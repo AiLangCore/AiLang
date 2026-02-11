@@ -384,6 +384,70 @@ public sealed class AosInterpreter
             return AosValue.FromBool(File.Exists(pathValue.AsString()));
         }
 
+        if (target == "io.pathExists")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var path = pathValue.AsString();
+            return AosValue.FromBool(File.Exists(path) || Directory.Exists(path));
+        }
+
+        if (target == "io.makeDir")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            Directory.CreateDirectory(pathValue.AsString());
+            return AosValue.Void;
+        }
+
+        if (target == "io.writeFile")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            var textValue = EvalNode(node.Children[1], runtime, env);
+            if (pathValue.Kind != AosValueKind.String || textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            File.WriteAllText(pathValue.AsString(), textValue.AsString());
+            return AosValue.Void;
+        }
+
         if (target == "compiler.parse")
         {
             if (!runtime.Permissions.Contains("compiler"))
@@ -1151,7 +1215,7 @@ public sealed class AosInterpreter
         {
             switch (ch)
             {
-                case '\"': sb.Append("\\\\\""); break;
+                case '\"': sb.Append("\\\""); break;
                 case '\\': sb.Append("\\\\"); break;
                 case '\n': sb.Append("\\n"); break;
                 case '\r': sb.Append("\\r"); break;
@@ -1240,6 +1304,18 @@ public sealed class AosInterpreter
             var errPath = $"{stem}.err";
             var testName = Path.GetFileName(stem);
             var source = File.ReadAllText(inputPath);
+            if (testName == "new_directory_exists")
+            {
+                Directory.CreateDirectory(Path.Combine(directory, "new", "existing_project"));
+            }
+            else if (testName == "new_success")
+            {
+                var successDir = Path.Combine(directory, "new", "success_project");
+                if (Directory.Exists(successDir))
+                {
+                    Directory.Delete(successDir, recursive: true);
+                }
+            }
 
             string actual;
             string expected;
@@ -1292,6 +1368,15 @@ public sealed class AosInterpreter
                 failCount++;
                 Console.WriteLine($"FAIL {testName}");
             }
+
+            if (testName == "new_success")
+            {
+                var successDir = Path.Combine(directory, "new", "success_project");
+                if (Directory.Exists(successDir))
+                {
+                    Directory.Delete(successDir, recursive: true);
+                }
+            }
         }
 
         return failCount == 0 ? 0 : 1;
@@ -1326,6 +1411,18 @@ public sealed class AosInterpreter
 
     private static string[]? ResolveGoldenArgs(string directory, string testName, bool errorMode)
     {
+        if (testName.StartsWith("new_", StringComparison.Ordinal))
+        {
+            var newDir = Path.Combine(directory, "new");
+            return testName switch
+            {
+                "new_missing_name" => new[] { "new" },
+                "new_directory_exists" => new[] { "new", Path.Combine(newDir, "existing_project") },
+                "new_success" => new[] { "new", Path.Combine(newDir, "success_project") },
+                _ => new[] { "new" }
+            };
+        }
+
         if (testName.StartsWith("publish_", StringComparison.Ordinal))
         {
             return testName switch

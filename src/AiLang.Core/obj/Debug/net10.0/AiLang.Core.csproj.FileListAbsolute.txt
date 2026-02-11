@@ -11,3 +11,4 @@
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/ref/AiLang.Core.dll
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/format.aos
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/validate.aos
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.sourcelink.json

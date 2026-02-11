@@ -165,6 +165,10 @@ public sealed class AosInterpreter
                 return EvalMakeErr(node, runtime, env);
             case "MakeLitString":
                 return EvalMakeLitString(node, runtime, env);
+            case "Event":
+            case "Command":
+            case "HttpRequest":
+                return AosValue.FromNode(node);
             case "NodeKind":
                 return EvalNodeKind(node, runtime, env);
             case "NodeId":
@@ -479,6 +483,39 @@ public sealed class AosInterpreter
             }
             diagnostic ??= new AosDiagnostic("PAR000", "Parse failed.", "unknown", null);
             return AosValue.FromNode(CreateErrNode("parse_err", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "unknown", node.Span));
+        }
+
+        if (target == "compiler.parseHttpRequest")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var payload = EvalNode(node.Children[0], runtime, env);
+            if (payload.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var request = payload.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var method = request.Length > 0 ? request[0] : string.Empty;
+            var path = request.Length > 1 ? request[1] : string.Empty;
+            var parsed = new AosNode(
+                "HttpRequest",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["method"] = new AosAttrValue(AosAttrKind.String, method),
+                    ["path"] = new AosAttrValue(AosAttrKind.String, path)
+                },
+                new List<AosNode>(),
+                node.Span);
+            return AosValue.FromNode(parsed);
         }
 
         if (target == "compiler.format")
@@ -1334,6 +1371,11 @@ public sealed class AosInterpreter
                     actual = ExecuteTraceGolden(source, testName);
                     goto compare_result;
                 }
+                if (testName.StartsWith("lifecycle_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteLifecycleGolden(source, testName);
+                    goto compare_result;
+                }
                 if (testName == "publish_binary_runs")
                 {
                     actual = ExecutePublishBinaryGolden(aicProgram, directory, source);
@@ -1487,6 +1529,87 @@ public sealed class AosInterpreter
 
             var output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
+            return NormalizeGoldenText(output);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private static string ExecuteLifecycleGolden(string source, string testName)
+    {
+        var hostBinary = ResolveHostBinaryPath();
+        if (hostBinary is null)
+        {
+            return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=lifecycle)";
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-lifecycle-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "lifecycle_input.aos");
+            File.WriteAllText(sourcePath, source);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostBinary,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory()
+            };
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add(sourcePath);
+            if (testName == "lifecycle_event_message_basic")
+            {
+                psi.ArgumentList.Add("__event_message");
+                psi.ArgumentList.Add("text");
+                psi.ArgumentList.Add("hello");
+            }
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null)
+            {
+                return "Err#err0(code=RUN001 message=\"Failed to execute lifecycle golden.\" nodeId=lifecycle)";
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            if (testName == "lifecycle_app_exit_code")
+            {
+                return AosFormatter.Format(new AosNode(
+                    "ExitCode",
+                    "ec1",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+            }
+            if (testName == "lifecycle_command_exit_after_print")
+            {
+                var exitText = AosFormatter.Format(new AosNode(
+                    "ExitCode",
+                    "ec1",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+                var printed = NormalizeGoldenText(output);
+                return printed.Length == 0 ? exitText : $"{printed}\n{exitText}";
+            }
+
             return NormalizeGoldenText(output);
         }
         finally

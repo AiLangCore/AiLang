@@ -1,0 +1,33 @@
+Program#h1 {
+  Export#h2(name=init)
+  Export#h3(name=update)
+  Let#h4(name=init) {
+    Fn#h5(params=args) {
+      Block#h6 { Return#h7 { MakeBlock#h8 { Lit#h9(value="state") } } }
+    }
+  }
+  Let#h10(name=update) {
+    Fn#h11(params=state,event) {
+      Block#h12 {
+        Let#h13(name=reqPayload) { AttrValueString#h14 { Var#h15(name=event) Lit#h16(value=0) } }
+        Let#h32(name=req) { Call#h33(target=compiler.parseHttpRequest) { Var#h34(name=reqPayload) } }
+        Let#h35(name=reqPath) { AttrValueString#h36 { Var#h37(name=req) Lit#h38(value=1) } }
+        If#h17 {
+          Eq#h18 { Var#h19(name=reqPath) Lit#h20(value="/health") }
+          Block#h21 {
+            Return#h22 {
+              AppendChild#h23 {
+                AppendChild#h24 {
+                  MakeBlock#h25 { Lit#h26(value="next") }
+                  Var#h27(name=state)
+                }
+                Command#Emit(type="http.response" payload="ok")
+              }
+            }
+          }
+          Block#h28 { Return#h29 { MakeBlock#h30 { Lit#h31(value="next") } } }
+        }
+      }
+    }
+  }
+}

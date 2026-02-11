@@ -1,0 +1,5 @@
+Program#mb1 {
+  Import#mb2(path="cycle_a.aos")
+  Let#mb3(name=fromB) { Lit#mb4(value=2) }
+  Export#mb5(name=fromB)
+}

@@ -203,7 +203,23 @@ Program#p1 {
                                                                                                       If#k261 {
                                                                                                         Eq#k262 { Var#k263(name=kind) Lit#k264(value="StrEscape") }
                                                                                                         Block#k265 { Call#k267(target=requireChildCount) { Var#k268(name=node) Var#k269(name=state) Lit#k270(value=1) } }
-                                                                                                        Block#k271 { Var#k273(name=state) }
+                                                                                                        Block#k271 {
+                                                                                                          If#k276 {
+                                                                                                            Eq#k277 { Var#k278(name=kind) Lit#k279(value="Import") }
+                                                                                                            Block#k280 {
+                                                                                                              Call#k281(target=requireAttrAndChildren) { Var#k282(name=node) Var#k283(name=state) Lit#k284(value="path") Lit#k285(value=0) }
+                                                                                                            }
+                                                                                                            Block#k286 {
+                                                                                                              If#k287 {
+                                                                                                                Eq#k288 { Var#k289(name=kind) Lit#k290(value="Export") }
+                                                                                                                Block#k291 {
+                                                                                                                  Call#k292(target=requireAttrAndChildren) { Var#k293(name=node) Var#k294(name=state) Lit#k295(value="name") Lit#k296(value=0) }
+                                                                                                                }
+                                                                                                                Block#k297 { Var#k298(name=state) }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
                                                                                                       }
                                                                                                     }
                                                                                                   }
@@ -252,7 +268,14 @@ Program#p1 {
             }
           }
         }
-        Return#k274 { Var#k275(name=stateAfter) }
+        Let#k276(name=stateAfterProject) {
+          If#k277 {
+            Eq#k278 { Var#k16(name=kind) Lit#k279(value="Project") }
+            Block#k280 { Call#k281(target=requireProjectShape) { Var#k282(name=node) Var#k283(name=stateAfter) } }
+            Block#k284 { Var#k285(name=stateAfter) }
+          }
+        }
+        Return#k274 { Var#k276(name=stateAfterProject) }
       }
     }
   }
@@ -489,6 +512,41 @@ Program#p1 {
         Let#h333(name=index) { ChildCount#h334 { Var#h335(name=ids) } }
         Let#h336(name=litId) { StrConcat#h337 { Lit#h338(value="id-") ToString#h339 { Var#h340(name=index) } } }
         Return#h341 { AppendChild#h342 { Var#h343(name=ids) MakeLitString#h344 { Var#h345(name=litId) Var#h346(name=id) } } }
+      }
+    }
+  }
+
+  Let#p1000(name=requireProjectShape) {
+    Fn#p1001(params=node,state) {
+      Block#p1002 {
+        Let#p1003(name=s1) { Call#p1004(target=requireAttrAndChildren) { Var#p1005(name=node) Var#p1006(name=state) Lit#p1007(value="name") Lit#p1008(value=0) } }
+        Let#p1009(name=s2) { Call#p1010(target=requireAttr) { Var#p1011(name=node) Var#p1012(name=s1) Lit#p1013(value="entryFile") } }
+        Let#p1014(name=s3) { Call#p1015(target=requireAttr) { Var#p1016(name=node) Var#p1017(name=s2) Lit#p1018(value="entryExport") } }
+        Return#p1019 {
+          If#p1020 {
+            Eq#p1021 { Call#p1022(target=getAttrOrEmpty) { Var#p1023(name=node) Lit#p1024(value="entryExport") Lit#p1025(value=0) } Lit#p1026(value="") }
+            Block#p1027 { Call#p1028(target=addErrForNode) { Var#p1029(name=s3) Lit#p1030(value="VAL095") Lit#p1031(value="Project entryExport must be non-empty.") Var#p1032(name=node) } }
+            Block#p1033 { Var#p1034(name=s3) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#p1035(name=getAttrOrEmpty) {
+    Fn#p1036(params=node,key,index) {
+      Block#p1037 {
+        If#p1038 {
+          Eq#p1039 { Var#p1040(name=index) AttrCount#p1041 { Var#p1042(name=node) } }
+          Block#p1043 { Return#p1044 { Lit#p1045(value="") } }
+          Block#p1046 {
+            If#p1047 {
+              Eq#p1048 { AttrKey#p1049 { Var#p1050(name=node) Var#p1051(name=index) } Var#p1052(name=key) }
+              Block#p1053 { Return#p1054 { AttrValueString#p1055 { Var#p1056(name=node) Var#p1057(name=index) } } }
+              Block#p1058 { Return#p1059 { Call#p1060(target=getAttrOrEmpty) { Var#p1061(name=node) Var#p1062(name=key) Add#p1063 { Var#p1064(name=index) Lit#p1065(value=1) } } } }
+            }
+          }
+        }
       }
     }
   }

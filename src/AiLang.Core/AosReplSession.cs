@@ -161,12 +161,7 @@ public sealed class AosReplSession
 
     private AosParseResult Parse(string line)
     {
-        var tokenizer = new AosTokenizer(line);
-        var tokens = tokenizer.Tokenize();
-        var parser = new AosParser(tokens);
-        var result = parser.ParseSingle();
-        result.Diagnostics.AddRange(tokenizer.Diagnostics);
-        return result;
+        return AosExternalFrontend.Parse(line);
     }
 
     private string FormatOk(AosValue value)

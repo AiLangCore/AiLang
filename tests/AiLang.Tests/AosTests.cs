@@ -170,6 +170,99 @@ public class AosTests
     }
 
     [Test]
+    public void Evaluator_ImportsAndMergesExplicitExports()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-import-ok-");
+        try
+        {
+            var depPath = Path.Combine(tempDir.FullName, "dep.aos");
+            File.WriteAllText(depPath, "Program#dp { Let#dl(name=x) { Lit#dv(value=7) } Export#de(name=x) }");
+
+            var main = Parse("Program#mp { Import#mi(path=\"dep.aos\") Var#mv(name=x) }").Root!;
+            var runtime = new AosRuntime { ModuleBaseDir = tempDir.FullName };
+            var interpreter = new AosInterpreter();
+            var result = interpreter.EvaluateProgram(main, runtime);
+
+            Assert.That(result.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(result.AsInt(), Is.EqualTo(7));
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
+    public void Evaluator_ReportsCircularImport()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-import-cycle-");
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir.FullName, "a.aos"), "Program#a { Import#ia(path=\"b.aos\") Let#al(name=x) { Lit#av(value=1) } Export#ae(name=x) }");
+            File.WriteAllText(Path.Combine(tempDir.FullName, "b.aos"), "Program#b { Import#ib(path=\"a.aos\") Let#bl(name=y) { Lit#bv(value=2) } Export#be(name=y) }");
+
+            var main = Parse("Program#mp { Import#mi(path=\"a.aos\") Var#mv(name=x) }").Root!;
+            var runtime = new AosRuntime { ModuleBaseDir = tempDir.FullName };
+            var interpreter = new AosInterpreter();
+            var result = interpreter.EvaluateProgram(main, runtime);
+
+            Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+            var err = result.AsNode();
+            Assert.That(err.Kind, Is.EqualTo("Err"));
+            Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("RUN023"));
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
+    public void Evaluator_ReportsMissingImportFile()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-import-missing-");
+        try
+        {
+            var main = Parse("Program#mp { Import#mi(path=\"missing.aos\") }").Root!;
+            var runtime = new AosRuntime { ModuleBaseDir = tempDir.FullName };
+            var interpreter = new AosInterpreter();
+            var result = interpreter.EvaluateProgram(main, runtime);
+
+            Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+            var err = result.AsNode();
+            Assert.That(err.Kind, Is.EqualTo("Err"));
+            Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("RUN024"));
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
+    public void CompilerRun_ReturnsErrNode_ForMissingImport()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-compiler-run-missing-");
+        try
+        {
+            var source = "Program#p1 { Let#l1(name=parsed) { Call#c1(target=compiler.parse) { Lit#s1(value=\"Program#p2 { Import#i1(path=\\\"missing.aos\\\") }\") } } Call#c2(target=compiler.run) { Var#v1(name=parsed) } }";
+            var root = Parse(source).Root!;
+            var runtime = new AosRuntime { ModuleBaseDir = tempDir.FullName };
+            runtime.Permissions.Add("compiler");
+
+            var interpreter = new AosInterpreter();
+            var result = interpreter.EvaluateProgram(root, runtime);
+            Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+            Assert.That(result.AsNode().Kind, Is.EqualTo("Err"));
+            Assert.That(result.AsNode().Attrs["code"].AsString(), Is.EqualTo("RUN024"));
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
     public void Aic_Smoke_FmtCheckRun()
     {
         var aicPath = FindRepoFile("compiler/aic.aos");
@@ -185,6 +278,20 @@ public class AosTests
 
         var runOutput = ExecuteAic(aicPath, "run", runInput);
         Assert.That(runOutput, Is.EqualTo("Ok#ok0(type=string value=\"hello from main\")"));
+    }
+
+    [Test]
+    public void Aic_Run_ImportDiagnostics()
+    {
+        var aicPath = FindRepoFile("compiler/aic.aos");
+        var cycleInput = File.ReadAllText(FindRepoFile("examples/golden/run_import_cycle.in.aos"));
+        var missingInput = File.ReadAllText(FindRepoFile("examples/golden/run_import_missing.in.aos"));
+
+        var cycleOutput = ExecuteAic(aicPath, "run", cycleInput);
+        var missingOutput = ExecuteAic(aicPath, "run", missingInput);
+
+        Assert.That(cycleOutput, Is.EqualTo("Err#runtime_err(code=RUN023 message=\"Circular import detected.\" nodeId=mb2)"));
+        Assert.That(missingOutput, Is.EqualTo("Err#runtime_err(code=RUN024 message=\"Import file not found: examples/golden/modules/does_not_exist.aos\" nodeId=rm2)"));
     }
 
     private static AosParseResult Parse(string source)
@@ -203,6 +310,7 @@ public class AosTests
         var runtime = new AosRuntime();
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
+        runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetDirectoryName(aicPath)!)!;
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(new[] { mode }));
         runtime.ReadOnlyBindings.Add("argv");
 

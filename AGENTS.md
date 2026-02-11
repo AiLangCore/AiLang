@@ -44,6 +44,7 @@ The AI must treat architectural constraints as hard rules.
 - Use `./scripts/test.sh` for golden test validation.
 - Use `./scripts/build-airun.sh` only when rebuilding `tools/airun` via dotnet publish.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.
+- Frontend parsing is provided by standalone `tools/aos_frontend`.
 
 ## Definition of done
 
@@ -52,3 +53,8 @@ A change is complete only if:
 - Behavior is deterministic.
 - Output matches canonical formatting.
 - No architectural rules are violated.
+
+## Normative specs
+
+- `SPEC/IL.md`, `SPEC/EVAL.md`, and `SPEC/VALIDATION.md` are language contracts.
+- Semantic changes must update spec docs and matching goldens in the same change.

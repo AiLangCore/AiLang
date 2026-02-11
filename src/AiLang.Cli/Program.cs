@@ -62,6 +62,7 @@ try
     runtime.Permissions.Add("console");
     runtime.Permissions.Add("io");
     runtime.Permissions.Add("compiler");
+    runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(args[1])) ?? Directory.GetCurrentDirectory();
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
 
@@ -93,12 +94,7 @@ catch (Exception ex)
 
 static AosParseResult Parse(string source)
 {
-    var tokenizer = new AosTokenizer(source);
-    var tokens = tokenizer.Tokenize();
-    var parser = new AosParser(tokens);
-    var result = parser.ParseSingle();
-    result.Diagnostics.AddRange(tokenizer.Diagnostics);
-    return result;
+    return AosExternalFrontend.Parse(source);
 }
 
 static string FormatOk(string id, AosValue value)

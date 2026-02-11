@@ -1,0 +1,11 @@
+Program#std_str_p1 {
+  Let#std_str_l1(name=concat) {
+    Fn#std_str_f1(params=a,b) {
+      Block#std_str_b1 {
+        Return#std_str_r1 { StrConcat#std_str_s1 { Var#std_str_v1(name=a) Var#std_str_v2(name=b) } }
+      }
+    }
+  }
+
+  Export#std_str_e1(name=concat)
+}

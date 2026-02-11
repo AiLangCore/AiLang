@@ -103,6 +103,57 @@ public sealed class AosValidator
                 var target = node.Attrs.TryGetValue("target", out var targetVal) ? targetVal.AsString() : string.Empty;
                 var argTypes = node.Children.Select(child => ValidateNode(child, env, permissions)).ToList();
                 return ValidateCall(node, target, argTypes, env, permissions);
+            case "Import":
+                RequireAttr(node, "path");
+                RequireChildren(node, 0, 0);
+                if (node.Attrs.TryGetValue("path", out var pathAttr) && pathAttr.Kind != AosAttrKind.String)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL089", "Import path must be string.", node.Id, node.Span));
+                }
+                return AosValueKind.Void;
+            case "Export":
+                RequireAttr(node, "name");
+                RequireChildren(node, 0, 0);
+                if (node.Attrs.TryGetValue("name", out var exportNameAttr) && exportNameAttr.Kind == AosAttrKind.Identifier)
+                {
+                    if (!env.ContainsKey(exportNameAttr.AsString()))
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL010", $"Unknown variable '{exportNameAttr.AsString()}'.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Void;
+            case "Project":
+                RequireAttr(node, "name");
+                RequireAttr(node, "entryFile");
+                RequireAttr(node, "entryExport");
+                RequireChildren(node, 0, 0);
+                if (node.Attrs.TryGetValue("entryFile", out var entryFileAttr))
+                {
+                    if (entryFileAttr.Kind != AosAttrKind.String)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL092", "Project entryFile must be string.", node.Id, node.Span));
+                    }
+                    else
+                    {
+                        var entryFile = entryFileAttr.AsString();
+                        if (Path.IsPathRooted(entryFile))
+                        {
+                            _diagnostics.Add(new AosDiagnostic("VAL093", "Project entryFile must be relative path.", node.Id, node.Span));
+                        }
+                    }
+                }
+                if (node.Attrs.TryGetValue("entryExport", out var entryExportAttr))
+                {
+                    if (entryExportAttr.Kind != AosAttrKind.String)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL094", "Project entryExport must be string.", node.Id, node.Span));
+                    }
+                    else if (string.IsNullOrEmpty(entryExportAttr.AsString()))
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL095", "Project entryExport must be non-empty.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Void;
             case "Fn":
                 RequireAttr(node, "params");
                 RequireChildren(node, 1, 1);
@@ -519,6 +570,20 @@ public sealed class AosValidator
                 _diagnostics.Add(new AosDiagnostic("VAL086", "compiler.test arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Int;
+        }
+
+        if (target == "compiler.run")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL090", "compiler.run expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL091", "compiler.run arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
         }
 
         if (!target.Contains('.') && env.TryGetValue(target, out var fnType) && fnType == AosValueKind.Function)

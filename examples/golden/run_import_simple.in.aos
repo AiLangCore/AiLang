@@ -1,0 +1,4 @@
+Program#ri1 {
+  Import#ri2(path="examples/golden/modules/simple_dep.aos")
+  Var#ri3(name=value)
+}

@@ -1,0 +1,4 @@
+Program#rc1 {
+  Import#rc2(path="examples/golden/modules/cycle_a.aos")
+  Var#rc3(name=fromA)
+}

@@ -1,0 +1,26 @@
+Program#std_io_p1 {
+  Let#std_io_l1(name=print) {
+    Fn#std_io_f1(params=value) {
+      Block#std_io_b1 {
+        Return#std_io_r1 {
+          Call#std_io_c1(target=io.print) { Var#std_io_v1(name=value) }
+        }
+      }
+    }
+  }
+
+  Let#std_io_l2(name=println) {
+    Fn#std_io_f2(params=value) {
+      Block#std_io_b2 {
+        Return#std_io_r2 {
+          Call#std_io_c2(target=io.print) {
+            StrConcat#std_io_s1 { Var#std_io_v2(name=value) Lit#std_io_i1(value="\n") }
+          }
+        }
+      }
+    }
+  }
+
+  Export#std_io_e1(name=print)
+  Export#std_io_e2(name=println)
+}

@@ -62,7 +62,18 @@ Rebuild `tools/airun` (NativeAOT, osx-arm64):
 ```
 
 Dotnet is only required for `scripts/build-airun.sh`.
+`scripts/build-airun.sh` also rebuilds the standalone frontend parser `tools/aos_frontend`.
 
 ## Examples
 
 See `examples/hello.aos` for a full program using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.
+
+## Language Contracts
+
+Normative semantic contracts live in:
+
+- `SPEC/IL.md`
+- `SPEC/EVAL.md`
+- `SPEC/VALIDATION.md`
+
+When semantics change, update these specs and matching goldens together.

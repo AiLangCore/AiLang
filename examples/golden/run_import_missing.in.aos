@@ -1,0 +1,3 @@
+Program#rm1 {
+  Import#rm2(path="examples/golden/modules/does_not_exist.aos")
+}

@@ -76,11 +76,7 @@ public static class AosFormatter
         }
 
         var source = File.ReadAllText(path);
-        var tokenizer = new AosTokenizer(source);
-        var tokens = tokenizer.Tokenize();
-        var parser = new AosParser(tokens);
-        var parse = parser.ParseSingle();
-        parse.Diagnostics.AddRange(tokenizer.Diagnostics);
+        var parse = AosExternalFrontend.Parse(source);
 
         if (parse.Root is null)
         {

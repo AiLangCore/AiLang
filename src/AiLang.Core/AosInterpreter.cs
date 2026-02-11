@@ -547,66 +547,6 @@ public sealed class AosInterpreter
             return AosValue.FromString(json);
         }
 
-        if (target == "compiler.route")
-        {
-            if (!runtime.Permissions.Contains("compiler"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 2)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            var tableValue = EvalNode(node.Children[1], runtime, env);
-            if (pathValue.Kind != AosValueKind.String || tableValue.Kind != AosValueKind.Node)
-            {
-                return AosValue.Unknown;
-            }
-
-            var path = pathValue.AsString();
-            var tableNode = tableValue.AsNode();
-            string? matchedHandler = null;
-
-            foreach (var route in tableNode.Children)
-            {
-                if (!string.Equals(route.Kind, "Route", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (!route.Attrs.TryGetValue("path", out var routePathAttr) || routePathAttr.Kind != AosAttrKind.String)
-                {
-                    continue;
-                }
-                if (!route.Attrs.TryGetValue("handler", out var handlerAttr) || handlerAttr.Kind != AosAttrKind.String)
-                {
-                    continue;
-                }
-
-                if (string.Equals(routePathAttr.AsString(), path, StringComparison.Ordinal))
-                {
-                    matchedHandler = handlerAttr.AsString();
-                    break;
-                }
-            }
-
-            var matchAttrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["handler"] = matchedHandler is null
-                    ? new AosAttrValue(AosAttrKind.Identifier, "null")
-                    : new AosAttrValue(AosAttrKind.String, matchedHandler)
-            };
-
-            return AosValue.FromNode(new AosNode(
-                "Match",
-                "auto",
-                matchAttrs,
-                new List<AosNode>(),
-                node.Span));
-        }
-
         if (target == "compiler.format")
         {
             if (!runtime.Permissions.Contains("compiler"))
@@ -708,6 +648,7 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
+            AosStandardLibraryLoader.EnsureRouteLoaded(runtime, this);
             var runEnv = new Dictionary<string, AosValue>(StringComparer.Ordinal);
             var value = Evaluate(input.AsNode(), runtime, runEnv);
             if (IsErrValue(value))
@@ -1649,6 +1590,8 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("compiler");
         runtime.Env["argv"] = BuildArgvNode(argv);
         runtime.ReadOnlyBindings.Add("argv");
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
 
         var oldIn = Console.In;
         var oldOut = Console.Out;
@@ -1657,7 +1600,6 @@ public sealed class AosInterpreter
         {
             Console.SetIn(new StringReader(input));
             Console.SetOut(writer);
-            var interpreter = new AosInterpreter();
             interpreter.EvaluateProgram(aicProgram, runtime);
         }
         finally
@@ -1995,6 +1937,8 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
 
         var validator = new AosValidator();
         var validation = validator.Validate(parse.Root, null, runtime.Permissions, runStructural: false);
@@ -2004,7 +1948,6 @@ public sealed class AosInterpreter
             return AosFormatter.Format(CreateErrNode("diag0", first.Code, first.Message, first.NodeId ?? "unknown", parse.Root.Span));
         }
 
-        var interpreter = new AosInterpreter();
         var result = interpreter.EvaluateProgram(parse.Root, runtime);
         return FormatOkValue(result, parse.Root.Span);
     }

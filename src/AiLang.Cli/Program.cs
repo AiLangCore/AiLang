@@ -39,8 +39,7 @@ static int RunCli(string[] args)
                 PrintUsage();
                 return 1;
             }
-
-    if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
+            if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
             {
                 PrintUsage();
                 return 1;
@@ -255,6 +254,8 @@ static bool TryLoadProgramForExecution(
     runtime.TraceEnabled = traceEnabled;
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
+    var bootstrapInterpreter = new AosInterpreter();
+    AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
 
     var envTypes = new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
     {
@@ -274,8 +275,7 @@ static bool TryLoadProgramForExecution(
 
     if (evaluateProgram)
     {
-        var interpreter = new AosInterpreter();
-        var initResult = interpreter.EvaluateProgram(parse.Root, runtime);
+        var initResult = bootstrapInterpreter.EvaluateProgram(parse.Root, runtime);
         if (IsErrNode(initResult, out var errNode))
         {
             errCode = errNode!.Attrs.TryGetValue("code", out var codeAttr) && codeAttr.Kind == AosAttrKind.Identifier ? codeAttr.AsString() : "RUN001";
@@ -329,6 +329,8 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.ReadOnlyBindings.Add("argv");
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
+        var bootstrapInterpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
 
         var driverProgram = new AosNode(
             "Program",
@@ -357,15 +359,14 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
             },
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
 
-        var interpreter = new AosInterpreter();
-        var exportValue = interpreter.EvaluateProgram(driverProgram, runtime);
+        var exportValue = bootstrapInterpreter.EvaluateProgram(driverProgram, runtime);
         if (IsErrNode(exportValue, out var exportErr))
         {
             Console.WriteLine(AosFormatter.Format(exportErr!));
             return 3;
         }
 
-        var execution = ExecuteModuleEntry(interpreter, runtime, entryExport, exportValue, "__entryArgs");
+        var execution = ExecuteModuleEntry(bootstrapInterpreter, runtime, entryExport, exportValue, "__entryArgs");
         var result = execution.Value;
 
         if (IsErrNode(result, out var errNode))

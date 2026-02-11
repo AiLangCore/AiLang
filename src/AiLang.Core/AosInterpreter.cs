@@ -12,6 +12,9 @@ public sealed class AosRuntime
     public bool TraceEnabled { get; set; }
     public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
+    public Dictionary<int, System.Net.Sockets.TcpListener> NetListeners { get; } = new();
+    public Dictionary<int, System.Net.Sockets.TcpClient> NetConnections { get; } = new();
+    public int NextNetHandle { get; set; } = 1;
 }
 
 public sealed class AosInterpreter
@@ -36,6 +39,24 @@ public sealed class AosInterpreter
     {
         _strictUnknown = true;
         return Evaluate(expr, runtime, runtime.Env);
+    }
+
+    public AosValue RunBytecode(AosNode bytecode, string entryName, AosNode argsNode, AosRuntime runtime)
+    {
+        try
+        {
+            var vm = VmProgram.Load(bytecode);
+            return VmRunner.Run(this, runtime, vm, entryName, argsNode);
+        }
+        catch (VmRuntimeException ex)
+        {
+            return AosValue.FromNode(CreateErrNode(
+                "vm_err",
+                ex.Code,
+                ex.Message,
+                ex.NodeId,
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
     }
 
     private AosValue Evaluate(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
@@ -172,6 +193,7 @@ public sealed class AosInterpreter
             case "Match":
             case "Map":
             case "Field":
+            case "Bytecode":
                 return AosValue.FromNode(node);
             case "NodeKind":
                 return EvalNodeKind(node, runtime, env);
@@ -456,6 +478,307 @@ public sealed class AosInterpreter
             return AosValue.Void;
         }
 
+        if (target == "sys.net_listen")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var portValue = EvalNode(node.Children[0], runtime, env);
+            if (portValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
+            listener.Start();
+            var handle = runtime.NextNetHandle++;
+            runtime.NetListeners[handle] = listener;
+            return AosValue.FromInt(handle);
+        }
+
+        if (target == "sys.net_accept")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetListeners.TryGetValue(handleValue.AsInt(), out var listener))
+            {
+                return AosValue.FromInt(-1);
+            }
+
+            var client = listener.AcceptTcpClient();
+            var connHandle = runtime.NextNetHandle++;
+            runtime.NetConnections[connHandle] = client;
+            return AosValue.FromInt(connHandle);
+        }
+
+        if (target == "sys.net_readHeaders")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            {
+                return AosValue.FromString(string.Empty);
+            }
+
+            var stream = client.GetStream();
+            var bytes = new List<byte>(1024);
+            var endSeen = 0;
+            var pattern = new byte[] { 13, 10, 13, 10 };
+            while (bytes.Count < 16384)
+            {
+                var next = stream.ReadByte();
+                if (next < 0)
+                {
+                    break;
+                }
+
+                var b = (byte)next;
+                bytes.Add(b);
+                if (b == pattern[endSeen])
+                {
+                    endSeen++;
+                    if (endSeen == 4)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    endSeen = b == pattern[0] ? 1 : 0;
+                }
+            }
+
+            return AosValue.FromString(System.Text.Encoding.ASCII.GetString(bytes.ToArray()));
+        }
+
+        if (target == "sys.net_write")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            var textValue = EvalNode(node.Children[1], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int || textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            {
+                return AosValue.Unknown;
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(textValue.AsString());
+            var stream = client.GetStream();
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Flush();
+            return AosValue.Void;
+        }
+
+        if (target == "sys.net_close")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handle = handleValue.AsInt();
+            if (runtime.NetConnections.TryGetValue(handle, out var conn))
+            {
+                try { conn.Close(); } catch { }
+                runtime.NetConnections.Remove(handle);
+                return AosValue.Void;
+            }
+
+            if (runtime.NetListeners.TryGetValue(handle, out var listener))
+            {
+                try { listener.Stop(); } catch { }
+                runtime.NetListeners.Remove(handle);
+                return AosValue.Void;
+            }
+
+            return AosValue.Void;
+        }
+
+        if (target == "sys.stdout_writeLine")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var textValue = EvalNode(node.Children[0], runtime, env);
+            if (textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            Console.WriteLine(textValue.AsString());
+            return AosValue.Void;
+        }
+
+        if (target == "sys.proc_exit")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var codeValue = EvalNode(node.Children[0], runtime, env);
+            if (codeValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            throw new AosProcessExitException(codeValue.AsInt());
+        }
+
+        if (target == "sys.fs_readFile")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(File.ReadAllText(pathValue.AsString()));
+        }
+
+        if (target == "sys.fs_fileExists")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromBool(File.Exists(pathValue.AsString()));
+        }
+
+        if (target == "sys.str_utf8ByteCount")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var textValue = EvalNode(node.Children[0], runtime, env);
+            if (textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromInt(System.Text.Encoding.UTF8.GetByteCount(textValue.AsString()));
+        }
+
+        if (target == "sys.vm_run")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 3)
+            {
+                return AosValue.Unknown;
+            }
+
+            var bytecodeValue = EvalNode(node.Children[0], runtime, env);
+            var entryValue = EvalNode(node.Children[1], runtime, env);
+            var argsValue = EvalNode(node.Children[2], runtime, env);
+            if (bytecodeValue.Kind != AosValueKind.Node || entryValue.Kind != AosValueKind.String || argsValue.Kind != AosValueKind.Node)
+            {
+                return AosValue.Unknown;
+            }
+
+            try
+            {
+                var vm = VmProgram.Load(bytecodeValue.AsNode());
+                return VmRunner.Run(this, runtime, vm, entryValue.AsString(), argsValue.AsNode());
+            }
+            catch (VmRuntimeException ex)
+            {
+                return AosValue.FromNode(CreateErrNode("vm_err", ex.Code, ex.Message, ex.NodeId, node.Span));
+            }
+        }
+
         if (target == "compiler.parse")
         {
             if (!runtime.Permissions.Contains("compiler"))
@@ -489,40 +812,7 @@ public sealed class AosInterpreter
             return AosValue.FromNode(CreateErrNode("parse_err", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "unknown", node.Span));
         }
 
-        if (target == "compiler.parseHttpRequest")
-        {
-            if (!runtime.Permissions.Contains("compiler"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var payload = EvalNode(node.Children[0], runtime, env);
-            if (payload.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            var request = payload.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var method = request.Length > 0 ? request[0] : string.Empty;
-            var path = request.Length > 1 ? request[1] : string.Empty;
-            var parsed = new AosNode(
-                "HttpRequest",
-                "auto",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["method"] = new AosAttrValue(AosAttrKind.String, method),
-                    ["path"] = new AosAttrValue(AosAttrKind.String, path)
-                },
-                new List<AosNode>(),
-                node.Span);
-            return AosValue.FromNode(parsed);
-        }
-
-        if (target == "compiler.toJson")
+        if (target == "compiler.emitBytecode")
         {
             if (!runtime.Permissions.Contains("compiler"))
             {
@@ -539,12 +829,72 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!TrySerializeJsonNode(input.AsNode(), out var json))
+            try
+            {
+                return AosValue.FromNode(BytecodeCompiler.Compile(input.AsNode()));
+            }
+            catch (VmRuntimeException ex)
+            {
+                return AosValue.FromNode(CreateErrNode("vm_emit_err", ex.Code, ex.Message, ex.NodeId, node.Span));
+            }
+        }
+
+        if (target == "compiler.strCompare")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
             {
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromString(json);
+            var left = EvalNode(node.Children[0], runtime, env);
+            var right = EvalNode(node.Children[1], runtime, env);
+            if (left.Kind != AosValueKind.String || right.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var cmp = string.CompareOrdinal(left.AsString(), right.AsString());
+            if (cmp < 0)
+            {
+                return AosValue.FromInt(-1);
+            }
+            if (cmp > 0)
+            {
+                return AosValue.FromInt(1);
+            }
+            return AosValue.FromInt(0);
+        }
+
+        if (target == "compiler.strToken")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
+            {
+                return AosValue.Unknown;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            var index = EvalNode(node.Children[1], runtime, env);
+            if (text.Kind != AosValueKind.String || index.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            var tokens = text.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var i = index.AsInt();
+            if (i < 0 || i >= tokens.Length)
+            {
+                return AosValue.FromString(string.Empty);
+            }
+
+            return AosValue.FromString(tokens[i]);
         }
 
         if (target == "compiler.format")
@@ -648,7 +998,7 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            AosStandardLibraryLoader.EnsureRouteLoaded(runtime, this);
+            AosStandardLibraryLoader.EnsureLoaded(runtime, this);
             var runEnv = new Dictionary<string, AosValue>(StringComparer.Ordinal);
             var value = Evaluate(input.AsNode(), runtime, runEnv);
             if (IsErrValue(value))
@@ -670,7 +1020,6 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var bundleValue = EvalNode(node.Children[0], runtime, env);
             var projectNameValue = EvalNode(node.Children[1], runtime, env);
             if (projectNameValue.Kind != AosValueKind.String)
             {
@@ -698,28 +1047,62 @@ public sealed class AosInterpreter
             var projectName = projectNameValue.AsString();
             var bundlePath = Path.Combine(publishDir, $"{projectName}.aibundle");
             var outputBinaryPath = Path.Combine(publishDir, projectName);
-            var bundleText = bundleValue.Kind switch
+
+            var rawBundleNode = node.Children.Count > 0 ? node.Children[0] : null;
+            if (rawBundleNode is null || rawBundleNode.Kind != "Bundle")
             {
-                AosValueKind.Node => AosFormatter.Format(bundleValue.AsNode()),
-                AosValueKind.String => bundleValue.AsString(),
-                _ => string.Empty
-            };
-            if (bundleText.Length == 0 && node.Children.Count > 0)
-            {
-                // compiler.publish accepts a literal bundle node argument; it does not require the
-                // bundle node to be executable.
-                bundleText = AosFormatter.Format(node.Children[0]);
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB005", "publish requires Bundle node.", node.Id, node.Span));
             }
 
-            if (bundleText.Length == 0)
+            if (!rawBundleNode.Attrs.TryGetValue("entryFile", out var entryFileAttr) || entryFileAttr.Kind != AosAttrKind.String)
             {
-                return AosValue.Unknown;
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB006", "Bundle missing entryFile.", node.Id, node.Span));
             }
+
+            var entryFile = entryFileAttr.AsString();
+            var entryPath = Path.GetFullPath(Path.Combine(publishDir, entryFile));
+            if (!File.Exists(entryPath))
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB007", $"Entry file not found: {entryFile}", node.Id, node.Span));
+            }
+
+            AosNode? entryProgram;
+            try
+            {
+                var parsed = AosExternalFrontend.Parse(File.ReadAllText(entryPath));
+                if (parsed.Root is null || parsed.Diagnostics.Count > 0 || parsed.Root.Kind != "Program")
+                {
+                    var diagnostic = parsed.Diagnostics.FirstOrDefault();
+                    return AosValue.FromNode(CreateErrNode(
+                        "publish_err",
+                        diagnostic?.Code ?? "PAR000",
+                        diagnostic?.Message ?? "Failed to parse entry file.",
+                        diagnostic?.NodeId ?? node.Id,
+                        node.Span));
+                }
+                entryProgram = parsed.Root;
+            }
+            catch (Exception ex)
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB008", ex.Message, node.Id, node.Span));
+            }
+
+            AosNode bytecodeNode;
+            try
+            {
+                bytecodeNode = BytecodeCompiler.Compile(entryProgram!, allowImportNodes: true);
+            }
+            catch (VmRuntimeException vmEx)
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", vmEx.Code, vmEx.Message, vmEx.NodeId, node.Span));
+            }
+
+            var bytecodeText = AosFormatter.Format(bytecodeNode);
 
             try
             {
                 Directory.CreateDirectory(publishDir);
-                File.WriteAllText(bundlePath, bundleText);
+                File.WriteAllText(bundlePath, bytecodeText);
 
                 var sourceBinary = ResolveHostBinaryPath();
                 if (sourceBinary is null)
@@ -728,7 +1111,7 @@ public sealed class AosInterpreter
                 }
 
                 File.Copy(sourceBinary, outputBinaryPath, overwrite: true);
-                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1--\n" + bundleText);
+                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1:BYTECODE--\n" + bytecodeText);
                 if (!OperatingSystem.IsWindows())
                 {
                     try
@@ -1293,130 +1676,6 @@ public sealed class AosInterpreter
         return sb.ToString();
     }
 
-    private static bool TrySerializeJsonNode(AosNode node, out string json)
-    {
-        if (node.Kind == "Lit")
-        {
-            if (!node.Attrs.TryGetValue("value", out var litAttr))
-            {
-                json = string.Empty;
-                return false;
-            }
-
-            switch (litAttr.Kind)
-            {
-                case AosAttrKind.String:
-                    json = "\"" + EscapeJsonString(litAttr.AsString()) + "\"";
-                    return true;
-                case AosAttrKind.Int:
-                    json = litAttr.AsInt().ToString();
-                    return true;
-                case AosAttrKind.Bool:
-                    json = litAttr.AsBool() ? "true" : "false";
-                    return true;
-                default:
-                    json = string.Empty;
-                    return false;
-            }
-        }
-
-        if (node.Kind == "Map")
-        {
-            var entries = new List<(string Key, AosNode Value, int Index)>();
-            for (var i = 0; i < node.Children.Count; i++)
-            {
-                var child = node.Children[i];
-                if (child.Kind != "Field" ||
-                    !child.Attrs.TryGetValue("key", out var keyAttr) ||
-                    keyAttr.Kind != AosAttrKind.String ||
-                    child.Children.Count != 1)
-                {
-                    json = string.Empty;
-                    return false;
-                }
-
-                entries.Add((keyAttr.AsString(), child.Children[0], i));
-            }
-
-            var ordered = entries
-                .OrderBy(e => e.Key, StringComparer.Ordinal)
-                .ThenBy(e => e.Index)
-                .ToList();
-
-            var sb = new System.Text.StringBuilder();
-            sb.Append('{');
-            for (var i = 0; i < ordered.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(',');
-                }
-
-                sb.Append('"');
-                sb.Append(EscapeJsonString(ordered[i].Key));
-                sb.Append('"');
-                sb.Append(':');
-                if (!TrySerializeJsonNode(ordered[i].Value, out var valueJson))
-                {
-                    json = string.Empty;
-                    return false;
-                }
-                sb.Append(valueJson);
-            }
-            sb.Append('}');
-            json = sb.ToString();
-            return true;
-        }
-
-        json = string.Empty;
-        return false;
-    }
-
-    private static string EscapeJsonString(string value)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var ch in value)
-        {
-            switch (ch)
-            {
-                case '"':
-                    sb.Append("\\\"");
-                    break;
-                case '\\':
-                    sb.Append("\\\\");
-                    break;
-                case '\b':
-                    sb.Append("\\b");
-                    break;
-                case '\f':
-                    sb.Append("\\f");
-                    break;
-                case '\n':
-                    sb.Append("\\n");
-                    break;
-                case '\r':
-                    sb.Append("\\r");
-                    break;
-                case '\t':
-                    sb.Append("\\t");
-                    break;
-                default:
-                    if (ch < 0x20)
-                    {
-                        sb.Append("\\u");
-                        sb.Append(((int)ch).ToString("x4"));
-                    }
-                    else
-                    {
-                        sb.Append(ch);
-                    }
-                    break;
-            }
-        }
-
-        return sb.ToString();
-    }
-
     private static string ValueToDisplayString(AosValue value)
     {
         return value.Kind switch
@@ -1479,7 +1738,7 @@ public sealed class AosInterpreter
         var aicProgram = LoadAicProgram();
         if (aicProgram is null)
         {
-            Console.WriteLine("FAIL aic (compiler/aic.aos not found)");
+            Console.WriteLine("FAIL aic (src/compiler/aic.aos not found)");
             return 1;
         }
 
@@ -1514,6 +1773,11 @@ public sealed class AosInterpreter
             if (File.Exists(errPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(errPath));
+                if (testName.StartsWith("vm_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteVmGolden(source, testName);
+                    goto compare_result;
+                }
                 var modeArgs = ResolveGoldenArgs(directory, testName, errorMode: true);
                 actual = ExecuteAicMode(aicProgram, modeArgs!, source);
             }
@@ -1528,6 +1792,11 @@ public sealed class AosInterpreter
                 if (testName.StartsWith("lifecycle_", StringComparison.Ordinal))
                 {
                     actual = ExecuteLifecycleGolden(source, testName);
+                    goto compare_result;
+                }
+                if (testName.StartsWith("vm_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteVmGolden(source, testName);
                     goto compare_result;
                 }
                 if (testName == "http_health_route_refactor")
@@ -1591,7 +1860,7 @@ public sealed class AosInterpreter
         runtime.Env["argv"] = BuildArgvNode(argv);
         runtime.ReadOnlyBindings.Add("argv");
         var interpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
 
         var oldIn = Console.In;
         var oldOut = Console.Out;
@@ -1675,6 +1944,7 @@ public sealed class AosInterpreter
             psi.ArgumentList.Add("run");
             psi.ArgumentList.Add(sourcePath);
             psi.ArgumentList.Add("--trace");
+            psi.ArgumentList.Add("--vm=ast");
             if (testName == "trace_with_args")
             {
                 psi.ArgumentList.Add("alpha");
@@ -1728,6 +1998,7 @@ public sealed class AosInterpreter
             };
             psi.ArgumentList.Add("run");
             psi.ArgumentList.Add(sourcePath);
+            psi.ArgumentList.Add("--vm=ast");
             if (testName == "lifecycle_event_message_basic" || testName == "http_health_route_refactor")
             {
                 psi.ArgumentList.Add("__event_message");
@@ -1784,6 +2055,72 @@ public sealed class AosInterpreter
         }
     }
 
+    private static string ExecuteVmGolden(string source, string testName)
+    {
+        var hostBinary = ResolveHostBinaryPath();
+        if (hostBinary is null)
+        {
+            return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=vm)";
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-vm-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "vm_input.aos");
+            File.WriteAllText(sourcePath, source);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostBinary,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory()
+            };
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add(sourcePath);
+            if (testName == "vm_echo")
+            {
+                // Explicit stdin exercise for io.readLine.
+                psi.StandardInputEncoding = System.Text.Encoding.UTF8;
+            }
+            if (testName == "vm_health_handler")
+            {
+                psi.ArgumentList.Add("__event_message");
+                psi.ArgumentList.Add("text");
+                psi.ArgumentList.Add("GET /health");
+            }
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null)
+            {
+                return "Err#err0(code=RUN001 message=\"Failed to execute vm golden.\" nodeId=vm)";
+            }
+
+            if (testName == "vm_echo")
+            {
+                process.StandardInput.Write("vm-echo\n");
+                process.StandardInput.Close();
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return NormalizeGoldenText(output);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
     private static string ExecutePublishBinaryGolden(AosNode aicProgram, string directory, string input)
     {
         var publishDir = Path.Combine(directory, "publish", "binary_runs");
@@ -1821,6 +2158,7 @@ public sealed class AosInterpreter
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
 
@@ -1938,7 +2276,7 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         var interpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
 
         var validator = new AosValidator();
         var validation = validator.Validate(parse.Root, null, runtime.Permissions, runStructural: false);
@@ -1988,6 +2326,957 @@ public sealed class AosInterpreter
 
         var ok = new AosNode("Ok", "ok0", attrs, new List<AosNode>(), span);
         return AosFormatter.Format(ok);
+    }
+
+    private static string VmConstantKey(AosValue value)
+    {
+        return value.Kind switch
+        {
+            AosValueKind.String => $"s:{value.AsString()}",
+            AosValueKind.Int => $"i:{value.AsInt()}",
+            AosValueKind.Bool => value.AsBool() ? "b:true" : "b:false",
+            AosValueKind.Unknown => "n:null",
+            _ => throw new InvalidOperationException("Unsupported constant value.")
+        };
+    }
+
+    private static AosNode BuildVmInstruction(int index, string op, int? a, int? b, string? s)
+    {
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["op"] = new AosAttrValue(AosAttrKind.Identifier, op)
+        };
+        if (a.HasValue)
+        {
+            attrs["a"] = new AosAttrValue(AosAttrKind.Int, a.Value);
+        }
+        if (b.HasValue)
+        {
+            attrs["b"] = new AosAttrValue(AosAttrKind.Int, b.Value);
+        }
+        if (!string.IsNullOrEmpty(s))
+        {
+            attrs["s"] = new AosAttrValue(AosAttrKind.String, s!);
+        }
+        return new AosNode(
+            "Inst",
+            $"i{index}",
+            attrs,
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+    }
+
+    private sealed class VmRuntimeException : Exception
+    {
+        public VmRuntimeException(string code, string message, string nodeId)
+            : base(message)
+        {
+            Code = code;
+            NodeId = nodeId;
+        }
+
+        public string Code { get; }
+        public string NodeId { get; }
+    }
+
+    private sealed class VmInstruction
+    {
+        public required string Op { get; init; }
+        public int A { get; init; }
+        public int B { get; init; }
+        public string S { get; init; } = string.Empty;
+    }
+
+    private sealed class VmFunction
+    {
+        public required string Name { get; init; }
+        public required List<string> Params { get; init; }
+        public required List<string> Locals { get; init; }
+        public required List<VmInstruction> Instructions { get; init; }
+    }
+
+    private sealed class VmProgram
+    {
+        public required List<AosValue> Constants { get; init; }
+        public required List<VmFunction> Functions { get; init; }
+        public required Dictionary<string, int> FunctionIndexByName { get; init; }
+
+        public static VmProgram Load(AosNode node)
+        {
+            if (node.Kind != "Bytecode")
+            {
+                throw new VmRuntimeException("VM001", "Expected Bytecode node.", node.Id);
+            }
+
+            if (!node.Attrs.TryGetValue("format", out var formatAttr) || formatAttr.Kind != AosAttrKind.String || formatAttr.AsString() != "AiBC1")
+            {
+                throw new VmRuntimeException("VM001", "Unsupported bytecode format.", node.Id);
+            }
+
+            var constants = new List<AosValue>();
+            var functions = new List<VmFunction>();
+            foreach (var child in node.Children)
+            {
+                if (child.Kind == "Const")
+                {
+                    if (!child.Attrs.TryGetValue("kind", out var kindAttr) || kindAttr.Kind != AosAttrKind.Identifier)
+                    {
+                        throw new VmRuntimeException("VM001", "Invalid Const node.", child.Id);
+                    }
+
+                    var kind = kindAttr.AsString();
+                    if (!child.Attrs.TryGetValue("value", out var valueAttr))
+                    {
+                        throw new VmRuntimeException("VM001", "Const missing value.", child.Id);
+                    }
+
+                    constants.Add(kind switch
+                    {
+                        "string" when valueAttr.Kind == AosAttrKind.String => AosValue.FromString(valueAttr.AsString()),
+                        "int" when valueAttr.Kind == AosAttrKind.Int => AosValue.FromInt(valueAttr.AsInt()),
+                        "bool" when valueAttr.Kind == AosAttrKind.Bool => AosValue.FromBool(valueAttr.AsBool()),
+                        "null" => AosValue.Unknown,
+                        _ => throw new VmRuntimeException("VM001", "Unsupported constant kind.", child.Id)
+                    });
+                    continue;
+                }
+
+                if (child.Kind == "Func")
+                {
+                    if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+                    {
+                        throw new VmRuntimeException("VM001", "Func missing name.", child.Id);
+                    }
+
+                    var name = nameAttr.AsString();
+                    var paramText = child.Attrs.TryGetValue("params", out var paramsAttr) && paramsAttr.Kind == AosAttrKind.String
+                        ? paramsAttr.AsString()
+                        : string.Empty;
+                    var localText = child.Attrs.TryGetValue("locals", out var localsAttr) && localsAttr.Kind == AosAttrKind.String
+                        ? localsAttr.AsString()
+                        : string.Empty;
+                    var parameters = SplitCsv(paramText);
+                    var locals = SplitCsv(localText);
+                    var instructions = new List<VmInstruction>(child.Children.Count);
+                    foreach (var instNode in child.Children)
+                    {
+                        if (instNode.Kind != "Inst")
+                        {
+                            throw new VmRuntimeException("VM001", "Func contains non-instruction child.", instNode.Id);
+                        }
+                        if (!instNode.Attrs.TryGetValue("op", out var opAttr) || opAttr.Kind != AosAttrKind.Identifier)
+                        {
+                            throw new VmRuntimeException("VM001", "Instruction missing op.", instNode.Id);
+                        }
+
+                        instructions.Add(new VmInstruction
+                        {
+                            Op = opAttr.AsString(),
+                            A = instNode.Attrs.TryGetValue("a", out var aAttr) && aAttr.Kind == AosAttrKind.Int ? aAttr.AsInt() : 0,
+                            B = instNode.Attrs.TryGetValue("b", out var bAttr) && bAttr.Kind == AosAttrKind.Int ? bAttr.AsInt() : 0,
+                            S = instNode.Attrs.TryGetValue("s", out var sAttr) && sAttr.Kind == AosAttrKind.String ? sAttr.AsString() : string.Empty
+                        });
+                    }
+
+                    functions.Add(new VmFunction
+                    {
+                        Name = name,
+                        Params = parameters,
+                        Locals = locals,
+                        Instructions = instructions
+                    });
+                    continue;
+                }
+
+                throw new VmRuntimeException("VM001", "Unsupported Bytecode section.", child.Id);
+            }
+
+            var functionIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < functions.Count; i++)
+            {
+                functionIndexByName[functions[i].Name] = i;
+            }
+
+            return new VmProgram
+            {
+                Constants = constants,
+                Functions = functions,
+                FunctionIndexByName = functionIndexByName
+            };
+        }
+
+        private static List<string> SplitCsv(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return new List<string>();
+            }
+
+            return text
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+    }
+
+    private sealed class VmCompileFunction
+    {
+        public required string Name { get; init; }
+        public required List<string> Parameters { get; init; }
+        public required List<string> Locals { get; init; }
+        public required List<AosNode> Instructions { get; init; }
+    }
+
+    private sealed class VmCompileContext
+    {
+        private readonly Dictionary<string, int> _constantIndex = new(StringComparer.Ordinal);
+        private readonly List<AosValue> _constants = new();
+        private readonly Dictionary<string, AosNode> _functions = new(StringComparer.Ordinal);
+        private readonly List<string> _functionOrder = new();
+        private int _instructionId;
+
+        public VmCompileContext(AosNode program, bool allowImportNodes)
+        {
+            Program = program;
+            AllowImportNodes = allowImportNodes;
+        }
+
+        public AosNode Program { get; }
+        public bool AllowImportNodes { get; }
+
+        public int AddConstant(AosValue value)
+        {
+            var key = VmConstantKey(value);
+            if (_constantIndex.TryGetValue(key, out var existing))
+            {
+                return existing;
+            }
+            var next = _constants.Count;
+            _constants.Add(value);
+            _constantIndex[key] = next;
+            return next;
+        }
+
+        public IReadOnlyList<AosValue> Constants => _constants;
+
+        public void DiscoverFunctions()
+        {
+            foreach (var child in Program.Children)
+            {
+                if (child.Kind != "Let")
+                {
+                    continue;
+                }
+                if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+                {
+                    continue;
+                }
+                if (child.Children.Count != 1 || child.Children[0].Kind != "Fn")
+                {
+                    continue;
+                }
+                var name = nameAttr.AsString();
+                _functions[name] = child.Children[0];
+            }
+
+            _functionOrder.Clear();
+            _functionOrder.Add("main");
+            foreach (var name in _functions.Keys.OrderBy(x => x, StringComparer.Ordinal))
+            {
+                _functionOrder.Add(name);
+            }
+        }
+
+        public IReadOnlyList<string> FunctionOrder => _functionOrder;
+
+        public AosNode? GetFunctionNode(string name)
+        {
+            return _functions.TryGetValue(name, out var fn) ? fn : null;
+        }
+
+        public AosNode BuildInstruction(string op, int? a = null, int? b = null, string? s = null)
+        {
+            return BuildVmInstruction(_instructionId++, op, a, b, s);
+        }
+    }
+
+    private sealed class VmFunctionCompileState
+    {
+        private readonly VmCompileContext _context;
+        private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
+        private readonly List<string> _locals = new();
+
+        public VmFunctionCompileState(VmCompileContext context, string functionName, List<string> parameters)
+        {
+            _context = context;
+            Name = functionName;
+            Parameters = parameters;
+            Instructions = new List<AosNode>();
+            for (var i = 0; i < parameters.Count; i++)
+            {
+                _slots[parameters[i]] = i;
+                _locals.Add(parameters[i]);
+            }
+        }
+
+        public string Name { get; }
+        public List<string> Parameters { get; }
+        public List<AosNode> Instructions { get; }
+        public IReadOnlyList<string> LocalNames => _locals;
+
+        public int EnsureSlot(string name)
+        {
+            if (_slots.TryGetValue(name, out var slot))
+            {
+                return slot;
+            }
+            slot = _locals.Count;
+            _slots[name] = slot;
+            _locals.Add(name);
+            return slot;
+        }
+
+        public bool TryGetSlot(string name, out int slot)
+        {
+            return _slots.TryGetValue(name, out slot);
+        }
+
+        public void Emit(string op, int? a = null, int? b = null, string? s = null)
+        {
+            Instructions.Add(_context.BuildInstruction(op, a, b, s));
+        }
+    }
+
+    private static class BytecodeCompiler
+    {
+        public static AosNode Compile(AosNode program, bool allowImportNodes = false)
+        {
+            if (program.Kind != "Program")
+            {
+                throw new VmRuntimeException("VM001", "compiler.emitBytecode expects Program node.", program.Id);
+            }
+
+            var context = new VmCompileContext(program, allowImportNodes);
+            context.DiscoverFunctions();
+            var compiled = new List<VmCompileFunction>();
+
+            foreach (var functionName in context.FunctionOrder)
+            {
+                if (functionName == "main")
+                {
+                    compiled.Add(CompileMain(context));
+                    continue;
+                }
+
+                var fnNode = context.GetFunctionNode(functionName);
+                if (fnNode is null)
+                {
+                    throw new VmRuntimeException("VM001", $"Function not found: {functionName}.", program.Id);
+                }
+                compiled.Add(CompileFunction(context, functionName, fnNode));
+            }
+
+            var children = new List<AosNode>();
+            for (var i = 0; i < context.Constants.Count; i++)
+            {
+                var constant = context.Constants[i];
+                var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal);
+                if (constant.Kind == AosValueKind.String)
+                {
+                    attrs["kind"] = new AosAttrValue(AosAttrKind.Identifier, "string");
+                    attrs["value"] = new AosAttrValue(AosAttrKind.String, constant.AsString());
+                }
+                else if (constant.Kind == AosValueKind.Int)
+                {
+                    attrs["kind"] = new AosAttrValue(AosAttrKind.Identifier, "int");
+                    attrs["value"] = new AosAttrValue(AosAttrKind.Int, constant.AsInt());
+                }
+                else if (constant.Kind == AosValueKind.Bool)
+                {
+                    attrs["kind"] = new AosAttrValue(AosAttrKind.Identifier, "bool");
+                    attrs["value"] = new AosAttrValue(AosAttrKind.Bool, constant.AsBool());
+                }
+                else
+                {
+                    attrs["kind"] = new AosAttrValue(AosAttrKind.Identifier, "null");
+                    attrs["value"] = new AosAttrValue(AosAttrKind.Identifier, "null");
+                }
+
+                children.Add(new AosNode(
+                    "Const",
+                    $"k{i}",
+                    attrs,
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+            }
+
+            foreach (var function in compiled)
+            {
+                children.Add(new AosNode(
+                    "Func",
+                    $"f_{function.Name}",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, function.Name),
+                        ["params"] = new AosAttrValue(AosAttrKind.String, string.Join(",", function.Parameters)),
+                        ["locals"] = new AosAttrValue(AosAttrKind.String, string.Join(",", function.Locals))
+                    },
+                    function.Instructions,
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+            }
+
+            return new AosNode(
+                "Bytecode",
+                "bc1",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["format"] = new AosAttrValue(AosAttrKind.String, "AiBC1"),
+                    ["version"] = new AosAttrValue(AosAttrKind.Int, 1)
+                },
+                children,
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+        }
+
+        private static VmCompileFunction CompileMain(VmCompileContext context)
+        {
+            var state = new VmFunctionCompileState(context, "main", new List<string> { "argv" });
+            foreach (var child in context.Program.Children)
+            {
+                if (child.Kind == "Let" &&
+                    child.Attrs.TryGetValue("name", out var letNameAttr) &&
+                    letNameAttr.Kind == AosAttrKind.Identifier &&
+                    child.Children.Count == 1 &&
+                    child.Children[0].Kind == "Fn")
+                {
+                    continue;
+                }
+
+                CompileStatement(context, state, child);
+            }
+
+            state.Emit("RETURN");
+            return new VmCompileFunction
+            {
+                Name = "main",
+                Parameters = state.Parameters,
+                Locals = state.LocalNames.ToList(),
+                Instructions = state.Instructions
+            };
+        }
+
+        private static VmCompileFunction CompileFunction(VmCompileContext context, string name, AosNode fnNode)
+        {
+            if (!fnNode.Attrs.TryGetValue("params", out var paramsAttr) || paramsAttr.Kind != AosAttrKind.Identifier)
+            {
+                throw new VmRuntimeException("VM001", "Fn missing params.", fnNode.Id);
+            }
+            if (fnNode.Children.Count != 1 || fnNode.Children[0].Kind != "Block")
+            {
+                throw new VmRuntimeException("VM001", "Fn body must be Block.", fnNode.Id);
+            }
+
+            var parameters = paramsAttr.AsString()
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+            var state = new VmFunctionCompileState(context, name, parameters);
+            CompileBlock(context, state, fnNode.Children[0], isRoot: true);
+            state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+            state.Emit("RETURN");
+
+            return new VmCompileFunction
+            {
+                Name = name,
+                Parameters = state.Parameters,
+                Locals = state.LocalNames.ToList(),
+                Instructions = state.Instructions
+            };
+        }
+
+        private static void CompileBlock(VmCompileContext context, VmFunctionCompileState state, AosNode block, bool isRoot)
+        {
+            if (block.Kind != "Block")
+            {
+                throw new VmRuntimeException("VM001", "Expected Block node.", block.Id);
+            }
+            foreach (var child in block.Children)
+            {
+                CompileStatement(context, state, child);
+            }
+            if (!isRoot)
+            {
+                state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+            }
+        }
+
+        private static void CompileStatement(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Kind == "Export")
+            {
+                return;
+            }
+
+            if (node.Kind == "Import")
+            {
+                if (context.AllowImportNodes)
+                {
+                    return;
+                }
+                throw new VmRuntimeException("VM001", "Unsupported construct in bytecode mode: Import.", node.Id);
+            }
+
+            if (node.Kind == "Let")
+            {
+                if (!node.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+                {
+                    throw new VmRuntimeException("VM001", "Let requires name.", node.Id);
+                }
+                if (node.Children.Count != 1)
+                {
+                    throw new VmRuntimeException("VM001", "Let requires exactly one child.", node.Id);
+                }
+                if (node.Children[0].Kind == "Fn")
+                {
+                    // top-level function declarations are handled separately.
+                    return;
+                }
+
+                CompileExpression(context, state, node.Children[0]);
+                var slot = state.EnsureSlot(nameAttr.AsString());
+                state.Emit("STORE_LOCAL", slot);
+                return;
+            }
+
+            if (node.Kind == "Return")
+            {
+                if (node.Children.Count == 0)
+                {
+                    state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+                }
+                else if (node.Children.Count == 1)
+                {
+                    CompileExpression(context, state, node.Children[0]);
+                }
+                else
+                {
+                    throw new VmRuntimeException("VM001", "Return supports at most one child.", node.Id);
+                }
+                state.Emit("RETURN");
+                return;
+            }
+
+            if (node.Kind == "If")
+            {
+                CompileIfStatement(context, state, node);
+                return;
+            }
+
+            CompileExpression(context, state, node);
+            state.Emit("POP");
+        }
+
+        private static void CompileIfStatement(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Children.Count < 2 || node.Children.Count > 3)
+            {
+                throw new VmRuntimeException("VM001", "If requires 2 or 3 children.", node.Id);
+            }
+
+            CompileExpression(context, state, node.Children[0]);
+            var jumpIfFalseIndex = state.Instructions.Count;
+            state.Emit("JUMP_IF_FALSE", 0);
+            CompileStatementOrBlock(context, state, node.Children[1]);
+            var jumpEndIndex = state.Instructions.Count;
+            state.Emit("JUMP", 0);
+            var elseStart = state.Instructions.Count;
+            if (node.Children.Count == 3)
+            {
+                CompileStatementOrBlock(context, state, node.Children[2]);
+            }
+            var end = state.Instructions.Count;
+            PatchJump(state.Instructions[jumpIfFalseIndex], elseStart);
+            PatchJump(state.Instructions[jumpEndIndex], end);
+        }
+
+        private static void CompileStatementOrBlock(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Kind == "Block")
+            {
+                foreach (var child in node.Children)
+                {
+                    CompileStatement(context, state, child);
+                }
+                return;
+            }
+            CompileStatement(context, state, node);
+        }
+
+        private static void CompileExpression(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            switch (node.Kind)
+            {
+                case "Var":
+                {
+                    if (!node.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+                    {
+                        throw new VmRuntimeException("VM001", "Var requires name.", node.Id);
+                    }
+                    if (!state.TryGetSlot(nameAttr.AsString(), out var slot))
+                    {
+                        throw new VmRuntimeException("VM001", $"Unsupported variable in bytecode mode: {nameAttr.AsString()}.", node.Id);
+                    }
+                    state.Emit("LOAD_LOCAL", slot);
+                    return;
+                }
+                case "Lit":
+                {
+                    if (!node.Attrs.TryGetValue("value", out var litAttr))
+                    {
+                        throw new VmRuntimeException("VM001", "Lit missing value.", node.Id);
+                    }
+                    var constIndex = litAttr.Kind switch
+                    {
+                        AosAttrKind.String => context.AddConstant(AosValue.FromString(litAttr.AsString())),
+                        AosAttrKind.Int => context.AddConstant(AosValue.FromInt(litAttr.AsInt())),
+                        AosAttrKind.Bool => context.AddConstant(AosValue.FromBool(litAttr.AsBool())),
+                        AosAttrKind.Identifier when litAttr.AsString() == "null" => context.AddConstant(AosValue.Unknown),
+                        _ => throw new VmRuntimeException("VM001", "Unsupported literal in bytecode mode.", node.Id)
+                    };
+                    state.Emit("CONST", constIndex);
+                    return;
+                }
+                case "Eq":
+                {
+                    if (node.Children.Count != 2)
+                    {
+                        throw new VmRuntimeException("VM001", "Eq expects 2 children.", node.Id);
+                    }
+                    CompileExpression(context, state, node.Children[0]);
+                    CompileExpression(context, state, node.Children[1]);
+                    state.Emit("EQ");
+                    return;
+                }
+                case "Add":
+                {
+                    if (node.Children.Count != 2)
+                    {
+                        throw new VmRuntimeException("VM001", "Add expects 2 children.", node.Id);
+                    }
+                    CompileExpression(context, state, node.Children[0]);
+                    CompileExpression(context, state, node.Children[1]);
+                    state.Emit("ADD_INT");
+                    return;
+                }
+                case "StrConcat":
+                {
+                    if (node.Children.Count != 2)
+                    {
+                        throw new VmRuntimeException("VM001", "StrConcat expects 2 children.", node.Id);
+                    }
+                    CompileExpression(context, state, node.Children[0]);
+                    CompileExpression(context, state, node.Children[1]);
+                    state.Emit("STR_CONCAT");
+                    return;
+                }
+                case "Call":
+                {
+                    if (!node.Attrs.TryGetValue("target", out var targetAttr) || targetAttr.Kind != AosAttrKind.Identifier)
+                    {
+                        throw new VmRuntimeException("VM001", "Call target missing.", node.Id);
+                    }
+                    foreach (var child in node.Children)
+                    {
+                        CompileExpression(context, state, child);
+                    }
+                    var target = targetAttr.AsString();
+                    var fnIndex = -1;
+                    for (var i = 0; i < context.FunctionOrder.Count; i++)
+                    {
+                        if (string.Equals(context.FunctionOrder[i], target, StringComparison.Ordinal))
+                        {
+                            fnIndex = i;
+                            break;
+                        }
+                    }
+                    if (fnIndex >= 0)
+                    {
+                        state.Emit("CALL", fnIndex, node.Children.Count);
+                    }
+                    else
+                    {
+                        state.Emit("CALL_SYS", node.Children.Count, null, target);
+                    }
+                    return;
+                }
+                case "If":
+                    CompileIfExpression(context, state, node);
+                    return;
+                case "Block":
+                    foreach (var child in node.Children)
+                    {
+                        CompileStatement(context, state, child);
+                    }
+                    state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+                    return;
+                default:
+                    throw new VmRuntimeException("VM001", $"Unsupported construct in bytecode mode: {node.Kind}.", node.Id);
+            }
+        }
+
+        private static void CompileIfExpression(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Children.Count < 2 || node.Children.Count > 3)
+            {
+                throw new VmRuntimeException("VM001", "If requires 2 or 3 children.", node.Id);
+            }
+
+            CompileExpression(context, state, node.Children[0]);
+            var jumpIfFalseIndex = state.Instructions.Count;
+            state.Emit("JUMP_IF_FALSE", 0);
+            CompileExpression(context, state, node.Children[1]);
+            var jumpEndIndex = state.Instructions.Count;
+            state.Emit("JUMP", 0);
+            var elseStart = state.Instructions.Count;
+            if (node.Children.Count == 3)
+            {
+                CompileExpression(context, state, node.Children[2]);
+            }
+            else
+            {
+                state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+            }
+            var end = state.Instructions.Count;
+            PatchJump(state.Instructions[jumpIfFalseIndex], elseStart);
+            PatchJump(state.Instructions[jumpEndIndex], end);
+        }
+
+        private static void PatchJump(AosNode instruction, int target)
+        {
+            instruction.Attrs["a"] = new AosAttrValue(AosAttrKind.Int, target);
+        }
+    }
+
+    private static class VmRunner
+    {
+        public static AosValue Run(AosInterpreter interpreter, AosRuntime runtime, VmProgram vm, string entryName, AosNode argsNode)
+        {
+            if (!vm.FunctionIndexByName.TryGetValue(entryName, out var entryIndex))
+            {
+                throw new VmRuntimeException("VM001", $"Entry function not found: {entryName}.", entryName);
+            }
+
+            var args = new List<AosValue>();
+            var entry = vm.Functions[entryIndex];
+            if (entry.Params.Count == 1 && string.Equals(entry.Params[0], "argv", StringComparison.Ordinal))
+            {
+                args.Add(AosValue.FromNode(argsNode));
+            }
+            else
+            {
+                foreach (var child in argsNode.Children)
+                {
+                    if (child.Kind == "Lit" && child.Attrs.TryGetValue("value", out var valueAttr))
+                    {
+                        args.Add(valueAttr.Kind switch
+                        {
+                            AosAttrKind.String => AosValue.FromString(valueAttr.AsString()),
+                            AosAttrKind.Int => AosValue.FromInt(valueAttr.AsInt()),
+                            AosAttrKind.Bool => AosValue.FromBool(valueAttr.AsBool()),
+                            AosAttrKind.Identifier when valueAttr.AsString() == "null" => AosValue.Unknown,
+                            _ => AosValue.Unknown
+                        });
+                        continue;
+                    }
+                    args.Add(AosValue.FromNode(child));
+                }
+            }
+
+            return ExecuteFunction(interpreter, runtime, vm, entryIndex, args);
+        }
+
+        private static AosValue ExecuteFunction(AosInterpreter interpreter, AosRuntime runtime, VmProgram vm, int functionIndex, List<AosValue> args)
+        {
+            if (functionIndex < 0 || functionIndex >= vm.Functions.Count)
+            {
+                throw new VmRuntimeException("VM001", "Invalid function index.", "vm");
+            }
+            var function = vm.Functions[functionIndex];
+            if (args.Count != function.Params.Count)
+            {
+                throw new VmRuntimeException("VM001", $"Arity mismatch for {function.Name}.", function.Name);
+            }
+
+            var locals = new AosValue[function.Locals.Count];
+            for (var i = 0; i < locals.Length; i++)
+            {
+                locals[i] = AosValue.Unknown;
+            }
+            for (var i = 0; i < function.Params.Count; i++)
+            {
+                locals[i] = args[i];
+            }
+
+            var stack = new List<AosValue>();
+            var pc = 0;
+            while (pc < function.Instructions.Count)
+            {
+                var inst = function.Instructions[pc];
+                switch (inst.Op)
+                {
+                    case "CONST":
+                        if (inst.A < 0 || inst.A >= vm.Constants.Count)
+                        {
+                            throw new VmRuntimeException("VM001", "Invalid CONST index.", function.Name);
+                        }
+                        stack.Add(vm.Constants[inst.A]);
+                        pc++;
+                        break;
+                    case "LOAD_LOCAL":
+                        if (inst.A < 0 || inst.A >= locals.Length)
+                        {
+                            throw new VmRuntimeException("VM001", "Invalid local slot.", function.Name);
+                        }
+                        stack.Add(locals[inst.A]);
+                        pc++;
+                        break;
+                    case "STORE_LOCAL":
+                        if (inst.A < 0 || inst.A >= locals.Length)
+                        {
+                            throw new VmRuntimeException("VM001", "Invalid local slot.", function.Name);
+                        }
+                        locals[inst.A] = Pop(stack, function.Name);
+                        pc++;
+                        break;
+                    case "POP":
+                        _ = Pop(stack, function.Name);
+                        pc++;
+                        break;
+                    case "EQ":
+                    {
+                        var right = Pop(stack, function.Name);
+                        var left = Pop(stack, function.Name);
+                        var equals = left.Kind == right.Kind && left.Kind switch
+                        {
+                            AosValueKind.String => left.AsString() == right.AsString(),
+                            AosValueKind.Int => left.AsInt() == right.AsInt(),
+                            AosValueKind.Bool => left.AsBool() == right.AsBool(),
+                            AosValueKind.Unknown => true,
+                            _ => false
+                        };
+                        stack.Add(AosValue.FromBool(equals));
+                        pc++;
+                        break;
+                    }
+                    case "ADD_INT":
+                    {
+                        var right = Pop(stack, function.Name);
+                        var left = Pop(stack, function.Name);
+                        if (left.Kind != AosValueKind.Int || right.Kind != AosValueKind.Int)
+                        {
+                            throw new VmRuntimeException("VM001", "ADD_INT requires int operands.", function.Name);
+                        }
+                        stack.Add(AosValue.FromInt(left.AsInt() + right.AsInt()));
+                        pc++;
+                        break;
+                    }
+                    case "STR_CONCAT":
+                    {
+                        var right = Pop(stack, function.Name);
+                        var left = Pop(stack, function.Name);
+                        if (left.Kind != AosValueKind.String || right.Kind != AosValueKind.String)
+                        {
+                            throw new VmRuntimeException("VM001", "STR_CONCAT requires string operands.", function.Name);
+                        }
+                        stack.Add(AosValue.FromString(left.AsString() + right.AsString()));
+                        pc++;
+                        break;
+                    }
+                    case "JUMP":
+                        pc = inst.A;
+                        break;
+                    case "JUMP_IF_FALSE":
+                    {
+                        var cond = Pop(stack, function.Name);
+                        if (cond.Kind != AosValueKind.Bool)
+                        {
+                            throw new VmRuntimeException("VM001", "JUMP_IF_FALSE requires bool.", function.Name);
+                        }
+                        pc = cond.AsBool() ? pc + 1 : inst.A;
+                        break;
+                    }
+                    case "CALL":
+                    {
+                        var argc = inst.B;
+                        var callArgs = PopArgs(stack, argc, function.Name);
+                        var result = ExecuteFunction(interpreter, runtime, vm, inst.A, callArgs);
+                        stack.Add(result);
+                        pc++;
+                        break;
+                    }
+                    case "CALL_SYS":
+                    {
+                        var argc = inst.A;
+                        var callArgs = PopArgs(stack, argc, function.Name);
+                        var result = ExecuteCall(interpreter, runtime, inst.S, callArgs);
+                        stack.Add(result);
+                        pc++;
+                        break;
+                    }
+                    case "RETURN":
+                        return stack.Count == 0 ? AosValue.Void : Pop(stack, function.Name);
+                    default:
+                        throw new VmRuntimeException("VM001", $"Unsupported opcode: {inst.Op}.", function.Name);
+                }
+            }
+
+            return AosValue.Void;
+        }
+
+        private static AosValue ExecuteCall(AosInterpreter interpreter, AosRuntime runtime, string target, List<AosValue> args)
+        {
+            var callNode = new AosNode(
+                "Call",
+                "vm_call",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["target"] = new AosAttrValue(AosAttrKind.Identifier, target)
+                },
+                args.Select(ToRuntimeNode).ToList(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+            var env = new Dictionary<string, AosValue>(runtime.Env, StringComparer.Ordinal);
+            var value = interpreter.EvalCall(callNode, runtime, env);
+            if (value.Kind == AosValueKind.Unknown)
+            {
+                throw new VmRuntimeException("VM001", $"Unsupported call target in bytecode mode: {target}.", target);
+            }
+            return value;
+        }
+
+        private static AosValue Pop(List<AosValue> stack, string nodeId)
+        {
+            if (stack.Count == 0)
+            {
+                throw new VmRuntimeException("VM001", "Stack underflow.", nodeId);
+            }
+            var index = stack.Count - 1;
+            var value = stack[index];
+            stack.RemoveAt(index);
+            return value;
+        }
+
+        private static List<AosValue> PopArgs(List<AosValue> stack, int argc, string nodeId)
+        {
+            if (argc < 0 || stack.Count < argc)
+            {
+                throw new VmRuntimeException("VM001", "Invalid call argument count.", nodeId);
+            }
+
+            var args = new List<AosValue>(argc);
+            for (var i = 0; i < argc; i++)
+            {
+                args.Add(Pop(stack, nodeId));
+            }
+            args.Reverse();
+            return args;
+        }
     }
 
     private sealed class ReturnSignal : Exception

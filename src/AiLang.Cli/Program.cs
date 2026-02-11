@@ -1,6 +1,4 @@
 using AiLang.Core;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 
 Environment.ExitCode = RunCli(args);
@@ -9,11 +7,30 @@ return;
 static int RunCli(string[] args)
 {
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
-    var filteredArgs = args.Where(a => !string.Equals(a, "--trace", StringComparison.Ordinal)).ToArray();
-
-    if (TryLoadEmbeddedBundle(out var embeddedBundleText))
+    string vmMode = "bytecode";
+    var filtered = new List<string>();
+    foreach (var arg in args)
     {
-        return RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled);
+        if (string.Equals(arg, "--trace", StringComparison.Ordinal))
+        {
+            continue;
+        }
+        if (arg.StartsWith("--vm=", StringComparison.Ordinal))
+        {
+            vmMode = arg["--vm=".Length..];
+            continue;
+        }
+
+        filtered.Add(arg);
+    }
+
+    var filteredArgs = filtered.ToArray();
+
+    if (TryLoadEmbeddedPayload(out var embeddedPayload, out var embeddedBytecodePayload))
+    {
+        return embeddedBytecodePayload
+            ? RunEmbeddedBytecode(embeddedPayload!, filteredArgs, traceEnabled)
+            : RunEmbeddedBundle(embeddedPayload!, filteredArgs, traceEnabled, vmMode);
     }
 
     if (filteredArgs.Length == 0)
@@ -32,7 +49,7 @@ static int RunCli(string[] args)
                 PrintUsage();
                 return 1;
             }
-            return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled);
+            return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled, vmMode);
         case "serve":
             if (filteredArgs.Length < 2)
             {
@@ -45,7 +62,7 @@ static int RunCli(string[] args)
                 return 1;
             }
 
-            return RunServe(filteredArgs[1], appArgs, port, traceEnabled);
+            return RunServe(filteredArgs[1], appArgs, port, traceEnabled, vmMode);
         default:
             PrintUsage();
             return 1;
@@ -70,28 +87,46 @@ static int RunRepl()
     return 0;
 }
 
-static int RunSource(string path, string[] argv, bool traceEnabled)
+static int RunSource(string path, string[] argv, bool traceEnabled, string vmMode)
 {
     try
     {
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: false, out var parseRoot, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
-        var interpreter = new AosInterpreter();
-        var execution = ExecuteCliProgram(interpreter, runtime!, parseRoot!);
-        var result = execution.Value;
+        var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
+        var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
+        var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
+                             suppressValue.Kind == AosValueKind.Bool &&
+                             suppressValue.AsBool();
+        if (!suppressOutput && TryGetProgramNode(runtime, out var programNode))
+        {
+            suppressOutput = IsLifecycleProgram(programNode!);
+        }
+
+        if (IsErrNode(result, out var errNode))
+        {
+            Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+
         if (traceEnabled)
         {
-            Console.WriteLine(FormatTrace("trace1", runtime!.TraceSteps));
+            Console.WriteLine(FormatTrace("trace1", traceSnapshot ?? runtime!.TraceSteps));
         }
-        else if (!execution.SuppressOutput)
+        else if (!suppressOutput)
         {
             Console.WriteLine(FormatOk("ok1", result));
         }
         return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (AosProcessExitException exit)
+    {
+        return exit.Code;
     }
     catch (Exception ex)
     {
@@ -100,113 +135,168 @@ static int RunSource(string path, string[] argv, bool traceEnabled)
     }
 }
 
-static int RunServe(string path, string[] argv, int port, bool traceEnabled)
+static int RunServe(string path, string[] argv, int port, bool traceEnabled, string vmMode)
 {
     try
     {
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, out var parseRoot, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
-        if (!HasExport(parseRoot!, "init") || !HasExport(parseRoot!, "update") ||
-            !HasFunctionBinding(runtime!, "init") || !HasFunctionBinding(runtime!, "update"))
+        runtime!.Permissions.Add("sys");
+        var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port));
+        if (IsErrNode(result, out var errNode))
         {
-            Console.WriteLine(FormatErr("err0", "HTTP001", "App must export init and update.", "app"));
-            return 1;
-        }
-
-        var interpreter = new AosInterpreter();
-        var state = InvokeNamedFunction(interpreter, runtime, "init", runtime.Env["argv"], traceName: "init");
-        if (IsErrNode(state, out var initErr))
-        {
-            Console.WriteLine(AosFormatter.Format(initErr!));
+            Console.WriteLine(AosFormatter.Format(errNode!));
             return 3;
         }
 
-        var listener = new TcpListener(IPAddress.Loopback, port);
-        listener.Start();
-        var commandExecutor = new ServeCommandExecutor();
-        var exitCode = 0;
-
-        while (true)
+        if (traceEnabled)
         {
-            using var client = listener.AcceptTcpClient();
-            using var stream = client.GetStream();
-
-            if (!CliHttpServe.TryReadHttpRequestLine(stream, out var method, out var requestPath))
-            {
-                CliHttpServe.WriteHttpResponse(stream, null);
-                continue;
-            }
-
-            if (traceEnabled)
-            {
-                runtime.TraceSteps.Clear();
-            }
-
-            var eventNode = CliHttpServe.CreateHttpRequestEvent(method, requestPath);
-
-            if (traceEnabled)
-            {
-                CliHttpServe.AppendEventDispatchTrace(runtime, eventNode);
-            }
-
-            var next = RuntimeDispatch(interpreter, runtime, AosValue.FromNode(eventNode), state);
-            if (IsErrNode(next, out var updateErr))
-            {
-                Console.WriteLine(AosFormatter.Format(updateErr!));
-                listener.Stop();
-                return 3;
-            }
-
-            commandExecutor.Reset();
-            if (TryUnpackLifecycleBlock(next, runtime, out var nextState, out var commands))
-            {
-                state = nextState;
-                foreach (var command in commands)
-                {
-                    if (traceEnabled)
-                    {
-                        CliHttpServe.AppendCommandExecuteTrace(runtime, command);
-                    }
-
-                    var commandExitCode = commandExecutor.Execute(command);
-                    if (commandExitCode is not null)
-                    {
-                        exitCode = commandExitCode.Value;
-                        break;
-                    }
-                }
-            }
-            else if (TryGetExitCode(next, out var immediateExit))
-            {
-                exitCode = immediateExit;
-            }
-            else
-            {
-                state = next;
-            }
-
-            CliHttpServe.WriteHttpResponse(stream, commandExecutor.HttpResponsePayload);
-            if (traceEnabled)
-            {
-                Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
-            }
-
-            if (exitCode != 0 || commandExecutor.ExitRequested)
-            {
-                listener.Stop();
-                return exitCode;
-            }
+            Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
         }
+        return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (AosProcessExitException exit)
+    {
+        return exit.Code;
     }
     catch (Exception ex)
     {
         Console.WriteLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
         return 3;
     }
+}
+
+static AosNode? LoadRuntimeKernel()
+{
+    var searchRoots = new[]
+    {
+        AppContext.BaseDirectory,
+        Directory.GetCurrentDirectory(),
+        Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
+        Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+    };
+
+    string? path = null;
+    foreach (var root in searchRoots)
+    {
+        var candidate = Path.Combine(root, "runtime.aos");
+        if (File.Exists(candidate))
+        {
+            path = candidate;
+            break;
+        }
+    }
+
+    if (path is null)
+    {
+        return null;
+    }
+
+    var parse = Parse(File.ReadAllText(path));
+    if (parse.Root is null || parse.Diagnostics.Count > 0)
+    {
+        return null;
+    }
+
+    return parse.Root.Kind == "Program" ? parse.Root : null;
+}
+
+static AosNode BuildKernelServeArgs(int port)
+{
+    var children = new List<AosNode>
+    {
+        new(
+            "Lit",
+            "karg0",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, "serve")
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg1",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.Int, port)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+    };
+
+    return new AosNode(
+        "Block",
+        "kargv",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+        children,
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+}
+
+static AosNode BuildKernelRunArgs()
+{
+    return new AosNode(
+        "Block",
+        "kargv_run",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+        new List<AosNode>
+        {
+            new(
+                "Lit",
+                "karg_run0",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["value"] = new AosAttrValue(AosAttrKind.String, "run")
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+        },
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+}
+
+static AosValue ExecuteRuntimeStart(AosRuntime runtime, AosNode kernelArgs)
+{
+    var runtimeKernel = LoadRuntimeKernel();
+    if (runtimeKernel is null)
+    {
+        throw new InvalidOperationException("runtime.aos not found.");
+    }
+
+    var interpreter = new AosInterpreter();
+    runtime.Permissions.Add("sys");
+    var kernelInit = interpreter.EvaluateProgram(runtimeKernel, runtime);
+    if (IsErrNode(kernelInit, out var kernelErr))
+    {
+        return AosValue.FromNode(kernelErr!);
+    }
+
+    runtime.Env["__kernel_args"] = AosValue.FromNode(kernelArgs);
+    var call = new AosNode(
+        "Call",
+        "kernel_call",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["target"] = new AosAttrValue(AosAttrKind.Identifier, "runtime.start")
+        },
+        new List<AosNode>
+        {
+            new(
+                "Var",
+                "kernel_args",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__kernel_args")
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+        },
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+    return interpreter.EvaluateExpression(call, runtime);
 }
 
 
@@ -215,6 +305,7 @@ static bool TryLoadProgramForExecution(
     bool traceEnabled,
     string[] argv,
     bool evaluateProgram,
+    string vmMode,
     out AosNode? program,
     out AosRuntime? runtime,
     out string errCode,
@@ -251,11 +342,16 @@ static bool TryLoadProgramForExecution(
     runtime.Permissions.Add("io");
     runtime.Permissions.Add("compiler");
     runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
-    runtime.TraceEnabled = traceEnabled;
+    runtime.TraceEnabled = false;
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
+    runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
+    runtime.ReadOnlyBindings.Add("__vm_mode");
+    runtime.Env["__program"] = AosValue.FromNode(parse.Root);
+    runtime.ReadOnlyBindings.Add("__program");
     var bootstrapInterpreter = new AosInterpreter();
-    AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
+    AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
+    runtime.TraceEnabled = traceEnabled;
 
     var envTypes = new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
     {
@@ -283,6 +379,8 @@ static bool TryLoadProgramForExecution(
             errNodeId = errNode.Attrs.TryGetValue("nodeId", out var nodeIdAttr) && nodeIdAttr.Kind == AosAttrKind.Identifier ? nodeIdAttr.AsString() : "unknown";
             return false;
         }
+        runtime.Env["__program_result"] = initResult;
+        runtime.ReadOnlyBindings.Add("__program_result");
     }
 
     program = parse.Root;
@@ -294,7 +392,7 @@ static AosParseResult Parse(string source)
     return AosExternalFrontend.Parse(source);
 }
 
-static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled)
+static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled, string vmMode)
 {
     try
     {
@@ -327,10 +425,13 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
+        var bundleVmMode = string.Equals(vmMode, "bytecode", StringComparison.Ordinal) ? "ast" : vmMode;
+        runtime.Env["__vm_mode"] = AosValue.FromString(bundleVmMode);
+        runtime.ReadOnlyBindings.Add("__vm_mode");
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
         var bootstrapInterpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
 
         var driverProgram = new AosNode(
             "Program",
@@ -366,8 +467,14 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
             return 3;
         }
 
-        var execution = ExecuteModuleEntry(bootstrapInterpreter, runtime, entryExport, exportValue, "__entryArgs");
-        var result = execution.Value;
+        runtime.Env["__program"] = AosValue.FromNode(driverProgram);
+        runtime.ReadOnlyBindings.Add("__program");
+        runtime.Env["__program_result"] = exportValue;
+        runtime.ReadOnlyBindings.Add("__program_result");
+        runtime.Env["__entryExport"] = AosValue.FromString(entryExport);
+        runtime.ReadOnlyBindings.Add("__entryExport");
+
+        var result = ExecuteRuntimeStart(runtime, BuildKernelRunArgs());
 
         if (IsErrNode(result, out var errNode))
         {
@@ -389,30 +496,85 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
     }
 }
 
-static bool TryLoadEmbeddedBundle(out string? bundleText)
+static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool traceEnabled)
 {
-    bundleText = null;
+    try
+    {
+        var parse = Parse(bytecodeText);
+        if (parse.Root is null || parse.Diagnostics.Count > 0)
+        {
+            var diagnostic = parse.Diagnostics.FirstOrDefault() ?? new AosDiagnostic("BND001", "Embedded bytecode parse failed.", "bundle", null);
+            Console.WriteLine(FormatErr("err1", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "bundle"));
+            return 3;
+        }
+
+        if (parse.Root.Kind != "Bytecode")
+        {
+            Console.WriteLine(FormatErr("err1", "BND005", "Embedded payload is not Bytecode.", parse.Root.Id));
+            return 3;
+        }
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("console");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.TraceEnabled = traceEnabled;
+        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.ReadOnlyBindings.Add("argv");
+
+        var interpreter = new AosInterpreter();
+        var result = interpreter.RunBytecode(parse.Root, "main", BuildArgvNode(cliArgs), runtime);
+        if (IsErrNode(result, out var errNode))
+        {
+            Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+
+        if (traceEnabled)
+        {
+            Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
+        }
+
+        return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(FormatErr("err1", "BND006", ex.Message, "bundle"));
+        return 3;
+    }
+}
+
+static bool TryLoadEmbeddedPayload(out string? payloadText, out bool isBytecodePayload)
+{
+    payloadText = null;
+    isBytecodePayload = false;
     var processPath = Environment.ProcessPath;
     if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
     {
         return false;
     }
 
-    var marker = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
+    var markerAst = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
+    var markerBytecode = Encoding.UTF8.GetBytes("\n--AIBUNDLE1:BYTECODE--\n");
     var bytes = File.ReadAllBytes(processPath);
-    var markerIndex = LastIndexOf(bytes, marker);
-    if (markerIndex < 0)
+    var astIndex = LastIndexOf(bytes, markerAst);
+    var bytecodeIndex = LastIndexOf(bytes, markerBytecode);
+    if (astIndex < 0 && bytecodeIndex < 0)
     {
         return false;
     }
 
+    var marker = astIndex >= bytecodeIndex ? markerAst : markerBytecode;
+    var markerIndex = astIndex >= bytecodeIndex ? astIndex : bytecodeIndex;
+    isBytecodePayload = astIndex < bytecodeIndex;
     var start = markerIndex + marker.Length;
     if (start >= bytes.Length)
     {
         return false;
     }
 
-    bundleText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
+    payloadText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
     return true;
 }
 
@@ -438,6 +600,7 @@ static int LastIndexOf(byte[] haystack, byte[] needle)
 
     return -1;
 }
+
 
 static bool TryGetBundleAttr(AosNode bundle, string key, out string value)
 {
@@ -466,358 +629,44 @@ static bool IsErrNode(AosValue value, out AosNode? errNode)
     return true;
 }
 
-static (AosValue Value, bool SuppressOutput) ExecuteCliProgram(AosInterpreter interpreter, AosRuntime runtime, AosNode program)
+static bool TryGetProgramNode(AosRuntime runtime, out AosNode? programNode)
 {
-    var programResult = interpreter.EvaluateProgram(program, runtime);
-    if (IsErrNode(programResult, out _))
-    {
-        return (programResult, false);
-    }
-
-    if (HasExport(program, "init") && HasExport(program, "update") &&
-        HasFunctionBinding(runtime, "init") && HasFunctionBinding(runtime, "update"))
-    {
-        var lifecycle = ExecuteLifecycle(interpreter, runtime, "argv");
-        return (lifecycle, true);
-    }
-
-    if (HasExport(program, "start") && HasFunctionBinding(runtime, "start"))
-    {
-        var startResult = InvokeNamedFunction(interpreter, runtime, "start", runtime.Env["argv"], traceName: null);
-        return (startResult, false);
-    }
-
-    return (programResult, false);
-}
-
-static (AosValue Value, bool SuppressOutput) ExecuteModuleEntry(
-    AosInterpreter interpreter,
-    AosRuntime runtime,
-    string entryExport,
-    AosValue exportValue,
-    string argBindingName)
-{
-    if (HasFunctionBinding(runtime, "init") && HasFunctionBinding(runtime, "update"))
-    {
-        var lifecycle = ExecuteLifecycle(interpreter, runtime, argBindingName);
-        return (lifecycle, true);
-    }
-
-    if (HasFunctionBinding(runtime, entryExport))
-    {
-        var args = runtime.Env.TryGetValue(argBindingName, out var argValue) ? argValue : AosValue.FromNode(BuildArgvNode(Array.Empty<string>()));
-        var callResult = InvokeNamedFunction(interpreter, runtime, entryExport, args, traceName: null);
-        return (callResult, false);
-    }
-
-    return (exportValue, false);
-}
-
-static AosValue ExecuteLifecycle(AosInterpreter interpreter, AosRuntime runtime, string argBindingName)
-{
-    if (!runtime.Env.TryGetValue(argBindingName, out var argValue))
-    {
-        argValue = AosValue.FromNode(BuildArgvNode(Array.Empty<string>()));
-    }
-
-    var state = InvokeNamedFunction(interpreter, runtime, "init", argValue, traceName: "init");
-    if (IsErrNode(state, out _))
-    {
-        return state;
-    }
-
-    var eventSource = CliAdapters.CreateEventSource(argValue);
-    ICommandExecutor commandExecutor = new CliCommandExecutor();
-
-    while (true)
-    {
-        var nextEvent = eventSource.NextEvent();
-        if (nextEvent is null)
-        {
-            break;
-        }
-
-        if (runtime.TraceEnabled)
-        {
-            runtime.TraceSteps.Add(new AosNode(
-                "Step",
-                "auto",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["kind"] = new AosAttrValue(AosAttrKind.String, "EventDispatch"),
-                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, nextEvent.Id)
-                },
-                new List<AosNode>(),
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-        }
-
-        var next = RuntimeDispatch(interpreter, runtime, AosValue.FromNode(nextEvent), state);
-        if (IsErrNode(next, out _))
-        {
-            return next;
-        }
-
-        if (TryUnpackLifecycleBlock(next, runtime, out var nextState, out var commands))
-        {
-            state = nextState;
-            foreach (var command in commands)
-            {
-                if (runtime.TraceEnabled)
-                {
-                    runtime.TraceSteps.Add(new AosNode(
-                        "Step",
-                        "auto",
-                        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                        {
-                            ["kind"] = new AosAttrValue(AosAttrKind.String, "CommandExecute"),
-                            ["nodeId"] = new AosAttrValue(AosAttrKind.String, command.Id)
-                        },
-                        new List<AosNode>(),
-                        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-                }
-
-                var commandExitCode = commandExecutor.Execute(command);
-                if (commandExitCode is not null)
-                {
-                    return AosValue.FromInt(commandExitCode.Value);
-                }
-            }
-
-            break;
-        }
-
-        if (TryGetExitCode(next, out var exitCode))
-        {
-            return AosValue.FromInt(exitCode);
-        }
-
-        state = next;
-        break;
-    }
-    return AosValue.Void;
-}
-
-static AosValue RuntimeDispatch(AosInterpreter interpreter, AosRuntime runtime, AosValue @event, AosValue state)
-{
-    return InvokeNamedFunction(interpreter, runtime, "update", state, @event, traceName: "update");
-}
-
-static AosValue InvokeNamedFunction(
-    AosInterpreter interpreter,
-    AosRuntime runtime,
-    string functionName,
-    AosValue arg0,
-    AosValue? arg1 = null,
-    string? traceName = null)
-{
-    var bindings = new List<(string Name, AosValue Value)> { ("__entry_arg0", arg0) };
-    if (arg1 is not null)
-    {
-        bindings.Add(("__entry_arg1", arg1));
-    }
-
-    var previous = new Dictionary<string, AosValue>(StringComparer.Ordinal);
-    foreach (var (name, value) in bindings)
-    {
-        if (runtime.Env.TryGetValue(name, out var prior))
-        {
-            previous[name] = prior;
-        }
-        runtime.Env[name] = value;
-    }
-
-    var callChildren = new List<AosNode>
-    {
-        new(
-            "Var",
-            "entry_arg0",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__entry_arg0")
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
-    };
-    if (arg1 is not null)
-    {
-        callChildren.Add(new AosNode(
-            "Var",
-            "entry_arg1",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__entry_arg1")
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-    }
-
-    var call = new AosNode(
-        "Call",
-        $"entry_call_{functionName}",
-        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-        {
-            ["target"] = new AosAttrValue(AosAttrKind.Identifier, functionName)
-        },
-        callChildren,
-        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-
-    AosValue result;
-    try
-    {
-        result = interpreter.EvaluateExpression(call, runtime);
-    }
-    finally
-    {
-        foreach (var (name, _) in bindings)
-        {
-            if (previous.TryGetValue(name, out var prior))
-            {
-                runtime.Env[name] = prior;
-            }
-            else
-            {
-                runtime.Env.Remove(name);
-            }
-        }
-    }
-
-    if (!string.IsNullOrEmpty(traceName) && runtime.TraceEnabled)
-    {
-        AppendLifecycleTraceStep(runtime, traceName!, result);
-    }
-    return result;
-}
-
-static void AppendLifecycleTraceStep(AosRuntime runtime, string functionName, AosValue value)
-{
-    var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-    {
-        ["kind"] = new AosAttrValue(AosAttrKind.String, "LifecycleCall"),
-        ["nodeId"] = new AosAttrValue(AosAttrKind.String, functionName),
-        ["returnKind"] = new AosAttrValue(AosAttrKind.String, value.Kind.ToString().ToLowerInvariant())
-    };
-    if (value.Kind == AosValueKind.String)
-    {
-        attrs["returnValue"] = new AosAttrValue(AosAttrKind.String, value.AsString());
-    }
-    else if (value.Kind == AosValueKind.Int)
-    {
-        attrs["returnValue"] = new AosAttrValue(AosAttrKind.Int, value.AsInt());
-    }
-    else if (value.Kind == AosValueKind.Bool)
-    {
-        attrs["returnValue"] = new AosAttrValue(AosAttrKind.Bool, value.AsBool());
-    }
-    else if (value.Kind == AosValueKind.Node)
-    {
-        attrs["returnNode"] = new AosAttrValue(AosAttrKind.String, $"{value.AsNode().Kind}#{value.AsNode().Id}");
-    }
-
-    runtime.TraceSteps.Add(new AosNode(
-        "Step",
-        "auto",
-        attrs,
-        new List<AosNode>(),
-        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-}
-
-static bool TryGetExitCode(AosValue value, out int exitCode)
-{
-    exitCode = 0;
-    if (value.Kind != AosValueKind.Node)
+    programNode = null;
+    if (!runtime.Env.TryGetValue("__program", out var programValue) || programValue.Kind != AosValueKind.Node)
     {
         return false;
     }
-    var node = value.AsNode();
-    if (node.Kind != "Command" || node.Id != "Exit")
-    {
-        return false;
-    }
-    if (!node.Attrs.TryGetValue("code", out var codeAttr) || codeAttr.Kind != AosAttrKind.Int)
-    {
-        return false;
-    }
-    exitCode = codeAttr.AsInt();
+    programNode = programValue.AsNode();
     return true;
 }
 
-static bool TryUnpackLifecycleBlock(AosValue value, AosRuntime runtime, out AosValue state, out List<AosNode> commands)
+static bool IsLifecycleProgram(AosNode program)
 {
-    state = AosValue.Void;
-    commands = new List<AosNode>();
-    if (value.Kind != AosValueKind.Node)
-    {
-        return false;
-    }
-
-    var node = value.AsNode();
-    if (node.Kind != "Block" || node.Children.Count == 0)
-    {
-        return false;
-    }
-
-    if (runtime.TraceEnabled)
-    {
-        runtime.TraceSteps.Add(new AosNode(
-            "Step",
-            "auto",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["kind"] = new AosAttrValue(AosAttrKind.String, node.Kind),
-                ["nodeId"] = new AosAttrValue(AosAttrKind.String, node.Id)
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-    }
-
-    state = NodeToValue(node.Children[0]);
-    for (var i = 1; i < node.Children.Count; i++)
-    {
-        if (node.Children[i].Kind == "Command")
-        {
-            commands.Add(node.Children[i]);
-        }
-    }
-
-    return true;
-}
-
-static AosValue NodeToValue(AosNode node)
-{
-    if (node.Kind == "Lit" && node.Attrs.TryGetValue("value", out var lit))
-    {
-        return lit.Kind switch
-        {
-            AosAttrKind.String => AosValue.FromString(lit.AsString()),
-            AosAttrKind.Int => AosValue.FromInt(lit.AsInt()),
-            AosAttrKind.Bool => AosValue.FromBool(lit.AsBool()),
-            _ => AosValue.FromNode(node)
-        };
-    }
-
-    return AosValue.FromNode(node);
-}
-
-static bool HasFunctionBinding(AosRuntime runtime, string name)
-    => runtime.Env.TryGetValue(name, out var value) && value.Kind == AosValueKind.Function;
-
-static bool HasExport(AosNode program, string exportName)
-{
+    var hasInit = false;
+    var hasUpdate = false;
     foreach (var child in program.Children)
     {
         if (child.Kind != "Export")
         {
             continue;
         }
-        if (child.Attrs.TryGetValue("name", out var nameAttr) &&
-            nameAttr.Kind == AosAttrKind.Identifier &&
-            string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
+        if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
         {
-            return true;
+            continue;
+        }
+
+        var name = nameAttr.AsString();
+        if (string.Equals(name, "init", StringComparison.Ordinal))
+        {
+            hasInit = true;
+        }
+        else if (string.Equals(name, "update", StringComparison.Ordinal))
+        {
+            hasUpdate = true;
         }
     }
 
-    return false;
+    return hasInit && hasUpdate;
 }
 
 static string FormatOk(string id, AosValue value)
@@ -878,7 +727,7 @@ static string FormatErr(string id, string code, string message, string nodeId)
 
 static void PrintUsage()
 {
-    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>]");
+    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast]");
 }
 
 static AosNode BuildArgvNode(string[] values)

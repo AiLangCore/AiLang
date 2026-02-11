@@ -3,6 +3,8 @@
 ############################################
 bin/
 obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 *.userosscache
@@ -12,6 +14,8 @@ obj/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+.artifacts/
+.tmp-aot/
 
 ############################################
 # Test results

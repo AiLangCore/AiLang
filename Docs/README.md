@@ -19,6 +19,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 
 - [Overview](./Overview.md)
 - [Getting Started](./Getting-Started.md)
+- [Host Boundary](./HOST_BOUNDARY.md)
 
 ## Hard Constraints
 
@@ -32,4 +33,4 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 Treat this repository as an AiLang project with:
 
 - Manifest: `../project.aiproj`
-- Entry compiler flow: `../compiler/aic.aos`
+- Entry compiler flow: `../src/compiler/aic.aos`

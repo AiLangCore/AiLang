@@ -4,6 +4,9 @@
 
 Provide deterministic, execution-focused documentation for AI agents operating this repository.
 
+This README is agent-oriented by design.
+The root `README.md` is human-oriented.
+
 ## Normative Source
 
 - `../SPEC/IL.md`
@@ -23,3 +26,10 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - Deterministic behavior and output.
 - No hidden side effects.
 - No semantic drift from `SPEC/`.
+
+## Project Root Contract
+
+Treat this repository as an AiLang project with:
+
+- Manifest: `../project.aiproj`
+- Entry compiler flow: `../compiler/aic.aos`

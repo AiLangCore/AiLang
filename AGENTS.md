@@ -58,3 +58,10 @@ A change is complete only if:
 
 - `SPEC/IL.md`, `SPEC/EVAL.md`, and `SPEC/VALIDATION.md` are language contracts.
 - Semantic changes must update spec docs and matching goldens in the same change.
+
+## Documentation policy
+
+- Root `README.md` is human-oriented.
+- `Docs/README.md` and files under `Docs/` are agent-oriented.
+- Agents should prefer `Docs/` + `SPEC/` for operational guidance.
+- This repository should be treated as an AiLang project with manifest `project.aiproj`.

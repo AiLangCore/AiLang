@@ -1,6 +1,17 @@
 # AiLang
 
-AiLang is a small experimental language with an AI-optimized syntax (AOS) and a REPL protocol based on explicit AST nodes. The core library provides a tokenizer, parser, validator, interpreter, patch ops, and a canonical formatter.
+AiLang is an AI-first language/runtime project using AI-Optimized Syntax (AOS) as its canonical representation.
+
+This root README is human-oriented.  
+For agent-focused operating docs, use `Docs/README.md`.
+
+## Project Identity
+
+This repository is itself an AiLang project.
+
+- Project manifest: `project.aiproj`
+- Compiler driver: `compiler/aic.aos`
+- Standard library: `std/*.aos`
 
 ## Quick Start
 

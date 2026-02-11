@@ -1,4 +1,11 @@
 using AiLang.Core;
+using System.Text;
+
+if (TryLoadEmbeddedBundle(out var embeddedBundleText))
+{
+    Environment.ExitCode = RunEmbeddedBundle(embeddedBundleText!, args);
+    return;
+}
 
 if (args.Length == 0)
 {
@@ -95,6 +102,198 @@ catch (Exception ex)
 static AosParseResult Parse(string source)
 {
     return AosExternalFrontend.Parse(source);
+}
+
+static int RunEmbeddedBundle(string bundleText, string[] cliArgs)
+{
+    try
+    {
+        var parse = Parse(bundleText);
+        if (parse.Root is null || parse.Diagnostics.Count > 0)
+        {
+            var diagnostic = parse.Diagnostics.FirstOrDefault() ?? new AosDiagnostic("BND001", "Embedded bundle parse failed.", "bundle", null);
+            Console.WriteLine(FormatErr("err1", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "bundle"));
+            return 3;
+        }
+
+        if (parse.Root.Kind != "Bundle")
+        {
+            Console.WriteLine(FormatErr("err1", "BND002", "Embedded payload is not a Bundle node.", parse.Root.Id));
+            return 3;
+        }
+
+        if (!TryGetBundleAttr(parse.Root, "entryFile", out var entryFile) ||
+            !TryGetBundleAttr(parse.Root, "entryExport", out var entryExport))
+        {
+            Console.WriteLine(FormatErr("err1", "BND003", "Bundle is missing required attributes.", parse.Root.Id));
+            return 3;
+        }
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("console");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+        runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
+        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.ReadOnlyBindings.Add("argv");
+        runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.ReadOnlyBindings.Add("__entryArgs");
+
+        var driverProgram = new AosNode(
+            "Program",
+            "embedded_program",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+            new List<AosNode>
+            {
+                new(
+                    "Import",
+                    "embedded_import",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["path"] = new AosAttrValue(AosAttrKind.String, entryFile)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+                new(
+                    "Var",
+                    "embedded_export",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, entryExport)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+            },
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+        var interpreter = new AosInterpreter();
+        var exportValue = interpreter.EvaluateProgram(driverProgram, runtime);
+        if (IsErrNode(exportValue, out var exportErr))
+        {
+            Console.WriteLine(AosFormatter.Format(exportErr!));
+            return 3;
+        }
+
+        AosValue result;
+        if (exportValue.Kind == AosValueKind.Function)
+        {
+            var call = new AosNode(
+                "Call",
+                "embedded_call",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["target"] = new AosAttrValue(AosAttrKind.Identifier, entryExport)
+                },
+                new List<AosNode>
+                {
+                    new(
+                        "Var",
+                        "embedded_args",
+                        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                        {
+                            ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__entryArgs")
+                        },
+                        new List<AosNode>(),
+                        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+                },
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+            result = interpreter.EvaluateExpression(call, runtime);
+        }
+        else
+        {
+            result = exportValue;
+        }
+
+        if (IsErrNode(result, out var errNode))
+        {
+            Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+
+        return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(FormatErr("err1", "BND004", ex.Message, "bundle"));
+        return 3;
+    }
+}
+
+static bool TryLoadEmbeddedBundle(out string? bundleText)
+{
+    bundleText = null;
+    var processPath = Environment.ProcessPath;
+    if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
+    {
+        return false;
+    }
+
+    var marker = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
+    var bytes = File.ReadAllBytes(processPath);
+    var markerIndex = LastIndexOf(bytes, marker);
+    if (markerIndex < 0)
+    {
+        return false;
+    }
+
+    var start = markerIndex + marker.Length;
+    if (start >= bytes.Length)
+    {
+        return false;
+    }
+
+    bundleText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
+    return true;
+}
+
+static int LastIndexOf(byte[] haystack, byte[] needle)
+{
+    for (var i = haystack.Length - needle.Length; i >= 0; i--)
+    {
+        var match = true;
+        for (var j = 0; j < needle.Length; j++)
+        {
+            if (haystack[i + j] != needle[j])
+            {
+                match = false;
+                break;
+            }
+        }
+
+        if (match)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static bool TryGetBundleAttr(AosNode bundle, string key, out string value)
+{
+    value = string.Empty;
+    if (!bundle.Attrs.TryGetValue(key, out var attr) || attr.Kind != AosAttrKind.String)
+    {
+        return false;
+    }
+    value = attr.AsString();
+    return !string.IsNullOrEmpty(value);
+}
+
+static bool IsErrNode(AosValue value, out AosNode? errNode)
+{
+    errNode = null;
+    if (value.Kind != AosValueKind.Node)
+    {
+        return false;
+    }
+    var node = value.AsNode();
+    if (node.Kind != "Err")
+    {
+        return false;
+    }
+    errNode = node;
+    return true;
 }
 
 static string FormatOk(string id, AosValue value)

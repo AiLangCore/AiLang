@@ -550,6 +550,7 @@ public sealed class AosInterpreter
             var publishDir = dirAttr.AsString();
             var projectName = projectNameValue.AsString();
             var bundlePath = Path.Combine(publishDir, $"{projectName}.aibundle");
+            var outputBinaryPath = Path.Combine(publishDir, projectName);
             var bundleText = bundleValue.Kind switch
             {
                 AosValueKind.Node => AosFormatter.Format(bundleValue.AsNode()),
@@ -570,7 +571,33 @@ public sealed class AosInterpreter
 
             try
             {
+                Directory.CreateDirectory(publishDir);
                 File.WriteAllText(bundlePath, bundleText);
+
+                var sourceBinary = ResolveHostBinaryPath();
+                if (sourceBinary is null)
+                {
+                    return AosValue.FromNode(CreateErrNode("publish_err", "PUB004", "host executable not found.", node.Id, node.Span));
+                }
+
+                File.Copy(sourceBinary, outputBinaryPath, overwrite: true);
+                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1--\n" + bundleText);
+                if (!OperatingSystem.IsWindows())
+                {
+                    try
+                    {
+                        File.SetUnixFileMode(
+                            outputBinaryPath,
+                            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                            UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                            UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                    }
+                    catch
+                    {
+                        // Best-effort on non-Unix platforms.
+                    }
+                }
+
                 return AosValue.FromInt(0);
             }
             catch (Exception ex)
@@ -1210,6 +1237,11 @@ public sealed class AosInterpreter
             else if (File.Exists(outPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(outPath));
+                if (testName == "publish_binary_runs")
+                {
+                    actual = ExecutePublishBinaryGolden(aicProgram, directory, source);
+                    goto compare_result;
+                }
                 var modeArgs = ResolveGoldenArgs(directory, testName, errorMode: false);
                 if (modeArgs is not null)
                 {
@@ -1229,6 +1261,7 @@ public sealed class AosInterpreter
                 continue;
             }
 
+        compare_result:
             if (actual == expected)
             {
                 Console.WriteLine($"PASS {testName}");
@@ -1276,6 +1309,7 @@ public sealed class AosInterpreter
         {
             return testName switch
             {
+                "publish_binary_runs" => new[] { "publish", Path.Combine(directory, "publish", "binary_runs") },
                 "publish_bundle_single_file" => new[] { "publish", Path.Combine(directory, "publish", "bundle_single_file") },
                 "publish_bundle_with_import" => new[] { "publish", Path.Combine(directory, "publish", "bundle_with_import") },
                 "publish_bundle_cycle_error" => new[] { "publish", Path.Combine(directory, "publish", "bundle_cycle_error") },
@@ -1293,6 +1327,37 @@ public sealed class AosInterpreter
         }
 
         return null;
+    }
+
+    private static string ExecutePublishBinaryGolden(AosNode aicProgram, string directory, string input)
+    {
+        var publishDir = Path.Combine(directory, "publish", "binary_runs");
+        var publishOutput = ExecuteAicMode(aicProgram, new[] { "publish", publishDir }, input);
+        var binaryPath = Path.Combine(publishDir, "binaryrun");
+        if (!File.Exists(binaryPath))
+        {
+            return publishOutput;
+        }
+
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = binaryPath,
+            Arguments = "alpha beta",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = publishDir
+        };
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process is null)
+        {
+            return "Err#err0(code=RUN001 message=\"Failed to execute published binary.\" nodeId=binary)";
+        }
+
+        var output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        _ = output;
+        return "binary-ok";
     }
 
     private static AosNode? LoadAicProgram()
@@ -1525,5 +1590,30 @@ public sealed class AosInterpreter
     private static AosValue CreateRuntimeErr(string code, string message, string nodeId, AosSpan span)
     {
         return AosValue.FromNode(CreateErrNode("runtime_err", code, message, nodeId, span));
+    }
+
+    private static string? ResolveHostBinaryPath()
+    {
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
+        {
+            return processPath;
+        }
+
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "airun"),
+            Path.Combine(Directory.GetCurrentDirectory(), "tools", "airun")
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }

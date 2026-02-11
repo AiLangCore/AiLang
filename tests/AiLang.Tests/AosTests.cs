@@ -68,6 +68,34 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_ReportsMissingAttribute()
+    {
+        var source = "Let#l1 { Lit#v1(value=1) }";
+        var parse = Parse(source);
+        var validator = new AosValidator();
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math" };
+        var result = validator.Validate(parse.Root!, null, permissions);
+        var diagnostic = result.Diagnostics.FirstOrDefault(d => d.Code == "VAL002");
+        Assert.That(diagnostic, Is.Not.Null);
+        Assert.That(diagnostic!.Message, Is.EqualTo("Missing attribute 'name'."));
+        Assert.That(diagnostic.NodeId, Is.EqualTo("l1"));
+    }
+
+    [Test]
+    public void Validator_ReportsDuplicateIds()
+    {
+        var source = "Program#p1 { Lit#dup(value=1) Lit#dup(value=2) }";
+        var parse = Parse(source);
+        var validator = new AosValidator();
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math" };
+        var result = validator.Validate(parse.Root!, null, permissions);
+        var diagnostic = result.Diagnostics.FirstOrDefault(d => d.Code == "VAL001");
+        Assert.That(diagnostic, Is.Not.Null);
+        Assert.That(diagnostic!.Message, Is.EqualTo("Duplicate node id 'dup'."));
+        Assert.That(diagnostic.NodeId, Is.EqualTo("dup"));
+    }
+
+    [Test]
     public void PatchOps_ReplaceAndInsert()
     {
         var program = Parse("Program#p1 { Let#l1(name=x) { Lit#v1(value=1) } }").Root!;
@@ -120,6 +148,45 @@ public class AosTests
         Assert.That(expected.All(name => names.Contains(name)), Is.True);
     }
 
+    [Test]
+    public void CompilerBuiltins_ParseAndValidateWork()
+    {
+        var source = "Program#p1 { Call#c1(target=compiler.validate) { Call#c2(target=compiler.parse) { Lit#s1(value=\"Program#p2 { Lit#l1(value=1) }\") } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, runtime.Permissions, runStructural: false);
+        Assert.That(validation.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var diags = value.AsNode();
+        Assert.That(diags.Kind, Is.EqualTo("Block"));
+        Assert.That(diags.Children.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Aic_Smoke_FmtCheckRun()
+    {
+        var aicPath = FindRepoFile("compiler/aic.aos");
+        var fmtInput = File.ReadAllText(FindRepoFile("examples/aic_fmt_input.aos"));
+        var checkInput = File.ReadAllText(FindRepoFile("examples/aic_check_bad.aos"));
+        var runInput = File.ReadAllText(FindRepoFile("examples/aic_run_input.aos"));
+
+        var fmtOutput = ExecuteAic(aicPath, "fmt", fmtInput);
+        Assert.That(fmtOutput, Is.EqualTo("Program#p1 { Let#l1(name=x) { Lit#v1(value=1) } }"));
+
+        var checkOutput = ExecuteAic(aicPath, "check", checkInput);
+        Assert.That(checkOutput.Contains("Err#diag0(code=VAL002"), Is.True);
+
+        var runOutput = ExecuteAic(aicPath, "run", runInput);
+        Assert.That(runOutput, Is.EqualTo("Ok#ok0(type=string value=\"hello from main\")"));
+    }
+
     private static AosParseResult Parse(string source)
     {
         var tokenizer = new AosTokenizer(source);
@@ -128,5 +195,82 @@ public class AosTests
         var result = parser.ParseSingle();
         result.Diagnostics.AddRange(tokenizer.Diagnostics);
         return result;
+    }
+
+    private static string ExecuteAic(string aicPath, string mode, string stdin)
+    {
+        var aicProgram = Parse(File.ReadAllText(aicPath)).Root!;
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(new[] { mode }));
+        runtime.ReadOnlyBindings.Add("argv");
+
+        var validator = new AosValidator();
+        var envTypes = new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
+        {
+            ["argv"] = AosValueKind.Node
+        };
+        var validation = validator.Validate(aicProgram, envTypes, runtime.Permissions, runStructural: false);
+        Assert.That(validation.Diagnostics, Is.Empty);
+
+        var oldIn = Console.In;
+        var oldOut = Console.Out;
+        var writer = new StringWriter();
+        try
+        {
+            Console.SetIn(new StringReader(stdin));
+            Console.SetOut(writer);
+            var interpreter = new AosInterpreter();
+            interpreter.EvaluateProgram(aicProgram, runtime);
+        }
+        finally
+        {
+            Console.SetIn(oldIn);
+            Console.SetOut(oldOut);
+        }
+
+        return writer.ToString();
+    }
+
+    private static AosNode BuildArgvNode(string[] values)
+    {
+        var children = new List<AosNode>(values.Length);
+        for (var i = 0; i < values.Length; i++)
+        {
+            children.Add(new AosNode(
+                "Lit",
+                $"argv{i}",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
+
+        return new AosNode(
+            "Block",
+            "argv",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+            children,
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+    }
+
+    private static string FindRepoFile(string relativePath)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new FileNotFoundException($"Could not find {relativePath} from {AppContext.BaseDirectory}");
     }
 }

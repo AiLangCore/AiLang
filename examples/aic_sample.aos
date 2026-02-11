@@ -1,0 +1,4 @@
+Program#p1 {
+  Let#l1(name=value) { Lit#v1(value=41) }
+  Call#c1(target=math.add) { Var#v2(name=value) Lit#v3(value=1) }
+}

@@ -1,0 +1,10 @@
+Program#p1 {
+  Call#c1(target=io.print) { Lit#s1(value="What is your name?") }
+  Let#l1(name=name) { Call#c2(target=io.readLine) }
+  Call#c3(target=io.print) {
+    StrConcat#sc1 {
+      Lit#s2(value="Hello, ")
+      Var#v1(name=name)
+    }
+  }
+}

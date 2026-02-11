@@ -1,0 +1,9 @@
+Program#p1 {
+  Let#l1(name=msg) { Lit#v1(value="hello from main") }
+  Let#l2(name=echo) {
+    Fn#f1(params=x) {
+      Block#b1 { Var#v2(name=x) }
+    }
+  }
+  Call#c1(target=echo) { Var#v3(name=msg) }
+}

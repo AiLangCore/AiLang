@@ -4,18 +4,31 @@ public sealed class AosRuntime
 {
     public Dictionary<string, AosValue> Env { get; } = new(StringComparer.Ordinal);
     public HashSet<string> Permissions { get; } = new(StringComparer.Ordinal) { "math" };
+    public HashSet<string> ReadOnlyBindings { get; } = new(StringComparer.Ordinal);
     public AosNode? Program { get; set; }
 }
 
 public sealed class AosInterpreter
 {
+    private bool _strictUnknown;
+    private int _evalDepth;
+    private const int MaxEvalDepth = 4096;
+
     public AosValue EvaluateProgram(AosNode program, AosRuntime runtime)
     {
+        _strictUnknown = false;
         return Evaluate(program, runtime, runtime.Env);
     }
 
     public AosValue EvaluateExpression(AosNode expr, AosRuntime runtime)
     {
+        _strictUnknown = false;
+        return Evaluate(expr, runtime, runtime.Env);
+    }
+
+    public AosValue EvaluateExpressionStrict(AosNode expr, AosRuntime runtime)
+    {
+        _strictUnknown = true;
         return Evaluate(expr, runtime, runtime.Env);
     }
 
@@ -33,6 +46,31 @@ public sealed class AosInterpreter
 
     private AosValue EvalNode(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
+        _evalDepth++;
+        if (_evalDepth > MaxEvalDepth)
+        {
+            throw new InvalidOperationException($"Evaluation depth exceeded at {node.Kind}#{node.Id}.");
+        }
+
+        try
+        {
+            var value = EvalCore(node, runtime, env);
+
+            if (_strictUnknown && value.Kind == AosValueKind.Unknown)
+            {
+                throw new InvalidOperationException($"Unknown value from node {node.Kind}#{node.Id}.");
+            }
+
+            return value;
+        }
+        finally
+        {
+            _evalDepth--;
+        }
+    }
+
+    private AosValue EvalCore(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
         switch (node.Kind)
         {
             case "Program":
@@ -47,12 +85,17 @@ public sealed class AosInterpreter
                 {
                     return AosValue.Unknown;
                 }
+                var name = nameAttr.AsString();
+                if (runtime.ReadOnlyBindings.Contains(name))
+                {
+                    throw new InvalidOperationException($"Cannot assign read-only binding '{name}'.");
+                }
                 if (node.Children.Count != 1)
                 {
                     return AosValue.Unknown;
                 }
                 var value = EvalNode(node.Children[0], runtime, env);
-                env[nameAttr.AsString()] = value;
+                env[name] = value;
                 return AosValue.Void;
             case "Var":
                 if (!node.Attrs.TryGetValue("name", out var varAttr) || varAttr.Kind != AosAttrKind.Identifier)
@@ -86,6 +129,14 @@ public sealed class AosInterpreter
                 return EvalStrConcat(node, runtime, env);
             case "StrEscape":
                 return EvalStrEscape(node, runtime, env);
+            case "MakeBlock":
+                return EvalMakeBlock(node, runtime, env);
+            case "AppendChild":
+                return EvalAppendChild(node, runtime, env);
+            case "MakeErr":
+                return EvalMakeErr(node, runtime, env);
+            case "MakeLitString":
+                return EvalMakeLitString(node, runtime, env);
             case "NodeKind":
                 return EvalNodeKind(node, runtime, env);
             case "NodeId":
@@ -188,6 +239,216 @@ public sealed class AosInterpreter
             }
             Console.WriteLine(arg.AsString());
             return AosValue.Void;
+        }
+
+        if (target == "io.print")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var value = EvalNode(node.Children[0], runtime, env);
+            if (value.Kind == AosValueKind.Unknown)
+            {
+                return AosValue.Unknown;
+            }
+
+            Console.WriteLine(ValueToDisplayString(value));
+            return AosValue.Void;
+        }
+
+        if (target == "io.write")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var value = EvalNode(node.Children[0], runtime, env);
+            if (value.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            Console.Write(value.AsString());
+            return AosValue.Void;
+        }
+
+        if (target == "io.readLine")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 0)
+            {
+                return AosValue.Unknown;
+            }
+
+            var line = Console.ReadLine();
+            return AosValue.FromString(line ?? string.Empty);
+        }
+
+        if (target == "io.readAllStdin")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 0)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(Console.In.ReadToEnd());
+        }
+
+        if (target == "io.readFile")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(File.ReadAllText(pathValue.AsString()));
+        }
+
+        if (target == "io.fileExists")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromBool(File.Exists(pathValue.AsString()));
+        }
+
+        if (target == "compiler.parse")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            if (text.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var tokenizer = new AosTokenizer(text.AsString());
+            var tokens = tokenizer.Tokenize();
+            var parser = new AosParser(tokens);
+            var parse = parser.ParseSingle();
+            parse.Diagnostics.AddRange(tokenizer.Diagnostics);
+
+            if (parse.Root is not null && parse.Diagnostics.Count == 0 && parse.Root.Kind == "Program")
+            {
+                return AosValue.FromNode(parse.Root);
+            }
+
+            var diagnostic = parse.Diagnostics.FirstOrDefault();
+            if (diagnostic is null && parse.Root is not null && parse.Root.Kind != "Program")
+            {
+                diagnostic = new AosDiagnostic("PAR001", "Expected Program root.", parse.Root.Id, parse.Root.Span);
+            }
+            diagnostic ??= new AosDiagnostic("PAR000", "Parse failed.", "unknown", null);
+            return AosValue.FromNode(CreateErrNode("parse_err", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "unknown", node.Span));
+        }
+
+        if (target == "compiler.format")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var input = EvalNode(node.Children[0], runtime, env);
+            if (input.Kind != AosValueKind.Node)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(AosFormatter.Format(input.AsNode()));
+        }
+
+        if (target == "compiler.validate")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var input = EvalNode(node.Children[0], runtime, env);
+            if (input.Kind != AosValueKind.Node)
+            {
+                return AosValue.Unknown;
+            }
+
+            var validator = new AosValidator();
+            var diagnostics = validator.Validate(input.AsNode(), null, runtime.Permissions, runStructural: false).Diagnostics;
+            return AosValue.FromNode(CreateDiagnosticsNode(diagnostics, node.Span));
+        }
+
+        if (target == "compiler.test")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var dirValue = EvalNode(node.Children[0], runtime, env);
+            if (dirValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromInt(RunGoldenTests(dirValue.AsString()));
         }
 
         if (!env.TryGetValue(target, out var functionValue))
@@ -330,6 +591,85 @@ public sealed class AosInterpreter
             return AosValue.Unknown;
         }
         return AosValue.FromString(EscapeString(value.AsString()));
+    }
+
+    private AosValue EvalMakeBlock(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 1)
+        {
+            return AosValue.Unknown;
+        }
+        var idValue = EvalNode(node.Children[0], runtime, env);
+        if (idValue.Kind != AosValueKind.String)
+        {
+            return AosValue.Unknown;
+        }
+        var result = new AosNode("Block", idValue.AsString(), new Dictionary<string, AosAttrValue>(StringComparer.Ordinal), new List<AosNode>(), node.Span);
+        return AosValue.FromNode(result);
+    }
+
+    private AosValue EvalAppendChild(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 2)
+        {
+            return AosValue.Unknown;
+        }
+        var parentValue = EvalNode(node.Children[0], runtime, env);
+        var childValue = EvalNode(node.Children[1], runtime, env);
+        if (parentValue.Kind != AosValueKind.Node || childValue.Kind != AosValueKind.Node)
+        {
+            return AosValue.Unknown;
+        }
+        var parent = parentValue.AsNode();
+        var child = childValue.AsNode();
+        var newAttrs = new Dictionary<string, AosAttrValue>(parent.Attrs, StringComparer.Ordinal);
+        var newChildren = new List<AosNode>(parent.Children) { child };
+        var result = new AosNode(parent.Kind, parent.Id, newAttrs, newChildren, parent.Span);
+        return AosValue.FromNode(result);
+    }
+
+    private AosValue EvalMakeErr(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 4)
+        {
+            return AosValue.Unknown;
+        }
+        var idValue = EvalNode(node.Children[0], runtime, env);
+        var codeValue = EvalNode(node.Children[1], runtime, env);
+        var messageValue = EvalNode(node.Children[2], runtime, env);
+        var nodeIdValue = EvalNode(node.Children[3], runtime, env);
+        if (idValue.Kind != AosValueKind.String || codeValue.Kind != AosValueKind.String || messageValue.Kind != AosValueKind.String || nodeIdValue.Kind != AosValueKind.String)
+        {
+            return AosValue.Unknown;
+        }
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["code"] = new AosAttrValue(AosAttrKind.Identifier, codeValue.AsString()),
+            ["message"] = new AosAttrValue(AosAttrKind.String, messageValue.AsString()),
+            ["nodeId"] = new AosAttrValue(AosAttrKind.Identifier, nodeIdValue.AsString())
+        };
+        var result = new AosNode("Err", idValue.AsString(), attrs, new List<AosNode>(), node.Span);
+        return AosValue.FromNode(result);
+    }
+
+    private AosValue EvalMakeLitString(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 2)
+        {
+            return AosValue.Unknown;
+        }
+        var idValue = EvalNode(node.Children[0], runtime, env);
+        var strValue = EvalNode(node.Children[1], runtime, env);
+        if (idValue.Kind != AosValueKind.String || strValue.Kind != AosValueKind.String)
+        {
+            return AosValue.Unknown;
+        }
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["value"] = new AosAttrValue(AosAttrKind.String, strValue.AsString())
+        };
+        var result = new AosNode("Lit", idValue.AsString(), attrs, new List<AosNode>(), node.Span);
+        return AosValue.FromNode(result);
     }
 
     private AosValue EvalNodeKind(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
@@ -525,6 +865,239 @@ public sealed class AosInterpreter
             }
         }
         return sb.ToString();
+    }
+
+    private static string ValueToDisplayString(AosValue value)
+    {
+        return value.Kind switch
+        {
+            AosValueKind.String => value.AsString(),
+            AosValueKind.Int => value.AsInt().ToString(),
+            AosValueKind.Bool => value.AsBool() ? "true" : "false",
+            AosValueKind.Void => "void",
+            AosValueKind.Node => $"{value.AsNode().Kind}#{value.AsNode().Id}",
+            AosValueKind.Function => "function",
+            _ => "unknown"
+        };
+    }
+
+    private static AosNode CreateErrNode(string id, string code, string message, string nodeId, AosSpan span)
+    {
+        return new AosNode(
+            "Err",
+            id,
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["code"] = new AosAttrValue(AosAttrKind.Identifier, code),
+                ["message"] = new AosAttrValue(AosAttrKind.String, message),
+                ["nodeId"] = new AosAttrValue(AosAttrKind.Identifier, nodeId)
+            },
+            new List<AosNode>(),
+            span);
+    }
+
+    private static AosNode CreateDiagnosticsNode(List<AosDiagnostic> diagnostics, AosSpan span)
+    {
+        var children = new List<AosNode>(diagnostics.Count);
+        for (var i = 0; i < diagnostics.Count; i++)
+        {
+            var diagnostic = diagnostics[i];
+            children.Add(CreateErrNode(
+                $"diag{i}",
+                diagnostic.Code,
+                diagnostic.Message,
+                diagnostic.NodeId ?? "unknown",
+                span));
+        }
+
+        return new AosNode(
+            "Block",
+            "diagnostics",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+            children,
+            span);
+    }
+
+    private static int RunGoldenTests(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            Console.WriteLine($"FAIL {directory} (directory not found)");
+            return 1;
+        }
+
+        var inputFiles = Directory.GetFiles(directory, "*.in.aos", SearchOption.TopDirectoryOnly)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        var failCount = 0;
+        foreach (var inputPath in inputFiles)
+        {
+            var stem = inputPath[..^".in.aos".Length];
+            var outPath = $"{stem}.out.aos";
+            var errPath = $"{stem}.err";
+            var testName = Path.GetFileName(stem);
+            var source = File.ReadAllText(inputPath);
+
+            string actual;
+            string expected;
+
+            if (File.Exists(errPath))
+            {
+                expected = NormalizeGoldenText(File.ReadAllText(errPath));
+                actual = ExecuteCheck(source);
+            }
+            else if (File.Exists(outPath))
+            {
+                expected = NormalizeGoldenText(File.ReadAllText(outPath));
+                var fmtActual = ExecuteFmt(source);
+                var runActual = ExecuteRun(source);
+                actual = expected == fmtActual ? fmtActual : runActual;
+            }
+            else
+            {
+                failCount++;
+                Console.WriteLine($"FAIL {testName}");
+                continue;
+            }
+
+            if (actual == expected)
+            {
+                Console.WriteLine($"PASS {testName}");
+            }
+            else
+            {
+                failCount++;
+                Console.WriteLine($"FAIL {testName}");
+            }
+        }
+
+        return failCount == 0 ? 0 : 1;
+    }
+
+    private static string NormalizeGoldenText(string value)
+    {
+        var normalized = value.Replace("\r\n", "\n", StringComparison.Ordinal);
+        while (normalized.EndsWith("\n", StringComparison.Ordinal))
+        {
+            normalized = normalized[..^1];
+        }
+        return normalized;
+    }
+
+    private static string ExecuteFmt(string source)
+    {
+        var parse = ParseSource(source);
+        if (parse.Root is null)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics.FirstOrDefault(), "PAR000");
+        }
+
+        if (parse.Diagnostics.Count > 0)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics[0], parse.Diagnostics[0].Code);
+        }
+
+        return AosFormatter.Format(parse.Root);
+    }
+
+    private static string ExecuteCheck(string source)
+    {
+        var parse = ParseSource(source);
+        if (parse.Root is null)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics.FirstOrDefault(), "PAR000");
+        }
+
+        if (parse.Diagnostics.Count > 0)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics[0], parse.Diagnostics[0].Code);
+        }
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math", "io", "compiler", "console" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root, null, permissions, runStructural: false);
+        if (validation.Diagnostics.Count == 0)
+        {
+            return "Ok#ok0(type=void)";
+        }
+
+        var first = validation.Diagnostics[0];
+        return AosFormatter.Format(CreateErrNode("diag0", first.Code, first.Message, first.NodeId ?? "unknown", parse.Root.Span));
+    }
+
+    private static string ExecuteRun(string source)
+    {
+        var parse = ParseSource(source);
+        if (parse.Root is null)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics.FirstOrDefault(), "PAR000");
+        }
+
+        if (parse.Diagnostics.Count > 0)
+        {
+            return FormatDiagnosticErr(parse.Diagnostics[0], parse.Diagnostics[0].Code);
+        }
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("console");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root, null, runtime.Permissions, runStructural: false);
+        if (validation.Diagnostics.Count > 0)
+        {
+            var first = validation.Diagnostics[0];
+            return AosFormatter.Format(CreateErrNode("diag0", first.Code, first.Message, first.NodeId ?? "unknown", parse.Root.Span));
+        }
+
+        var interpreter = new AosInterpreter();
+        var result = interpreter.EvaluateProgram(parse.Root, runtime);
+        return FormatOkValue(result, parse.Root.Span);
+    }
+
+    private static AosParseResult ParseSource(string source)
+    {
+        var tokenizer = new AosTokenizer(source);
+        var tokens = tokenizer.Tokenize();
+        var parser = new AosParser(tokens);
+        var parse = parser.ParseSingle();
+        parse.Diagnostics.AddRange(tokenizer.Diagnostics);
+        return parse;
+    }
+
+    private static string FormatDiagnosticErr(AosDiagnostic? diagnostic, string fallbackCode)
+    {
+        var code = diagnostic?.Code ?? fallbackCode;
+        var message = diagnostic?.Message ?? "Parse failed.";
+        var nodeId = diagnostic?.NodeId ?? "unknown";
+        var node = CreateErrNode("err0", code, message, nodeId, new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+        return AosFormatter.Format(node);
+    }
+
+    private static string FormatOkValue(AosValue value, AosSpan span)
+    {
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["type"] = new AosAttrValue(AosAttrKind.Identifier, value.Kind.ToString().ToLowerInvariant())
+        };
+
+        if (value.Kind == AosValueKind.String)
+        {
+            attrs["value"] = new AosAttrValue(AosAttrKind.String, value.AsString());
+        }
+        else if (value.Kind == AosValueKind.Int)
+        {
+            attrs["value"] = new AosAttrValue(AosAttrKind.Int, value.AsInt());
+        }
+        else if (value.Kind == AosValueKind.Bool)
+        {
+            attrs["value"] = new AosAttrValue(AosAttrKind.Bool, value.AsBool());
+        }
+
+        var ok = new AosNode("Ok", "ok0", attrs, new List<AosNode>(), span);
+        return AosFormatter.Format(ok);
     }
 
     private sealed class ReturnSignal : Exception

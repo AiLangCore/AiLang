@@ -1,0 +1,4 @@
+Program#p1 {
+  Let#l1(name=line) { Call#c1(target=io.readLine) }
+  Call#c2(target=io.print) { Var#v1(name=line) }
+}

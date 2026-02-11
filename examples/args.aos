@@ -1,0 +1,33 @@
+Program#p1 {
+  Let#l1(name=printArgs) {
+    Fn#f1(params=args,index,count) {
+      Block#b1 {
+        If#if1 {
+          Eq#e1 { Var#v1(name=index) Var#v2(name=count) }
+          Block#b2 { Return#r1 }
+          Block#b3 {
+            Call#c1(target=io.print) {
+              AttrValueString#avs1 {
+                ChildAt#ca1 { Var#v3(name=args) Var#v4(name=index) }
+                Lit#li1(value=0)
+              }
+            }
+            Return#r2 {
+              Call#c2(target=printArgs) {
+                Var#v5(name=args)
+                Add#a1 { Var#v6(name=index) Lit#li2(value=1) }
+                Var#v7(name=count)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Call#c3(target=printArgs) {
+    Var#v8(name=argv)
+    Lit#li3(value=0)
+    ChildCount#cc1 { Var#v9(name=argv) }
+  }
+}

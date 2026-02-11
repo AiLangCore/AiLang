@@ -17,6 +17,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>format.aos</Link>
     </Content>
+    <Content Include="..\..\compiler\validate.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>validate.aos</Link>
+    </Content>
   </ItemGroup>
 
 </Project>

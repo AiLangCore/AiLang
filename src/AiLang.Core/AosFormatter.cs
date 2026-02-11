@@ -11,7 +11,7 @@ public static class AosFormatter
         runtime.Permissions.Clear();
 
         var validator = new AosValidator();
-        var validation = validator.Validate(program, null, runtime.Permissions);
+        var validation = validator.Validate(program, null, runtime.Permissions, runStructural: false);
         if (validation.Diagnostics.Count > 0)
         {
             throw new InvalidOperationException($"Formatter validation failed: {validation.Diagnostics[0].Message}");

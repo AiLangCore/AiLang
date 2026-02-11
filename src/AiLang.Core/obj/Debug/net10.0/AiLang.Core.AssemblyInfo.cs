@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AiLang.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+17a791c6f4859790b9c1c0d3af19740cc946f77b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f63b4a2e1ea640ef4dfbd64154247d3dbe5db168")]
 [assembly: System.Reflection.AssemblyProductAttribute("AiLang.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AiLang.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -14,11 +14,26 @@ public sealed class AosValidator
 {
     private readonly List<AosDiagnostic> _diagnostics = new();
     private readonly HashSet<string> _ids = new(StringComparer.Ordinal);
+    private readonly AosStructuralValidator _structuralValidator = new();
 
     public AosValidationResult Validate(AosNode root, Dictionary<string, AosValueKind>? envTypes, HashSet<string> permissions)
+        => Validate(root, envTypes, permissions, runStructural: true);
+
+    public AosValidationResult Validate(AosNode root, Dictionary<string, AosValueKind>? envTypes, HashSet<string> permissions, bool runStructural)
     {
         _diagnostics.Clear();
         _ids.Clear();
+
+        if (runStructural)
+        {
+            var structural = _structuralValidator.Validate(root);
+            if (structural.Count > 0)
+            {
+                _diagnostics.AddRange(structural);
+                return new AosValidationResult(_diagnostics.ToList());
+            }
+        }
+
         var env = envTypes is null
             ? new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
             : new Dictionary<string, AosValueKind>(envTypes, StringComparer.Ordinal);
@@ -178,6 +193,41 @@ public sealed class AosValidator
                     }
                 }
                 return AosValueKind.String;
+            case "MakeBlock":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var idType = ValidateNode(node.Children[0], env, permissions);
+                    if (idType != AosValueKind.String && idType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL058", "MakeBlock expects string id.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Node;
+            case "AppendChild":
+                RequireChildren(node, 2, 2);
+                if (node.Children.Count == 2)
+                {
+                    var parentType = ValidateNode(node.Children[0], env, permissions);
+                    var childType = ValidateNode(node.Children[1], env, permissions);
+                    if (parentType != AosValueKind.Node && parentType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL059", "AppendChild expects node parent.", node.Id, node.Span));
+                    }
+                    if (childType != AosValueKind.Node && childType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL060", "AppendChild expects node child.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Node;
+            case "MakeErr":
+                RequireChildren(node, 4, 4);
+                ValidateChildrenAsStrings(node, env, permissions, "VAL061");
+                return AosValueKind.Node;
+            case "MakeLitString":
+                RequireChildren(node, 2, 2);
+                ValidateChildrenAsStrings(node, env, permissions, "VAL062");
+                return AosValueKind.Node;
             case "NodeKind":
             case "NodeId":
                 RequireChildren(node, 1, 1);
@@ -329,6 +379,134 @@ public sealed class AosValidator
             return AosValueKind.Void;
         }
 
+        if (target == "io.print")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL070", "io.print expects 1 argument.", node.Id, node.Span));
+            }
+            return AosValueKind.Void;
+        }
+
+        if (target == "io.write")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL072", "io.write expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL073", "io.write arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Void;
+        }
+
+        if (target == "io.readLine")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 0)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL071", "io.readLine expects 0 arguments.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
+        if (target == "io.readAllStdin")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 0)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL074", "io.readAllStdin expects 0 arguments.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
+        if (target == "io.readFile")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL081", "io.readFile expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL082", "io.readFile arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
+        if (target == "io.fileExists")
+        {
+            RequirePermission(node, "io", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL083", "io.fileExists expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL084", "io.fileExists arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Bool;
+        }
+
+        if (target == "compiler.parse")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL075", "compiler.parse expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL076", "compiler.parse arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
+        }
+
+        if (target == "compiler.format")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL077", "compiler.format expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL078", "compiler.format arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
+        if (target == "compiler.validate")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL079", "compiler.validate expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL080", "compiler.validate arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
+        }
+
+        if (target == "compiler.test")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL085", "compiler.test expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL086", "compiler.test arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Int;
+        }
+
         if (!target.Contains('.') && env.TryGetValue(target, out var fnType) && fnType == AosValueKind.Function)
         {
             return AosValueKind.Unknown;
@@ -377,6 +555,19 @@ public sealed class AosValidator
         if (indexType != AosValueKind.Int && indexType != AosValueKind.Unknown)
         {
             _diagnostics.Add(new AosDiagnostic(code, $"{node.Kind} expects int index as second child.", node.Id, node.Span));
+        }
+    }
+
+    private void ValidateChildrenAsStrings(AosNode node, Dictionary<string, AosValueKind> env, HashSet<string> permissions, string code)
+    {
+        foreach (var child in node.Children)
+        {
+            var valueType = ValidateNode(child, env, permissions);
+            if (valueType != AosValueKind.String && valueType != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic(code, $"{node.Kind} expects string arguments.", node.Id, node.Span));
+                return;
+            }
         }
     }
 

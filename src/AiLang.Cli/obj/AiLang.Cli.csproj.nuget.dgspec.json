@@ -8,7 +8,7 @@
       "version": "1.0.0",
       "restore": {
         "projectUniqueName": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/AiLang.Cli.csproj",
-        "projectName": "AiLang.Cli",
+        "projectName": "airun",
         "projectPath": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/AiLang.Cli.csproj",
         "packagesPath": "/Users/toddhenderson/.nuget/packages/",
         "outputPath": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/obj/",

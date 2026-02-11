@@ -22,6 +22,7 @@ public sealed class AosValidator
         var env = envTypes is null
             ? new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
             : new Dictionary<string, AosValueKind>(envTypes, StringComparer.Ordinal);
+        PredeclareFunctions(root, env);
         ValidateNode(root, env, permissions);
         return new AosValidationResult(_diagnostics.ToList());
     }
@@ -44,6 +45,12 @@ public sealed class AosValidator
             case "Let":
                 RequireAttr(node, "name");
                 RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1 && node.Children[0].Kind == "Fn" &&
+                    node.Attrs.TryGetValue("name", out var fnNameAttr) && fnNameAttr.Kind == AosAttrKind.Identifier)
+                {
+                    env[fnNameAttr.AsString()] = AosValueKind.Function;
+                }
+
                 var letType = node.Children.Count == 1 ? ValidateNode(node.Children[0], env, permissions) : AosValueKind.Unknown;
                 if (node.Attrs.TryGetValue("name", out var nameAttr) && nameAttr.Kind == AosAttrKind.Identifier)
                 {
@@ -80,7 +87,139 @@ public sealed class AosValidator
                 RequireAttr(node, "target");
                 var target = node.Attrs.TryGetValue("target", out var targetVal) ? targetVal.AsString() : string.Empty;
                 var argTypes = node.Children.Select(child => ValidateNode(child, env, permissions)).ToList();
-                return ValidateCall(node, target, argTypes, permissions);
+                return ValidateCall(node, target, argTypes, env, permissions);
+            case "Fn":
+                RequireAttr(node, "params");
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1 && node.Children[0].Kind != "Block")
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL050", "Fn body must be Block.", node.Id, node.Span));
+                }
+                if (node.Children.Count == 1)
+                {
+                    var fnEnv = new Dictionary<string, AosValueKind>(env, StringComparer.Ordinal);
+                    if (node.Attrs.TryGetValue("params", out var paramsAttr) && paramsAttr.Kind == AosAttrKind.Identifier)
+                    {
+                        var names = paramsAttr.AsString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        foreach (var name in names)
+                        {
+                            if (!string.IsNullOrWhiteSpace(name))
+                            {
+                                fnEnv[name] = AosValueKind.Unknown;
+                            }
+                        }
+                    }
+                    ValidateNode(node.Children[0], fnEnv, permissions);
+                }
+                return AosValueKind.Function;
+            case "Eq":
+                RequireChildren(node, 2, 2);
+                if (node.Children.Count == 2)
+                {
+                    var leftType = ValidateNode(node.Children[0], env, permissions);
+                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    if (leftType != rightType && leftType != AosValueKind.Unknown && rightType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL051", "Eq operands must have same type.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Bool;
+            case "Add":
+                RequireChildren(node, 2, 2);
+                if (node.Children.Count == 2)
+                {
+                    var leftType = ValidateNode(node.Children[0], env, permissions);
+                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    if (leftType != AosValueKind.Int && leftType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL052", "Add left operand must be int.", node.Id, node.Span));
+                    }
+                    if (rightType != AosValueKind.Int && rightType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL053", "Add right operand must be int.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Int;
+            case "ToString":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var valueType = ValidateNode(node.Children[0], env, permissions);
+                    if (valueType != AosValueKind.Int && valueType != AosValueKind.Bool && valueType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL054", "ToString expects int or bool.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.String;
+            case "StrConcat":
+                RequireChildren(node, 2, 2);
+                if (node.Children.Count == 2)
+                {
+                    var leftType = ValidateNode(node.Children[0], env, permissions);
+                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    if (leftType != AosValueKind.String && leftType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL055", "StrConcat left operand must be string.", node.Id, node.Span));
+                    }
+                    if (rightType != AosValueKind.String && rightType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL056", "StrConcat right operand must be string.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.String;
+            case "StrEscape":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var valueType = ValidateNode(node.Children[0], env, permissions);
+                    if (valueType != AosValueKind.String && valueType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL057", "StrEscape expects string.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.String;
+            case "NodeKind":
+            case "NodeId":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var nodeType = ValidateNode(node.Children[0], env, permissions);
+                    if (nodeType != AosValueKind.Node && nodeType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL060", $"{node.Kind} expects node.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.String;
+            case "AttrCount":
+            case "ChildCount":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var nodeType = ValidateNode(node.Children[0], env, permissions);
+                    if (nodeType != AosValueKind.Node && nodeType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL061", $"{node.Kind} expects node.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Int;
+            case "AttrKey":
+            case "AttrValueKind":
+            case "AttrValueString":
+                RequireChildren(node, 2, 2);
+                ValidateNodeChildPair(node, env, permissions, "VAL062");
+                return AosValueKind.String;
+            case "AttrValueInt":
+                RequireChildren(node, 2, 2);
+                ValidateNodeChildPair(node, env, permissions, "VAL063");
+                return AosValueKind.Int;
+            case "AttrValueBool":
+                RequireChildren(node, 2, 2);
+                ValidateNodeChildPair(node, env, permissions, "VAL064");
+                return AosValueKind.Bool;
+            case "ChildAt":
+                RequireChildren(node, 2, 2);
+                ValidateNodeChildPair(node, env, permissions, "VAL065");
+                return AosValueKind.Node;
             case "If":
                 RequireChildren(node, 2, 3);
                 if (node.Children.Count >= 1)
@@ -146,7 +285,7 @@ public sealed class AosValidator
         }
     }
 
-    private AosValueKind ValidateCall(AosNode node, string target, List<AosValueKind> argTypes, HashSet<string> permissions)
+    private AosValueKind ValidateCall(AosNode node, string target, List<AosValueKind> argTypes, Dictionary<string, AosValueKind> env, HashSet<string> permissions)
     {
         if (string.IsNullOrWhiteSpace(target))
         {
@@ -175,6 +314,7 @@ public sealed class AosValidator
             return AosValueKind.Int;
         }
 
+
         if (target == "console.print")
         {
             RequirePermission(node, "console", permissions);
@@ -187,6 +327,11 @@ public sealed class AosValidator
                 _diagnostics.Add(new AosDiagnostic("VAL035", "console.print arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Void;
+        }
+
+        if (!target.Contains('.') && env.TryGetValue(target, out var fnType) && fnType == AosValueKind.Function)
+        {
+            return AosValueKind.Unknown;
         }
 
         _diagnostics.Add(new AosDiagnostic("VAL036", $"Unknown call target '{target}'.", node.Id, node.Span));
@@ -214,6 +359,40 @@ public sealed class AosValidator
         if (!permissions.Contains(permission))
         {
             _diagnostics.Add(new AosDiagnostic("VAL040", $"Permission '{permission}' denied.", node.Id, node.Span));
+        }
+    }
+
+    private void ValidateNodeChildPair(AosNode node, Dictionary<string, AosValueKind> env, HashSet<string> permissions, string code)
+    {
+        if (node.Children.Count != 2)
+        {
+            return;
+        }
+        var targetType = ValidateNode(node.Children[0], env, permissions);
+        var indexType = ValidateNode(node.Children[1], env, permissions);
+        if (targetType != AosValueKind.Node && targetType != AosValueKind.Unknown)
+        {
+            _diagnostics.Add(new AosDiagnostic(code, $"{node.Kind} expects node as first child.", node.Id, node.Span));
+        }
+        if (indexType != AosValueKind.Int && indexType != AosValueKind.Unknown)
+        {
+            _diagnostics.Add(new AosDiagnostic(code, $"{node.Kind} expects int index as second child.", node.Id, node.Span));
+        }
+    }
+
+    private void PredeclareFunctions(AosNode node, Dictionary<string, AosValueKind> env)
+    {
+        if (node.Kind == "Let" && node.Children.Count == 1 && node.Children[0].Kind == "Fn")
+        {
+            if (node.Attrs.TryGetValue("name", out var nameAttr) && nameAttr.Kind == AosAttrKind.Identifier)
+            {
+                env[nameAttr.AsString()] = AosValueKind.Function;
+            }
+        }
+
+        foreach (var child in node.Children)
+        {
+            PredeclareFunctions(child, env);
         }
     }
 }

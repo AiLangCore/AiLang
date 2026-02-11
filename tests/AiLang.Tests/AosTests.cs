@@ -37,6 +37,26 @@ public class AosTests
     }
 
     [Test]
+    public void Formatter_ProducesCanonicalOutput()
+    {
+        var source = "Call#c1(target=console.print) { Lit#s1(value=\"hi\") }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+        var formatted = AosFormatter.Format(parse.Root!);
+        Assert.That(formatted, Is.EqualTo("Call#c1(target=console.print) { Lit#s1(value=\"hi\") }"));
+    }
+
+    [Test]
+    public void Formatter_SortsAttributesByKey()
+    {
+        var source = "Program#p1(z=1 a=2) { }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+        var formatted = AosFormatter.Format(parse.Root!);
+        Assert.That(formatted, Is.EqualTo("Program#p1(a=2 z=1)"));
+    }
+
+    [Test]
     public void Validator_DeniesConsolePermission()
     {
         var source = "Call#c1(target=console.print) { Lit#s1(value=\"hi\") }";
@@ -76,6 +96,28 @@ public class AosTests
         var evalResult = session.ExecuteLine(eval);
         Assert.That(evalResult.Contains("type=int"), Is.True);
         Assert.That(evalResult.Contains("value=5"), Is.True);
+    }
+
+    [Test]
+    public void Repl_HelpReturnsStructuredCommands()
+    {
+        var session = new AosReplSession();
+        var help = "Cmd#c1(name=help)";
+        var result = session.ExecuteLine(help);
+
+        var parse = Parse(result);
+        Assert.That(parse.Diagnostics, Is.Empty);
+        Assert.That(parse.Root, Is.Not.Null);
+
+        var ok = parse.Root!;
+        Assert.That(ok.Kind, Is.EqualTo("Ok"));
+        Assert.That(ok.Attrs["type"].AsString(), Is.EqualTo("void"));
+        Assert.That(ok.Children.Count, Is.EqualTo(5));
+        Assert.That(ok.Children.All(child => child.Kind == "Cmd"), Is.True);
+        var names = ok.Children.Select(child => child.Attrs["name"].AsString()).ToList();
+        var expected = new[] { "help", "setPerms", "load", "eval", "applyPatch" };
+        Assert.That(names.Count, Is.EqualTo(expected.Length));
+        Assert.That(expected.All(name => names.Contains(name)), Is.True);
     }
 
     private static AosParseResult Parse(string source)

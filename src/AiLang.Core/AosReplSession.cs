@@ -30,13 +30,33 @@ public sealed class AosReplSession
         var name = nameAttr.AsString();
         return name switch
         {
-            "help" => FormatOk(AosValue.FromString("Cmd(name=help|setPerms|load|eval|applyPatch)")),
+            "help" => HandleHelp(),
             "setPerms" => HandleSetPerms(cmd),
             "load" => HandleLoad(cmd),
             "eval" => HandleEval(cmd),
             "applyPatch" => HandlePatch(cmd),
             _ => FormatErr(new AosDiagnostic("REPL003", $"Unknown command '{name}'.", cmd.Id, cmd.Span), "REPL")
         };
+    }
+
+    private string HandleHelp()
+    {
+        var commands = new[] { "help", "setPerms", "load", "eval", "applyPatch" };
+        var children = new List<AosNode>();
+        foreach (var command in commands)
+        {
+            children.Add(new AosNode(
+                "Cmd",
+                NextId("cmd"),
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["name"] = new AosAttrValue(AosAttrKind.Identifier, command)
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
+
+        return FormatOk(AosValue.Void, children);
     }
 
     private string HandleSetPerms(AosNode cmd)
@@ -151,6 +171,11 @@ public sealed class AosReplSession
 
     private string FormatOk(AosValue value)
     {
+        return FormatOk(value, new List<AosNode>());
+    }
+
+    private string FormatOk(AosValue value, List<AosNode> children)
+    {
         var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
         {
             ["type"] = new AosAttrValue(AosAttrKind.Identifier, value.Kind.ToString().ToLowerInvariant())
@@ -169,7 +194,7 @@ public sealed class AosReplSession
             attrs["value"] = new AosAttrValue(AosAttrKind.Bool, value.AsBool());
         }
 
-        var node = new AosNode("Ok", NextId("ok"), attrs, new List<AosNode>(), new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+        var node = new AosNode("Ok", NextId("ok"), attrs, children, new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
         return AosFormatter.Format(node);
     }
 

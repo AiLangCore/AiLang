@@ -6,6 +6,8 @@ public enum AosValueKind
     Int,
     Bool,
     Void,
+    Node,
+    Function,
     Unknown
 }
 
@@ -13,14 +15,19 @@ public sealed record AosValue(AosValueKind Kind, object? Data)
 {
     public static readonly AosValue Void = new(AosValueKind.Void, null);
     public static readonly AosValue Unknown = new(AosValueKind.Unknown, null);
+    public static readonly AosValue NullNode = new(AosValueKind.Node, null);
 
     public static AosValue FromString(string value) => new(AosValueKind.String, value);
     public static AosValue FromInt(int value) => new(AosValueKind.Int, value);
     public static AosValue FromBool(bool value) => new(AosValueKind.Bool, value);
+    public static AosValue FromNode(AosNode node) => new(AosValueKind.Node, node);
+    public static AosValue FromFunction(AosFunction function) => new(AosValueKind.Function, function);
 
     public string AsString() => (string)Data!;
     public int AsInt() => (int)Data!;
     public bool AsBool() => (bool)Data!;
+    public AosNode AsNode() => (AosNode)Data!;
+    public AosFunction AsFunction() => (AosFunction)Data!;
 }
 
 public enum AosAttrKind
@@ -83,3 +90,17 @@ public sealed class AosNode
 }
 
 public sealed record AosDiagnostic(string Code, string Message, string? NodeId, AosSpan? Span);
+
+public sealed class AosFunction
+{
+    public AosFunction(List<string> parameters, AosNode body, Dictionary<string, AosValue> capturedEnv)
+    {
+        Parameters = parameters;
+        Body = body;
+        CapturedEnv = capturedEnv;
+    }
+
+    public List<string> Parameters { get; }
+    public AosNode Body { get; }
+    public Dictionary<string, AosValue> CapturedEnv { get; }
+}

@@ -1,91 +1,102 @@
-using System.Text;
-
 namespace AiLang.Core;
 
 public static class AosFormatter
 {
+    private static readonly Lazy<AosNode> FormatterProgram = new(LoadFormatterProgram);
+
     public static string Format(AosNode node)
     {
-        var sb = new StringBuilder();
-        WriteNode(sb, node);
-        return sb.ToString();
+        var program = FormatterProgram.Value;
+        var runtime = new AosRuntime();
+        runtime.Permissions.Clear();
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(program, null, runtime.Permissions);
+        if (validation.Diagnostics.Count > 0)
+        {
+            throw new InvalidOperationException($"Formatter validation failed: {validation.Diagnostics[0].Message}");
+        }
+
+        var interpreter = new AosInterpreter();
+        interpreter.EvaluateProgram(program, runtime);
+
+        runtime.Env["__input"] = AosValue.FromNode(node);
+        var callNode = new AosNode(
+            "Call",
+            "format_call",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["target"] = new AosAttrValue(AosAttrKind.Identifier, "format")
+            },
+            new List<AosNode>
+            {
+                new(
+                    "Var",
+                    "format_input",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__input")
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+            },
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+        var result = interpreter.EvaluateExpression(callNode, runtime);
+        if (result.Kind != AosValueKind.String)
+        {
+            throw new InvalidOperationException("Formatter did not return a string.");
+        }
+        return result.AsString();
     }
 
-    private static void WriteNode(StringBuilder sb, AosNode node)
+    private static AosNode LoadFormatterProgram()
     {
-        sb.Append(node.Kind);
-        sb.Append('#');
-        sb.Append(node.Id);
-
-        if (node.Attrs.Count > 0)
+        var searchRoots = new[]
         {
-            sb.Append('(');
-            var first = true;
-            foreach (var entry in node.Attrs.OrderBy(k => k.Key, StringComparer.Ordinal))
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+        };
+
+        string? path = null;
+        foreach (var root in searchRoots)
+        {
+            var candidate = Path.Combine(root, "format.aos");
+            if (File.Exists(candidate))
             {
-                if (!first)
-                {
-                    sb.Append(' ');
-                }
-                first = false;
-                sb.Append(entry.Key);
-                sb.Append('=');
-                WriteAttrValue(sb, entry.Value);
-            }
-            sb.Append(')');
-        }
-
-        if (node.Children.Count > 0)
-        {
-            sb.Append(" { ");
-            for (var i = 0; i < node.Children.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(' ');
-                }
-                WriteNode(sb, node.Children[i]);
-            }
-            sb.Append(" }");
-        }
-    }
-
-    private static void WriteAttrValue(StringBuilder sb, AosAttrValue value)
-    {
-        switch (value.Kind)
-        {
-            case AosAttrKind.String:
-                sb.Append('"');
-                sb.Append(Escape((string)value.Value));
-                sb.Append('"');
+                path = candidate;
                 break;
-            case AosAttrKind.Int:
-                sb.Append((int)value.Value);
-                break;
-            case AosAttrKind.Bool:
-                sb.Append(((bool)value.Value) ? "true" : "false");
-                break;
-            case AosAttrKind.Identifier:
-                sb.Append((string)value.Value);
-                break;
-        }
-    }
-
-    private static string Escape(string value)
-    {
-        var sb = new StringBuilder();
-        foreach (var ch in value)
-        {
-            switch (ch)
-            {
-                case '"': sb.Append("\\\""); break;
-                case '\\': sb.Append("\\\\"); break;
-                case '\n': sb.Append("\\n"); break;
-                case '\r': sb.Append("\\r"); break;
-                case '\t': sb.Append("\\t"); break;
-                default: sb.Append(ch); break;
             }
         }
-        return sb.ToString();
+
+        if (path is null)
+        {
+            throw new FileNotFoundException("format.aos not found.");
+        }
+
+        var source = File.ReadAllText(path);
+        var tokenizer = new AosTokenizer(source);
+        var tokens = tokenizer.Tokenize();
+        var parser = new AosParser(tokens);
+        var parse = parser.ParseSingle();
+        parse.Diagnostics.AddRange(tokenizer.Diagnostics);
+
+        if (parse.Root is null)
+        {
+            throw new InvalidOperationException("Failed to parse format.aos.");
+        }
+
+        if (parse.Root.Kind != "Program")
+        {
+            throw new InvalidOperationException("format.aos must contain a Program node.");
+        }
+
+        if (parse.Diagnostics.Count > 0)
+        {
+            throw new InvalidOperationException($"format.aos parse error: {parse.Diagnostics[0].Message}");
+        }
+
+        return parse.Root;
     }
 }

@@ -21,6 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\compiler\format.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>format.aos</Link>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AiLang.Core\AiLang.Core.csproj" />
   </ItemGroup>
 

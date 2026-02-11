@@ -6,4 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\compiler\format.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>format.aos</Link>
+    </Content>
+  </ItemGroup>
+
 </Project>

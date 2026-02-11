@@ -2,6 +2,8 @@
 
 AiLang is an AI-first language/runtime project using AI-Optimized Syntax (AOS) as its canonical representation.
 
+![AiLang](assets/AiLang.png)
+
 This root README is human-oriented.  
 For agent-focused operating docs, use `Docs/README.md`.
 

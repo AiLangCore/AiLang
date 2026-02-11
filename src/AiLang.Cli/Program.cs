@@ -1,20 +1,23 @@
 using AiLang.Core;
 using System.Text;
 
+var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
+var filteredArgs = args.Where(a => !string.Equals(a, "--trace", StringComparison.Ordinal)).ToArray();
+
 if (TryLoadEmbeddedBundle(out var embeddedBundleText))
 {
-    Environment.ExitCode = RunEmbeddedBundle(embeddedBundleText!, args);
+    Environment.ExitCode = RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled);
     return;
 }
 
-if (args.Length == 0)
+if (filteredArgs.Length == 0)
 {
     PrintUsage();
     Environment.ExitCode = 1;
     return;
 }
 
-if (args[0] == "repl")
+if (filteredArgs[0] == "repl")
 {
     var session = new AosReplSession();
     string? line;
@@ -31,14 +34,14 @@ if (args[0] == "repl")
     return;
 }
 
-if (args[0] != "run")
+if (filteredArgs[0] != "run")
 {
     PrintUsage();
     Environment.ExitCode = 1;
     return;
 }
 
-if (args.Length < 2)
+if (filteredArgs.Length < 2)
 {
     PrintUsage();
     Environment.ExitCode = 1;
@@ -47,8 +50,8 @@ if (args.Length < 2)
 
 try
 {
-    var source = File.ReadAllText(args[1]);
-    var argv = args.Skip(2).ToArray();
+    var source = File.ReadAllText(filteredArgs[1]);
+    var argv = filteredArgs.Skip(2).ToArray();
     var parse = Parse(source);
     if (parse.Root is null || parse.Diagnostics.Count > 0)
     {
@@ -69,7 +72,8 @@ try
     runtime.Permissions.Add("console");
     runtime.Permissions.Add("io");
     runtime.Permissions.Add("compiler");
-    runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(args[1])) ?? Directory.GetCurrentDirectory();
+    runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(filteredArgs[1])) ?? Directory.GetCurrentDirectory();
+    runtime.TraceEnabled = traceEnabled;
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
 
@@ -90,7 +94,14 @@ try
 
     var interpreter = new AosInterpreter();
     var result = interpreter.EvaluateProgram(parse.Root, runtime);
-    Console.WriteLine(FormatOk("ok1", result));
+    if (traceEnabled)
+    {
+        Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
+    }
+    else
+    {
+        Console.WriteLine(FormatOk("ok1", result));
+    }
     Environment.ExitCode = result.Kind == AosValueKind.Int ? result.AsInt() : 0;
 }
 catch (Exception ex)
@@ -104,7 +115,7 @@ static AosParseResult Parse(string source)
     return AosExternalFrontend.Parse(source);
 }
 
-static int RunEmbeddedBundle(string bundleText, string[] cliArgs)
+static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled)
 {
     try
     {
@@ -133,6 +144,7 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs)
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
+        runtime.TraceEnabled = traceEnabled;
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
@@ -208,6 +220,11 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs)
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
             return 3;
+        }
+
+        if (traceEnabled)
+        {
+            Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
         }
 
         return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
@@ -323,6 +340,17 @@ static string FormatOk(string id, AosValue value)
         new List<AosNode>(),
         new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
     return AosFormatter.Format(node);
+}
+
+static string FormatTrace(string id, List<AosNode> steps)
+{
+    var trace = new AosNode(
+        "Trace",
+        id,
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+        new List<AosNode>(steps),
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+    return AosFormatter.Format(trace);
 }
 
 static string FormatErr(string id, string code, string message, string nodeId)

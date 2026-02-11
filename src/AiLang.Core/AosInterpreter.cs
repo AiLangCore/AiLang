@@ -9,6 +9,8 @@ public sealed class AosRuntime
     public Dictionary<string, Dictionary<string, AosValue>> ModuleExports { get; } = new(StringComparer.Ordinal);
     public HashSet<string> ModuleLoading { get; } = new(StringComparer.Ordinal);
     public Stack<Dictionary<string, AosValue>> ExportScopes { get; } = new();
+    public bool TraceEnabled { get; set; }
+    public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
 }
 
@@ -50,6 +52,20 @@ public sealed class AosInterpreter
 
     private AosValue EvalNode(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
+        if (runtime.TraceEnabled)
+        {
+            runtime.TraceSteps.Add(new AosNode(
+                "Step",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["kind"] = new AosAttrValue(AosAttrKind.String, node.Kind),
+                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, node.Id)
+                },
+                new List<AosNode>(),
+                node.Span));
+        }
+
         _evalDepth++;
         if (_evalDepth > MaxEvalDepth)
         {
@@ -1237,6 +1253,11 @@ public sealed class AosInterpreter
             else if (File.Exists(outPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(outPath));
+                if (testName.StartsWith("trace_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteTraceGolden(source, testName);
+                    goto compare_result;
+                }
                 if (testName == "publish_binary_runs")
                 {
                     actual = ExecutePublishBinaryGolden(aicProgram, directory, source);
@@ -1327,6 +1348,60 @@ public sealed class AosInterpreter
         }
 
         return null;
+    }
+
+    private static string ExecuteTraceGolden(string source, string testName)
+    {
+        var hostBinary = ResolveHostBinaryPath();
+        if (hostBinary is null)
+        {
+            return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=trace)";
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-trace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "trace_input.aos");
+            File.WriteAllText(sourcePath, source);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostBinary,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory()
+            };
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add(sourcePath);
+            psi.ArgumentList.Add("--trace");
+            if (testName == "trace_with_args")
+            {
+                psi.ArgumentList.Add("alpha");
+                psi.ArgumentList.Add("beta");
+            }
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null)
+            {
+                return "Err#err0(code=RUN001 message=\"Failed to execute trace golden.\" nodeId=trace)";
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return NormalizeGoldenText(output);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     private static string ExecutePublishBinaryGolden(AosNode aicProgram, string directory, string input)

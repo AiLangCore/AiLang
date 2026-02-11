@@ -426,6 +426,28 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
+            var structural = new AosStructuralValidator();
+            var diagnostics = structural.Validate(input.AsNode());
+            return AosValue.FromNode(CreateDiagnosticsNode(diagnostics, node.Span));
+        }
+
+        if (target == "compiler.validateHost")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var input = EvalNode(node.Children[0], runtime, env);
+            if (input.Kind != AosValueKind.Node)
+            {
+                return AosValue.Unknown;
+            }
+
             var validator = new AosValidator();
             var diagnostics = validator.Validate(input.AsNode(), null, runtime.Permissions, runStructural: false).Diagnostics;
             return AosValue.FromNode(CreateDiagnosticsNode(diagnostics, node.Span));
@@ -926,6 +948,13 @@ public sealed class AosInterpreter
             return 1;
         }
 
+        var aicProgram = LoadAicProgram();
+        if (aicProgram is null)
+        {
+            Console.WriteLine("FAIL aic (compiler/aic.aos not found)");
+            return 1;
+        }
+
         var inputFiles = Directory.GetFiles(directory, "*.in.aos", SearchOption.TopDirectoryOnly)
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
@@ -945,13 +974,13 @@ public sealed class AosInterpreter
             if (File.Exists(errPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(errPath));
-                actual = ExecuteCheck(source);
+                actual = ExecuteAicMode(aicProgram, "check", source);
             }
             else if (File.Exists(outPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(outPath));
-                var fmtActual = ExecuteFmt(source);
-                var runActual = ExecuteRun(source);
+                var fmtActual = ExecuteAicMode(aicProgram, "fmt", source);
+                var runActual = ExecuteAicMode(aicProgram, "run", source);
                 actual = expected == fmtActual ? fmtActual : runActual;
             }
             else
@@ -973,6 +1002,87 @@ public sealed class AosInterpreter
         }
 
         return failCount == 0 ? 0 : 1;
+    }
+
+    private static string ExecuteAicMode(AosNode aicProgram, string mode, string input)
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+        runtime.Env["argv"] = BuildArgvNode(new[] { mode });
+        runtime.ReadOnlyBindings.Add("argv");
+
+        var oldIn = Console.In;
+        var oldOut = Console.Out;
+        var writer = new StringWriter();
+        try
+        {
+            Console.SetIn(new StringReader(input));
+            Console.SetOut(writer);
+            var interpreter = new AosInterpreter();
+            interpreter.EvaluateProgram(aicProgram, runtime);
+        }
+        finally
+        {
+            Console.SetIn(oldIn);
+            Console.SetOut(oldOut);
+        }
+
+        return NormalizeGoldenText(writer.ToString());
+    }
+
+    private static AosNode? LoadAicProgram()
+    {
+        var searchRoots = new[]
+        {
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+        };
+
+        string? path = null;
+        foreach (var root in searchRoots)
+        {
+            var candidate = Path.Combine(root, "aic.aos");
+            if (File.Exists(candidate))
+            {
+                path = candidate;
+                break;
+            }
+        }
+
+        if (path is null)
+        {
+            return null;
+        }
+
+        var parse = ParseSource(File.ReadAllText(path));
+        return parse.Root;
+    }
+
+    private static AosValue BuildArgvNode(string[] values)
+    {
+        var children = new List<AosNode>(values.Length);
+        for (var i = 0; i < values.Length; i++)
+        {
+            children.Add(new AosNode(
+                "Lit",
+                $"argv{i}",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
+
+        var argvNode = new AosNode(
+            "Block",
+            "argv",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+            children,
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+        return AosValue.FromNode(argvNode);
     }
 
     private static string NormalizeGoldenText(string value)

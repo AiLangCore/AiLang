@@ -1,0 +1,6 @@
+Program#p1 {
+  If#if1 {
+    Lit#c1(value=true)
+    Lit#x1(value=1)
+  }
+}

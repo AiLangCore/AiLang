@@ -1,0 +1,9 @@
+Program#p1 {
+  Let#l1(name=x) { Lit#v1(value=2) }
+  Let#l2(name=y) { Add#a1 { Var#v2(name=x) Lit#v3(value=5) } }
+  If#if1 {
+    Eq#e1 { Var#v4(name=y) Lit#v5(value=7) }
+    Block#b1 { StrConcat#s1 { Lit#v6(value="ok-") Lit#v7(value="yes") } }
+    Block#b2 { Lit#v8(value="bad") }
+  }
+}

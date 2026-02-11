@@ -4,11 +4,10 @@ AiLang is a small experimental language with an AI-optimized syntax (AOS) and a 
 
 ## Quick Start
 
-Build and run the REPL:
+Use the repo-local launcher:
 
 ```bash
-dotnet build AiLang.slnx
-./src/AiLang.Cli/bin/Debug/net10.0/airun repl
+./tools/airun repl
 ```
 
 Load a program and evaluate expressions:
@@ -35,7 +34,7 @@ Cmd#c9(name=setPerms allow=console,math)
 
 ```text
 Cmd#c1(name=help)
-Ok#ok1(type=string value="Cmd(name=help|setPerms|load|eval|applyPatch)")
+Ok#ok6(type=void) { Cmd#cmd1(name=help) Cmd#cmd2(name=setPerms) Cmd#cmd3(name=load) Cmd#cmd4(name=eval) Cmd#cmd5(name=applyPatch) }
 Cmd#c2(name=setPerms allow=console,math)
 Ok#ok2(type=void)
 Cmd#c3(name=load) { Program#p1 { Let#l1(name=message) { Lit#s1(value="hi") } Call#c1(target=console.print) { Var#v1(name=message) } } }
@@ -44,6 +43,26 @@ Cmd#c4(name=eval) { Call#c2(target=math.add) { Lit#a1(value=2) Lit#a2(value=3) }
 Ok#ok4(type=int value=5)
 ```
 
+## Testing
+
+Run golden tests without dotnet:
+
+```bash
+./scripts/test.sh
+```
+
+`scripts/test.sh` uses only `./tools/airun`; it does not invoke dotnet.
+
+## Build Launcher
+
+Rebuild `tools/airun` (NativeAOT, osx-arm64):
+
+```bash
+./scripts/build-airun.sh
+```
+
+Dotnet is only required for `scripts/build-airun.sh`.
+
 ## Examples
 
-See `examples/hello.aos` for a full program using `console.print`.
+See `examples/hello.aos` for a full program using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.

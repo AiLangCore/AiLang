@@ -493,6 +493,20 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
+        if (target == "compiler.validateHost")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL087", "compiler.validateHost expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL088", "compiler.validateHost arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
+        }
+
         if (target == "compiler.test")
         {
             RequirePermission(node, "compiler", permissions);

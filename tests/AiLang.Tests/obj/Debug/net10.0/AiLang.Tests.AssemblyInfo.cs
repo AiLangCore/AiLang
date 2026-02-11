@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AiLang.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f63b4a2e1ea640ef4dfbd64154247d3dbe5db168")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+87a88ec379217bb816a92ddcf0b6243dce7364b5")]
 [assembly: System.Reflection.AssemblyProductAttribute("AiLang.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AiLang.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

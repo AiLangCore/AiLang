@@ -9,7 +9,7 @@ Program#aic_p1 {
           Block#aic_b3 {
             If#aic_if2 {
               Eq#aic_e2 { Var#aic_v3(name=cmd) Lit#aic_i3(value="check") }
-              Block#aic_b4 { Return#aic_r2 { Call#aic_c3(target=runCheck) { Lit#aic_i4(value=0) } } }
+              Block#aic_b4 { Return#aic_r2 { Call#aic_c3(target=runCheck) { Var#aic_v3200(name=args) } } }
               Block#aic_b5 {
                 If#aic_if3 {
                   Eq#aic_e3 { Var#aic_v4(name=cmd) Lit#aic_i5(value="run") }
@@ -110,9 +110,10 @@ Program#aic_p1 {
   }
 
   Let#aic_l40(name=runCheck) {
-    Fn#aic_f40(params=_) {
+    Fn#aic_f40(params=args) {
       Block#aic_b40 {
         Let#aic_l41(name=parsed) { Call#aic_c40(target=readAndParse) { Lit#aic_i40(value=0) } }
+        Let#aic_l410(name=mode) { Call#aic_c401(target=readArg) { Var#aic_v401(name=args) Lit#aic_i401(value=1) } }
         If#aic_if40 {
           Eq#aic_e40 { NodeKind#aic_nk40 { Var#aic_v40(name=parsed) } Lit#aic_i41(value="Err") }
           Block#aic_b41 {
@@ -120,7 +121,13 @@ Program#aic_p1 {
             Return#aic_r40
           }
           Block#aic_b42 {
-            Let#aic_l42(name=diags) { Call#aic_c43(target=compiler.validate) { Var#aic_v42(name=parsed) } }
+            Let#aic_l42(name=diags) {
+              If#aic_if401 {
+                Eq#aic_e401 { Var#aic_v402(name=mode) Lit#aic_i402(value="host") }
+                Block#aic_b402 { Call#aic_c402(target=compiler.validateHost) { Var#aic_v403(name=parsed) } }
+                Block#aic_b403 { Call#aic_c43(target=compiler.validate) { Var#aic_v42(name=parsed) } }
+              }
+            }
             If#aic_if41 {
               Eq#aic_e41 { ChildCount#aic_cc41 { Var#aic_v43(name=diags) } Lit#aic_i42(value=0) }
               Block#aic_b43 {
@@ -344,6 +351,46 @@ Program#aic_p1 {
     }
   }
 
+  Let#aic_l91__2(name=makeStringLit) {
+    Fn#aic_f91(params=env,text) {
+      Block#aic_b901 {
+        Let#aic_l901(name=i) { ChildCount#aic_cc901 { Var#aic_v901(name=env) } }
+        Let#aic_l902(name=id) { StrConcat#aic_sc901 { Lit#aic_i901(value="s") ToString#aic_ts901 { Var#aic_v902(name=i) } } }
+        Return#aic_r901 { MakeLitString#aic_mls901 { Var#aic_v903(name=id) Var#aic_v904(name=text) } }
+      }
+    }
+  }
+
+  Let#aic_l92(name=makeBoolLit) {
+    Fn#aic_f92(params=b) {
+      Block#aic_b902 {
+        Let#aic_l903(name=p) {
+          If#aic_if902 {
+            Var#aic_v905(name=b)
+            Block#aic_b903 { Call#aic_c902(target=compiler.parse) { Lit#aic_i902(value="Program#bp1 { Lit#bv1(value=true) }") } }
+            Block#aic_b904 { Call#aic_c903(target=compiler.parse) { Lit#aic_i903(value="Program#bp0 { Lit#bv0(value=false) }") } }
+          }
+        }
+        Return#aic_r902 { ChildAt#aic_ca902 { Var#aic_v906(name=p) Lit#aic_i904(value=0) } }
+      }
+    }
+  }
+
+  Let#aic_l93(name=makeIntLit) {
+    Fn#aic_f93(params=n) {
+      Block#aic_b905 {
+        Let#aic_l904(name=src) {
+          StrConcat#aic_sc902 {
+            Lit#aic_i905(value="Program#ip { Lit#iv(value=")
+            StrConcat#aic_sc903 { ToString#aic_ts902 { Var#aic_v907(name=n) } Lit#aic_i906(value=") }") }
+          }
+        }
+        Let#aic_l905(name=p) { Call#aic_c904(target=compiler.parse) { Var#aic_v908(name=src) } }
+        Return#aic_r903 { ChildAt#aic_ca903 { Var#aic_v909(name=p) Lit#aic_i907(value=0) } }
+      }
+    }
+  }
+
   Let#aic_l100(name=emitOkFromValue) {
     Fn#aic_f100(params=value) {
       Block#aic_b101 {
@@ -436,7 +483,31 @@ Program#aic_p1 {
                                 If#aic_if116 {
                                   Eq#aic_e116 { Var#aic_v137(name=kind) Lit#aic_i114(value="Fn") }
                                   Block#aic_b125 { Return#aic_r116 { Call#aic_c78(target=makeState) { Call#aic_c79(target=makeClosure) { Var#aic_v138(name=node) Var#aic_v139(name=env) } Var#aic_v140(name=env) } } }
-                                  Block#aic_b126 { Return#aic_r117 { Call#aic_c80(target=makeState) { MakeErr#aic_me110 { Lit#aic_i115(value="err_eval") Lit#aic_i116(value="RUN010") Lit#aic_i117(value="Unsupported node kind.") NodeId#aic_nid110 { Var#aic_v141(name=node) } } Var#aic_v142(name=env) } } }
+                                  Block#aic_b126 {
+                                    If#aic_if117 {
+                                      Eq#aic_e117 { Var#aic_v141(name=kind) Lit#aic_i115(value="If") }
+                                      Block#aic_b1270 { Return#aic_r117 { Call#aic_c80(target=evalIfExpr) { Var#aic_v142(name=node) Var#aic_v143(name=env) } } }
+                                      Block#aic_b1271 {
+                                        If#aic_if118 {
+                                          Eq#aic_e118 { Var#aic_v144(name=kind) Lit#aic_i116(value="Eq") }
+                                          Block#aic_b1272 { Return#aic_r118 { Call#aic_c81(target=evalEqExpr) { Var#aic_v145(name=node) Var#aic_v146(name=env) } } }
+                                          Block#aic_b1273 {
+                                            If#aic_if119 {
+                                              Eq#aic_e119 { Var#aic_v147(name=kind) Lit#aic_i117(value="StrConcat") }
+                                              Block#aic_b1274 { Return#aic_r119 { Call#aic_c82(target=evalStrConcatExpr) { Var#aic_v148(name=node) Var#aic_v149(name=env) } } }
+                                              Block#aic_b1275 {
+                                                If#aic_if1200 {
+                                                  Eq#aic_e1200 { Var#aic_v150(name=kind) Lit#aic_i118(value="Add") }
+                                                  Block#aic_b1276 { Return#aic_r120 { Call#aic_c83(target=evalAddExpr) { Var#aic_v151(name=node) Var#aic_v152(name=env) } } }
+                                                  Block#aic_b1277 { Return#aic_r121 { Call#aic_c84(target=makeState) { MakeErr#aic_me110 { Lit#aic_i119(value="err_eval") Lit#aic_i120(value="RUN010") Lit#aic_i121(value="Unsupported node kind.") NodeId#aic_nid110 { Var#aic_v153(name=node) } } Var#aic_v154(name=env) } } }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
                                 }
                               }
                             }
@@ -458,16 +529,16 @@ Program#aic_p1 {
     Fn#aic_f120(params=node,env,index,last) {
       Block#aic_b127 {
         If#aic_if120 {
-          Eq#aic_e120 { Var#aic_v143(name=index) ChildCount#aic_cc120 { Var#aic_v144(name=node) } }
-          Block#aic_b128 { Return#aic_r118 { Call#aic_c81(target=makeState) { Var#aic_v145(name=last) Var#aic_v146(name=env) } } }
+          Eq#aic_e120 { Var#aic_v143__2(name=index) ChildCount#aic_cc120 { Var#aic_v144__2(name=node) } }
+          Block#aic_b128 { Return#aic_r118__2 { Call#aic_c81__2(target=makeState) { Var#aic_v145__2(name=last) Var#aic_v146__2(name=env) } } }
           Block#aic_b129 {
-            Let#aic_l121(name=st) { Call#aic_c82(target=evalNode) { ChildAt#aic_ca120 { Var#aic_v147(name=node) Var#aic_v148(name=index) } Var#aic_v149(name=env) } }
-            Let#aic_l122(name=v) { Call#aic_c83(target=stateValue) { Var#aic_v150(name=st) } }
-            Let#aic_l123(name=e2) { Call#aic_c84(target=stateEnv) { Var#aic_v151(name=st) } }
+            Let#aic_l121(name=st) { Call#aic_c82__2(target=evalNode) { ChildAt#aic_ca120 { Var#aic_v147__2(name=node) Var#aic_v148__2(name=index) } Var#aic_v149__2(name=env) } }
+            Let#aic_l122(name=v) { Call#aic_c83__2(target=stateValue) { Var#aic_v150__2(name=st) } }
+            Let#aic_l123(name=e2) { Call#aic_c84__2(target=stateEnv) { Var#aic_v151__2(name=st) } }
             If#aic_if121 {
-              Eq#aic_e121 { NodeKind#aic_nk120 { Var#aic_v152(name=v) } Lit#aic_i118(value="Err") }
-              Block#aic_b130 { Return#aic_r119 { Call#aic_c85(target=makeState) { Var#aic_v153(name=v) Var#aic_v154(name=e2) } } }
-              Block#aic_b131 { Return#aic_r120 { Call#aic_c86(target=evalSeq) { Var#aic_v155(name=node) Var#aic_v156(name=e2) Add#aic_a120 { Var#aic_v157(name=index) Lit#aic_i119(value=1) } Var#aic_v158(name=v) } } }
+              Eq#aic_e121 { NodeKind#aic_nk120 { Var#aic_v152__2(name=v) } Lit#aic_i118__2(value="Err") }
+              Block#aic_b130 { Return#aic_r119__2 { Call#aic_c85(target=makeState) { Var#aic_v153__2(name=v) Var#aic_v154__2(name=e2) } } }
+              Block#aic_b131 { Return#aic_r120__2 { Call#aic_c86(target=evalSeq) { Var#aic_v155(name=node) Var#aic_v156(name=e2) Add#aic_a120 { Var#aic_v157(name=index) Lit#aic_i119__2(value=1) } Var#aic_v158(name=v) } } }
             }
           }
         }
@@ -478,7 +549,7 @@ Program#aic_p1 {
   Let#aic_l130(name=evalLet) {
     Fn#aic_f130(params=node,env) {
       Block#aic_b132 {
-        Let#aic_l131(name=name) { Call#aic_c87(target=getAttr) { Var#aic_v159(name=node) Lit#aic_i120(value="name") Lit#aic_i121(value=0) } }
+        Let#aic_l131(name=name) { Call#aic_c87(target=getAttr) { Var#aic_v159(name=node) Lit#aic_i120__2(value="name") Lit#aic_i121__2(value=0) } }
         Let#aic_l132(name=expr) { ChildAt#aic_ca130 { Var#aic_v160(name=node) Lit#aic_i122(value=0) } }
         Let#aic_l133(name=isFn) { Eq#aic_e130 { NodeKind#aic_nk130 { Var#aic_v161(name=expr) } Lit#aic_i123(value="Fn") } }
         Let#aic_l134(name=st) {
@@ -492,7 +563,7 @@ Program#aic_p1 {
         Let#aic_l136(name=e2) { Call#aic_c92(target=stateEnv) { Var#aic_v169(name=st) } }
         If#aic_if131 {
           Eq#aic_e131 { NodeKind#aic_nk131 { Var#aic_v170(name=v) } Lit#aic_i124(value="Err") }
-          Block#aic_b135 { Return#aic_r121 { Call#aic_c93(target=makeState) { Var#aic_v171(name=v) Var#aic_v172(name=e2) } } }
+          Block#aic_b135 { Return#aic_r121__2 { Call#aic_c93(target=makeState) { Var#aic_v171(name=v) Var#aic_v172(name=e2) } } }
           Block#aic_b136 { Return#aic_r122 { Call#aic_c94(target=makeState) { Call#aic_c95(target=makeVoid) { Lit#aic_i125(value=0) } Call#aic_c96(target=addBinding) { Var#aic_v173(name=e2) Var#aic_v174(name=name) Var#aic_v175(name=v) } } } }
         }
       }
@@ -509,35 +580,32 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l150(name=evalCall) {
-    Fn#aic_f150(params=node,env) {
-      Block#aic_b138 {
-        Let#aic_l151(name=target) { Call#aic_c100(target=getAttr) { Var#aic_v181(name=node) Lit#aic_i129(value="target") Lit#aic_i130(value=0) } }
-        If#aic_if150 {
-          Eq#aic_e150 { Var#aic_v182(name=target) Lit#aic_i131(value="io.print") }
-          Block#aic_b139 {
-            Let#aic_l152(name=argSt) { Call#aic_c101(target=evalNode) { ChildAt#aic_ca150 { Var#aic_v183(name=node) Lit#aic_i132(value=0) } Var#aic_v184(name=env) } }
-            Let#aic_l153(name=argVal) { Call#aic_c102(target=stateValue) { Var#aic_v185(name=argSt) } }
-            Let#aic_l154(name=e2) { Call#aic_c103(target=stateEnv) { Var#aic_v186(name=argSt) } }
-            If#aic_if151 {
-              Eq#aic_e151 { NodeKind#aic_nk150 { Var#aic_v187(name=argVal) } Lit#aic_i133(value="Err") }
-              Block#aic_b140 { Return#aic_r124 { Call#aic_c104(target=makeState) { Var#aic_v188(name=argVal) Var#aic_v189(name=e2) } } }
-              Block#aic_b141 {
-                Call#aic_c105(target=io.print) { Call#aic_c106(target=valueToString) { Var#aic_v190(name=argVal) } }
-                Return#aic_r125 { Call#aic_c107(target=makeState) { Call#aic_c108(target=makeVoid) { Lit#aic_i134(value=0) } Var#aic_v191(name=e2) } }
+  Let#aic_l145(name=evalIfExpr) {
+    Fn#aic_f145(params=node,env) {
+      Block#aic_b1450 {
+        Let#aic_l1451(name=condSt) { Call#aic_c1450(target=evalNode) { ChildAt#aic_ca1450 { Var#aic_v1450(name=node) Lit#aic_i1450(value=0) } Var#aic_v1451(name=env) } }
+        Let#aic_l1452(name=condVal) { Call#aic_c1451(target=stateValue) { Var#aic_v1452(name=condSt) } }
+        Let#aic_l1453(name=e2) { Call#aic_c1452(target=stateEnv) { Var#aic_v1453(name=condSt) } }
+        If#aic_if1450 {
+          Eq#aic_e1450 { NodeKind#aic_nk1450 { Var#aic_v1454(name=condVal) } Lit#aic_i1451(value="Err") }
+          Block#aic_b1451 { Return#aic_r1450 { Call#aic_c1453(target=makeState) { Var#aic_v1455(name=condVal) Var#aic_v1456(name=e2) } } }
+          Block#aic_b1452 {
+            If#aic_if1451 {
+              Eq#aic_e1451 { AttrValueKind#aic_avk1450 { Var#aic_v1457(name=condVal) Lit#aic_i1452(value=0) } Lit#aic_i1453(value="bool") }
+              Block#aic_b1453 {
+                If#aic_if1452 {
+                  AttrValueBool#aic_avb1450 { Var#aic_v1458(name=condVal) Lit#aic_i1454(value=0) }
+                  Block#aic_b1454 { Return#aic_r1451 { Call#aic_c1454(target=evalNode) { ChildAt#aic_ca1451 { Var#aic_v1459(name=node) Lit#aic_i1455(value=1) } Var#aic_v1460(name=e2) } } }
+                  Block#aic_b1455 {
+                    If#aic_if1453 {
+                      Eq#aic_e1452 { ChildCount#aic_cc1450 { Var#aic_v1461(name=node) } Lit#aic_i1456(value=3) }
+                      Block#aic_b1456 { Return#aic_r1452 { Call#aic_c1455(target=evalNode) { ChildAt#aic_ca1452 { Var#aic_v1462(name=node) Lit#aic_i1457(value=2) } Var#aic_v1463(name=e2) } } }
+                      Block#aic_b1457 { Return#aic_r1453 { Call#aic_c1456(target=makeState) { Call#aic_c1457(target=makeVoid) { Lit#aic_i1458(value=0) } Var#aic_v1464(name=e2) } } }
+                    }
+                  }
+                }
               }
-            }
-          }
-          Block#aic_b142 {
-            If#aic_if152 {
-              Eq#aic_e152 { Var#aic_v192(name=target) Lit#aic_i135(value="io.readLine") }
-              Block#aic_b143 {
-                Let#aic_l155(name=line) { Call#aic_c109(target=io.readLine) }
-                Let#aic_l156(name=i) { ChildCount#aic_cc150 { Var#aic_v193(name=env) } }
-                Let#aic_l157(name=id) { StrConcat#aic_sc150 { Lit#aic_i136(value="in") ToString#aic_ts150 { Var#aic_v194(name=i) } } }
-                Return#aic_r126 { Call#aic_c110(target=makeState) { MakeLitString#aic_mls150 { Var#aic_v195(name=id) Var#aic_v196(name=line) } Var#aic_v197(name=env) } }
-              }
-              Block#aic_b144 { Return#aic_r127 { Call#aic_c111(target=evalUserCall) { Var#aic_v198(name=node) Var#aic_v199(name=env) Var#aic_v200(name=target) } } }
+              Block#aic_b1458 { Return#aic_r1454 { Call#aic_c1458(target=makeState) { MakeErr#aic_me1450 { Lit#aic_i1459(value="err_if") Lit#aic_i1460(value="RUN011") Lit#aic_i1461(value="If condition must be bool.") NodeId#aic_nid1450 { Var#aic_v1465(name=node) } } Var#aic_v1466(name=e2) } } }
             }
           }
         }
@@ -545,44 +613,270 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l160(name=evalUserCall) {
-    Fn#aic_f160(params=node,env,target) {
-      Block#aic_b145 {
-        Let#aic_l161(name=argSt) {
-          If#aic_if160 {
-            Eq#aic_e160 { ChildCount#aic_cc160 { Var#aic_v201(name=node) } Lit#aic_i137(value=0) }
-            Block#aic_b146 { Call#aic_c112(target=makeState) { Call#aic_c113(target=makeVoid) { Lit#aic_i138(value=0) } Var#aic_v202(name=env) } }
-            Block#aic_b147 { Call#aic_c114(target=evalNode) { ChildAt#aic_ca160 { Var#aic_v203(name=node) Lit#aic_i139(value=0) } Var#aic_v204(name=env) } }
-          }
-        }
-        Let#aic_l162(name=argVal) { Call#aic_c115(target=stateValue) { Var#aic_v205(name=argSt) } }
-        Let#aic_l163(name=e2) { Call#aic_c116(target=stateEnv) { Var#aic_v206(name=argSt) } }
-        If#aic_if161 {
-          Eq#aic_e161 { NodeKind#aic_nk160 { Var#aic_v207(name=argVal) } Lit#aic_i140(value="Err") }
-          Block#aic_b148 { Return#aic_r128 { Call#aic_c117(target=makeState) { Var#aic_v208(name=argVal) Var#aic_v209(name=e2) } } }
-          Block#aic_b149 {
-            Let#aic_l164(name=fnv) { Call#aic_c118(target=lookupEnv) { Var#aic_v210(name=e2) Var#aic_v211(name=target) Lit#aic_i141(value=0) } }
-            If#aic_if162 {
-              Eq#aic_e162 { NodeKind#aic_nk161 { Var#aic_v212(name=fnv) } Lit#aic_i142(value="Err") }
-              Block#aic_b150 { Return#aic_r129 { Call#aic_c119(target=makeState) { Var#aic_v213(name=fnv) Var#aic_v214(name=e2) } } }
-              Block#aic_b151 {
-                Let#aic_l165(name=fnNode) { ChildAt#aic_ca161 { Var#aic_v215(name=fnv) Lit#aic_i143(value=0) } }
-                Let#aic_l166(name=fnEnv) { ChildAt#aic_ca162 { Var#aic_v216(name=fnv) Lit#aic_i144(value=1) } }
-                If#aic_if163 {
-                  Eq#aic_e163 { NodeKind#aic_nk162 { Var#aic_v217(name=fnNode) } Lit#aic_i145(value="Fn") }
-                  Block#aic_b152 {
-                    Let#aic_l167(name=p) { Call#aic_c120(target=getAttr) { Var#aic_v218(name=fnNode) Lit#aic_i146(value="params") Lit#aic_i147(value=0) } }
-                    Let#aic_l168(name=callEnv) {
-                      If#aic_if164 {
-                        Eq#aic_e164 { Var#aic_v219(name=p) Lit#aic_i148(value="_") }
-                        Block#aic_b153 { Var#aic_v220(name=fnEnv) }
-                        Block#aic_b154 { Call#aic_c121(target=addBinding) { Var#aic_v221(name=fnEnv) Var#aic_v222(name=p) Var#aic_v223(name=argVal) } }
+  Let#aic_l146(name=evalEqExpr) {
+    Fn#aic_f146(params=node,env) {
+      Block#aic_b1460 {
+        Let#aic_l1461(name=lSt) { Call#aic_c1460(target=evalNode) { ChildAt#aic_ca1460 { Var#aic_v1467(name=node) Lit#aic_i1462(value=0) } Var#aic_v1468(name=env) } }
+        Let#aic_l1462(name=lVal) { Call#aic_c1461(target=stateValue) { Var#aic_v1469(name=lSt) } }
+        Let#aic_l1463(name=e2) { Call#aic_c1462(target=stateEnv) { Var#aic_v1470(name=lSt) } }
+        If#aic_if1460 {
+          Eq#aic_e1460 { NodeKind#aic_nk1460 { Var#aic_v1471(name=lVal) } Lit#aic_i1463(value="Err") }
+          Block#aic_b1461 { Return#aic_r1460 { Call#aic_c1463(target=makeState) { Var#aic_v1472(name=lVal) Var#aic_v1473(name=e2) } } }
+          Block#aic_b1462 {
+            Let#aic_l1464(name=rSt) { Call#aic_c1464(target=evalNode) { ChildAt#aic_ca1461 { Var#aic_v1474(name=node) Lit#aic_i1464(value=1) } Var#aic_v1475(name=e2) } }
+            Let#aic_l1465(name=rVal) { Call#aic_c1465(target=stateValue) { Var#aic_v1476(name=rSt) } }
+            Let#aic_l1466(name=e3) { Call#aic_c1466(target=stateEnv) { Var#aic_v1477(name=rSt) } }
+            If#aic_if1461 {
+              Eq#aic_e1461 { NodeKind#aic_nk1461 { Var#aic_v1478(name=rVal) } Lit#aic_i1465(value="Err") }
+              Block#aic_b1463 { Return#aic_r1461 { Call#aic_c1467(target=makeState) { Var#aic_v1479(name=rVal) Var#aic_v1480(name=e3) } } }
+              Block#aic_b1464 {
+                Let#aic_l1467(name=lk) { AttrValueKind#aic_avk1460 { Var#aic_v1481(name=lVal) Lit#aic_i1466(value=0) } }
+                Let#aic_l1468(name=rk) { AttrValueKind#aic_avk1461 { Var#aic_v1482(name=rVal) Lit#aic_i1467(value=0) } }
+                Let#aic_l1469(name=eqv) {
+                  If#aic_if1462 {
+                    Eq#aic_e1462 { Var#aic_v1483(name=lk) Var#aic_v1484(name=rk) }
+                    Block#aic_b1465 {
+                      If#aic_if1463 {
+                        Eq#aic_e1463 { Var#aic_v1485(name=lk) Lit#aic_i1468(value="string") }
+                        Block#aic_b1466 { Eq#aic_e1464 { AttrValueString#aic_avs1460 { Var#aic_v1486(name=lVal) Lit#aic_i1469(value=0) } AttrValueString#aic_avs1461 { Var#aic_v1487(name=rVal) Lit#aic_i1470(value=0) } } }
+                        Block#aic_b1467 {
+                          If#aic_if1464 {
+                            Eq#aic_e1465 { Var#aic_v1488(name=lk) Lit#aic_i1471(value="int") }
+                            Block#aic_b1468 { Eq#aic_e1466 { AttrValueInt#aic_avi1460 { Var#aic_v1489(name=lVal) Lit#aic_i1472(value=0) } AttrValueInt#aic_avi1461 { Var#aic_v1490(name=rVal) Lit#aic_i1473(value=0) } } }
+                            Block#aic_b1469 { Eq#aic_e1467 { AttrValueBool#aic_avb1460 { Var#aic_v1491(name=lVal) Lit#aic_i1474(value=0) } AttrValueBool#aic_avb1461 { Var#aic_v1492(name=rVal) Lit#aic_i1475(value=0) } } }
+                          }
+                        }
                       }
                     }
-                    Let#aic_l169(name=bodySt) { Call#aic_c122(target=evalNode) { ChildAt#aic_ca163 { Var#aic_v224(name=fnNode) Lit#aic_i149(value=0) } Var#aic_v225(name=callEnv) } }
-                    Return#aic_r130 { Call#aic_c123(target=makeState) { Call#aic_c124(target=stateValue) { Var#aic_v226(name=bodySt) } Var#aic_v227(name=e2) } }
+                    Block#aic_b1470 { Lit#aic_i1476(value=false) }
                   }
-                  Block#aic_b155 { Return#aic_r131 { Call#aic_c125(target=makeState) { MakeErr#aic_me160 { Lit#aic_i150(value="err_call") Lit#aic_i151(value="RUN002") Lit#aic_i152(value="Target is not callable.") Var#aic_v228(name=target) } Var#aic_v229(name=e2) } } }
+                }
+                Return#aic_r1462 { Call#aic_c1468(target=makeState) { Call#aic_c1469(target=makeBoolLit) { Var#aic_v1493(name=eqv) } Var#aic_v1494(name=e3) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_l147(name=evalStrConcatExpr) {
+    Fn#aic_f147(params=node,env) {
+      Block#aic_b1471 {
+        Let#aic_l1471(name=lSt) { Call#aic_c1470(target=evalNode) { ChildAt#aic_ca1470 { Var#aic_v1495(name=node) Lit#aic_i1477(value=0) } Var#aic_v1496(name=env) } }
+        Let#aic_l1472(name=lVal) { Call#aic_c1471(target=stateValue) { Var#aic_v1497(name=lSt) } }
+        Let#aic_l1473(name=e2) { Call#aic_c1472(target=stateEnv) { Var#aic_v1498(name=lSt) } }
+        If#aic_if1470 {
+          Eq#aic_e1470 { NodeKind#aic_nk1470 { Var#aic_v1499(name=lVal) } Lit#aic_i1478(value="Err") }
+          Block#aic_b1472 { Return#aic_r1470 { Call#aic_c1473(target=makeState) { Var#aic_v1500(name=lVal) Var#aic_v1501(name=e2) } } }
+          Block#aic_b1473 {
+            Let#aic_l1474(name=rSt) { Call#aic_c1474(target=evalNode) { ChildAt#aic_ca1471 { Var#aic_v1502(name=node) Lit#aic_i1479(value=1) } Var#aic_v1503(name=e2) } }
+            Let#aic_l1475(name=rVal) { Call#aic_c1475(target=stateValue) { Var#aic_v1504(name=rSt) } }
+            Let#aic_l1476(name=e3) { Call#aic_c1476(target=stateEnv) { Var#aic_v1505(name=rSt) } }
+            If#aic_if1471 {
+              Eq#aic_e1471 { NodeKind#aic_nk1471 { Var#aic_v1506(name=rVal) } Lit#aic_i1480(value="Err") }
+              Block#aic_b1474 { Return#aic_r1471 { Call#aic_c1477(target=makeState) { Var#aic_v1507(name=rVal) Var#aic_v1508(name=e3) } } }
+              Block#aic_b1475 {
+                Let#aic_l1477(name=s) { StrConcat#aic_sc1470 { Call#aic_c1478(target=valueToString) { Var#aic_v1509(name=lVal) } Call#aic_c1479(target=valueToString) { Var#aic_v1510(name=rVal) } } }
+                Return#aic_r1472 { Call#aic_c1480(target=makeState) { Call#aic_c1481(target=makeStringLit) { Var#aic_v1511(name=e3) Var#aic_v1512(name=s) } Var#aic_v1513(name=e3) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_l148(name=evalAddExpr) {
+    Fn#aic_f148(params=node,env) {
+      Block#aic_b1480 {
+        Let#aic_l1481(name=lSt) { Call#aic_c1482(target=evalNode) { ChildAt#aic_ca1480 { Var#aic_v1514(name=node) Lit#aic_i1481(value=0) } Var#aic_v1515(name=env) } }
+        Let#aic_l1482(name=lVal) { Call#aic_c1483(target=stateValue) { Var#aic_v1516(name=lSt) } }
+        Let#aic_l1483(name=e2) { Call#aic_c1484(target=stateEnv) { Var#aic_v1517(name=lSt) } }
+        If#aic_if1480 {
+          Eq#aic_e1480 { NodeKind#aic_nk1480 { Var#aic_v1518(name=lVal) } Lit#aic_i1482(value="Err") }
+          Block#aic_b1481 { Return#aic_r1480 { Call#aic_c1485(target=makeState) { Var#aic_v1519(name=lVal) Var#aic_v1520(name=e2) } } }
+          Block#aic_b1482 {
+            Let#aic_l1484(name=rSt) { Call#aic_c1486(target=evalNode) { ChildAt#aic_ca1481 { Var#aic_v1521(name=node) Lit#aic_i1483(value=1) } Var#aic_v1522(name=e2) } }
+            Let#aic_l1485(name=rVal) { Call#aic_c1487(target=stateValue) { Var#aic_v1523(name=rSt) } }
+            Let#aic_l1486(name=e3) { Call#aic_c1488(target=stateEnv) { Var#aic_v1524(name=rSt) } }
+            If#aic_if1481 {
+              Eq#aic_e1481 { NodeKind#aic_nk1481 { Var#aic_v1525(name=rVal) } Lit#aic_i1484(value="Err") }
+              Block#aic_b1483 { Return#aic_r1481 { Call#aic_c1489(target=makeState) { Var#aic_v1526(name=rVal) Var#aic_v1527(name=e3) } } }
+              Block#aic_b1484 {
+                If#aic_if1482 {
+                  Eq#aic_e1482 { AttrValueKind#aic_avk1480 { Var#aic_v1528(name=lVal) Lit#aic_i1485(value=0) } Lit#aic_i1486(value="int") }
+                  Block#aic_b1485 {
+                    If#aic_if1483 {
+                      Eq#aic_e1483 { AttrValueKind#aic_avk1481 { Var#aic_v1529(name=rVal) Lit#aic_i1487(value=0) } Lit#aic_i1488(value="int") }
+                      Block#aic_b1486 {
+                        Let#aic_l1487(name=n) { Add#aic_a1480 { AttrValueInt#aic_avi1480 { Var#aic_v1530(name=lVal) Lit#aic_i1489(value=0) } AttrValueInt#aic_avi1481 { Var#aic_v1531(name=rVal) Lit#aic_i1490(value=0) } } }
+                        Return#aic_r1482 { Call#aic_c1490(target=makeState) { Call#aic_c1491(target=makeIntLit) { Var#aic_v1532(name=n) } Var#aic_v1533(name=e3) } }
+                      }
+                      Block#aic_b1487 { Return#aic_r1483 { Call#aic_c1492(target=makeState) { MakeErr#aic_me1480 { Lit#aic_i1491(value="err_add") Lit#aic_i1492(value="RUN012") Lit#aic_i1493(value="Add expects int operands.") NodeId#aic_nid1480 { Var#aic_v1534(name=node) } } Var#aic_v1535(name=e3) } } }
+                    }
+                  }
+                  Block#aic_b1488 { Return#aic_r1484 { Call#aic_c1493(target=makeState) { MakeErr#aic_me1481 { Lit#aic_i1494(value="err_add2") Lit#aic_i1495(value="RUN012") Lit#aic_i1496(value="Add expects int operands.") NodeId#aic_nid1481 { Var#aic_v1536(name=node) } } Var#aic_v1537(name=e3) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_l150(name=evalCall) {
+    Fn#aic_f150(params=node,env) {
+      Block#aic_b138 {
+        Let#aic_l151(name=target) { Call#aic_c100(target=getAttr) { Var#aic_v181(name=node) Lit#aic_i129(value="target") Lit#aic_i130(value=0) } }
+        Let#aic_l152(name=argCount) { ChildCount#aic_cc150 { Var#aic_v182(name=node) } }
+        Let#aic_l153(name=argSt) {
+          If#aic_if150 {
+            Eq#aic_e150 { Var#aic_v183(name=argCount) Lit#aic_i131(value=0) }
+            Block#aic_b139 { Call#aic_c101(target=makeState) { Call#aic_c102(target=makeVoid) { Lit#aic_i132(value=0) } Var#aic_v184(name=env) } }
+            Block#aic_b140 { Call#aic_c103(target=evalNode) { ChildAt#aic_ca150 { Var#aic_v185(name=node) Lit#aic_i133(value=0) } Var#aic_v186(name=env) } }
+          }
+        }
+        Let#aic_l154(name=argVal) { Call#aic_c104(target=stateValue) { Var#aic_v187(name=argSt) } }
+        Let#aic_l155(name=e2) { Call#aic_c105(target=stateEnv) { Var#aic_v188(name=argSt) } }
+        If#aic_if151 {
+          Eq#aic_e151 { NodeKind#aic_nk150 { Var#aic_v189(name=argVal) } Lit#aic_i134(value="Err") }
+          Block#aic_b141 { Return#aic_r124 { Call#aic_c106(target=makeState) { Var#aic_v190(name=argVal) Var#aic_v191(name=e2) } } }
+          Block#aic_b142 {
+            If#aic_if152 {
+              Eq#aic_e152 { Var#aic_v192(name=target) Lit#aic_i135(value="io.print") }
+              Block#aic_b143 {
+                Call#aic_c107(target=io.print) { Call#aic_c108(target=valueToString) { Var#aic_v193(name=argVal) } }
+                Return#aic_r125 { Call#aic_c109(target=makeState) { Call#aic_c110(target=makeVoid) { Lit#aic_i136(value=0) } Var#aic_v194(name=e2) } }
+              }
+              Block#aic_b144 {
+                If#aic_if153 {
+                  Eq#aic_e153 { Var#aic_v195(name=target) Lit#aic_i137(value="io.write") }
+                  Block#aic_b145 {
+                    Call#aic_c111(target=io.write) { Call#aic_c112(target=valueToString) { Var#aic_v196(name=argVal) } }
+                    Return#aic_r126 { Call#aic_c113(target=makeState) { Call#aic_c114(target=makeVoid) { Lit#aic_i138(value=0) } Var#aic_v197(name=e2) } }
+                  }
+                  Block#aic_b146 {
+                    If#aic_if154 {
+                      Eq#aic_e154 { Var#aic_v198(name=target) Lit#aic_i139(value="io.readLine") }
+                      Block#aic_b147 {
+                        Let#aic_l156(name=line) { Call#aic_c115(target=io.readLine) }
+                        Let#aic_l157(name=lit) { Call#aic_c116(target=makeStringLit) { Var#aic_v199(name=e2) Var#aic_v200(name=line) } }
+                        Return#aic_r127 { Call#aic_c117(target=makeState) { Var#aic_v201(name=lit) Var#aic_v202(name=e2) } }
+                      }
+                      Block#aic_b148 {
+                        If#aic_if155 {
+                          Eq#aic_e155 { Var#aic_v203(name=target) Lit#aic_i140(value="io.readAllStdin") }
+                          Block#aic_b149 {
+                            Let#aic_l158(name=text) { Call#aic_c118(target=io.readAllStdin) }
+                            Let#aic_l159(name=lit) { Call#aic_c119(target=makeStringLit) { Var#aic_v204(name=e2) Var#aic_v205(name=text) } }
+                            Return#aic_r128 { Call#aic_c120(target=makeState) { Var#aic_v206(name=lit) Var#aic_v207(name=e2) } }
+                          }
+                          Block#aic_b150 {
+                            If#aic_if156 {
+                              Eq#aic_e156 { Var#aic_v208(name=target) Lit#aic_i141(value="io.readFile") }
+                              Block#aic_b151 {
+                                Let#aic_l160(name=text) { Call#aic_c121(target=io.readFile) { Call#aic_c122(target=valueToString) { Var#aic_v209(name=argVal) } } }
+                                Let#aic_l161(name=lit) { Call#aic_c123(target=makeStringLit) { Var#aic_v210(name=e2) Var#aic_v211(name=text) } }
+                                Return#aic_r129 { Call#aic_c124(target=makeState) { Var#aic_v212(name=lit) Var#aic_v213(name=e2) } }
+                              }
+                              Block#aic_b152 {
+                                If#aic_if157 {
+                                  Eq#aic_e157 { Var#aic_v214(name=target) Lit#aic_i142(value="io.fileExists") }
+                                  Block#aic_b153 {
+                                    Let#aic_l162(name=ok) { Call#aic_c125(target=io.fileExists) { Call#aic_c126(target=valueToString) { Var#aic_v215(name=argVal) } } }
+                                    Let#aic_l163(name=lit) { Call#aic_c127(target=makeBoolLit) { Var#aic_v216(name=ok) } }
+                                    Return#aic_r130 { Call#aic_c128(target=makeState) { Var#aic_v217(name=lit) Var#aic_v218(name=e2) } }
+                                  }
+                                  Block#aic_b154 {
+                                    If#aic_if158 {
+                                      Eq#aic_e158 { Var#aic_v219(name=target) Lit#aic_i143(value="compiler.parse") }
+                                      Block#aic_b155 { Return#aic_r131 { Call#aic_c129(target=makeState) { Call#aic_c130(target=compiler.parse) { Call#aic_c131(target=valueToString) { Var#aic_v220(name=argVal) } } Var#aic_v221(name=e2) } } }
+                                      Block#aic_b156 {
+                                        If#aic_if159 {
+                                          Eq#aic_e159 { Var#aic_v222(name=target) Lit#aic_i144(value="compiler.format") }
+                                          Block#aic_b157 {
+                                            Let#aic_l164(name=text) { Call#aic_c132(target=compiler.format) { Var#aic_v223(name=argVal) } }
+                                            Let#aic_l165(name=lit) { Call#aic_c133(target=makeStringLit) { Var#aic_v224(name=e2) Var#aic_v225(name=text) } }
+                                            Return#aic_r132 { Call#aic_c134(target=makeState) { Var#aic_v226(name=lit) Var#aic_v227(name=e2) } }
+                                          }
+                                          Block#aic_b158 {
+                                            If#aic_if160 {
+                                              Eq#aic_e160 { Var#aic_v228(name=target) Lit#aic_i145(value="compiler.validate") }
+                                              Block#aic_b159 { Return#aic_r133 { Call#aic_c135(target=makeState) { Call#aic_c136(target=compiler.validate) { Var#aic_v229(name=argVal) } Var#aic_v230(name=e2) } } }
+                                              Block#aic_b160 {
+                                                If#aic_if161 {
+                                                  Eq#aic_e161 { Var#aic_v231(name=target) Lit#aic_i146(value="compiler.test") }
+                                                  Block#aic_b161 {
+                                                    Let#aic_l166(name=n) { Call#aic_c137(target=compiler.test) { Call#aic_c138(target=valueToString) { Var#aic_v232(name=argVal) } } }
+                                                    Let#aic_l167(name=lit) { Call#aic_c139(target=makeIntLit) { Var#aic_v233(name=n) } }
+                                                    Return#aic_r134 { Call#aic_c140(target=makeState) { Var#aic_v234(name=lit) Var#aic_v235(name=e2) } }
+                                                  }
+                                                  Block#aic_b162 { Return#aic_r135 { Call#aic_c141(target=evalUserCall) { Var#aic_v236(name=node) Var#aic_v237(name=env) Var#aic_v238(name=target) } } }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_l160__2(name=evalUserCall) {
+    Fn#aic_f160(params=node,env,target) {
+      Block#aic_b145__2 {
+        Let#aic_l161__2(name=argSt) {
+          If#aic_if160__2 {
+            Eq#aic_e160__2 { ChildCount#aic_cc160 { Var#aic_v201__2(name=node) } Lit#aic_i137__2(value=0) }
+            Block#aic_b146__2 { Call#aic_c112__2(target=makeState) { Call#aic_c113__2(target=makeVoid) { Lit#aic_i138__2(value=0) } Var#aic_v202__2(name=env) } }
+            Block#aic_b147__2 { Call#aic_c114__2(target=evalNode) { ChildAt#aic_ca160 { Var#aic_v203__2(name=node) Lit#aic_i139__2(value=0) } Var#aic_v204__2(name=env) } }
+          }
+        }
+        Let#aic_l162__2(name=argVal) { Call#aic_c115__2(target=stateValue) { Var#aic_v205__2(name=argSt) } }
+        Let#aic_l163__2(name=e2) { Call#aic_c116__2(target=stateEnv) { Var#aic_v206__2(name=argSt) } }
+        If#aic_if161__2 {
+          Eq#aic_e161__2 { NodeKind#aic_nk160 { Var#aic_v207__2(name=argVal) } Lit#aic_i140__2(value="Err") }
+          Block#aic_b148__2 { Return#aic_r128__2 { Call#aic_c117__2(target=makeState) { Var#aic_v208__2(name=argVal) Var#aic_v209__2(name=e2) } } }
+          Block#aic_b149__2 {
+            Let#aic_l164__2(name=fnv) { Call#aic_c118__2(target=lookupEnv) { Var#aic_v210__2(name=e2) Var#aic_v211__2(name=target) Lit#aic_i141__2(value=0) } }
+            If#aic_if162 {
+              Eq#aic_e162 { NodeKind#aic_nk161 { Var#aic_v212__2(name=fnv) } Lit#aic_i142__2(value="Err") }
+              Block#aic_b150__2 { Return#aic_r129__2 { Call#aic_c119__2(target=makeState) { Var#aic_v213__2(name=fnv) Var#aic_v214__2(name=e2) } } }
+              Block#aic_b151__2 {
+                Let#aic_l165__2(name=fnNode) { ChildAt#aic_ca161 { Var#aic_v215__2(name=fnv) Lit#aic_i143__2(value=0) } }
+                Let#aic_l166__2(name=fnEnv) { ChildAt#aic_ca162 { Var#aic_v216__2(name=fnv) Lit#aic_i144__2(value=1) } }
+                If#aic_if163 {
+                  Eq#aic_e163 { NodeKind#aic_nk162 { Var#aic_v217__2(name=fnNode) } Lit#aic_i145__2(value="Fn") }
+                  Block#aic_b152__2 {
+                    Let#aic_l167__2(name=p) { Call#aic_c120__2(target=getAttr) { Var#aic_v218__2(name=fnNode) Lit#aic_i146__2(value="params") Lit#aic_i147(value=0) } }
+                    Let#aic_l168(name=callEnv) {
+                      If#aic_if164 {
+                        Eq#aic_e164 { Var#aic_v219__2(name=p) Lit#aic_i148(value="_") }
+                        Block#aic_b153__2 { Var#aic_v220__2(name=fnEnv) }
+                        Block#aic_b154__2 { Call#aic_c121__2(target=addBinding) { Var#aic_v221__2(name=fnEnv) Var#aic_v222__2(name=p) Var#aic_v223__2(name=argVal) } }
+                      }
+                    }
+                    Let#aic_l169(name=bodySt) { Call#aic_c122__2(target=evalNode) { ChildAt#aic_ca163 { Var#aic_v224__2(name=fnNode) Lit#aic_i149(value=0) } Var#aic_v225__2(name=callEnv) } }
+                    Return#aic_r130__2 { Call#aic_c123__2(target=makeState) { Call#aic_c124__2(target=stateValue) { Var#aic_v226__2(name=bodySt) } Var#aic_v227__2(name=e2) } }
+                  }
+                  Block#aic_b155__2 { Return#aic_r131__2 { Call#aic_c125__2(target=makeState) { MakeErr#aic_me160 { Lit#aic_i150(value="err_call") Lit#aic_i151(value="RUN002") Lit#aic_i152(value="Target is not callable.") Var#aic_v228__2(name=target) } Var#aic_v229__2(name=e2) } } }
                 }
               }
             }

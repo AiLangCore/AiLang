@@ -33,10 +33,17 @@ The AI must treat architectural constraints as hard rules.
 ## Development workflow
 
 - Work in small, reviewable changes.
-- Run `dotnet test` frequently.
+- Run `./scripts/test.sh` frequently.
 - Keep diffs minimal and focused.
 - Prefer editing existing code over rewriting files.
 - When unsure, stop and ask for clarification.
+
+## Local commands
+
+- Use `./tools/airun` for day-to-day execution.
+- Use `./scripts/test.sh` for golden test validation.
+- Use `./scripts/build-airun.sh` only when rebuilding `tools/airun` via dotnet publish.
+- Do not use `dotnet run` or `dotnet test` for normal workflow.
 
 ## Definition of done
 

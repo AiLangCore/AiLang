@@ -710,6 +710,26 @@ public sealed class AosInterpreter
             return AosValue.FromBool(File.Exists(pathValue.AsString()));
         }
 
+        if (target == "sys.str_utf8ByteCount")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var textValue = EvalNode(node.Children[0], runtime, env);
+            if (textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromInt(System.Text.Encoding.UTF8.GetByteCount(textValue.AsString()));
+        }
+
         if (target == "compiler.parse")
         {
             if (!runtime.Permissions.Contains("compiler"))

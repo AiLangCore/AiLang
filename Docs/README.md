@@ -19,6 +19,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 
 - [Overview](./Overview.md)
 - [Getting Started](./Getting-Started.md)
+- [Host Boundary](./HOST_BOUNDARY.md)
 
 ## Hard Constraints
 

@@ -8,7 +8,44 @@ Program#rt_p1 {
         If#rt_if1 {
           Eq#rt_eq1 { Var#rt_v2(name=mode) Lit#rt_i2(value="serve") }
           Block#rt_b2 { Return#rt_r1 { Call#rt_c2(target=runtime_serve) { Var#rt_v3(name=args) } } }
-          Block#rt_b3 { Return#rt_r2 { Lit#rt_i3(value=0) } }
+          Block#rt_b3 { Return#rt_r2 { Call#rt_c37(target=runtime_run) { Var#rt_v94(name=args) } } }
+        }
+      }
+    }
+  }
+
+  Let#rt_l31(name=runtime_run) {
+    Fn#rt_f14(params=args) {
+      Block#rt_b50 {
+        Let#rt_l32(name=__runtime_suppress_output) { Lit#rt_i51(value=false) }
+        If#rt_if19 {
+          Call#rt_c38(target=runtime_has_export) { Var#rt_v95(name=__program) Lit#rt_i52(value="init") Lit#rt_i53(value=0) }
+          Block#rt_b51 {
+            If#rt_if20 {
+              Call#rt_c39(target=runtime_has_export) { Var#rt_v96(name=__program) Lit#rt_i54(value="update") Lit#rt_i55(value=0) }
+              Block#rt_b52 {
+                Let#rt_l33(name=__runtime_suppress_output) { Lit#rt_i56(value=true) }
+                Let#rt_l34(name=state) { Call#rt_c40(target=init) { Var#rt_v97(name=argv) } }
+                Let#rt_l35(name=event) { Call#rt_c41(target=runtime_make_start_event) { Lit#rt_i57(value=0) } }
+                Let#rt_l36(name=next) { Call#rt_c42(target=runtime.dispatch) { Var#rt_v98(name=state) Var#rt_v99(name=event) } }
+                Return#rt_r29 { Call#rt_c43(target=runtime_handle_next_run) { Var#rt_v100(name=next) Var#rt_v101(name=state) } }
+              }
+              Block#rt_b53 {
+                If#rt_if21 {
+                  Call#rt_c44(target=runtime_has_export) { Var#rt_v102(name=__program) Lit#rt_i58(value="start") Lit#rt_i59(value=0) }
+                  Block#rt_b54 { Return#rt_r30 { Call#rt_c45(target=start) { Var#rt_v103(name=argv) } } }
+                  Block#rt_b55 { Return#rt_r31 { Var#rt_v104(name=__program_result) } }
+                }
+              }
+            }
+          }
+          Block#rt_b56 {
+            If#rt_if22 {
+              Call#rt_c46(target=runtime_has_export) { Var#rt_v105(name=__program) Lit#rt_i60(value="start") Lit#rt_i61(value=0) }
+              Block#rt_b57 { Return#rt_r32 { Call#rt_c47(target=start) { Var#rt_v106(name=argv) } } }
+              Block#rt_b58 { Return#rt_r33 { Var#rt_v107(name=__program_result) } }
+            }
+          }
         }
       }
     }
@@ -195,6 +232,88 @@ Program#rt_p1 {
     }
   }
 
+  Let#rt_l40(name=runtime_make_start_event) {
+    Fn#rt_f15(params=_) {
+      Block#rt_b59 {
+        Let#rt_l41(name=parsed) { Call#rt_c48(target=compiler.parse) { Lit#rt_i62(value="Program#rt_start_p1 { Event#Start }") } }
+        If#rt_if23 {
+          Eq#rt_eq18 { NodeKind#rt_nk4 { Var#rt_v108(name=parsed) } Lit#rt_i63(value="Program") }
+          Block#rt_b60 { Return#rt_r34 { ChildAt#rt_ca7 { Var#rt_v109(name=parsed) Lit#rt_i64(value=0) } } }
+          Block#rt_b61 {
+            Let#rt_l42(name=fallback) { Call#rt_c49(target=compiler.parse) { Lit#rt_i65(value="Program#rt_start_p2 { Event#Message(type=\"start\" payload=\"\") }") } }
+            Return#rt_r35 { ChildAt#rt_ca8 { Var#rt_v110(name=fallback) Lit#rt_i66(value=0) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l43(name=runtime_handle_next_run) {
+    Fn#rt_f16(params=next,currentState) {
+      Block#rt_b62 {
+        If#rt_if24 {
+          Eq#rt_eq19 { NodeKind#rt_nk5 { Var#rt_v111(name=next) } Lit#rt_i67(value="Block") }
+          Block#rt_b63 {
+            If#rt_if25 {
+              Eq#rt_eq20 { ChildCount#rt_cc5 { Var#rt_v112(name=next) } Lit#rt_i68(value=0) }
+              Block#rt_b64 { Return#rt_r36 { Var#rt_v113(name=currentState) } }
+              Block#rt_b65 {
+                Let#rt_l44(name=newState) { ChildAt#rt_ca9 { Var#rt_v114(name=next) Lit#rt_i69(value=0) } }
+                Call#rt_c50(target=runtime_handle_commands_run) { Var#rt_v115(name=next) Lit#rt_i70(value=1) }
+                Return#rt_r37 { Var#rt_v116(name=newState) }
+              }
+            }
+          }
+          Block#rt_b66 { Return#rt_r38 { Var#rt_v117(name=next) } }
+        }
+      }
+    }
+  }
+
+  Let#rt_l45(name=runtime_handle_commands_run) {
+    Fn#rt_f17(params=block,index) {
+      Block#rt_b67 {
+        If#rt_if26 {
+          Eq#rt_eq21 { Var#rt_v118(name=index) ChildCount#rt_cc6 { Var#rt_v119(name=block) } }
+          Block#rt_b68 { Return#rt_r39 { Lit#rt_i71(value=0) } }
+          Block#rt_b69 {
+            Let#rt_l46(name=cmd) { ChildAt#rt_ca10 { Var#rt_v120(name=block) Var#rt_v121(name=index) } }
+            If#rt_if27 {
+              Eq#rt_eq22 { NodeKind#rt_nk6 { Var#rt_v122(name=cmd) } Lit#rt_i72(value="Command") }
+              Block#rt_b70 {
+                If#rt_if28 {
+                  Eq#rt_eq23 { NodeId#rt_nid3 { Var#rt_v123(name=cmd) } Lit#rt_i73(value="Exit") }
+                  Block#rt_b71 { Call#rt_c51(target=sys.proc_exit) { Call#rt_c52(target=runtime_attr_int) { Var#rt_v124(name=cmd) Lit#rt_i74(value="code") Lit#rt_i75(value=0) } } }
+                  Block#rt_b72 { Lit#rt_i76(value=0) }
+                }
+                If#rt_if29 {
+                  Eq#rt_eq24 { NodeId#rt_nid4 { Var#rt_v125(name=cmd) } Lit#rt_i77(value="Print") }
+                  Block#rt_b73 { Call#rt_c53(target=sys.stdout_writeLine) { Call#rt_c54(target=runtime_attr_string) { Var#rt_v126(name=cmd) Lit#rt_i78(value="text") Lit#rt_i79(value=0) } } }
+                  Block#rt_b74 { Lit#rt_i80(value=0) }
+                }
+                If#rt_if30 {
+                  Eq#rt_eq25 { NodeId#rt_nid5 { Var#rt_v127(name=cmd) } Lit#rt_i81(value="Emit") }
+                  Block#rt_b75 {
+                    Let#rt_l47(name=emitType) { Call#rt_c55(target=runtime_attr_string) { Var#rt_v128(name=cmd) Lit#rt_i82(value="type") Lit#rt_i83(value=0) } }
+                    Let#rt_l48(name=emitPayload) { Call#rt_c56(target=runtime_attr_string) { Var#rt_v129(name=cmd) Lit#rt_i84(value="payload") Lit#rt_i85(value=0) } }
+                    If#rt_if31 {
+                      Eq#rt_eq26 { Var#rt_v130(name=emitType) Lit#rt_i86(value="stdout") }
+                      Block#rt_b76 { Call#rt_c57(target=sys.stdout_writeLine) { Var#rt_v131(name=emitPayload) } }
+                      Block#rt_b77 { Lit#rt_i87(value=0) }
+                    }
+                  }
+                  Block#rt_b78 { Lit#rt_i88(value=0) }
+                }
+              }
+              Block#rt_b79 { Lit#rt_i89(value=0) }
+            }
+            Return#rt_r40 { Call#rt_c58(target=runtime_handle_commands_run) { Var#rt_v132(name=block) Add#rt_a5 { Var#rt_v133(name=index) Lit#rt_i90(value=1) } } }
+          }
+        }
+      }
+    }
+  }
+
   Let#rt_l27(name=runtime_arg_string) {
     Fn#rt_f10(params=args,index) {
       Block#rt_b34 {
@@ -277,6 +396,47 @@ Program#rt_p1 {
                     Var#rt_v91(name=node)
                     Var#rt_v92(name=key)
                     Add#rt_a4 { Var#rt_v93(name=index) Lit#rt_i50(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l49(name=runtime_has_export) {
+    Fn#rt_f18(params=program,name,index) {
+      Block#rt_b80 {
+        If#rt_if32 {
+          Eq#rt_eq27 { Var#rt_v134(name=index) ChildCount#rt_cc7 { Var#rt_v135(name=program) } }
+          Block#rt_b81 { Return#rt_r41 { Lit#rt_i91(value=false) } }
+          Block#rt_b82 {
+            Let#rt_l50(name=child) { ChildAt#rt_ca11 { Var#rt_v136(name=program) Var#rt_v137(name=index) } }
+            If#rt_if33 {
+              Eq#rt_eq28 { NodeKind#rt_nk7 { Var#rt_v138(name=child) } Lit#rt_i92(value="Export") }
+              Block#rt_b83 {
+                If#rt_if34 {
+                  Eq#rt_eq29 { Call#rt_c59(target=runtime_attr_string) { Var#rt_v139(name=child) Lit#rt_i93(value="name") Lit#rt_i94(value=0) } Var#rt_v140(name=name) }
+                  Block#rt_b84 { Return#rt_r42 { Lit#rt_i95(value=true) } }
+                  Block#rt_b85 {
+                    Return#rt_r43 {
+                      Call#rt_c60(target=runtime_has_export) {
+                        Var#rt_v141(name=program)
+                        Var#rt_v142(name=name)
+                        Add#rt_a6 { Var#rt_v143(name=index) Lit#rt_i96(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#rt_b86 {
+                Return#rt_r44 {
+                  Call#rt_c61(target=runtime_has_export) {
+                    Var#rt_v144(name=program)
+                    Var#rt_v145(name=name)
+                    Add#rt_a7 { Var#rt_v146(name=index) Lit#rt_i97(value=1) }
                   }
                 }
               }

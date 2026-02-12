@@ -299,41 +299,9 @@ public sealed partial class AosInterpreter
             return sysValue;
         }
 
-        if (target == "sys.vm_run")
+        if (TryEvaluateVmRunCall(target, node, runtime, env, out var vmRunValue))
         {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 3)
-            {
-                return AosValue.Unknown;
-            }
-
-            var bytecodeValue = EvalNode(node.Children[0], runtime, env);
-            var entryValue = EvalNode(node.Children[1], runtime, env);
-            var argsValue = EvalNode(node.Children[2], runtime, env);
-            if (bytecodeValue.Kind != AosValueKind.Node || entryValue.Kind != AosValueKind.String || argsValue.Kind != AosValueKind.Node)
-            {
-                return AosValue.Unknown;
-            }
-
-            try
-            {
-                var bytecodeNode = bytecodeValue.AsNode();
-                var entryName = entryValue.AsString();
-                var vm = VmProgramLoader.Load(bytecodeNode, BytecodeAdapter.Instance);
-                var args = BuildVmArgs(vm, entryName, argsValue.AsNode());
-                return VmEngine.Run<AosNode, AosValue>(
-                    vm,
-                    entryName,
-                    args,
-                    new VmExecutionAdapter(this, runtime));
-            }
-            catch (VmRuntimeException ex)
-            {
-                return AosValue.FromNode(CreateErrNode("vm_err", ex.Code, ex.Message, ex.NodeId, node.Span));
-            }
+            return vmRunValue;
         }
 
         if (TryEvaluateCompilerCall(target, node, runtime, env, out var compilerValue))

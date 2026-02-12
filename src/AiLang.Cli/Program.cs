@@ -126,19 +126,17 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
     try
     {
         var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
-        var lifecycleMode = program is not null && HasExport(program, "init") && HasExport(program, "update");
         var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
         var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
         var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
                              suppressValue.Kind == AosValueKind.Bool &&
                              suppressValue.AsBool();
-        suppressOutput = suppressOutput || lifecycleMode;
 
         if (IsErrNode(result, out var errNode))
         {
@@ -175,34 +173,6 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
         Console.WriteLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
         return 3;
     }
-}
-
-static bool HasExport(AosNode program, string exportName)
-{
-    foreach (var child in program.Children)
-    {
-        if (!string.Equals(child.Kind, "Export", StringComparison.Ordinal))
-        {
-            continue;
-        }
-
-        if (!child.Attrs.TryGetValue("name", out var nameAttr))
-        {
-            continue;
-        }
-
-        if (nameAttr.Kind != AosAttrKind.String && nameAttr.Kind != AosAttrKind.Identifier)
-        {
-            continue;
-        }
-
-        if (string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 static int RunServe(string path, string[] argv, int port, string tlsCertPath, string tlsKeyPath, bool traceEnabled, string vmMode)

@@ -1,0 +1,3 @@
+Program#p1 {
+  Project#proj1(name="AiVectra" entryFile="src/lib.aos" entryExport="library" version="0.1.0")
+}

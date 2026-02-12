@@ -1,0 +1,4 @@
+Program#p1 {
+  Let#l1(name=start) { Lit#i1(value=0) }
+  Export#e1(name=start)
+}

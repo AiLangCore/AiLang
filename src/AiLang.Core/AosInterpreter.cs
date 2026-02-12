@@ -1051,6 +1051,62 @@ public sealed class AosInterpreter
             var projectName = projectNameValue.AsString();
             var bundlePath = Path.Combine(publishDir, $"{projectName}.aibundle");
             var outputBinaryPath = Path.Combine(publishDir, projectName);
+            var libraryPath = Path.Combine(publishDir, $"{projectName}.ailib");
+
+            var manifestPath = Path.Combine(publishDir, "project.aiproj");
+            if (TryLoadProjectNode(manifestPath, out var projectNode, out var manifestErr) && projectNode is not null)
+            {
+                if (ValidateProjectIncludesForPublish(publishDir, projectNode, out var includeErr))
+                {
+                    if (TryGetStringProjectAttr(projectNode, "entryExport", out var entryExportValue) &&
+                        string.Equals(entryExportValue, "library", StringComparison.Ordinal))
+                    {
+                        if (!TryGetStringProjectAttr(projectNode, "version", out var libraryVersion) || string.IsNullOrWhiteSpace(libraryVersion))
+                        {
+                            return AosValue.FromNode(CreateErrNode("publish_err", "PUB014", "Library project requires non-empty version.", projectNode.Id, node.Span));
+                        }
+
+                        var canonicalProgram = new AosNode(
+                            "Program",
+                            "libp1",
+                            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+                            new List<AosNode>
+                            {
+                                new AosNode(
+                                    "Project",
+                                    "proj1",
+                                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                                    {
+                                        ["name"] = new AosAttrValue(AosAttrKind.String, projectName),
+                                        ["entryFile"] = new AosAttrValue(AosAttrKind.String, TryGetStringProjectAttr(projectNode, "entryFile", out var ef) ? ef : string.Empty),
+                                        ["entryExport"] = new AosAttrValue(AosAttrKind.String, "library"),
+                                        ["version"] = new AosAttrValue(AosAttrKind.String, libraryVersion)
+                                    },
+                                    new List<AosNode>(),
+                                    node.Span)
+                            },
+                            node.Span);
+                        try
+                        {
+                            Directory.CreateDirectory(publishDir);
+                            File.WriteAllText(libraryPath, AosFormatter.Format(canonicalProgram));
+                            return AosValue.FromInt(0);
+                        }
+                        catch (Exception ex)
+                        {
+                            return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", ex.Message, node.Id, node.Span));
+                        }
+                    }
+                }
+                else
+                {
+                    return AosValue.FromNode(includeErr!);
+                }
+            }
+            else if (manifestErr is not null)
+            {
+                return AosValue.FromNode(manifestErr);
+            }
 
             var rawBundleNode = node.Children.Count > 0 ? node.Children[0] : null;
             if (rawBundleNode is null || rawBundleNode.Kind != "Bundle")
@@ -1821,6 +1877,142 @@ public sealed class AosInterpreter
             span);
     }
 
+    private static bool TryLoadProjectNode(string manifestPath, out AosNode? projectNode, out AosNode? errNode)
+    {
+        projectNode = null;
+        errNode = null;
+
+        if (!File.Exists(manifestPath))
+        {
+            return false;
+        }
+
+        AosParseResult parse;
+        try
+        {
+            parse = AosExternalFrontend.Parse(File.ReadAllText(manifestPath));
+        }
+        catch (Exception ex)
+        {
+            errNode = CreateErrNode(
+                "publish_err",
+                "PUB009",
+                $"Failed to read project manifest: {ex.Message}",
+                "project",
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+            return false;
+        }
+
+        if (parse.Root is null || parse.Diagnostics.Count > 0)
+        {
+            var first = parse.Diagnostics.FirstOrDefault();
+            errNode = CreateErrNode(
+                "publish_err",
+                first?.Code ?? "PAR000",
+                first?.Message ?? "Failed to parse project manifest.",
+                first?.NodeId ?? "project",
+                parse.Root?.Span ?? new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+            return false;
+        }
+
+        if (parse.Root.Kind != "Program" || parse.Root.Children.Count != 1 || parse.Root.Children[0].Kind != "Project")
+        {
+            errNode = CreateErrNode(
+                "publish_err",
+                "PUB010",
+                "project.aiproj must contain Program with one Project child.",
+                parse.Root.Id,
+                parse.Root.Span);
+            return false;
+        }
+
+        projectNode = parse.Root.Children[0];
+        return true;
+    }
+
+    private static bool TryGetStringProjectAttr(AosNode node, string key, out string value)
+    {
+        value = string.Empty;
+        if (!node.Attrs.TryGetValue(key, out var attr) || attr.Kind != AosAttrKind.String)
+        {
+            return false;
+        }
+
+        value = attr.AsString();
+        return true;
+    }
+
+    private static bool ValidateProjectIncludesForPublish(string publishDir, AosNode projectNode, out AosNode? errNode)
+    {
+        errNode = null;
+        foreach (var includeNode in projectNode.Children)
+        {
+            if (includeNode.Kind != "Include")
+            {
+                continue;
+            }
+
+            if (!TryGetStringProjectAttr(includeNode, "name", out var includeName) ||
+                !TryGetStringProjectAttr(includeNode, "path", out var includePath) ||
+                !TryGetStringProjectAttr(includeNode, "version", out var includeVersion))
+            {
+                errNode = CreateErrNode("publish_err", "PUB011", "Include requires name, path, and version.", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            if (Path.IsPathRooted(includePath))
+            {
+                errNode = CreateErrNode("publish_err", "PUB012", "Include path must be relative.", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            var includeDir = Path.GetFullPath(Path.Combine(publishDir, includePath));
+            var includeManifestPath = Path.Combine(includeDir, $"{includeName}.ailib");
+            if (!File.Exists(includeManifestPath))
+            {
+                errNode = CreateErrNode("publish_err", "PUB015", $"Included library not found: {includeName}", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            if (!TryLoadProjectNode(includeManifestPath, out var includeProjectNode, out var includeParseErr))
+            {
+                errNode = includeParseErr ?? CreateErrNode("publish_err", "PUB016", $"Invalid included library manifest: {includeName}", includeNode.Id, includeNode.Span);
+                return false;
+            }
+            if (includeProjectNode is null)
+            {
+                errNode = CreateErrNode("publish_err", "PUB016", $"Invalid included library manifest: {includeName}", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            if (!TryGetStringProjectAttr(includeProjectNode, "name", out var actualName) ||
+                !string.Equals(actualName, includeName, StringComparison.Ordinal))
+            {
+                errNode = CreateErrNode("publish_err", "PUB017", $"Included library name mismatch for {includeName}.", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            if (!TryGetStringProjectAttr(includeProjectNode, "version", out var actualVersion))
+            {
+                errNode = CreateErrNode("publish_err", "PUB018", $"Included library missing version: {includeName}", includeNode.Id, includeNode.Span);
+                return false;
+            }
+
+            if (!string.Equals(actualVersion, includeVersion, StringComparison.Ordinal))
+            {
+                errNode = CreateErrNode(
+                    "publish_err",
+                    "PUB019",
+                    $"Included library version mismatch for {includeName}: expected {includeVersion}, got {actualVersion}.",
+                    includeNode.Id,
+                    includeNode.Span);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static AosNode CreateDiagnosticsNode(List<AosDiagnostic> diagnostics, AosSpan span)
     {
         var children = new List<AosNode>(diagnostics.Count);
@@ -2020,6 +2212,9 @@ public sealed class AosInterpreter
                 "publish_bundle_cycle_error" => new[] { "publish", Path.Combine(directory, "publish", "bundle_cycle_error") },
                 "publish_writes_bundle" => new[] { "publish", Path.Combine(directory, "publish", "writes_bundle") },
                 "publish_overwrite_bundle" => new[] { "publish", Path.Combine(directory, "publish", "overwrite_bundle") },
+                "publish_include_success" => new[] { "publish", Path.Combine(directory, "publishcases", "include_success") },
+                "publish_include_missing_library" => new[] { "publish", Path.Combine(directory, "publishcases", "include_missing_library") },
+                "publish_include_version_mismatch" => new[] { "publish", Path.Combine(directory, "publishcases", "include_version_mismatch") },
                 "publish_missing_dir" => new[] { "publish" },
                 "publish_missing_manifest" => new[] { "publish", Path.Combine(directory, "publish", "missing_manifest") },
                 _ => new[] { "publish" }

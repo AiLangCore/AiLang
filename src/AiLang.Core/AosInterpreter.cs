@@ -45,7 +45,7 @@ public sealed partial class AosInterpreter
     {
         try
         {
-            var vm = VmProgram.Load(bytecode);
+            var vm = VmProgramLoader.Load(bytecode);
             return VmRunner.Run(this, runtime, vm, entryName, argsNode);
         }
         catch (VmRuntimeException ex)
@@ -728,7 +728,7 @@ public sealed partial class AosInterpreter
 
             try
             {
-                var vm = VmProgram.Load(bytecodeValue.AsNode());
+                var vm = VmProgramLoader.Load(bytecodeValue.AsNode());
                 return VmRunner.Run(this, runtime, vm, entryValue.AsString(), argsValue.AsNode());
             }
             catch (VmRuntimeException ex)
@@ -2171,29 +2171,9 @@ public sealed partial class AosInterpreter
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
     }
 
-    private sealed class VmInstruction
+    private static class VmProgramLoader
     {
-        public required string Op { get; init; }
-        public int A { get; init; }
-        public int B { get; init; }
-        public string S { get; init; } = string.Empty;
-    }
-
-    private sealed class VmFunction
-    {
-        public required string Name { get; init; }
-        public required List<string> Params { get; init; }
-        public required List<string> Locals { get; init; }
-        public required List<VmInstruction> Instructions { get; init; }
-    }
-
-    private sealed class VmProgram
-    {
-        public required List<AosValue> Constants { get; init; }
-        public required List<VmFunction> Functions { get; init; }
-        public required Dictionary<string, int> FunctionIndexByName { get; init; }
-
-        public static VmProgram Load(AosNode node)
+        public static VmProgram<AosValue> Load(AosNode node)
         {
             if (node.Kind != "Bytecode")
             {
@@ -2302,7 +2282,7 @@ public sealed partial class AosInterpreter
                 functionIndexByName[functions[i].Name] = i;
             }
 
-            return new VmProgram
+            return new VmProgram<AosValue>
             {
                 Constants = constants,
                 Functions = functions,
@@ -3069,7 +3049,7 @@ public sealed partial class AosInterpreter
 
     private static class VmRunner
     {
-        public static AosValue Run(AosInterpreter interpreter, AosRuntime runtime, VmProgram vm, string entryName, AosNode argsNode)
+        public static AosValue Run(AosInterpreter interpreter, AosRuntime runtime, VmProgram<AosValue> vm, string entryName, AosNode argsNode)
         {
             if (!vm.FunctionIndexByName.TryGetValue(entryName, out var entryIndex))
             {
@@ -3105,7 +3085,7 @@ public sealed partial class AosInterpreter
             return ExecuteFunction(interpreter, runtime, vm, entryIndex, args);
         }
 
-        private static AosValue ExecuteFunction(AosInterpreter interpreter, AosRuntime runtime, VmProgram vm, int functionIndex, List<AosValue> args)
+        private static AosValue ExecuteFunction(AosInterpreter interpreter, AosRuntime runtime, VmProgram<AosValue> vm, int functionIndex, List<AosValue> args)
         {
             if (functionIndex < 0 || functionIndex >= vm.Functions.Count)
             {

@@ -1150,22 +1150,9 @@ public sealed partial class AosInterpreter
                     return AosValue.FromNode(CreateErrNode("publish_err", "PUB004", "host executable not found.", node.Id, node.Span));
                 }
 
-                File.Copy(sourceBinary, outputBinaryPath, overwrite: true);
-                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1:BYTECODE--\n" + bytecodeText);
-                if (!OperatingSystem.IsWindows())
+                if (!BundlePublisher.TryWriteEmbeddedBytecodeExecutable(sourceBinary, outputBinaryPath, bytecodeText, out var bundleWriteError))
                 {
-                    try
-                    {
-                        File.SetUnixFileMode(
-                            outputBinaryPath,
-                            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                            UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                            UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
-                    }
-                    catch
-                    {
-                        // Best-effort on non-Unix platforms.
-                    }
+                    return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", bundleWriteError, node.Id, node.Span));
                 }
 
                 return AosValue.FromInt(0);
@@ -2184,19 +2171,6 @@ public sealed partial class AosInterpreter
             attrs,
             new List<AosNode>(),
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-    }
-
-    private sealed class VmRuntimeException : Exception
-    {
-        public VmRuntimeException(string code, string message, string nodeId)
-            : base(message)
-        {
-            Code = code;
-            NodeId = nodeId;
-        }
-
-        public string Code { get; }
-        public string NodeId { get; }
     }
 
     private sealed class VmInstruction

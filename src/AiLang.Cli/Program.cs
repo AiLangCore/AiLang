@@ -145,6 +145,11 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
             Console.WriteLine(AosFormatter.Format(errNode!));
             return 3;
         }
+        if (result.Kind == AosValueKind.Unknown)
+        {
+            Console.WriteLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
+            return 3;
+        }
 
         if (traceEnabled)
         {
@@ -182,6 +187,11 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled, str
         if (IsErrNode(result, out var errNode))
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+        if (result.Kind == AosValueKind.Unknown)
+        {
+            Console.WriteLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
             return 3;
         }
 
@@ -468,7 +478,9 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
         var bootstrapInterpreter = new AosInterpreter();
+        runtime.TraceEnabled = false;
         AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
+        runtime.TraceEnabled = traceEnabled;
 
         var driverProgram = new AosNode(
             "Program",
@@ -518,6 +530,11 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
             Console.WriteLine(AosFormatter.Format(errNode!));
             return 3;
         }
+        if (result.Kind == AosValueKind.Unknown)
+        {
+            Console.WriteLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
+            return 3;
+        }
 
         if (traceEnabled)
         {
@@ -565,6 +582,11 @@ static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool trace
         if (IsErrNode(result, out var errNode))
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+        if (result.Kind == AosValueKind.Unknown)
+        {
+            Console.WriteLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
             return 3;
         }
 

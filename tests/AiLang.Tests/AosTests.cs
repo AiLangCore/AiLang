@@ -216,6 +216,38 @@ public class AosTests
     }
 
     [Test]
+    public void VmRunBytecode_EmitsInstructionTrace_WhenEnabled()
+    {
+        var source = "Program#p1 { Call#c1(target=compiler.emitBytecode) { Call#c2(target=compiler.parse) { Lit#s1(value=\"Program#p2 { Lit#l1(value=1) }\") } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime { TraceEnabled = true };
+        runtime.Permissions.Add("compiler");
+        var bytecodeValue = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        runtime.TraceSteps.Clear();
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "main", args, runtime);
+        Assert.That(result.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var vmSteps = runtime.TraceSteps
+            .Where(step => step.Kind == "Step" &&
+                           step.Attrs.TryGetValue("kind", out var kindAttr) &&
+                           kindAttr.Kind == AosAttrKind.String &&
+                           kindAttr.AsString() == "VmInstruction")
+            .ToList();
+
+        Assert.That(vmSteps.Count, Is.GreaterThan(0));
+        Assert.That(vmSteps.Any(step =>
+            step.Attrs.TryGetValue("op", out var opAttr) &&
+            opAttr.Kind == AosAttrKind.String &&
+            opAttr.AsString() == "RETURN"), Is.True);
+    }
+
+    [Test]
     public void Evaluator_ImportsAndMergesExplicitExports()
     {
         var tempDir = Directory.CreateTempSubdirectory("ailang-import-ok-");
@@ -431,6 +463,52 @@ public class AosTests
             }
             certDir.Delete(recursive: true);
         }
+    }
+
+    [Test]
+    public void Serve_InvalidTlsMaterial_ReturnsRuntimeError()
+    {
+        var appPath = FindRepoFile("examples/golden/http/health_app.aos");
+        var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
+        var port = FindFreePort();
+        var missingCert = Path.Combine(Path.GetTempPath(), $"ailang-missing-cert-{Guid.NewGuid():N}.pem");
+        var missingKey = Path.Combine(Path.GetTempPath(), $"ailang-missing-key-{Guid.NewGuid():N}.pem");
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = repoRoot
+        };
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add("serve");
+        psi.ArgumentList.Add(appPath);
+        psi.ArgumentList.Add("--port");
+        psi.ArgumentList.Add(port.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--tls-cert");
+        psi.ArgumentList.Add(missingCert);
+        psi.ArgumentList.Add("--tls-key");
+        psi.ArgumentList.Add(missingKey);
+
+        using var process = Process.Start(psi);
+        Assert.That(process, Is.Not.Null);
+
+        var exited = process!.WaitForExit(15000);
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail("serve did not exit for invalid TLS material.");
+        }
+
+        var output = process.StandardOutput.ReadToEnd().Trim();
+        Assert.That(process.ExitCode, Is.EqualTo(3), process.StandardError.ReadToEnd());
+        Assert.That(
+            output,
+            Is.EqualTo("Err#runtime_err(code=TLS003 message=\"Failed to load TLS certificate or key.\" nodeId=serve)"));
     }
 
     [Test]

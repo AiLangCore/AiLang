@@ -35,9 +35,20 @@ public sealed partial class AosInterpreter
             {
                 HostFileSystem.EnsureDirectory(HostFileSystem.Combine(directory, "new", "existing_project"));
             }
-            else if (testName == "new_success")
+            else if (testName == "new_success" ||
+                     testName == "new_cli_success" ||
+                     testName == "new_http_success" ||
+                     testName == "new_gui_success" ||
+                     testName == "new_lib_success")
             {
-                var successDir = HostFileSystem.Combine(directory, "new", "success_project");
+                var successDir = testName switch
+                {
+                    "new_success" => HostFileSystem.Combine(directory, "new", "success_project"),
+                    "new_cli_success" => HostFileSystem.Combine(directory, "new", "success_cli_project"),
+                    "new_http_success" => HostFileSystem.Combine(directory, "new", "success_http_project"),
+                    "new_gui_success" => HostFileSystem.Combine(directory, "new", "success_gui_project"),
+                    _ => HostFileSystem.Combine(directory, "new", "success_lib_project")
+                };
                 if (HostFileSystem.DirectoryExists(successDir))
                 {
                     HostFileSystem.DeleteDirectory(successDir, recursive: true);
@@ -116,9 +127,20 @@ public sealed partial class AosInterpreter
                 HostConsole.WriteLine($"FAIL {testName}");
             }
 
-            if (testName == "new_success")
+            if (testName == "new_success" ||
+                testName == "new_cli_success" ||
+                testName == "new_http_success" ||
+                testName == "new_gui_success" ||
+                testName == "new_lib_success")
             {
-                var successDir = HostFileSystem.Combine(directory, "new", "success_project");
+                var successDir = testName switch
+                {
+                    "new_success" => HostFileSystem.Combine(directory, "new", "success_project"),
+                    "new_cli_success" => HostFileSystem.Combine(directory, "new", "success_cli_project"),
+                    "new_http_success" => HostFileSystem.Combine(directory, "new", "success_http_project"),
+                    "new_gui_success" => HostFileSystem.Combine(directory, "new", "success_gui_project"),
+                    _ => HostFileSystem.Combine(directory, "new", "success_lib_project")
+                };
                 if (HostFileSystem.DirectoryExists(successDir))
                 {
                     HostFileSystem.DeleteDirectory(successDir, recursive: true);
@@ -167,6 +189,11 @@ public sealed partial class AosInterpreter
                 "new_missing_name" => new[] { "new" },
                 "new_directory_exists" => new[] { "new", HostFileSystem.Combine(newDir, "existing_project") },
                 "new_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_project") },
+                "new_cli_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_cli_project"), "cli" },
+                "new_http_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_http_project"), "http" },
+                "new_gui_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_gui_project"), "gui" },
+                "new_lib_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_lib_project"), "lib" },
+                "new_unknown_template" => new[] { "new", HostFileSystem.Combine(newDir, "success_unknown_project"), "unknown" },
                 _ => new[] { "new" }
             };
         }

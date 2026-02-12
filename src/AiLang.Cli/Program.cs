@@ -1,6 +1,5 @@
 using AiLang.Core;
 using AiVM.Core;
-using System.Text;
 
 Environment.ExitCode = RunCli(args);
 return;
@@ -32,16 +31,18 @@ static int RunCli(string[] args)
         return 1;
     }
 
-    if (TryLoadEmbeddedPayload(out var embeddedPayload, out var embeddedBytecodePayload))
+    if (EmbeddedBundleLoader.TryLoadFromCurrentProcess(out var embedded))
     {
+        var embeddedPayload = embedded.Text;
+        var embeddedBytecodePayload = embedded.IsBytecode;
         if (!InAosDevMode() && !embeddedBytecodePayload)
         {
             Console.WriteLine(FormatErr("err0", "DEV002", "Production runtime only supports embedded bytecode payloads.", "bundle"));
             return 1;
         }
         return embeddedBytecodePayload
-            ? RunEmbeddedBytecode(embeddedPayload!, filteredArgs, traceEnabled)
-            : RunEmbeddedBundle(embeddedPayload!, filteredArgs, traceEnabled, vmMode);
+            ? RunEmbeddedBytecode(embeddedPayload, filteredArgs, traceEnabled)
+            : RunEmbeddedBundle(embeddedPayload, filteredArgs, traceEnabled, vmMode);
     }
 
     if (filteredArgs.Length == 0)
@@ -653,63 +654,6 @@ static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool trace
         return 3;
     }
 }
-
-static bool TryLoadEmbeddedPayload(out string? payloadText, out bool isBytecodePayload)
-{
-    payloadText = null;
-    isBytecodePayload = false;
-    var processPath = Environment.ProcessPath;
-    if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
-    {
-        return false;
-    }
-
-    var markerAst = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
-    var markerBytecode = Encoding.UTF8.GetBytes("\n--AIBUNDLE1:BYTECODE--\n");
-    var bytes = File.ReadAllBytes(processPath);
-    var astIndex = LastIndexOf(bytes, markerAst);
-    var bytecodeIndex = LastIndexOf(bytes, markerBytecode);
-    if (astIndex < 0 && bytecodeIndex < 0)
-    {
-        return false;
-    }
-
-    var marker = astIndex >= bytecodeIndex ? markerAst : markerBytecode;
-    var markerIndex = astIndex >= bytecodeIndex ? astIndex : bytecodeIndex;
-    isBytecodePayload = astIndex < bytecodeIndex;
-    var start = markerIndex + marker.Length;
-    if (start >= bytes.Length)
-    {
-        return false;
-    }
-
-    payloadText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
-    return true;
-}
-
-static int LastIndexOf(byte[] haystack, byte[] needle)
-{
-    for (var i = haystack.Length - needle.Length; i >= 0; i--)
-    {
-        var match = true;
-        for (var j = 0; j < needle.Length; j++)
-        {
-            if (haystack[i + j] != needle[j])
-            {
-                match = false;
-                break;
-            }
-        }
-
-        if (match)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
 
 static bool TryGetBundleAttr(AosNode bundle, string key, out string value)
 {

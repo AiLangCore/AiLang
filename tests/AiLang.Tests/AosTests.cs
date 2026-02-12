@@ -17,10 +17,16 @@ public class AosTests
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
         public string? LastStdoutLine { get; private set; }
+        public int IoPrintCount { get; private set; }
 
         public override void StdoutWriteLine(string text)
         {
             LastStdoutLine = text;
+        }
+
+        public override void IoPrint(string text)
+        {
+            IoPrintCount++;
         }
 
         public override int StrUtf8ByteCount(string text)
@@ -260,6 +266,57 @@ public class AosTests
 
             Assert.That(count, Is.EqualTo(777));
             Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void UnknownSysTarget_DoesNotEvaluateArguments()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            runtime.Permissions.Add("io");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
+            Assert.That(host.IoPrintCount, Is.EqualTo(0));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void InvalidCapabilityArity_DoesNotEvaluateArguments()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=io.print) { Call#c2(target=io.print) { Lit#s1(value=\"nested\") } Lit#s2(value=\"extra\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("io");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
+            Assert.That(host.IoPrintCount, Is.EqualTo(0));
         }
         finally
         {

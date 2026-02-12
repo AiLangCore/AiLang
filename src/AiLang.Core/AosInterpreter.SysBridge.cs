@@ -22,6 +22,17 @@ public sealed partial class AosInterpreter
             return true;
         }
 
+        if (!VmSyscallDispatcher.SupportsTarget(target))
+        {
+            return false;
+        }
+
+        if (VmSyscallDispatcher.TryGetExpectedArity(target, out var sysArity) &&
+            callNode.Children.Count != sysArity)
+        {
+            return true;
+        }
+
         var args = new List<SysValue>(callNode.Children.Count);
         for (var i = 0; i < callNode.Children.Count; i++)
         {
@@ -56,6 +67,17 @@ public sealed partial class AosInterpreter
             return false;
         }
         if (!runtime.Permissions.Contains(requiredPermission))
+        {
+            return true;
+        }
+
+        if (!VmCapabilityDispatcher.SupportsTarget(target))
+        {
+            return false;
+        }
+
+        if (VmCapabilityDispatcher.TryGetExpectedArity(target, out var capabilityArity) &&
+            callNode.Children.Count != capabilityArity)
         {
             return true;
         }

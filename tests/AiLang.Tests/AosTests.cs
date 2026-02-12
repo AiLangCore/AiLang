@@ -216,6 +216,35 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_Utf8Count_ReturnsInt()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+        Assert.That(value.AsInt(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void SyscallDispatch_InvalidArgs_ReturnsUnknown()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_close) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
+    }
+
+    [Test]
     public void VmRunBytecode_RejectsUnsupportedVersion()
     {
         var bytecode = Parse("Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0)").Root!;

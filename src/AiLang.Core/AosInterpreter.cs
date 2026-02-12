@@ -61,19 +61,7 @@ public sealed partial class AosInterpreter
 
     private AosValue EvalNode(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
-        if (runtime.TraceEnabled)
-        {
-            runtime.TraceSteps.Add(new AosNode(
-                "Step",
-                "auto",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["kind"] = new AosAttrValue(AosAttrKind.String, node.Kind),
-                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, node.Id)
-                },
-                new List<AosNode>(),
-                node.Span));
-        }
+        AddEvalTraceStep(runtime, node);
 
         _evalDepth++;
         if (_evalDepth > MaxEvalDepth)

@@ -67,48 +67,6 @@ public sealed class AosStructuralValidator
 
     private static AosNode LoadValidatorProgram()
     {
-        var searchRoots = new[]
-        {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = Path.Combine(root, "validate.aos");
-            if (File.Exists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
-        if (path is null)
-        {
-            throw new FileNotFoundException("validate.aos not found.");
-        }
-
-        var source = File.ReadAllText(path);
-        var parse = AosParsing.Parse(source);
-
-        if (parse.Root is null)
-        {
-            throw new InvalidOperationException("Failed to parse validate.aos.");
-        }
-
-        if (parse.Root.Kind != "Program")
-        {
-            throw new InvalidOperationException("validate.aos must contain a Program node.");
-        }
-
-        if (parse.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException($"validate.aos parse error: {parse.Diagnostics[0].Message}");
-        }
-
-        return parse.Root;
+        return AosCompilerAssets.LoadRequiredProgram("validate.aos");
     }
 }

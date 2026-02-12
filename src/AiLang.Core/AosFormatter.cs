@@ -52,48 +52,6 @@ public static class AosFormatter
 
     private static AosNode LoadFormatterProgram()
     {
-        var searchRoots = new[]
-        {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = Path.Combine(root, "format.aos");
-            if (File.Exists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
-        if (path is null)
-        {
-            throw new FileNotFoundException("format.aos not found.");
-        }
-
-        var source = File.ReadAllText(path);
-        var parse = AosParsing.Parse(source);
-
-        if (parse.Root is null)
-        {
-            throw new InvalidOperationException("Failed to parse format.aos.");
-        }
-
-        if (parse.Root.Kind != "Program")
-        {
-            throw new InvalidOperationException("format.aos must contain a Program node.");
-        }
-
-        if (parse.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException($"format.aos parse error: {parse.Diagnostics[0].Message}");
-        }
-
-        return parse.Root;
+        return AosCompilerAssets.LoadRequiredProgram("format.aos");
     }
 }

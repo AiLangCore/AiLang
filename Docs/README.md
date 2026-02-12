@@ -20,6 +20,8 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Overview](./Overview.md)
 - [Getting Started](./Getting-Started.md)
 - [Host Boundary](./HOST_BOUNDARY.md)
+- [Agent Code Map](./Agent-CodeMap.md)
+- [Conventions](./Conventions.md)
 
 ## Hard Constraints
 

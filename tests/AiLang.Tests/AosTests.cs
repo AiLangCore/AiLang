@@ -14,6 +14,22 @@ namespace AiLang.Tests;
 public class AosTests
 {
     [Test]
+    public void CompilerAssets_CanFindBundledCompilerFiles()
+    {
+        var path = AosCompilerAssets.TryFind("runtime.aos");
+        Assert.That(path, Is.Not.Null);
+        Assert.That(path!.EndsWith("runtime.aos", StringComparison.Ordinal), Is.True);
+    }
+
+    [Test]
+    public void CompilerAssets_LoadRequiredProgram_ReturnsProgramRoot()
+    {
+        var program = AosCompilerAssets.LoadRequiredProgram("format.aos");
+        Assert.That(program.Kind, Is.EqualTo("Program"));
+        Assert.That(program.Children.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
     public void TokenizerParser_ParsesBasicProgram()
     {
         var source = "Program#p1 { // root\n Let#l1(name=answer) { Lit#v1(value=1) } }";

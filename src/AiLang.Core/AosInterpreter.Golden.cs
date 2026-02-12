@@ -6,7 +6,7 @@ public sealed partial class AosInterpreter
 {
     private static int RunGoldenTests(string directory)
     {
-        if (!Directory.Exists(directory))
+        if (!HostFileSystem.DirectoryExists(directory))
         {
             Console.WriteLine($"FAIL {directory} (directory not found)");
             return 1;
@@ -19,7 +19,7 @@ public sealed partial class AosInterpreter
             return 1;
         }
 
-        var inputFiles = Directory.GetFiles(directory, "*.in.aos", SearchOption.TopDirectoryOnly)
+        var inputFiles = HostFileSystem.GetFiles(directory, "*.in.aos", SearchOption.TopDirectoryOnly)
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
@@ -29,27 +29,27 @@ public sealed partial class AosInterpreter
             var stem = inputPath[..^".in.aos".Length];
             var outPath = $"{stem}.out.aos";
             var errPath = $"{stem}.err";
-            var testName = Path.GetFileName(stem);
-            var source = File.ReadAllText(inputPath);
+            var testName = HostFileSystem.GetFileName(stem);
+            var source = HostFileSystem.ReadAllText(inputPath);
             if (testName == "new_directory_exists")
             {
-                Directory.CreateDirectory(Path.Combine(directory, "new", "existing_project"));
+                HostFileSystem.EnsureDirectory(HostFileSystem.Combine(directory, "new", "existing_project"));
             }
             else if (testName == "new_success")
             {
-                var successDir = Path.Combine(directory, "new", "success_project");
-                if (Directory.Exists(successDir))
+                var successDir = HostFileSystem.Combine(directory, "new", "success_project");
+                if (HostFileSystem.DirectoryExists(successDir))
                 {
-                    Directory.Delete(successDir, recursive: true);
+                    HostFileSystem.DeleteDirectory(successDir, recursive: true);
                 }
             }
 
             string actual;
             string expected;
 
-            if (File.Exists(errPath))
+            if (HostFileSystem.FileExists(errPath))
             {
-                expected = NormalizeGoldenText(File.ReadAllText(errPath));
+                expected = NormalizeGoldenText(HostFileSystem.ReadAllText(errPath));
                 if (testName.StartsWith("vm_", StringComparison.Ordinal))
                 {
                     actual = ExecuteVmGolden(source, testName);
@@ -58,9 +58,9 @@ public sealed partial class AosInterpreter
                 var modeArgs = ResolveGoldenArgs(directory, testName, errorMode: true);
                 actual = ExecuteAicMode(aicProgram, modeArgs!, source);
             }
-            else if (File.Exists(outPath))
+            else if (HostFileSystem.FileExists(outPath))
             {
-                expected = NormalizeGoldenText(File.ReadAllText(outPath));
+                expected = NormalizeGoldenText(HostFileSystem.ReadAllText(outPath));
                 if (testName.StartsWith("trace_", StringComparison.Ordinal))
                 {
                     actual = ExecuteTraceGolden(source, testName);
@@ -118,10 +118,10 @@ public sealed partial class AosInterpreter
 
             if (testName == "new_success")
             {
-                var successDir = Path.Combine(directory, "new", "success_project");
-                if (Directory.Exists(successDir))
+                var successDir = HostFileSystem.Combine(directory, "new", "success_project");
+                if (HostFileSystem.DirectoryExists(successDir))
                 {
-                    Directory.Delete(successDir, recursive: true);
+                    HostFileSystem.DeleteDirectory(successDir, recursive: true);
                 }
             }
         }
@@ -161,12 +161,12 @@ public sealed partial class AosInterpreter
     {
         if (testName.StartsWith("new_", StringComparison.Ordinal))
         {
-            var newDir = Path.Combine(directory, "new");
+            var newDir = HostFileSystem.Combine(directory, "new");
             return testName switch
             {
                 "new_missing_name" => new[] { "new" },
-                "new_directory_exists" => new[] { "new", Path.Combine(newDir, "existing_project") },
-                "new_success" => new[] { "new", Path.Combine(newDir, "success_project") },
+                "new_directory_exists" => new[] { "new", HostFileSystem.Combine(newDir, "existing_project") },
+                "new_success" => new[] { "new", HostFileSystem.Combine(newDir, "success_project") },
                 _ => new[] { "new" }
             };
         }
@@ -175,17 +175,17 @@ public sealed partial class AosInterpreter
         {
             return testName switch
             {
-                "publish_binary_runs" => new[] { "publish", Path.Combine(directory, "publish", "binary_runs") },
-                "publish_bundle_single_file" => new[] { "publish", Path.Combine(directory, "publish", "bundle_single_file") },
-                "publish_bundle_with_import" => new[] { "publish", Path.Combine(directory, "publish", "bundle_with_import") },
-                "publish_bundle_cycle_error" => new[] { "publish", Path.Combine(directory, "publish", "bundle_cycle_error") },
-                "publish_writes_bundle" => new[] { "publish", Path.Combine(directory, "publish", "writes_bundle") },
-                "publish_overwrite_bundle" => new[] { "publish", Path.Combine(directory, "publish", "overwrite_bundle") },
-                "publish_include_success" => new[] { "publish", Path.Combine(directory, "publishcases", "include_success") },
-                "publish_include_missing_library" => new[] { "publish", Path.Combine(directory, "publishcases", "include_missing_library") },
-                "publish_include_version_mismatch" => new[] { "publish", Path.Combine(directory, "publishcases", "include_version_mismatch") },
+                "publish_binary_runs" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "binary_runs") },
+                "publish_bundle_single_file" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "bundle_single_file") },
+                "publish_bundle_with_import" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "bundle_with_import") },
+                "publish_bundle_cycle_error" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "bundle_cycle_error") },
+                "publish_writes_bundle" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "writes_bundle") },
+                "publish_overwrite_bundle" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "overwrite_bundle") },
+                "publish_include_success" => new[] { "publish", HostFileSystem.Combine(directory, "publishcases", "include_success") },
+                "publish_include_missing_library" => new[] { "publish", HostFileSystem.Combine(directory, "publishcases", "include_missing_library") },
+                "publish_include_version_mismatch" => new[] { "publish", HostFileSystem.Combine(directory, "publishcases", "include_version_mismatch") },
                 "publish_missing_dir" => new[] { "publish" },
-                "publish_missing_manifest" => new[] { "publish", Path.Combine(directory, "publish", "missing_manifest") },
+                "publish_missing_manifest" => new[] { "publish", HostFileSystem.Combine(directory, "publish", "missing_manifest") },
                 _ => new[] { "publish" }
             };
         }
@@ -206,46 +206,34 @@ public sealed partial class AosInterpreter
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=trace)";
         }
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-trace-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var tempDir = HostFileSystem.Combine(HostFileSystem.GetTempPath(), $"ailang-trace-{Guid.NewGuid():N}");
+        HostFileSystem.EnsureDirectory(tempDir);
         try
         {
-            var sourcePath = Path.Combine(tempDir, "trace_input.aos");
-            File.WriteAllText(sourcePath, source);
+            var sourcePath = HostFileSystem.Combine(tempDir, "trace_input.aos");
+            HostFileSystem.WriteAllText(sourcePath, source);
 
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = hostBinary,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = Directory.GetCurrentDirectory()
-            };
-            psi.ArgumentList.Add("run");
-            psi.ArgumentList.Add(sourcePath);
-            psi.ArgumentList.Add("--trace");
-            psi.ArgumentList.Add("--vm=ast");
+            var args = new List<string> { "run", sourcePath, "--trace", "--vm=ast" };
             if (testName == "trace_with_args")
             {
-                psi.ArgumentList.Add("alpha");
-                psi.ArgumentList.Add("beta");
+                args.Add("alpha");
+                args.Add("beta");
             }
 
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process is null)
+            var result = HostProcessRunner.Run(hostBinary, args, HostFileSystem.GetCurrentDirectory());
+            if (result is null)
             {
                 return "Err#err0(code=RUN001 message=\"Failed to execute trace golden.\" nodeId=trace)";
             }
 
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
+            var output = System.Text.Encoding.UTF8.GetString(result.Stdout);
             return NormalizeGoldenText(output);
         }
         finally
         {
             try
             {
-                Directory.Delete(tempDir, true);
+                HostFileSystem.DeleteDirectory(tempDir, true);
             }
             catch
             {
@@ -261,39 +249,28 @@ public sealed partial class AosInterpreter
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=lifecycle)";
         }
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-lifecycle-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var tempDir = HostFileSystem.Combine(HostFileSystem.GetTempPath(), $"ailang-lifecycle-{Guid.NewGuid():N}");
+        HostFileSystem.EnsureDirectory(tempDir);
         try
         {
-            var sourcePath = Path.Combine(tempDir, "lifecycle_input.aos");
-            File.WriteAllText(sourcePath, source);
+            var sourcePath = HostFileSystem.Combine(tempDir, "lifecycle_input.aos");
+            HostFileSystem.WriteAllText(sourcePath, source);
 
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = hostBinary,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = Directory.GetCurrentDirectory()
-            };
-            psi.ArgumentList.Add("run");
-            psi.ArgumentList.Add(sourcePath);
-            psi.ArgumentList.Add("--vm=ast");
+            var args = new List<string> { "run", sourcePath, "--vm=ast" };
             if (testName == "lifecycle_event_message_basic" || testName == "http_health_route_refactor")
             {
-                psi.ArgumentList.Add("__event_message");
-                psi.ArgumentList.Add("text");
-                psi.ArgumentList.Add("GET /health");
+                args.Add("__event_message");
+                args.Add("text");
+                args.Add("GET /health");
             }
 
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process is null)
+            var result = HostProcessRunner.Run(hostBinary, args, HostFileSystem.GetCurrentDirectory());
+            if (result is null)
             {
                 return "Err#err0(code=RUN001 message=\"Failed to execute lifecycle golden.\" nodeId=lifecycle)";
             }
 
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
+            var output = System.Text.Encoding.UTF8.GetString(result.Stdout);
             if (testName == "lifecycle_app_exit_code")
             {
                 return AosFormatter.Format(new AosNode(
@@ -301,7 +278,7 @@ public sealed partial class AosInterpreter
                     "ec1",
                     new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
                     {
-                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, result.ExitCode)
                     },
                     new List<AosNode>(),
                     new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
@@ -313,7 +290,7 @@ public sealed partial class AosInterpreter
                     "ec1",
                     new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
                     {
-                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, result.ExitCode)
                     },
                     new List<AosNode>(),
                     new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
@@ -327,7 +304,7 @@ public sealed partial class AosInterpreter
         {
             try
             {
-                Directory.Delete(tempDir, true);
+                HostFileSystem.DeleteDirectory(tempDir, true);
             }
             catch
             {
@@ -343,62 +320,41 @@ public sealed partial class AosInterpreter
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=vm)";
         }
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-vm-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        var tempDir = HostFileSystem.Combine(HostFileSystem.GetTempPath(), $"ailang-vm-{Guid.NewGuid():N}");
+        HostFileSystem.EnsureDirectory(tempDir);
         try
         {
-            var sourcePath = Path.Combine(tempDir, "vm_input.aos");
-            File.WriteAllText(sourcePath, source);
+            var sourcePath = HostFileSystem.Combine(tempDir, "vm_input.aos");
+            HostFileSystem.WriteAllText(sourcePath, source);
             if (testName == "vm_import_support")
             {
-                File.WriteAllText(Path.Combine(tempDir, "mod.aos"),
+                HostFileSystem.WriteAllText(HostFileSystem.Combine(tempDir, "mod.aos"),
                     "Program#m1 { Export#e1(name=hello) Let#l1(name=hello) { Fn#f1(params=name) { Block#b1 { Return#r1 { Lit#s1(value=\"hello\") } } } } }");
             }
 
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = hostBinary,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                UseShellExecute = false,
-                WorkingDirectory = Directory.GetCurrentDirectory()
-            };
-            psi.ArgumentList.Add("run");
-            psi.ArgumentList.Add(sourcePath);
-            if (testName == "vm_echo")
-            {
-                // Explicit stdin exercise for io.readLine.
-                psi.StandardInputEncoding = System.Text.Encoding.UTF8;
-            }
+            var args = new List<string> { "run", sourcePath };
             if (testName == "vm_health_handler")
             {
-                psi.ArgumentList.Add("__event_message");
-                psi.ArgumentList.Add("text");
-                psi.ArgumentList.Add("GET /health");
+                args.Add("__event_message");
+                args.Add("text");
+                args.Add("GET /health");
             }
 
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process is null)
+            var stdin = testName == "vm_echo" ? "vm-echo\n" : null;
+            var result = HostProcessRunner.Run(hostBinary, args, HostFileSystem.GetCurrentDirectory(), stdin);
+            if (result is null)
             {
                 return "Err#err0(code=RUN001 message=\"Failed to execute vm golden.\" nodeId=vm)";
             }
 
-            if (testName == "vm_echo")
-            {
-                process.StandardInput.Write("vm-echo\n");
-                process.StandardInput.Close();
-            }
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
+            var output = System.Text.Encoding.UTF8.GetString(result.Stdout);
             return NormalizeGoldenText(output);
         }
         finally
         {
             try
             {
-                Directory.Delete(tempDir, true);
+                HostFileSystem.DeleteDirectory(tempDir, true);
             }
             catch
             {
@@ -408,32 +364,19 @@ public sealed partial class AosInterpreter
 
     private static string ExecutePublishBinaryGolden(AosNode aicProgram, string directory, string input)
     {
-        var publishDir = Path.Combine(directory, "publish", "binary_runs");
+        var publishDir = HostFileSystem.Combine(directory, "publish", "binary_runs");
         var publishOutput = ExecuteAicMode(aicProgram, new[] { "publish", publishDir }, input);
-        var binaryPath = Path.Combine(publishDir, "binaryrun");
-        if (!File.Exists(binaryPath))
+        var binaryPath = HostFileSystem.Combine(publishDir, "binaryrun");
+        if (!HostFileSystem.FileExists(binaryPath))
         {
             return publishOutput;
         }
 
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = binaryPath,
-            Arguments = "alpha beta",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            WorkingDirectory = publishDir
-        };
-        using var process = System.Diagnostics.Process.Start(psi);
-        if (process is null)
+        var result = HostProcessRunner.Run(binaryPath, new[] { "alpha", "beta" }, publishDir);
+        if (result is null)
         {
             return "Err#err0(code=RUN001 message=\"Failed to execute published binary.\" nodeId=binary)";
         }
-
-        var output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        _ = output;
         return "binary-ok";
     }
 
@@ -441,17 +384,17 @@ public sealed partial class AosInterpreter
     {
         var searchRoots = new[]
         {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+            HostEnvironment.BaseDirectory,
+            HostFileSystem.GetCurrentDirectory(),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
         };
 
         string? path = null;
         foreach (var root in searchRoots)
         {
-            var candidate = Path.Combine(root, "aic.aos");
-            if (File.Exists(candidate))
+            var candidate = HostFileSystem.Combine(root, "aic.aos");
+            if (HostFileSystem.FileExists(candidate))
             {
                 path = candidate;
                 break;
@@ -463,7 +406,7 @@ public sealed partial class AosInterpreter
             return null;
         }
 
-        var parse = ParseSource(File.ReadAllText(path));
+        var parse = ParseSource(HostFileSystem.ReadAllText(path));
         return parse.Root;
     }
 

@@ -129,7 +129,7 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
     try
     {
         var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
@@ -137,9 +137,12 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
 
         var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
         var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
-        var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
-                             suppressValue.Kind == AosValueKind.Bool &&
-                             suppressValue.AsBool();
+        var suppressOutput = (runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
+                              suppressValue.Kind == AosValueKind.Bool &&
+                              suppressValue.AsBool()) ||
+                             (program is not null &&
+                              HasNamedExport(program, "init") &&
+                              HasNamedExport(program, "update"));
 
         if (IsErrNode(result, out var errNode))
         {
@@ -417,7 +420,12 @@ static bool TryLoadProgramForExecution(
         return false;
     }
 
-    if (evaluateProgram)
+    var shouldEvaluateProgram = evaluateProgram ||
+                                (string.Equals(vmMode, "bytecode", StringComparison.Ordinal) &&
+                                 HasNamedExport(parse.Root, "init") &&
+                                 HasNamedExport(parse.Root, "update"));
+
+    if (shouldEvaluateProgram)
     {
         var initResult = bootstrapInterpreter.EvaluateProgram(parse.Root, runtime);
         if (IsErrNode(initResult, out var errNode))
@@ -433,6 +441,30 @@ static bool TryLoadProgramForExecution(
 
     program = parse.Root;
     return true;
+}
+
+static bool HasNamedExport(AosNode program, string exportName)
+{
+    foreach (var child in program.Children)
+    {
+        if (!string.Equals(child.Kind, "Export", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (!child.Attrs.TryGetValue("name", out var nameAttr))
+        {
+            continue;
+        }
+
+        if ((nameAttr.Kind == AosAttrKind.String || nameAttr.Kind == AosAttrKind.Identifier) &&
+            string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static AosParseResult Parse(string source)

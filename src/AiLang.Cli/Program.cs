@@ -81,13 +81,13 @@ static int RunCli(string[] args)
                 Console.WriteLine(FormatErr("err0", "DEV005", "Source serve is unavailable in production build.", "serve"));
                 return 1;
             }
-            if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
+            if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var tlsCertPath, out var tlsKeyPath, out var appArgs))
             {
                 PrintUsage();
                 return 1;
             }
 
-            return RunServe(filteredArgs[1], appArgs, port, traceEnabled, vmMode);
+            return RunServe(filteredArgs[1], appArgs, port, tlsCertPath, tlsKeyPath, traceEnabled, vmMode);
         case "bench":
             if (!InAosDevMode())
             {
@@ -124,21 +124,19 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
     try
     {
         var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
+        var lifecycleMode = program is not null && HasExport(program, "init") && HasExport(program, "update");
         var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
         var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
         var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
                              suppressValue.Kind == AosValueKind.Bool &&
                              suppressValue.AsBool();
-        if (!suppressOutput && TryGetProgramNode(runtime, out var programNode))
-        {
-            suppressOutput = IsLifecycleProgram(programNode!);
-        }
+        suppressOutput = suppressOutput || lifecycleMode;
 
         if (IsErrNode(result, out var errNode))
         {
@@ -159,6 +157,11 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
         {
             Console.WriteLine(FormatOk("ok1", result));
         }
+        if (suppressOutput)
+        {
+            return 0;
+        }
+
         return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
     }
     catch (AosProcessExitException exit)
@@ -172,7 +175,35 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
     }
 }
 
-static int RunServe(string path, string[] argv, int port, bool traceEnabled, string vmMode)
+static bool HasExport(AosNode program, string exportName)
+{
+    foreach (var child in program.Children)
+    {
+        if (!string.Equals(child.Kind, "Export", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (!child.Attrs.TryGetValue("name", out var nameAttr))
+        {
+            continue;
+        }
+
+        if (nameAttr.Kind != AosAttrKind.String && nameAttr.Kind != AosAttrKind.Identifier)
+        {
+            continue;
+        }
+
+        if (string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static int RunServe(string path, string[] argv, int port, string tlsCertPath, string tlsKeyPath, bool traceEnabled, string vmMode)
 {
     try
     {
@@ -183,7 +214,7 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled, str
         }
 
         runtime!.Permissions.Add("sys");
-        var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port));
+        var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port, tlsCertPath, tlsKeyPath));
         if (IsErrNode(result, out var errNode))
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
@@ -247,7 +278,7 @@ static AosNode? LoadRuntimeKernel()
     return parse.Root.Kind == "Program" ? parse.Root : null;
 }
 
-static AosNode BuildKernelServeArgs(int port)
+static AosNode BuildKernelServeArgs(int port, string tlsCertPath, string tlsKeyPath)
 {
     var children = new List<AosNode>
     {
@@ -266,6 +297,24 @@ static AosNode BuildKernelServeArgs(int port)
             new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
             {
                 ["value"] = new AosAttrValue(AosAttrKind.Int, port)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg2",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, tlsCertPath)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg3",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, tlsKeyPath)
             },
             new List<AosNode>(),
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
@@ -385,7 +434,7 @@ static bool TryLoadProgramForExecution(
     runtime.Permissions.Add("compiler");
     runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
     runtime.TraceEnabled = false;
-    runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
+    runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
     runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
     runtime.ReadOnlyBindings.Add("__vm_mode");
@@ -431,7 +480,7 @@ static bool TryLoadProgramForExecution(
 
 static AosParseResult Parse(string source)
 {
-    return AosExternalFrontend.Parse(source);
+    return AosParsing.Parse(source);
 }
 
 static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled, string vmMode)
@@ -471,11 +520,11 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.Permissions.Add("compiler");
         runtime.TraceEnabled = traceEnabled;
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
-        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
         runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
         runtime.ReadOnlyBindings.Add("__vm_mode");
-        runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.Env["__entryArgs"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
         var bootstrapInterpreter = new AosInterpreter();
         runtime.TraceEnabled = false;
@@ -574,11 +623,11 @@ static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool trace
         runtime.Permissions.Add("compiler");
         runtime.Permissions.Add("sys");
         runtime.TraceEnabled = traceEnabled;
-        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
 
         var interpreter = new AosInterpreter();
-        var result = interpreter.RunBytecode(parse.Root, "main", BuildArgvNode(cliArgs), runtime);
+        var result = interpreter.RunBytecode(parse.Root, "main", AosRuntimeNodes.BuildArgvNode(cliArgs), runtime);
         if (IsErrNode(result, out var errNode))
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
@@ -686,46 +735,6 @@ static bool IsErrNode(AosValue value, out AosNode? errNode)
     }
     errNode = node;
     return true;
-}
-
-static bool TryGetProgramNode(AosRuntime runtime, out AosNode? programNode)
-{
-    programNode = null;
-    if (!runtime.Env.TryGetValue("__program", out var programValue) || programValue.Kind != AosValueKind.Node)
-    {
-        return false;
-    }
-    programNode = programValue.AsNode();
-    return true;
-}
-
-static bool IsLifecycleProgram(AosNode program)
-{
-    var hasInit = false;
-    var hasUpdate = false;
-    foreach (var child in program.Children)
-    {
-        if (child.Kind != "Export")
-        {
-            continue;
-        }
-        if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
-        {
-            continue;
-        }
-
-        var name = nameAttr.AsString();
-        if (string.Equals(name, "init", StringComparison.Ordinal))
-        {
-            hasInit = true;
-        }
-        else if (string.Equals(name, "update", StringComparison.Ordinal))
-        {
-            hasUpdate = true;
-        }
-    }
-
-    return hasInit && hasUpdate;
 }
 
 static string FormatOk(string id, AosValue value)
@@ -929,7 +938,7 @@ static AosNode RunBenchCase(string name, string relativePath, int iterations)
         var interpreter = new AosInterpreter();
         AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var result = interpreter.RunBytecode(bytecode, "main", BuildArgvNode(Array.Empty<string>()), runtime);
+        var result = interpreter.RunBytecode(bytecode, "main", AosRuntimeNodes.BuildArgvNode(Array.Empty<string>()), runtime);
         sw.Stop();
         vmTicks += sw.ElapsedTicks;
         if (IsErrNode(result, out _))
@@ -949,7 +958,7 @@ static AosRuntime NewBenchRuntime(string sourcePath)
     runtime.Permissions.Add("compiler");
     runtime.Permissions.Add("sys");
     runtime.ModuleBaseDir = Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
-    runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(Array.Empty<string>()));
+    runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(Array.Empty<string>()));
     runtime.ReadOnlyBindings.Add("argv");
     return runtime;
 }
@@ -1011,7 +1020,7 @@ static void PrintUsage()
 {
     if (InAosDevMode())
     {
-        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
+        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
         return;
     }
 
@@ -1025,28 +1034,4 @@ static bool InAosDevMode()
 #else
     return false;
 #endif
-}
-
-static AosNode BuildArgvNode(string[] values)
-{
-    var children = new List<AosNode>(values.Length);
-    for (var i = 0; i < values.Length; i++)
-    {
-        children.Add(new AosNode(
-            "Lit",
-            $"argv{i}",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-    }
-
-    return new AosNode(
-        "Block",
-        "argv",
-        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
-        children,
-        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
 }

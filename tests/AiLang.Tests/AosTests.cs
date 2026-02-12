@@ -2,7 +2,11 @@ using AiLang.Core;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace AiLang.Tests;
@@ -379,6 +383,57 @@ public class AosTests
     }
 
     [Test]
+    public void Serve_HealthEndpoint_ReturnsOk_OverHttps()
+    {
+        var appPath = FindRepoFile("examples/golden/http/health_app.aos");
+        var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
+        var port = FindFreePort();
+        var certDir = Directory.CreateTempSubdirectory("ailang-https-");
+        var certPath = Path.Combine(certDir.FullName, "cert.pem");
+        var keyPath = Path.Combine(certDir.FullName, "key.pem");
+        WriteSelfSignedPem(certPath, keyPath);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = repoRoot
+        };
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add("serve");
+        psi.ArgumentList.Add(appPath);
+        psi.ArgumentList.Add("--port");
+        psi.ArgumentList.Add(port.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--tls-cert");
+        psi.ArgumentList.Add(certPath);
+        psi.ArgumentList.Add("--tls-key");
+        psi.ArgumentList.Add(keyPath);
+
+        using var process = Process.Start(psi);
+        Assert.That(process, Is.Not.Null);
+
+        try
+        {
+            var response = SendHttpsRequest(port, "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            Assert.That(response.Contains("HTTP/1.1 200 OK", StringComparison.Ordinal), Is.True);
+            Assert.That(response.EndsWith("{\"status\":\"ok\"}", StringComparison.Ordinal), Is.True);
+        }
+        finally
+        {
+            if (process is { HasExited: false })
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(2000);
+            }
+            certDir.Delete(recursive: true);
+        }
+    }
+
+    [Test]
     public void Bench_Command_ReturnsStructuredReport()
     {
         var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
@@ -427,7 +482,7 @@ public class AosTests
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         runtime.ModuleBaseDir = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
-        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(new[] { mode }));
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(new[] { mode }));
         runtime.ReadOnlyBindings.Add("argv");
 
         var validator = new AosValidator();
@@ -455,30 +510,6 @@ public class AosTests
         }
 
         return writer.ToString();
-    }
-
-    private static AosNode BuildArgvNode(string[] values)
-    {
-        var children = new List<AosNode>(values.Length);
-        for (var i = 0; i < values.Length; i++)
-        {
-            children.Add(new AosNode(
-                "Lit",
-                $"argv{i}",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
-                },
-                new List<AosNode>(),
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-        }
-
-        return new AosNode(
-            "Block",
-            "argv",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
-            children,
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
     }
 
     private static string FindRepoFile(string relativePath)
@@ -534,5 +565,51 @@ public class AosTests
         }
 
         throw new InvalidOperationException("Failed to connect to serve endpoint.", last);
+    }
+
+    private static string SendHttpsRequest(int port, string request)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        Exception? last = null;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var client = new TcpClient();
+                client.Connect(IPAddress.Loopback, port);
+                client.ReceiveTimeout = 2000;
+                client.SendTimeout = 2000;
+                using var stream = client.GetStream();
+                using var ssl = new SslStream(stream, leaveInnerStreamOpen: false, (_, _, _, _) => true);
+                ssl.AuthenticateAsClient(new SslClientAuthenticationOptions
+                {
+                    TargetHost = "localhost",
+                    EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                });
+
+                var bytes = Encoding.ASCII.GetBytes(request);
+                ssl.Write(bytes, 0, bytes.Length);
+                ssl.Flush();
+                using var reader = new StreamReader(ssl, Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                Thread.Sleep(50);
+            }
+        }
+
+        throw new InvalidOperationException("Failed to connect to HTTPS serve endpoint.", last);
+    }
+
+    private static void WriteSelfSignedPem(string certPath, string keyPath)
+    {
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=localhost", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+        File.WriteAllText(certPath, cert.ExportCertificatePem());
+        File.WriteAllText(keyPath, rsa.ExportPkcs8PrivateKeyPem());
     }
 }

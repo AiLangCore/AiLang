@@ -1,5 +1,3 @@
-using AiVM.Core;
-
 namespace AiLang.Core;
 
 public static class AosFormatter
@@ -54,48 +52,6 @@ public static class AosFormatter
 
     private static AosNode LoadFormatterProgram()
     {
-        var searchRoots = new[]
-        {
-            HostEnvironment.BaseDirectory,
-            HostFileSystem.GetCurrentDirectory(),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = HostFileSystem.Combine(root, "format.aos");
-            if (HostFileSystem.FileExists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
-        if (path is null)
-        {
-            throw new FileNotFoundException("format.aos not found.");
-        }
-
-        var source = HostFileSystem.ReadAllText(path);
-        var parse = AosParsing.Parse(source);
-
-        if (parse.Root is null)
-        {
-            throw new InvalidOperationException("Failed to parse format.aos.");
-        }
-
-        if (parse.Root.Kind != "Program")
-        {
-            throw new InvalidOperationException("format.aos must contain a Program node.");
-        }
-
-        if (parse.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException($"format.aos parse error: {parse.Diagnostics[0].Message}");
-        }
-
-        return parse.Root;
+        return AosCompilerAssets.LoadRequiredProgram("format.aos");
     }
 }

@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public sealed partial class AosInterpreter

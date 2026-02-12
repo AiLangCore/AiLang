@@ -409,25 +409,7 @@ public sealed partial class AosInterpreter
 
     private static AosNode? LoadAicProgram()
     {
-        var searchRoots = new[]
-        {
-            HostEnvironment.BaseDirectory,
-            HostFileSystem.GetCurrentDirectory(),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = HostFileSystem.Combine(root, "aic.aos");
-            if (HostFileSystem.FileExists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
+        var path = AosCompilerAssets.TryFind("aic.aos");
         if (path is null)
         {
             return null;

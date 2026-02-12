@@ -1,5 +1,3 @@
-using AiVM.Core;
-
 namespace AiLang.Core;
 
 public static class AosStandardLibraryLoader
@@ -50,96 +48,12 @@ public static class AosStandardLibraryLoader
 
     private static AosNode LoadRouteProgram()
     {
-        var searchRoots = new[]
-        {
-            HostEnvironment.BaseDirectory,
-            HostFileSystem.GetCurrentDirectory(),
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "src", "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = HostFileSystem.Combine(root, "route.aos");
-            if (HostFileSystem.FileExists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
-        if (path is null)
-        {
-            throw new FileNotFoundException("route.aos not found.");
-        }
-
-        var parse = AosParsing.ParseFile(path);
-        if (parse.Root is null)
-        {
-            throw new InvalidOperationException("Failed to parse route.aos.");
-        }
-
-        if (parse.Root.Kind != "Program")
-        {
-            throw new InvalidOperationException("route.aos must contain a Program node.");
-        }
-
-        if (parse.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException($"route.aos parse error: {parse.Diagnostics[0].Message}");
-        }
-
-        return parse.Root;
+        return AosCompilerAssets.LoadRequiredProgram("route.aos");
     }
 
     private static AosNode LoadJsonProgram()
     {
-        var searchRoots = new[]
-        {
-            HostEnvironment.BaseDirectory,
-            HostFileSystem.GetCurrentDirectory(),
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "src", "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
-        };
-
-        string? path = null;
-        foreach (var root in searchRoots)
-        {
-            var candidate = HostFileSystem.Combine(root, "json.aos");
-            if (HostFileSystem.FileExists(candidate))
-            {
-                path = candidate;
-                break;
-            }
-        }
-
-        if (path is null)
-        {
-            throw new FileNotFoundException("json.aos not found.");
-        }
-
-        var parse = AosParsing.ParseFile(path);
-        if (parse.Root is null)
-        {
-            throw new InvalidOperationException("Failed to parse json.aos.");
-        }
-
-        if (parse.Root.Kind != "Program")
-        {
-            throw new InvalidOperationException("json.aos must contain a Program node.");
-        }
-
-        if (parse.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException($"json.aos parse error: {parse.Diagnostics[0].Message}");
-        }
-
-        return parse.Root;
+        return AosCompilerAssets.LoadRequiredProgram("json.aos");
     }
 
 }

@@ -247,31 +247,13 @@ static int RunServe(string path, string[] argv, int port, string tlsCertPath, st
 
 static AosNode? LoadRuntimeKernel()
 {
-    var searchRoots = new[]
-    {
-        AppContext.BaseDirectory,
-        Directory.GetCurrentDirectory(),
-        Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-        Path.Combine(Directory.GetCurrentDirectory(), "compiler")
-    };
-
-    string? path = null;
-    foreach (var root in searchRoots)
-    {
-        var candidate = Path.Combine(root, "runtime.aos");
-        if (File.Exists(candidate))
-        {
-            path = candidate;
-            break;
-        }
-    }
-
+    var path = AosCompilerAssets.TryFind("runtime.aos");
     if (path is null)
     {
         return null;
     }
 
-    var parse = Parse(File.ReadAllText(path));
+    var parse = Parse(HostFileSystem.ReadAllText(path));
     if (parse.Root is null || parse.Diagnostics.Count > 0)
     {
         return null;

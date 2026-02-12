@@ -45,7 +45,7 @@ public sealed partial class AosInterpreter
     {
         try
         {
-            var vm = VmProgramLoader.Load(bytecode);
+            var vm = VmProgramLoader.Load(bytecode, BytecodeAdapter.Instance);
             return VmRunner.Run(this, runtime, vm, entryName, argsNode);
         }
         catch (VmRuntimeException ex)
@@ -728,7 +728,7 @@ public sealed partial class AosInterpreter
 
             try
             {
-                var vm = VmProgramLoader.Load(bytecodeValue.AsNode());
+                var vm = VmProgramLoader.Load(bytecodeValue.AsNode(), BytecodeAdapter.Instance);
                 return VmRunner.Run(this, runtime, vm, entryValue.AsString(), argsValue.AsNode());
             }
             catch (VmRuntimeException ex)
@@ -2171,136 +2171,37 @@ public sealed partial class AosInterpreter
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
     }
 
-    private static class VmProgramLoader
+    private sealed class BytecodeAdapter : IVmBytecodeAdapter<AosNode, AosValue>
     {
-        public static VmProgram<AosValue> Load(AosNode node)
+        public static readonly BytecodeAdapter Instance = new();
+
+        public string GetNodeKind(AosNode node) => node.Kind;
+        public string GetNodeId(AosNode node) => node.Id;
+        public IEnumerable<AosNode> GetChildren(AosNode node) => node.Children;
+
+        public VmAttr GetAttr(AosNode node, string key)
         {
-            if (node.Kind != "Bytecode")
+            if (!node.Attrs.TryGetValue(key, out var attr))
             {
-                throw new VmRuntimeException("VM001", "Expected Bytecode node.", node.Id);
+                return VmAttr.Missing();
             }
 
-            if (!node.Attrs.TryGetValue("magic", out var magicAttr) || magicAttr.Kind != AosAttrKind.String || magicAttr.AsString() != "AIBC")
+            return attr.Kind switch
             {
-                throw new VmRuntimeException("VM001", "Unsupported bytecode magic.", node.Id);
-            }
-            if (!node.Attrs.TryGetValue("format", out var formatAttr) || formatAttr.Kind != AosAttrKind.String || formatAttr.AsString() != "AiBC1")
-            {
-                throw new VmRuntimeException("VM001", "Unsupported bytecode format.", node.Id);
-            }
-            if (!node.Attrs.TryGetValue("version", out var versionAttr) || versionAttr.Kind != AosAttrKind.Int || versionAttr.AsInt() != 1)
-            {
-                throw new VmRuntimeException("VM001", "Unsupported bytecode version.", node.Id);
-            }
-            if (!node.Attrs.TryGetValue("flags", out var flagsAttr) || flagsAttr.Kind != AosAttrKind.Int)
-            {
-                throw new VmRuntimeException("VM001", "Invalid bytecode flags.", node.Id);
-            }
-
-            var constants = new List<AosValue>();
-            var functions = new List<VmFunction>();
-            foreach (var child in node.Children)
-            {
-                if (child.Kind == "Const")
-                {
-                    if (!child.Attrs.TryGetValue("kind", out var kindAttr) || kindAttr.Kind != AosAttrKind.Identifier)
-                    {
-                        throw new VmRuntimeException("VM001", "Invalid Const node.", child.Id);
-                    }
-
-                    var kind = kindAttr.AsString();
-                    if (!child.Attrs.TryGetValue("value", out var valueAttr))
-                    {
-                        throw new VmRuntimeException("VM001", "Const missing value.", child.Id);
-                    }
-
-                    constants.Add(kind switch
-                    {
-                        "string" when valueAttr.Kind == AosAttrKind.String => AosValue.FromString(valueAttr.AsString()),
-                        "int" when valueAttr.Kind == AosAttrKind.Int => AosValue.FromInt(valueAttr.AsInt()),
-                        "bool" when valueAttr.Kind == AosAttrKind.Bool => AosValue.FromBool(valueAttr.AsBool()),
-                        "node" when valueAttr.Kind == AosAttrKind.String => AosValue.FromNode(DecodeNodeConstant(valueAttr.AsString(), child.Id)),
-                        "null" => AosValue.Unknown,
-                        _ => throw new VmRuntimeException("VM001", "Unsupported constant kind.", child.Id)
-                    });
-                    continue;
-                }
-
-                if (child.Kind == "Func")
-                {
-                    if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
-                    {
-                        throw new VmRuntimeException("VM001", "Func missing name.", child.Id);
-                    }
-
-                    var name = nameAttr.AsString();
-                    var paramText = child.Attrs.TryGetValue("params", out var paramsAttr) && paramsAttr.Kind == AosAttrKind.String
-                        ? paramsAttr.AsString()
-                        : string.Empty;
-                    var localText = child.Attrs.TryGetValue("locals", out var localsAttr) && localsAttr.Kind == AosAttrKind.String
-                        ? localsAttr.AsString()
-                        : string.Empty;
-                    var parameters = SplitCsv(paramText);
-                    var locals = SplitCsv(localText);
-                    var instructions = new List<VmInstruction>(child.Children.Count);
-                    foreach (var instNode in child.Children)
-                    {
-                        if (instNode.Kind != "Inst")
-                        {
-                            throw new VmRuntimeException("VM001", "Func contains non-instruction child.", instNode.Id);
-                        }
-                        if (!instNode.Attrs.TryGetValue("op", out var opAttr) || opAttr.Kind != AosAttrKind.Identifier)
-                        {
-                            throw new VmRuntimeException("VM001", "Instruction missing op.", instNode.Id);
-                        }
-
-                        instructions.Add(new VmInstruction
-                        {
-                            Op = opAttr.AsString(),
-                            A = instNode.Attrs.TryGetValue("a", out var aAttr) && aAttr.Kind == AosAttrKind.Int ? aAttr.AsInt() : 0,
-                            B = instNode.Attrs.TryGetValue("b", out var bAttr) && bAttr.Kind == AosAttrKind.Int ? bAttr.AsInt() : 0,
-                            S = instNode.Attrs.TryGetValue("s", out var sAttr) && sAttr.Kind == AosAttrKind.String ? sAttr.AsString() : string.Empty
-                        });
-                    }
-
-                    functions.Add(new VmFunction
-                    {
-                        Name = name,
-                        Params = parameters,
-                        Locals = locals,
-                        Instructions = instructions
-                    });
-                    continue;
-                }
-
-                throw new VmRuntimeException("VM001", "Unsupported Bytecode section.", child.Id);
-            }
-
-            var functionIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (var i = 0; i < functions.Count; i++)
-            {
-                functionIndexByName[functions[i].Name] = i;
-            }
-
-            return new VmProgram<AosValue>
-            {
-                Constants = constants,
-                Functions = functions,
-                FunctionIndexByName = functionIndexByName
+                AosAttrKind.Identifier => VmAttr.Identifier(attr.AsString()),
+                AosAttrKind.String => VmAttr.String(attr.AsString()),
+                AosAttrKind.Int => VmAttr.Int(attr.AsInt()),
+                AosAttrKind.Bool => VmAttr.Bool(attr.AsBool()),
+                _ => VmAttr.Missing()
             };
         }
 
-        private static List<string> SplitCsv(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return new List<string>();
-            }
-
-            return text
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
-        }
+        public AosValue FromString(string value) => AosValue.FromString(value);
+        public AosValue FromInt(int value) => AosValue.FromInt(value);
+        public AosValue FromBool(bool value) => AosValue.FromBool(value);
+        public AosValue FromNull() => AosValue.Unknown;
+        public AosValue FromEncodedNodeConstant(string encodedNode, string nodeId) =>
+            AosValue.FromNode(DecodeNodeConstant(encodedNode, nodeId));
     }
 
     private sealed class VmCompileFunction

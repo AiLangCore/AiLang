@@ -289,196 +289,9 @@ public sealed partial class AosInterpreter
             return AosValue.FromInt(left.AsInt() + right.AsInt());
         }
 
-        if (target == "console.print")
+        if (TryEvaluateCapabilityCall(target, node, runtime, env, out var capabilityValue))
         {
-            if (!runtime.Permissions.Contains("console"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-            var arg = EvalNode(node.Children[0], runtime, env);
-            if (arg.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-            VmSyscalls.ConsolePrintLine(arg.AsString());
-            return AosValue.Void;
-        }
-
-        if (target == "io.print")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var value = EvalNode(node.Children[0], runtime, env);
-            if (value.Kind == AosValueKind.Unknown)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.IoPrint(ValueToDisplayString(value));
-            return AosValue.Void;
-        }
-
-        if (target == "io.write")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var value = EvalNode(node.Children[0], runtime, env);
-            if (value.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.IoWrite(value.AsString());
-            return AosValue.Void;
-        }
-
-        if (target == "io.readLine")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 0)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromString(VmSyscalls.IoReadLine());
-        }
-
-        if (target == "io.readAllStdin")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 0)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromString(VmSyscalls.IoReadAllStdin());
-        }
-
-        if (target == "io.readFile")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromString(VmSyscalls.IoReadFile(pathValue.AsString()));
-        }
-
-        if (target == "io.fileExists")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromBool(VmSyscalls.IoFileExists(pathValue.AsString()));
-        }
-
-        if (target == "io.pathExists")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromBool(VmSyscalls.IoPathExists(pathValue.AsString()));
-        }
-
-        if (target == "io.makeDir")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.IoMakeDir(pathValue.AsString());
-            return AosValue.Void;
-        }
-
-        if (target == "io.writeFile")
-        {
-            if (!runtime.Permissions.Contains("io"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 2)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            var textValue = EvalNode(node.Children[1], runtime, env);
-            if (pathValue.Kind != AosValueKind.String || textValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.IoWriteFile(pathValue.AsString(), textValue.AsString());
-            return AosValue.Void;
+            return capabilityValue;
         }
 
         if (TryEvaluateSysCall(target, node, runtime, env, out var sysValue))
@@ -1987,6 +1800,56 @@ public sealed partial class AosInterpreter
         }
 
         result = FromSysValue(sysResult);
+        return true;
+    }
+
+    private bool TryEvaluateCapabilityCall(
+        string target,
+        AosNode callNode,
+        AosRuntime runtime,
+        Dictionary<string, AosValue> env,
+        out AosValue result)
+    {
+        result = AosValue.Unknown;
+        var requiredPermission = target switch
+        {
+            "console.print" => "console",
+            "io.print" or "io.write" or "io.readLine" or "io.readAllStdin" or "io.readFile" or "io.fileExists" or "io.pathExists" or "io.makeDir" or "io.writeFile" => "io",
+            _ => null
+        };
+        if (requiredPermission is null)
+        {
+            return false;
+        }
+        if (!runtime.Permissions.Contains(requiredPermission))
+        {
+            return true;
+        }
+
+        var args = new List<SysValue>(callNode.Children.Count);
+        for (var i = 0; i < callNode.Children.Count; i++)
+        {
+            var value = EvalNode(callNode.Children[i], runtime, env);
+            if (target == "io.print")
+            {
+                if (value.Kind == AosValueKind.Unknown)
+                {
+                    return true;
+                }
+                args.Add(SysValue.String(ValueToDisplayString(value)));
+            }
+            else
+            {
+                args.Add(ToSysValue(value));
+            }
+        }
+
+        if (!VmCapabilityDispatcher.TryInvoke(target, args, out var capResult))
+        {
+            return false;
+        }
+
+        result = FromSysValue(capResult);
         return true;
     }
 

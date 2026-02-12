@@ -45,12 +45,12 @@ public sealed partial class AosInterpreter
     {
         try
         {
-            var args = BuildVmArgs(bytecode, entryName, argsNode);
-            return VmEngine.Run(
-                bytecode,
+            var vm = VmProgramLoader.Load(bytecode, BytecodeAdapter.Instance);
+            var args = BuildVmArgs(vm, entryName, argsNode);
+            return VmEngine.Run<AosNode, AosValue>(
+                vm,
                 entryName,
                 args,
-                BytecodeAdapter.Instance,
                 new VmExecutionAdapter(this, runtime));
         }
         catch (VmRuntimeException ex)
@@ -735,12 +735,12 @@ public sealed partial class AosInterpreter
             {
                 var bytecodeNode = bytecodeValue.AsNode();
                 var entryName = entryValue.AsString();
-                var args = BuildVmArgs(bytecodeNode, entryName, argsValue.AsNode());
-                return VmEngine.Run(
-                    bytecodeNode,
+                var vm = VmProgramLoader.Load(bytecodeNode, BytecodeAdapter.Instance);
+                var args = BuildVmArgs(vm, entryName, argsValue.AsNode());
+                return VmEngine.Run<AosNode, AosValue>(
+                    vm,
                     entryName,
                     args,
-                    BytecodeAdapter.Instance,
                     new VmExecutionAdapter(this, runtime));
             }
             catch (VmRuntimeException ex)
@@ -2216,9 +2216,8 @@ public sealed partial class AosInterpreter
             AosValue.FromNode(DecodeNodeConstant(encodedNode, nodeId));
     }
 
-    private static List<AosValue> BuildVmArgs(AosNode bytecodeNode, string entryName, AosNode argsNode)
+    private static List<AosValue> BuildVmArgs(VmProgram<AosValue> vm, string entryName, AosNode argsNode)
     {
-        var vm = VmProgramLoader.Load(bytecodeNode, BytecodeAdapter.Instance);
         if (!vm.FunctionIndexByName.TryGetValue(entryName, out var entryIndex))
         {
             throw new VmRuntimeException("VM001", $"Entry function not found: {entryName}.", entryName);

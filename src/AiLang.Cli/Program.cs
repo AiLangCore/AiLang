@@ -428,6 +428,12 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
 {
     try
     {
+        if (string.Equals(vmMode, "bytecode", StringComparison.Ordinal))
+        {
+            Console.WriteLine(FormatErr("err1", "VM001", "Embedded AST bundle requires --vm=ast.", "bundle"));
+            return 3;
+        }
+
         var parse = Parse(bundleText);
         if (parse.Root is null || parse.Diagnostics.Count > 0)
         {
@@ -457,8 +463,7 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
-        var bundleVmMode = string.Equals(vmMode, "bytecode", StringComparison.Ordinal) ? "ast" : vmMode;
-        runtime.Env["__vm_mode"] = AosValue.FromString(bundleVmMode);
+        runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
         runtime.ReadOnlyBindings.Add("__vm_mode");
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");

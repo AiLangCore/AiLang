@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiLang.Cli;
 using AiVM.Core;
 
 Environment.ExitCode = RunCli(args);
@@ -6,6 +7,8 @@ return;
 
 static int RunCli(string[] args)
 {
+    VmSyscalls.Host = new CliSyscallHost();
+
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
     string vmMode = "bytecode";
     var filtered = new List<string>();

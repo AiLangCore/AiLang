@@ -23,8 +23,8 @@ This file is normative for semantic validation used by `aic check` (default path
 - Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).
-- `Await` requires exactly one child (`Task`-typed expression).
-- `Par` requires at least two children.
+- `Await` must have exactly one child (`VAL167`).
+- `Par` must have at least two child expressions (`VAL168`).
 
 ## Type/Capability Rules
 
@@ -32,23 +32,13 @@ This file is normative for semantic validation used by `aic check` (default path
 - Capability calls are permission-gated (`VAL040` family).
 - Unknown call targets are rejected unless resolved as user-defined functions.
 
-## Async Validation Rules
+## Async Safety Rules
 
-- `Fn(async=true)` is allowed only on function literals with a `Block` body.
-- `Await` child must type-check to `Task` (or `Unknown` during partial analysis).
-- `Par` branch expressions are validated independently against the same lexical snapshot.
-- In compute-only async branches, effectful `sys.*` calls are rejected unless branch mode explicitly allows effects.
-- Detached async work outside structured parent scopes is invalid.
-
-## Async Diagnostics
-
-- Async diagnostics must remain deterministic (stable code/message/nodeId).
-- Recommended deterministic family:
-- `VAL160`: `Await` expects exactly one child.
-- `VAL161`: `Await` child must be `Task`.
-- `VAL162`: `Par` requires at least two children.
-- `VAL163`: effectful `sys.*` call is not allowed in compute-only async branch.
-- `VAL164`: detached async work outside structured scope is forbidden.
+- `Fn(async=...)` is optional; when present it must be bool (`VAL166`).
+- `Await` child must resolve to async task node (modeled as node-typed value in validator) (`VAL167`).
+- `Par` branch validation runs in compute-only mode by default.
+- `sys.*` calls are rejected in compute-only `Par` branches (`VAL169`).
+- Async diagnostics remain deterministic (stable code/message/nodeId).
 
 ## Contracts for `aic check`
 

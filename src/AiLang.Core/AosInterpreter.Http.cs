@@ -137,16 +137,26 @@ public sealed partial class AosInterpreter
                 continue;
             }
 
-            var charByteCount = Encoding.UTF8.GetByteCount(value.AsSpan(i, 1));
+            var scalarLength = 1;
+            if (char.IsHighSurrogate(ch) &&
+                i + 1 < value.Length &&
+                char.IsLowSurrogate(value[i + 1]))
+            {
+                scalarLength = 2;
+            }
+
+            var charByteCount = Encoding.UTF8.GetByteCount(value.AsSpan(i, scalarLength));
             if (charByteCount == 1)
             {
                 bytes.Add((byte)ch);
+                i += scalarLength - 1;
                 continue;
             }
 
             var encoded = new byte[charByteCount];
-            Encoding.UTF8.GetBytes(value.AsSpan(i, 1), encoded);
+            Encoding.UTF8.GetBytes(value.AsSpan(i, scalarLength), encoded);
             bytes.AddRange(encoded);
+            i += scalarLength - 1;
         }
 
         return Encoding.UTF8.GetString(bytes.ToArray());

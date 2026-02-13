@@ -437,7 +437,7 @@ public class AosTests
     [Test]
     public void CompilerParseHttpRequest_DecodesQueryValues()
     {
-        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth&name=Ada+Lovelace&mark=%E2%9C%93&metro=S%C3%A3o+Paulo HTTP/1.1\\r\\n\\r\\n\") } }");
+        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth&name=Ada+Lovelace&mark=%E2%9C%93&metro=S%C3%A3o+Paulo&emoji=😀 HTTP/1.1\\r\\n\\r\\n\") } }");
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var runtime = new AosRuntime();
@@ -457,6 +457,8 @@ public class AosTests
         Assert.That(query.Children[2].Children[0].Attrs["value"].AsString(), Is.EqualTo("✓"));
         Assert.That(query.Children[3].Attrs["key"].AsString(), Is.EqualTo("metro"));
         Assert.That(query.Children[3].Children[0].Attrs["value"].AsString(), Is.EqualTo("São Paulo"));
+        Assert.That(query.Children[4].Attrs["key"].AsString(), Is.EqualTo("emoji"));
+        Assert.That(query.Children[4].Children[0].Attrs["value"].AsString(), Is.EqualTo("😀"));
     }
 
     [Test]

@@ -34,6 +34,14 @@ static int RunCli(string[] args)
         return 1;
     }
 
+    if (filteredArgs.Length == 1 &&
+        (string.Equals(filteredArgs[0], "--version", StringComparison.Ordinal) ||
+         string.Equals(filteredArgs[0], "version", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(CliVersionInfo.BuildLine(InAosDevMode()));
+        return 0;
+    }
+
     if (EmbeddedBundleLoader.TryLoadFromCurrentProcess(out var embedded))
     {
         if (!InAosDevMode() && !embedded.IsBytecode)
@@ -51,14 +59,6 @@ static int RunCli(string[] args)
     {
         PrintUsage();
         return 1;
-    }
-
-    if (filteredArgs.Length == 1 &&
-        (string.Equals(filteredArgs[0], "--version", StringComparison.Ordinal) ||
-         string.Equals(filteredArgs[0], "version", StringComparison.Ordinal)))
-    {
-        Console.WriteLine(CliVersionInfo.BuildLine(InAosDevMode()));
-        return 0;
     }
 
     switch (filteredArgs[0])

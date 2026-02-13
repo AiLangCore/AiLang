@@ -44,7 +44,7 @@ public sealed class AosValidator
         return new AosValidationResult(_diagnostics.ToList());
     }
 
-    private AosValueKind ValidateNode(AosNode node, Dictionary<string, AosValueKind> env, HashSet<string> permissions)
+    private AosValueKind ValidateNode(AosNode node, Dictionary<string, AosValueKind> env, HashSet<string> permissions, bool inComputeOnlyPar = false)
     {
         if (!_ids.Add(node.Id))
         {
@@ -56,7 +56,7 @@ public sealed class AosValidator
             case "Program":
                 foreach (var child in node.Children)
                 {
-                    ValidateNode(child, env, permissions);
+                    ValidateNode(child, env, permissions, inComputeOnlyPar);
                 }
                 return AosValueKind.Void;
             case "Let":
@@ -68,7 +68,7 @@ public sealed class AosValidator
                     env[fnNameAttr.AsString()] = AosValueKind.Function;
                 }
 
-                var letType = node.Children.Count == 1 ? ValidateNode(node.Children[0], env, permissions) : AosValueKind.Unknown;
+                var letType = node.Children.Count == 1 ? ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar) : AosValueKind.Unknown;
                 if (node.Attrs.TryGetValue("name", out var nameAttr) && nameAttr.Kind == AosAttrKind.Identifier)
                 {
                     env[nameAttr.AsString()] = letType;
@@ -103,8 +103,8 @@ public sealed class AosValidator
             case "Call":
                 RequireAttr(node, "target");
                 var target = node.Attrs.TryGetValue("target", out var targetVal) ? targetVal.AsString() : string.Empty;
-                var argTypes = node.Children.Select(child => ValidateNode(child, env, permissions)).ToList();
-                return ValidateCall(node, target, argTypes, env, permissions);
+                var argTypes = node.Children.Select(child => ValidateNode(child, env, permissions, inComputeOnlyPar)).ToList();
+                return ValidateCall(node, target, argTypes, env, permissions, inComputeOnlyPar);
             case "Import":
                 RequireAttr(node, "path");
                 RequireChildren(node, 0, 0);
@@ -162,7 +162,7 @@ public sealed class AosValidator
                         _diagnostics.Add(new AosDiagnostic("VAL150", "Project children must be Include nodes.", child.Id, child.Span));
                         continue;
                     }
-                    ValidateNode(child, env, permissions);
+                    ValidateNode(child, env, permissions, inComputeOnlyPar);
                 }
                 return AosValueKind.Void;
             case "Include":
@@ -199,6 +199,10 @@ public sealed class AosValidator
             case "Fn":
                 RequireAttr(node, "params");
                 RequireChildren(node, 1, 1);
+                if (node.Attrs.TryGetValue("async", out var asyncAttr) && asyncAttr.Kind != AosAttrKind.Bool)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL166", "Fn async attribute must be bool.", node.Id, node.Span));
+                }
                 if (node.Children.Count == 1 && node.Children[0].Kind != "Block")
                 {
                     _diagnostics.Add(new AosDiagnostic("VAL050", "Fn body must be Block.", node.Id, node.Span));
@@ -217,15 +221,15 @@ public sealed class AosValidator
                             }
                         }
                     }
-                    ValidateNode(node.Children[0], fnEnv, permissions);
+                    ValidateNode(node.Children[0], fnEnv, permissions, inComputeOnlyPar);
                 }
                 return AosValueKind.Function;
             case "Eq":
                 RequireChildren(node, 2, 2);
                 if (node.Children.Count == 2)
                 {
-                    var leftType = ValidateNode(node.Children[0], env, permissions);
-                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    var leftType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    var rightType = ValidateNode(node.Children[1], env, permissions, inComputeOnlyPar);
                     if (leftType != rightType && leftType != AosValueKind.Unknown && rightType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL051", "Eq operands must have same type.", node.Id, node.Span));
@@ -236,8 +240,8 @@ public sealed class AosValidator
                 RequireChildren(node, 2, 2);
                 if (node.Children.Count == 2)
                 {
-                    var leftType = ValidateNode(node.Children[0], env, permissions);
-                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    var leftType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    var rightType = ValidateNode(node.Children[1], env, permissions, inComputeOnlyPar);
                     if (leftType != AosValueKind.Int && leftType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL052", "Add left operand must be int.", node.Id, node.Span));
@@ -252,7 +256,7 @@ public sealed class AosValidator
                 RequireChildren(node, 1, 1);
                 if (node.Children.Count == 1)
                 {
-                    var valueType = ValidateNode(node.Children[0], env, permissions);
+                    var valueType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (valueType != AosValueKind.Int && valueType != AosValueKind.Bool && valueType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL054", "ToString expects int or bool.", node.Id, node.Span));
@@ -263,8 +267,8 @@ public sealed class AosValidator
                 RequireChildren(node, 2, 2);
                 if (node.Children.Count == 2)
                 {
-                    var leftType = ValidateNode(node.Children[0], env, permissions);
-                    var rightType = ValidateNode(node.Children[1], env, permissions);
+                    var leftType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    var rightType = ValidateNode(node.Children[1], env, permissions, inComputeOnlyPar);
                     if (leftType != AosValueKind.String && leftType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL055", "StrConcat left operand must be string.", node.Id, node.Span));
@@ -279,7 +283,7 @@ public sealed class AosValidator
                 RequireChildren(node, 1, 1);
                 if (node.Children.Count == 1)
                 {
-                    var valueType = ValidateNode(node.Children[0], env, permissions);
+                    var valueType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (valueType != AosValueKind.String && valueType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL057", "StrEscape expects string.", node.Id, node.Span));
@@ -290,7 +294,7 @@ public sealed class AosValidator
                 RequireChildren(node, 1, 1);
                 if (node.Children.Count == 1)
                 {
-                    var idType = ValidateNode(node.Children[0], env, permissions);
+                    var idType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (idType != AosValueKind.String && idType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL058", "MakeBlock expects string id.", node.Id, node.Span));
@@ -301,8 +305,8 @@ public sealed class AosValidator
                 RequireChildren(node, 2, 2);
                 if (node.Children.Count == 2)
                 {
-                    var parentType = ValidateNode(node.Children[0], env, permissions);
-                    var childType = ValidateNode(node.Children[1], env, permissions);
+                    var parentType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    var childType = ValidateNode(node.Children[1], env, permissions, inComputeOnlyPar);
                     if (parentType != AosValueKind.Node && parentType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL059", "AppendChild expects node parent.", node.Id, node.Span));
@@ -351,7 +355,7 @@ public sealed class AosValidator
                 }
                 foreach (var child in node.Children)
                 {
-                    var childType = ValidateNode(child, env, permissions);
+                    var childType = ValidateNode(child, env, permissions, inComputeOnlyPar);
                     if (child.Kind != "Map")
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL138", "HttpRequest children must be Map nodes.", child.Id, child.Span));
@@ -378,7 +382,7 @@ public sealed class AosValidator
             case "Map":
                 foreach (var child in node.Children)
                 {
-                    var childType = ValidateNode(child, env, permissions);
+                    var childType = ValidateNode(child, env, permissions, inComputeOnlyPar);
                     if (child.Kind != "Field")
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL112", "Map children must be Field nodes.", child.Id, child.Span));
@@ -398,7 +402,7 @@ public sealed class AosValidator
                 }
                 if (node.Children.Count == 1)
                 {
-                    ValidateNode(node.Children[0], env, permissions);
+                    ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                 }
                 return AosValueKind.Node;
             case "Match":
@@ -455,7 +459,7 @@ public sealed class AosValidator
                 RequireChildren(node, 1, 1);
                 if (node.Children.Count == 1)
                 {
-                    var nodeType = ValidateNode(node.Children[0], env, permissions);
+                    var nodeType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (nodeType != AosValueKind.Node && nodeType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL060", $"{node.Kind} expects node.", node.Id, node.Span));
@@ -467,7 +471,7 @@ public sealed class AosValidator
                 RequireChildren(node, 1, 1);
                 if (node.Children.Count == 1)
                 {
-                    var nodeType = ValidateNode(node.Children[0], env, permissions);
+                    var nodeType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (nodeType != AosValueKind.Node && nodeType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL061", $"{node.Kind} expects node.", node.Id, node.Span));
@@ -496,7 +500,7 @@ public sealed class AosValidator
                 RequireChildren(node, 2, 3);
                 if (node.Children.Count >= 1)
                 {
-                    var condType = ValidateNode(node.Children[0], env, permissions);
+                    var condType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                     if (condType != AosValueKind.Bool && condType != AosValueKind.Unknown)
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL020", "If condition must be bool.", node.Id, node.Span));
@@ -517,8 +521,8 @@ public sealed class AosValidator
                     }
                 }
 
-                var thenType = node.Children.Count >= 2 ? ValidateNode(node.Children[1], new Dictionary<string, AosValueKind>(env), permissions) : AosValueKind.Void;
-                var elseType = node.Children.Count == 3 ? ValidateNode(node.Children[2], new Dictionary<string, AosValueKind>(env), permissions) : AosValueKind.Void;
+                var thenType = node.Children.Count >= 2 ? ValidateNode(node.Children[1], new Dictionary<string, AosValueKind>(env), permissions, inComputeOnlyPar) : AosValueKind.Void;
+                var elseType = node.Children.Count == 3 ? ValidateNode(node.Children[2], new Dictionary<string, AosValueKind>(env), permissions, inComputeOnlyPar) : AosValueKind.Void;
 
                 if (node.Children.Count == 2)
                 {
@@ -541,28 +545,54 @@ public sealed class AosValidator
                 var blockType = AosValueKind.Void;
                 foreach (var child in node.Children)
                 {
-                    blockType = ValidateNode(child, env, permissions);
+                    blockType = ValidateNode(child, env, permissions, inComputeOnlyPar);
                 }
                 return blockType;
             case "Return":
                 RequireChildren(node, 0, 1);
                 if (node.Children.Count == 1)
                 {
-                    return ValidateNode(node.Children[0], env, permissions);
+                    return ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
                 }
                 return AosValueKind.Void;
+            case "Await":
+                RequireChildren(node, 1, 1);
+                if (node.Children.Count == 1)
+                {
+                    var awaitedType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    if (awaitedType != AosValueKind.Node && awaitedType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL167", "Await child must resolve to task node.", node.Id, node.Span));
+                    }
+                }
+                return AosValueKind.Unknown;
+            case "Par":
+                if (node.Children.Count < 2)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL168", "Par requires at least two child expressions.", node.Id, node.Span));
+                }
+                foreach (var child in node.Children)
+                {
+                    ValidateNode(child, new Dictionary<string, AosValueKind>(env), permissions, inComputeOnlyPar: true);
+                }
+                return AosValueKind.Node;
             default:
                 _diagnostics.Add(new AosDiagnostic("VAL999", $"Unknown node kind '{node.Kind}'.", node.Id, node.Span));
                 return AosValueKind.Unknown;
         }
     }
 
-    private AosValueKind ValidateCall(AosNode node, string target, List<AosValueKind> argTypes, Dictionary<string, AosValueKind> env, HashSet<string> permissions)
+    private AosValueKind ValidateCall(AosNode node, string target, List<AosValueKind> argTypes, Dictionary<string, AosValueKind> env, HashSet<string> permissions, bool inComputeOnlyPar)
     {
         if (string.IsNullOrWhiteSpace(target))
         {
             _diagnostics.Add(new AosDiagnostic("VAL030", "Call target is required.", node.Id, node.Span));
             return AosValueKind.Unknown;
+        }
+
+        if (inComputeOnlyPar && target.StartsWith("sys.", StringComparison.Ordinal))
+        {
+            _diagnostics.Add(new AosDiagnostic("VAL169", "sys.* calls are not allowed inside compute-only Par branches.", node.Id, node.Span));
         }
 
         if (target == "math.add")

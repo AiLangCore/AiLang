@@ -513,6 +513,40 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_ParRequiresAtLeastTwoChildren()
+    {
+        var parse = Parse("Program#p1 { Par#par1 { Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal), runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL168"), Is.True);
+    }
+
+    [Test]
+    public void Validator_ParComputeOnlyRejectsSyscalls()
+    {
+        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, permissions, runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL169"), Is.True);
+    }
+
+    [Test]
+    public void Validator_AwaitRequiresNodeTypedChild()
+    {
+        var parse = Parse("Program#p1 { Await#a1 { Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal), runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL167"), Is.True);
+    }
+
+    [Test]
     public void SyscallDispatch_InvalidArgs_ReturnsUnknown()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.net_close) }");

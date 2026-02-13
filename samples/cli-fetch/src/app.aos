@@ -51,7 +51,7 @@ Program#cf_p1 {
           If#cf_if1 {
             Eq#cf_eq1 { ChildCount#cf_cc1 { Var#cf_v4(name=args) } Lit#cf_i4(value=0) }
             Block#cf_b3 { Lit#cf_i5(value="Fort Worth") }
-            Block#cf_b4 { AttrValueString#cf_a1 { ChildAt#cf_ca1 { Var#cf_v5(name=args) Lit#cf_i6(value=0) } Lit#cf_i7(value="value") } }
+            Block#cf_b4 { AttrValueString#cf_a1 { ChildAt#cf_ca1 { Var#cf_v5(name=args) Lit#cf_i6(value=0) } Lit#cf_i7(value=0) } }
           }
         }
         Call#cf_c2(target=io.print) { Call#cf_c3(target=formatWeather) { Var#cf_v6(name=city) } }

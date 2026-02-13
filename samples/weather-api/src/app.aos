@@ -1,0 +1,70 @@
+Program#wa_p1 {
+  Export#wa_e1(name=init)
+  Export#wa_e2(name=update)
+  Export#wa_e3(name=start)
+  Export#wa_e4(name=getWeatherJson)
+  Export#wa_e5(name=sampleWeatherJson)
+
+  Let#wa_l0(name=sampleWeatherJson) { Lit#wa_i0(value="{\"city\":\"Fort Worth\",\"tempC\":22,\"condition\":\"Sunny\",\"source\":\"mock\"}") }
+
+  Let#wa_l1(name=init) {
+    Fn#wa_f1(params=args) {
+      Block#wa_b1 { Return#wa_r1 { MakeBlock#wa_mb1 { Lit#wa_i1(value="state") } } }
+    }
+  }
+
+  Let#wa_l2(name=getWeatherJson) {
+    Fn#wa_f2(params=city,mock) {
+      Block#wa_b2 {
+        If#wa_if1 {
+          Eq#wa_eq1 { Var#wa_v1(name=city) Lit#wa_i2(value="Fort Worth") }
+          Block#wa_b3 { Return#wa_r2 { Var#wa_v00(name=sampleWeatherJson) } }
+          Block#wa_b4 { Return#wa_r3 { Lit#wa_i4(value="{\"city\":\"Unknown\",\"tempC\":0,\"condition\":\"Unknown\",\"source\":\"mock\"}") } }
+        }
+      }
+    }
+  }
+
+  Let#wa_l3(name=update) {
+    Fn#wa_f3(params=state,event) {
+      Block#wa_b5 {
+        Let#wa_l4(name=reqPayload) { AttrValueString#wa_a1 { Var#wa_v2(name=event) Lit#wa_i5(value=0) } }
+        Let#wa_l5(name=req) { Call#wa_c1(target=compiler.parseHttpRequest) { Var#wa_v3(name=reqPayload) } }
+        Let#wa_l6(name=reqPath) { AttrValueString#wa_a2 { Var#wa_v4(name=req) Lit#wa_i6(value=1) } }
+        If#wa_if2 {
+          Eq#wa_eq2 { Var#wa_v5(name=reqPath) Lit#wa_i7(value="/weather?city=Fort%20Worth&mock=1") }
+          Block#wa_b6 {
+            Let#wa_l7(name=bodyJson) { Call#wa_c2(target=getWeatherJson) { Lit#wa_i8(value="Fort Worth") Lit#wa_i9(value=true) } }
+            Let#wa_l8(name=cmdText) {
+              StrConcat#wa_s1 {
+                Lit#wa_i10(value="Program#cmdp1 { Command#Emit(type=\"http.response\" payload=\"")
+                StrConcat#wa_s2 {
+                  StrEscape#wa_se1 { Var#wa_v6(name=bodyJson) }
+                  Lit#wa_i11(value="\") }")
+                }
+              }
+            }
+            Let#wa_l9(name=cmdParsed) { Call#wa_c3(target=compiler.parse) { Var#wa_v7(name=cmdText) } }
+            Let#wa_l10(name=cmdNode) { ChildAt#wa_ca1 { Var#wa_v8(name=cmdParsed) Lit#wa_i12(value=0) } }
+            Return#wa_r4 {
+              AppendChild#wa_ap1 {
+                AppendChild#wa_ap2 {
+                  MakeBlock#wa_mb2 { Lit#wa_i13(value="next") }
+                  Var#wa_v9(name=state)
+                }
+                Var#wa_v10(name=cmdNode)
+              }
+            }
+          }
+          Block#wa_b7 { Return#wa_r5 { MakeBlock#wa_mb3 { Lit#wa_i14(value="next") } } }
+        }
+      }
+    }
+  }
+
+  Let#wa_l11(name=start) {
+    Fn#wa_f4(params=args) {
+      Block#wa_b8 { Return#wa_r6 { Lit#wa_i15(value=0) } }
+    }
+  }
+}

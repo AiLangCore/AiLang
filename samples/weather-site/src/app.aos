@@ -1,0 +1,67 @@
+Program#ws_p1 {
+  Import#ws_imp1(path="../../weather-api/src/app.aos")
+  Export#ws_e1(name=init)
+  Export#ws_e2(name=update)
+  Export#ws_e3(name=start)
+  Export#ws_e4(name=renderHomeHtml)
+  Export#ws_e5(name=sampleHomeHtml)
+
+  Let#ws_l0(name=sampleHomeHtml) { Lit#ws_i0(value="<html><body><h1>Weather</h1><p>Fort Worth</p><pre>{\"city\":\"Fort Worth\",\"tempC\":22,\"condition\":\"Sunny\",\"source\":\"mock\"}</pre></body></html>") }
+
+  Let#ws_l1(name=init) {
+    Fn#ws_f1(params=args) {
+      Block#ws_b1 { Return#ws_r1 { MakeBlock#ws_mb1 { Lit#ws_i1(value="state") } } }
+    }
+  }
+
+  Let#ws_l2(name=renderHomeHtml) {
+    Fn#ws_f2(params=_) {
+      Block#ws_b2 {
+        Return#ws_r2 { Var#ws_v0(name=sampleHomeHtml) }
+      }
+    }
+  }
+
+  Let#ws_l4(name=update) {
+    Fn#ws_f3(params=state,event) {
+      Block#ws_b3 {
+        Let#ws_l5(name=reqPayload) { AttrValueString#ws_a1 { Var#ws_v2(name=event) Lit#ws_i6(value=0) } }
+        Let#ws_l6(name=req) { Call#ws_c2(target=compiler.parseHttpRequest) { Var#ws_v3(name=reqPayload) } }
+        Let#ws_l7(name=reqPath) { AttrValueString#ws_a2 { Var#ws_v4(name=req) Lit#ws_i7(value=1) } }
+        If#ws_if1 {
+          Eq#ws_eq1 { Var#ws_v5(name=reqPath) Lit#ws_i8(value="/") }
+          Block#ws_b4 {
+            Let#ws_l8(name=htmlText) { Call#ws_c3(target=renderHomeHtml) { Lit#ws_i9(value=0) } }
+            Let#ws_l9(name=cmdText) {
+              StrConcat#ws_s3 {
+                Lit#ws_i10(value="Program#cmdp1 { Command#Emit(type=\"http.response\" payload=\"")
+                StrConcat#ws_s4 {
+                  StrEscape#ws_se1 { Var#ws_v6(name=htmlText) }
+                  Lit#ws_i11(value="\") }")
+                }
+              }
+            }
+            Let#ws_l10(name=cmdParsed) { Call#ws_c4(target=compiler.parse) { Var#ws_v7(name=cmdText) } }
+            Let#ws_l11(name=cmdNode) { ChildAt#ws_ca1 { Var#ws_v8(name=cmdParsed) Lit#ws_i12(value=0) } }
+            Return#ws_r3 {
+              AppendChild#ws_ap1 {
+                AppendChild#ws_ap2 {
+                  MakeBlock#ws_mb2 { Lit#ws_i13(value="next") }
+                  Var#ws_v9(name=state)
+                }
+                Var#ws_v10(name=cmdNode)
+              }
+            }
+          }
+          Block#ws_b5 { Return#ws_r4 { MakeBlock#ws_mb3 { Lit#ws_i14(value="next") } } }
+        }
+      }
+    }
+  }
+
+  Let#ws_l12(name=start) {
+    Fn#ws_f4(params=args) {
+      Block#ws_b6 { Return#ws_r5 { Lit#ws_i15(value=0) } }
+    }
+  }
+}

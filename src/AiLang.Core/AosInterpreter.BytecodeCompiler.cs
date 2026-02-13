@@ -712,6 +712,12 @@ public sealed partial class AosInterpreter
                     state.Emit("PAR_BEGIN", node.Children.Count);
                     foreach (var child in node.Children)
                     {
+                        if (TryCompileAsyncParCall(context, state, child))
+                        {
+                            state.Emit("PAR_FORK");
+                            continue;
+                        }
+
                         CompileExpression(context, state, child);
                         state.Emit("PAR_FORK");
                     }
@@ -792,6 +798,41 @@ public sealed partial class AosInterpreter
                 node.Span);
             var constIndex = context.AddConstant(AosValue.FromNode(template));
             state.Emit("MAKE_NODE", constIndex, node.Children.Count);
+        }
+
+        private static bool TryCompileAsyncParCall(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Kind != "Call" ||
+                !node.Attrs.TryGetValue("target", out var targetAttr) ||
+                targetAttr.Kind != AosAttrKind.Identifier)
+            {
+                return false;
+            }
+
+            var target = targetAttr.AsString();
+            var fnIndex = -1;
+            for (var i = 0; i < context.FunctionOrder.Count; i++)
+            {
+                if (string.Equals(context.FunctionOrder[i], target, StringComparison.Ordinal))
+                {
+                    fnIndex = i;
+                    break;
+                }
+            }
+
+            if (fnIndex >= 0)
+            {
+                // In-process user function calls remain synchronous in Par branch compilation.
+                return false;
+            }
+
+            foreach (var child in node.Children)
+            {
+                CompileExpression(context, state, child);
+            }
+
+            state.Emit("ASYNC_CALL_SYS", node.Children.Count, null, target);
+            return true;
         }
     }
 

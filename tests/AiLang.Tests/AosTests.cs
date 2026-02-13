@@ -734,14 +734,13 @@ public class AosTests
             var sourcePath = Path.Combine(srcDir, "main.aos");
 
             File.WriteAllText(manifestPath, "Program#p1 { Project#proj1(name=\"demo\" entryFile=\"src/main.aos\" entryExport=\"start\") }");
-            File.WriteAllText(sourcePath, "Program#p2 { Export#e1(name=start) Let#l1(name=start) { Fn#f1(params=args) { Block#b1 { Return#r1 { Lit#s1(value=\"manifest-ok\") } } } } }");
+            File.WriteAllText(sourcePath, "Program#p2 { Export#e1(name=start) Let#l1(name=start) { Fn#f1(params=args) { Block#b1 { Call#c1(target=sys.proc_exit) { Lit#i1(value=7) } Return#r1 { Lit#s1(value=\"manifest-ok\") } } } } }");
 
             var lines = new List<string>();
             var exitCode = AosCliExecutionEngine.RunSource(manifestPath, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
 
-            Assert.That(exitCode, Is.EqualTo(0));
-            Assert.That(lines.Count, Is.EqualTo(1));
-            Assert.That(lines[0], Is.EqualTo("Ok#ok1(type=void)"));
+            Assert.That(exitCode, Is.EqualTo(7));
+            Assert.That(lines.Count, Is.EqualTo(0));
         }
         finally
         {

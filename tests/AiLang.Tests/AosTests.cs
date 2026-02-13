@@ -18,12 +18,18 @@ public class AosTests
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
         public string? LastStdoutLine { get; private set; }
+        public string? LastConsoleWrite { get; private set; }
         public int IoPrintCount { get; private set; }
         public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
         public string RuntimeResult { get; set; } = "test-runtime";
+
+        public override void ConsoleWrite(string text)
+        {
+            LastConsoleWrite = text;
+        }
 
         public override void StdoutWriteLine(string text)
         {
@@ -297,6 +303,47 @@ public class AosTests
 
             Assert.That(count, Is.EqualTo(777));
             Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ConsoleWrite_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.ConsoleWrite("hello");
+            Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleWrite_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_write) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
         }
         finally
         {

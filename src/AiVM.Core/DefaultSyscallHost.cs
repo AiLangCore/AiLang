@@ -13,6 +13,8 @@ public class DefaultSyscallHost : ISyscallHost
 {
     private static readonly HttpClient HttpClient = new();
 
+    public virtual void ConsoleWrite(string text) => Console.Write(text);
+
     public virtual void ConsolePrintLine(string text) => Console.WriteLine(text);
 
     public virtual void IoPrint(string text) => Console.WriteLine(text);

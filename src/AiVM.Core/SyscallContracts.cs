@@ -13,6 +13,43 @@ public enum VmValueKind
 public static class SyscallContracts
 {
     public static bool IsSysTarget(string target) => target.StartsWith("sys.", StringComparison.Ordinal);
+    public static bool LegacySysPermissionAllowsAll(HashSet<string> permissions) => permissions.Contains("sys");
+
+    public static bool TryGetRequiredPermissionGroup(string target, out string permissionGroup)
+    {
+        permissionGroup = target switch
+        {
+            "sys.stdout_writeLine" => "console",
+
+            "sys.proc_exit" or
+            "sys.process_argv" or
+            "sys.platform" or
+            "sys.arch" or
+            "sys.os_version" or
+            "sys.runtime" or
+            "sys.str_utf8ByteCount" => "process",
+
+            "sys.fs_readFile" or
+            "sys.fs_fileExists" => "file",
+
+            "sys.net_listen" or
+            "sys.net_listen_tls" or
+            "sys.net_accept" or
+            "sys.net_readHeaders" or
+            "sys.net_write" or
+            "sys.net_close" or
+            "sys.net_tcpListen" or
+            "sys.net_tcpAccept" or
+            "sys.net_tcpRead" or
+            "sys.net_tcpWrite" or
+            "sys.http_get" => "net",
+
+            "sys.time_nowUnixMs" => "time",
+            _ => string.Empty
+        };
+
+        return permissionGroup.Length > 0;
+    }
 
     public static bool TryValidate(
         string target,
@@ -76,6 +113,10 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL136", "sys.proc_exit expects 1 argument.", "VAL137", "sys.proc_exit arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
+            case "sys.process_argv":
+                ValidateArity(argKinds, 0, "VAL170", "sys.process_argv expects 0 arguments.", addDiagnostic);
+                returnKind = VmValueKind.Node;
+                return true;
             case "sys.fs_readFile":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL138", "sys.fs_readFile expects 1 argument.", "VAL139", "sys.fs_readFile arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.String;
@@ -91,6 +132,56 @@ public static class SyscallContracts
             case "sys.http_get":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL148", "sys.http_get expects 1 argument.", "VAL149", "sys.http_get arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.String;
+                return true;
+            case "sys.net_tcpListen":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL172", "sys.net_tcpListen arg 1 must be string."),
+                        (VmValueKind.Int, "VAL173", "sys.net_tcpListen arg 2 must be int.")
+                    },
+                    "VAL171",
+                    "sys.net_tcpListen expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpAccept":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL174", "sys.net_tcpAccept expects 1 argument.", "VAL175", "sys.net_tcpAccept arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpRead":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL177", "sys.net_tcpRead arg 1 must be int."),
+                        (VmValueKind.Int, "VAL178", "sys.net_tcpRead arg 2 must be int.")
+                    },
+                    "VAL176",
+                    "sys.net_tcpRead expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.net_tcpWrite":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL180", "sys.net_tcpWrite arg 1 must be int."),
+                        (VmValueKind.String, "VAL181", "sys.net_tcpWrite arg 2 must be string.")
+                    },
+                    "VAL179",
+                    "sys.net_tcpWrite expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.time_nowUnixMs":
+                ValidateArity(argKinds, 0, "VAL182", "sys.time_nowUnixMs expects 0 arguments.", addDiagnostic);
+                returnKind = VmValueKind.Int;
                 return true;
             case "sys.platform":
                 ValidateArity(argKinds, 0, "VAL150", "sys.platform expects 0 arguments.", addDiagnostic);

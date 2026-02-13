@@ -17,7 +17,21 @@ public sealed partial class AosInterpreter
             return false;
         }
 
-        if (!runtime.Permissions.Contains("sys"))
+        if (target == "sys.process_argv")
+        {
+            if (!HasSyscallPermission(target, runtime.Permissions))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 0)
+            {
+                return true;
+            }
+            result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
+            return true;
+        }
+
+        if (!HasSyscallPermission(target, runtime.Permissions))
         {
             return true;
         }
@@ -46,6 +60,17 @@ public sealed partial class AosInterpreter
 
         result = FromSysValue(sysResult);
         return true;
+    }
+
+    private static bool HasSyscallPermission(string target, HashSet<string> permissions)
+    {
+        if (SyscallContracts.LegacySysPermissionAllowsAll(permissions))
+        {
+            return true;
+        }
+
+        return SyscallContracts.TryGetRequiredPermissionGroup(target, out var group) &&
+               permissions.Contains(group);
     }
 
     private bool TryEvaluateCapabilityCall(

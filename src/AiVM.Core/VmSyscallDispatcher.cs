@@ -12,12 +12,17 @@ public static class VmSyscallDispatcher
             "sys.net_readHeaders" or
             "sys.net_write" or
             "sys.net_close" or
+            "sys.net_tcpListen" or
+            "sys.net_tcpAccept" or
+            "sys.net_tcpRead" or
+            "sys.net_tcpWrite" or
             "sys.stdout_writeLine" or
             "sys.proc_exit" or
             "sys.fs_readFile" or
             "sys.fs_fileExists" or
             "sys.str_utf8ByteCount" or
             "sys.http_get" or
+            "sys.time_nowUnixMs" or
             "sys.platform" or
             "sys.arch" or
             "sys.os_version" or
@@ -36,12 +41,17 @@ public static class VmSyscallDispatcher
             "sys.net_readHeaders" => 1,
             "sys.net_write" => 2,
             "sys.net_close" => 1,
+            "sys.net_tcpListen" => 2,
+            "sys.net_tcpAccept" => 1,
+            "sys.net_tcpRead" => 2,
+            "sys.net_tcpWrite" => 2,
             "sys.stdout_writeLine" => 1,
             "sys.proc_exit" => 1,
             "sys.fs_readFile" => 1,
             "sys.fs_fileExists" => 1,
             "sys.str_utf8ByteCount" => 1,
             "sys.http_get" => 1,
+            "sys.time_nowUnixMs" => 0,
             "sys.platform" => 0,
             "sys.arch" => 0,
             "sys.os_version" => 0,
@@ -108,6 +118,41 @@ public static class VmSyscallDispatcher
                 result = SysValue.Void();
                 return true;
 
+            case "sys.net_tcpListen":
+                if (!TryGetString(args, 0, 2, out var tcpHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpListenPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpListen(network, tcpHost, tcpListenPort));
+                return true;
+
+            case "sys.net_tcpAccept":
+                if (!TryGetInt(args, 0, 1, out var tcpAcceptListener))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpAccept(network, tcpAcceptListener));
+                return true;
+
+            case "sys.net_tcpRead":
+                if (!TryGetInt(args, 0, 2, out var tcpReadHandle) ||
+                    !TryGetInt(args, 1, 2, out var tcpMaxBytes))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.NetTcpRead(network, tcpReadHandle, tcpMaxBytes));
+                return true;
+
+            case "sys.net_tcpWrite":
+                if (!TryGetInt(args, 0, 2, out var tcpWriteHandle) ||
+                    !TryGetString(args, 1, 2, out var tcpWriteData))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpWrite(network, tcpWriteHandle, tcpWriteData));
+                return true;
+
             case "sys.stdout_writeLine":
                 if (!TryGetString(args, 0, 1, out var outText))
                 {
@@ -156,6 +201,14 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.String(VmSyscalls.HttpGet(url));
+                return true;
+
+            case "sys.time_nowUnixMs":
+                if (args.Count != 0)
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.TimeNowUnixMs());
                 return true;
 
             case "sys.platform":

@@ -90,7 +90,7 @@ public static class AosCliExecutionEngine
                 return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
             }
 
-            runtime!.Permissions.Add("sys");
+            AddDefaultSyscallPermissions(runtime!);
             var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port, tlsCertPath, tlsKeyPath));
             if (IsErrNode(result, out var errNode))
             {
@@ -259,7 +259,7 @@ public static class AosCliExecutionEngine
             runtime.Permissions.Add("console");
             runtime.Permissions.Add("io");
             runtime.Permissions.Add("compiler");
-            runtime.Permissions.Add("sys");
+            AddDefaultSyscallPermissions(runtime);
             runtime.TraceEnabled = traceEnabled;
             runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(cliArgs));
             runtime.ReadOnlyBindings.Add("argv");
@@ -454,7 +454,7 @@ public static class AosCliExecutionEngine
         }
 
         var interpreter = new AosInterpreter();
-        runtime.Permissions.Add("sys");
+        AddDefaultSyscallPermissions(runtime);
         var kernelInit = interpreter.EvaluateProgram(runtimeKernel, runtime);
         if (IsErrNode(kernelInit, out var kernelErr))
         {
@@ -544,7 +544,7 @@ public static class AosCliExecutionEngine
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
-        runtime.Permissions.Add("sys");
+        AddDefaultSyscallPermissions(runtime);
         runtime.ModuleBaseDir = moduleBaseDir;
         runtime.TraceEnabled = false;
         runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(argv));
@@ -904,7 +904,10 @@ public static class AosCliExecutionEngine
         }
 
         var program = parse.Root;
-        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math", "console", "io", "compiler", "sys" };
+        var permissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "math", "console", "io", "compiler", "sys", "process", "file", "net", "time", "crypto", "ui"
+        };
         var validator = new AosValidator();
         var validation = validator.Validate(program, null, permissions, runStructural: false);
         if (validation.Diagnostics.Count > 0)
@@ -986,11 +989,23 @@ public static class AosCliExecutionEngine
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
-        runtime.Permissions.Add("sys");
+        AddDefaultSyscallPermissions(runtime);
         runtime.ModuleBaseDir = Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(Array.Empty<string>()));
         runtime.ReadOnlyBindings.Add("argv");
         return runtime;
+    }
+
+    private static void AddDefaultSyscallPermissions(AosRuntime runtime)
+    {
+        runtime.Permissions.Add("sys"); // Backward compatibility for existing permission manifests.
+        runtime.Permissions.Add("console");
+        runtime.Permissions.Add("process");
+        runtime.Permissions.Add("file");
+        runtime.Permissions.Add("net");
+        runtime.Permissions.Add("time");
+        runtime.Permissions.Add("crypto");
+        runtime.Permissions.Add("ui");
     }
 
     private static AosNode BuildBenchCaseNode(string name, string status, long astTicks, long vmTicks, int instCount)

@@ -2,6 +2,9 @@ namespace AiVM.Core;
 
 public interface ISyscallHost
 {
+    string[] ProcessArgv();
+    int TimeNowUnixMs();
+
     void ConsolePrintLine(string text);
     void IoPrint(string text);
     void IoWrite(string text);
@@ -27,6 +30,10 @@ public interface ISyscallHost
     int NetAccept(VmNetworkState state, int listenerHandle);
     string NetReadHeaders(VmNetworkState state, int connectionHandle);
     bool NetWrite(VmNetworkState state, int connectionHandle, string text);
+    int NetTcpListen(VmNetworkState state, string host, int port);
+    int NetTcpAccept(VmNetworkState state, int listenerHandle);
+    string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes);
+    int NetTcpWrite(VmNetworkState state, int connectionHandle, string data);
     void NetClose(VmNetworkState state, int handle);
 
     void StdoutWriteLine(string text);

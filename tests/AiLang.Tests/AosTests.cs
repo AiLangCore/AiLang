@@ -24,6 +24,8 @@ public class AosTests
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
         public string RuntimeResult { get; set; } = "test-runtime";
+        public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
+        public int TimeNowUnixMsResult { get; set; } = 0;
 
         public override void StdoutWriteLine(string text)
         {
@@ -63,6 +65,16 @@ public class AosTests
         public override string Runtime()
         {
             return RuntimeResult;
+        }
+
+        public override string[] ProcessArgv()
+        {
+            return ProcessArgvResult;
+        }
+
+        public override int TimeNowUnixMs()
+        {
+            return TimeNowUnixMsResult;
         }
     }
 
@@ -432,6 +444,106 @@ public class AosTests
         {
             VmSyscalls.Host = previous;
         }
+    }
+
+    [Test]
+    public void Validator_SyscallCapabilityGroups_DenyWithoutGroup()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math" };
+        var result = validator.Validate(parse.Root!, null, permissions);
+
+        Assert.That(result.Diagnostics.Any(d => d.Code == "VAL040" && d.Message == "Permission 'net' denied."), Is.True);
+    }
+
+    [Test]
+    public void Validator_SyscallCapabilityGroups_LegacySysPermissionStillAllowed()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "math", "sys" };
+        var result = validator.Validate(parse.Root!, null, permissions);
+
+        Assert.That(result.Diagnostics.Any(d => d.Code == "VAL040"), Is.False);
+    }
+
+    [Test]
+    public void SyscallDispatch_ProcessArgv_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.process_argv) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessArgvResult = new[] { "aic", "run", "sample.aos" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("process");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var argv = value.AsNode();
+            Assert.That(argv.Kind, Is.EqualTo("Block"));
+            Assert.That(argv.Children.Count, Is.EqualTo(3));
+            Assert.That(argv.Children[0].Attrs["value"].AsString(), Is.EqualTo("aic"));
+            Assert.That(argv.Children[1].Attrs["value"].AsString(), Is.EqualTo("run"));
+            Assert.That(argv.Children[2].Attrs["value"].AsString(), Is.EqualTo("sample.aos"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeNowUnixMs_ReturnsInt()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_nowUnixMs) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeNowUnixMsResult = 123456789 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("time");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(123456789));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallContracts_NewSyscalls_HaveDeterministicSignatures()
+    {
+        static List<(string code, string message)> Validate(string target, params VmValueKind[] args)
+        {
+            var diagnostics = new List<(string code, string message)>();
+            var ok = SyscallContracts.TryValidate(target, args, (code, message) => diagnostics.Add((code, message)), out _);
+            Assert.That(ok, Is.True, target);
+            return diagnostics;
+        }
+
+        Assert.That(Validate("sys.process_argv"), Is.Empty);
+        Assert.That(Validate("sys.net_tcpListen", VmValueKind.String, VmValueKind.Int), Is.Empty);
+        Assert.That(Validate("sys.net_tcpAccept", VmValueKind.Int), Is.Empty);
+        Assert.That(Validate("sys.net_tcpRead", VmValueKind.Int, VmValueKind.Int), Is.Empty);
+        Assert.That(Validate("sys.net_tcpWrite", VmValueKind.Int, VmValueKind.String), Is.Empty);
+        Assert.That(Validate("sys.time_nowUnixMs"), Is.Empty);
     }
 
     [Test]

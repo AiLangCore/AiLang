@@ -4,6 +4,16 @@ public static class VmSyscalls
 {
     public static ISyscallHost Host { get; set; } = new DefaultSyscallHost();
 
+    public static string[] ProcessArgv()
+    {
+        return Host.ProcessArgv();
+    }
+
+    public static int TimeNowUnixMs()
+    {
+        return Host.TimeNowUnixMs();
+    }
+
     public static void ConsolePrintLine(string text)
     {
         Host.ConsolePrintLine(text);
@@ -117,6 +127,26 @@ public static class VmSyscalls
     public static bool NetWrite(VmNetworkState state, int connectionHandle, string text)
     {
         return Host.NetWrite(state, connectionHandle, text);
+    }
+
+    public static int NetTcpListen(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpListen(state, host, port);
+    }
+
+    public static int NetTcpAccept(VmNetworkState state, int listenerHandle)
+    {
+        return Host.NetTcpAccept(state, listenerHandle);
+    }
+
+    public static string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
+    {
+        return Host.NetTcpRead(state, connectionHandle, maxBytes);
+    }
+
+    public static int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
+    {
+        return Host.NetTcpWrite(state, connectionHandle, data);
     }
 
     public static void NetClose(VmNetworkState state, int handle)

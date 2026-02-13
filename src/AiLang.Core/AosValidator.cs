@@ -731,7 +731,20 @@ public sealed class AosValidator
                 (code, message) => _diagnostics.Add(new AosDiagnostic(code, message, node.Id, node.Span)),
                 out var syscallReturnKind))
         {
-            RequirePermission(node, "sys", permissions);
+            if (SyscallContracts.LegacySysPermissionAllowsAll(permissions))
+            {
+                // Backward compatibility migration path for existing "sys" permission.
+                return FromVmValueKind(syscallReturnKind);
+            }
+
+            if (SyscallContracts.TryGetRequiredPermissionGroup(target, out var syscallPermission))
+            {
+                RequirePermission(node, syscallPermission, permissions);
+            }
+            else
+            {
+                RequirePermission(node, "sys", permissions);
+            }
             return FromVmValueKind(syscallReturnKind);
         }
 

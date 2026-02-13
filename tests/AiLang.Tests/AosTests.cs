@@ -566,6 +566,40 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_ParRequiresAtLeastTwoChildren()
+    {
+        var parse = Parse("Program#p1 { Par#par1 { Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal), runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL168"), Is.True);
+    }
+
+    [Test]
+    public void Validator_ParComputeOnlyRejectsSyscalls()
+    {
+        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, permissions, runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL169"), Is.True);
+    }
+
+    [Test]
+    public void Validator_AwaitRequiresNodeTypedChild()
+    {
+        var parse = Parse("Program#p1 { Await#a1 { Lit#v1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal), runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL167"), Is.True);
+    }
+
+    [Test]
     public void SyscallDispatch_InvalidArgs_ReturnsUnknown()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.net_close) }");
@@ -817,6 +851,59 @@ public class AosTests
 
         Assert.That(cycleOutput, Is.EqualTo("Err#runtime_err(code=RUN023 message=\"Circular import detected.\" nodeId=mb2)"));
         Assert.That(missingOutput, Is.EqualTo("Err#runtime_err(code=RUN024 message=\"Import file not found: examples/golden/modules/does_not_exist.aos\" nodeId=rm2)"));
+    }
+
+    [Test]
+    public void RunSource_ProjectManifest_LoadsEntryFile()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-run-aiproj-");
+        try
+        {
+            var srcDir = Path.Combine(tempDir.FullName, "src");
+            Directory.CreateDirectory(srcDir);
+            var manifestPath = Path.Combine(tempDir.FullName, "project.aiproj");
+            var sourcePath = Path.Combine(srcDir, "main.aos");
+
+            File.WriteAllText(manifestPath, "Program#p1 { Project#proj1(name=\"demo\" entryFile=\"src/main.aos\" entryExport=\"start\") }");
+            File.WriteAllText(sourcePath, "Program#p2 { Export#e1(name=start) Let#l1(name=start) { Fn#f1(params=args) { Block#b1 { Call#c1(target=sys.proc_exit) { Lit#i1(value=7) } Return#r1 { Lit#s1(value=\"manifest-ok\") } } } } }");
+
+            var lines = new List<string>();
+            var exitCode = AosCliExecutionEngine.RunSource(manifestPath, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(7));
+            Assert.That(lines.Count, Is.EqualTo(0));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Test]
+    public void RunSource_ProjectManifest_MissingField_ReturnsValidationError()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-run-aiproj-bad-");
+        try
+        {
+            var srcDir = Path.Combine(tempDir.FullName, "src");
+            Directory.CreateDirectory(srcDir);
+            var manifestPath = Path.Combine(tempDir.FullName, "project.aiproj");
+            var sourcePath = Path.Combine(srcDir, "main.aos");
+
+            File.WriteAllText(manifestPath, "Program#p1 { Project#proj1(name=\"demo\" entryFile=\"src/main.aos\") }");
+            File.WriteAllText(sourcePath, "Program#p2 { Lit#i1(value=1) }");
+
+            var lines = new List<string>();
+            var exitCode = AosCliExecutionEngine.RunSource(manifestPath, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.EqualTo("Err#err1(code=VAL002 message=\"Missing attribute 'entryExport'.\" nodeId=proj1)"));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
     }
 
     [Test]

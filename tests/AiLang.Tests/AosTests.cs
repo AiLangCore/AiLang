@@ -27,6 +27,7 @@ public class AosTests
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
         public string RuntimeResult { get; set; } = "test-runtime";
+        public string IoReadLineResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -46,6 +47,11 @@ public class AosTests
         public override void IoPrint(string text)
         {
             IoPrintCount++;
+        }
+
+        public override string IoReadLine()
+        {
+            return IoReadLineResult;
         }
 
         public override string ProcessCwd()
@@ -356,6 +362,46 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
             Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_IoReadLine_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { IoReadLineResult = "typed" };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.IoReadLine(), Is.EqualTo("typed"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleReadLine_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_readLine) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { IoReadLineResult = "typed-line" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("typed-line"));
         }
         finally
         {

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace AiVM.Core;
 
 public static class VmRunner
@@ -422,12 +424,27 @@ public static class VmRunner
                 }
                 case "ASYNC_CALL_SYS":
                 {
-                    var callArgs = PopArgs(stack, inst.A, function.Name);
-                    var result = adapter.ExecuteCall(inst.S, callArgs);
+                    if (inst.A < 0 || stack.Count < inst.A)
+                    {
+                        throw new VmRuntimeException("VM001", "Invalid call argument count.", function.Name);
+                    }
+                    var callArgStart = stack.Count - inst.A;
+                    var callArgs = CollectionsMarshal.AsSpan(stack).Slice(callArgStart, inst.A);
+                    TValue result;
+                    if (inst.B > 0 &&
+                        adapter.TryExecuteSyscall((SyscallId)(inst.B - 1), callArgs, out var syscallResult))
+                    {
+                        result = syscallResult;
+                    }
+                    else
+                    {
+                        result = adapter.ExecuteCall(inst.S, callArgs);
+                    }
                     if (adapter.IsUnknown(result))
                     {
                         throw new VmRuntimeException("VM001", $"Unsupported call target in bytecode mode: {inst.S}.", inst.S);
                     }
+                    stack.RemoveRange(callArgStart, inst.A);
                     stack.Add(CreateCompletedTaskValue(result, adapter, asyncState));
                     pc++;
                     break;
@@ -506,12 +523,27 @@ public static class VmRunner
                     break;
                 case "CALL_SYS":
                 {
-                    var callArgs = PopArgs(stack, inst.A, function.Name);
-                    var result = adapter.ExecuteCall(inst.S, callArgs);
+                    if (inst.A < 0 || stack.Count < inst.A)
+                    {
+                        throw new VmRuntimeException("VM001", "Invalid call argument count.", function.Name);
+                    }
+                    var callArgStart = stack.Count - inst.A;
+                    var callArgs = CollectionsMarshal.AsSpan(stack).Slice(callArgStart, inst.A);
+                    TValue result;
+                    if (inst.B > 0 &&
+                        adapter.TryExecuteSyscall((SyscallId)(inst.B - 1), callArgs, out var syscallResult))
+                    {
+                        result = syscallResult;
+                    }
+                    else
+                    {
+                        result = adapter.ExecuteCall(inst.S, callArgs);
+                    }
                     if (adapter.IsUnknown(result))
                     {
                         throw new VmRuntimeException("VM001", $"Unsupported call target in bytecode mode: {inst.S}.", inst.S);
                     }
+                    stack.RemoveRange(callArgStart, inst.A);
                     stack.Add(result);
                     pc++;
                     break;

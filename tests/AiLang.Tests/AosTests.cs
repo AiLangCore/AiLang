@@ -64,6 +64,17 @@ public class AosTests
         public string CryptoHmacSha256Result { get; set; } = string.Empty;
         public int LastCryptoRandomBytesCount { get; private set; } = -1;
         public string CryptoRandomBytesResult { get; set; } = string.Empty;
+        public string? LastNetUdpBindHost { get; private set; }
+        public int LastNetUdpBindPort { get; private set; } = -1;
+        public int NetUdpBindResult { get; set; } = -1;
+        public int LastNetUdpRecvHandle { get; private set; } = -1;
+        public int LastNetUdpRecvMaxBytes { get; private set; } = -1;
+        public VmUdpPacket NetUdpRecvResult { get; set; }
+        public int LastNetUdpSendHandle { get; private set; } = -1;
+        public string? LastNetUdpSendHost { get; private set; }
+        public int LastNetUdpSendPort { get; private set; } = -1;
+        public string? LastNetUdpSendData { get; private set; }
+        public int NetUdpSendResult { get; set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -244,6 +255,29 @@ public class AosTests
         {
             LastCryptoRandomBytesCount = count;
             return CryptoRandomBytesResult;
+        }
+
+        public override int NetUdpBind(VmNetworkState state, string host, int port)
+        {
+            LastNetUdpBindHost = host;
+            LastNetUdpBindPort = port;
+            return NetUdpBindResult;
+        }
+
+        public override VmUdpPacket NetUdpRecv(VmNetworkState state, int handle, int maxBytes)
+        {
+            LastNetUdpRecvHandle = handle;
+            LastNetUdpRecvMaxBytes = maxBytes;
+            return NetUdpRecvResult;
+        }
+
+        public override int NetUdpSend(VmNetworkState state, int handle, string host, int port, string data)
+        {
+            LastNetUdpSendHandle = handle;
+            LastNetUdpSendHost = host;
+            LastNetUdpSendPort = port;
+            LastNetUdpSendData = data;
+            return NetUdpSendResult;
         }
     }
 
@@ -1250,6 +1284,66 @@ public class AosTests
             Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(32));
             Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(10));
             Assert.That(host.LastNetTcpWriteData, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetUdpBindAndSend_CallHost()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=h) { Call#c1(target=sys.net_udpBind) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=9090) } } Call#c2(target=sys.net_udpSend) { Var#v1(name=h) Lit#h2(value=\"127.0.0.1\") Lit#p2(value=9999) Lit#d1(value=\"ping\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetUdpBindResult = 22, NetUdpSendResult = 4 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("net");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(4));
+            Assert.That(host.LastNetUdpBindHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpBindPort, Is.EqualTo(9090));
+            Assert.That(host.LastNetUdpSendHandle, Is.EqualTo(22));
+            Assert.That(host.LastNetUdpSendHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpSendPort, Is.EqualTo(9999));
+            Assert.That(host.LastNetUdpSendData, Is.EqualTo("ping"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetUdpRecv_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_udpRecv) { Lit#h1(value=22) Lit#m1(value=64) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetUdpRecvResult = new VmUdpPacket("127.0.0.1", 4444, "pong") };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("net");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var packet = value.AsNode();
+            Assert.That(packet.Kind, Is.EqualTo("UdpPacket"));
+            Assert.That(packet.Attrs["host"].AsString(), Is.EqualTo("127.0.0.1"));
+            Assert.That(packet.Attrs["port"].AsInt(), Is.EqualTo(4444));
+            Assert.That(packet.Attrs["data"].AsString(), Is.EqualTo("pong"));
+            Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(22));
+            Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
         }
         finally
         {

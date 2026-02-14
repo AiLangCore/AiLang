@@ -47,4 +47,19 @@ public static class AosRuntimeNodes
             new List<AosNode>(),
             ZeroSpan);
     }
+
+    public static AosNode BuildUdpPacketNode(string host, int port, string data)
+    {
+        return new AosNode(
+            "UdpPacket",
+            "udpPacket",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["host"] = new AosAttrValue(AosAttrKind.String, host),
+                ["port"] = new AosAttrValue(AosAttrKind.Int, port),
+                ["data"] = new AosAttrValue(AosAttrKind.String, data)
+            },
+            new List<AosNode>(),
+            ZeroSpan);
+    }
 }

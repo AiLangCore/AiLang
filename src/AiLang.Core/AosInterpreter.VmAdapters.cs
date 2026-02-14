@@ -224,6 +224,18 @@ public sealed partial class AosInterpreter
                     var stat = VmSyscalls.FsStat(args[0].AsString());
                     result = AosValue.FromNode(AosRuntimeNodes.BuildFsStatNode(stat.Type, stat.Size, stat.MtimeUnixMs));
                     return true;
+                case SyscallId.NetUdpRecv:
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
+                        args.Length != 2 ||
+                        args[0].Kind != AosValueKind.Int ||
+                        args[1].Kind != AosValueKind.Int)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var packet = VmSyscalls.NetUdpRecv(_runtime.Network, args[0].AsInt(), args[1].AsInt());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUdpPacketNode(packet.Host, packet.Port, packet.Data));
+                    return true;
             }
 
             if (!SyscallPermissions.HasPermission(_runtime.Permissions, id))

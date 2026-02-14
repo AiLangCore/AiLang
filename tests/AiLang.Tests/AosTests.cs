@@ -59,6 +59,9 @@ public class AosTests
         public string CryptoSha1Result { get; set; } = string.Empty;
         public string? LastCryptoSha256Input { get; private set; }
         public string CryptoSha256Result { get; set; } = string.Empty;
+        public string? LastCryptoHmacSha256Key { get; private set; }
+        public string? LastCryptoHmacSha256Text { get; private set; }
+        public string CryptoHmacSha256Result { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -226,6 +229,13 @@ public class AosTests
         {
             LastCryptoSha256Input = text;
             return CryptoSha256Result;
+        }
+
+        public override string CryptoHmacSha256(string key, string text)
+        {
+            LastCryptoHmacSha256Key = key;
+            LastCryptoHmacSha256Text = text;
+            return CryptoHmacSha256Result;
         }
     }
 
@@ -1332,6 +1342,32 @@ public class AosTests
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("sha256hex"));
             Assert.That(host.LastCryptoSha256Input, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoHmacSha256_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_hmacSha256) { Lit#k1(value=\"secret\") Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoHmacSha256Result = "hmachex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("hmachex"));
+            Assert.That(host.LastCryptoHmacSha256Key, Is.EqualTo("secret"));
+            Assert.That(host.LastCryptoHmacSha256Text, Is.EqualTo("hello"));
         }
         finally
         {

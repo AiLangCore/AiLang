@@ -825,6 +825,33 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscallDispatcher_FsReadDir_IsWired()
+    {
+        Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_readDir"), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity("sys.fs_readDir", out var arity), Is.True);
+        Assert.That(arity, Is.EqualTo(1));
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "x" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                "sys.fs_readDir",
+                new[] { SysValue.String("path") },
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(host.LastFsReadDirPath, Is.EqualTo("path"));
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_FsPathExists_ReturnsBool()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.fs_pathExists) { Lit#s1(value=\"x\") } }");

@@ -51,6 +51,8 @@ public class AosTests
         public int LastNetTcpWriteHandle { get; private set; } = -1;
         public string? LastNetTcpWriteData { get; private set; }
         public int NetTcpWriteResult { get; set; } = -1;
+        public string? LastCryptoBase64EncodeInput { get; private set; }
+        public string CryptoBase64EncodeResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -194,6 +196,12 @@ public class AosTests
             LastNetTcpWriteHandle = connectionHandle;
             LastNetTcpWriteData = data;
             return NetTcpWriteResult;
+        }
+
+        public override string CryptoBase64Encode(string text)
+        {
+            LastCryptoBase64EncodeInput = text;
+            return CryptoBase64EncodeResult;
         }
     }
 
@@ -1200,6 +1208,31 @@ public class AosTests
             Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(32));
             Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(10));
             Assert.That(host.LastNetTcpWriteData, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoBase64Encode_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Encode) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoBase64EncodeResult = "aGVsbG8=" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("aGVsbG8="));
+            Assert.That(host.LastCryptoBase64EncodeInput, Is.EqualTo("hello"));
         }
         finally
         {

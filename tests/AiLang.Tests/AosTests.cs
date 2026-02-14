@@ -38,6 +38,7 @@ public class AosTests
         public string ProcessEnvGetResult { get; set; } = string.Empty;
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
+        public int LastSleepMs { get; private set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -108,6 +109,11 @@ public class AosTests
         public override int TimeMonotonicMs()
         {
             return TimeMonotonicMsResult;
+        }
+
+        public override void TimeSleepMs(int ms)
+        {
+            LastSleepMs = ms;
         }
 
         public override string ProcessCwd()
@@ -633,14 +639,15 @@ public class AosTests
     }
 
     [Test]
-    public void VmSyscalls_TimeMonotonicMs_UsesConfiguredHost()
+    public void VmSyscalls_TimeSleepMs_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost { TimeMonotonicMsResult = 1234 };
+        var host = new RecordingSyscallHost();
         try
         {
             VmSyscalls.Host = host;
-            Assert.That(VmSyscalls.TimeMonotonicMs(), Is.EqualTo(1234));
+            VmSyscalls.TimeSleepMs(15);
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
         }
         finally
         {
@@ -657,6 +664,22 @@ public class AosTests
         {
             VmSyscalls.Host = host;
             Assert.That(VmSyscalls.TimeNowUnixMs(), Is.EqualTo(123456789));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_TimeMonotonicMs_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeMonotonicMsResult = 1234 };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.TimeMonotonicMs(), Is.EqualTo(1234));
         }
         finally
         {
@@ -705,6 +728,30 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
             Assert.That(value.AsInt(), Is.EqualTo(5678));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeSleepMs_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_sleepMs) { Lit#ms1(value=15) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
         }
         finally
         {

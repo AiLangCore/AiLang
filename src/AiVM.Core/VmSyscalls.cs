@@ -24,6 +24,11 @@ public static class VmSyscalls
         return Host.TimeMonotonicMs();
     }
 
+    public static void TimeSleepMs(int ms)
+    {
+        Host.TimeSleepMs(ms);
+    }
+
     public static void ConsoleWriteErrLine(string text)
     {
         Host.ConsoleWriteErrLine(text);

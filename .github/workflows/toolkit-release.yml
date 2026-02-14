@@ -2,16 +2,64 @@ name: Toolkit Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: prepare-release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
+            echo "Releases can only run from main." >&2
+            exit 1
+          fi
+
+      - name: Compute version and tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="0.0.1-alpha.${GITHUB_RUN_NUMBER}"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists on origin."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Release ${TAG}" "${GITHUB_SHA}"
+            git push origin "${TAG}"
+          fi
+
   package:
     name: package-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -21,8 +69,13 @@ jobs:
             archive: tar.gz
             frontend: aos_frontend
             airun: airun
-          - os: macos-latest
+          - os: macos-14
             rid: osx-arm64
+            archive: tar.gz
+            frontend: aos_frontend
+            airun: airun
+          - os: macos-13
+            rid: osx-x64
             archive: tar.gz
             frontend: aos_frontend
             airun: airun
@@ -35,35 +88,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Enforce main-based tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main --depth=1
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
-            echo "Tag ${GITHUB_REF_NAME} is not based on origin/main." >&2
-            exit 1
-          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-
-      - name: Compute version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-alpha$ ]]; then
-            VERSION="${VERSION}.${GITHUB_RUN_NUMBER}"
-          fi
-          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore
         run: dotnet restore ./src/AiCLI/AiCLI.csproj
@@ -79,7 +108,7 @@ jobs:
             --self-contained true \
             -p:PublishSingleFile=true \
             -p:PublishTrimmed=false \
-            -p:Version="${{ steps.version.outputs.version }}" \
+            -p:Version="${{ needs.prepare.outputs.version }}" \
             -o ./dist
 
       - name: Publish airun (Windows)
@@ -92,7 +121,7 @@ jobs:
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:PublishTrimmed=false `
-            -p:Version=${{ steps.version.outputs.version }} `
+            -p:Version=${{ needs.prepare.outputs.version }} `
             -o .\dist
 
       - name: Build frontend parser (non-Windows)
@@ -114,16 +143,32 @@ jobs:
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
+      - name: Stage compiler assets (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/compiler
+          cp ./src/compiler/*.aos ./dist/compiler/
+
+      - name: Stage compiler assets (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
+          Copy-Item .\src\compiler\*.aos .\dist\compiler\
+
       - name: Pack release artifact (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
           PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
           cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
+          cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
@@ -131,11 +176,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
+          $version = "${{ needs.prepare.outputs.version }}"
           $packageDir = "airun-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
           Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
           Copy-Item ".\dist\${{ matrix.frontend }}" "$packageDir\${{ matrix.frontend }}"
+          Copy-Item ".\dist\compiler" "$packageDir\compiler" -Recurse
           Copy-Item ".\LICENSE" "$packageDir\LICENSE"
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip"
 
@@ -143,12 +189,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: airun-${{ matrix.rid }}
-          path: airun-${{ steps.version.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
+          path: airun-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
 
   release:
     name: github-release
     runs-on: ubuntu-latest
-    needs: package
+    needs:
+      - prepare
+      - package
 
     steps:
       - name: Download packaged artifacts
@@ -160,4 +208,5 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
           files: ./release-assets/*

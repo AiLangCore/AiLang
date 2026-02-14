@@ -36,6 +36,7 @@ public class AosTests
         public bool FsPathExistsResult { get; set; }
         public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
         public string ProcessEnvGetResult { get; set; } = string.Empty;
+        public int LastSleepMs { get; private set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -96,6 +97,11 @@ public class AosTests
         public override string ProcessEnvGet(string name)
         {
             return ProcessEnvGetResult;
+        }
+
+        public override void TimeSleepMs(int ms)
+        {
+            LastSleepMs = ms;
         }
 
         public override string ProcessCwd()
@@ -613,6 +619,47 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("v1"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_TimeSleepMs_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.TimeSleepMs(15);
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeSleepMs_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_sleepMs) { Lit#ms1(value=15) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
         }
         finally
         {

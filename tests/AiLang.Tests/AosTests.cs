@@ -962,8 +962,8 @@ public class AosTests
     [Test]
     public void VmSyscallDispatcher_FsReadDir_IsWired()
     {
-        Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_readDir"), Is.True);
-        Assert.That(VmSyscallDispatcher.TryGetExpectedArity("sys.fs_readDir", out var arity), Is.True);
+        Assert.That(SyscallRegistry.TryResolve("sys.fs_readDir", out var syscallId), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var arity), Is.True);
         Assert.That(arity, Is.EqualTo(1));
 
         var previous = VmSyscalls.Host;
@@ -972,8 +972,8 @@ public class AosTests
         {
             VmSyscalls.Host = host;
             var invoked = VmSyscallDispatcher.TryInvoke(
-                "sys.fs_readDir",
-                new[] { SysValue.String("path") },
+                syscallId,
+                new[] { SysValue.String("path") }.AsSpan(),
                 new VmNetworkState(),
                 out var result);
             Assert.That(invoked, Is.True);
@@ -989,8 +989,8 @@ public class AosTests
     [Test]
     public void VmSyscallDispatcher_FsStat_IsWired()
     {
-        Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_stat"), Is.True);
-        Assert.That(VmSyscallDispatcher.TryGetExpectedArity("sys.fs_stat", out var arity), Is.True);
+        Assert.That(SyscallRegistry.TryResolve("sys.fs_stat", out var syscallId), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var arity), Is.True);
         Assert.That(arity, Is.EqualTo(1));
 
         var previous = VmSyscalls.Host;
@@ -999,8 +999,8 @@ public class AosTests
         {
             VmSyscalls.Host = host;
             var invoked = VmSyscallDispatcher.TryInvoke(
-                "sys.fs_stat",
-                new[] { SysValue.String("path") },
+                syscallId,
+                new[] { SysValue.String("path") }.AsSpan(),
                 new VmNetworkState(),
                 out var result);
             Assert.That(invoked, Is.True);

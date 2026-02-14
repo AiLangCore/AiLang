@@ -80,6 +80,10 @@ public static class SyscallContracts
                 ValidateArity(argKinds, 0, "VAL187", "sys.console_readLine expects 0 arguments.", addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
+            case "sys.console_readAllStdin":
+                ValidateArity(argKinds, 0, "VAL188", "sys.console_readAllStdin expects 0 arguments.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
             case "sys.console_writeErrLine":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL189", "sys.console_writeErrLine expects 1 argument.", "VAL190", "sys.console_writeErrLine arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.Void;

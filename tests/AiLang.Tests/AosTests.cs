@@ -29,6 +29,7 @@ public class AosTests
         public string OsVersionResult { get; set; } = "test-version";
         public string RuntimeResult { get; set; } = "test-runtime";
         public string IoReadLineResult { get; set; } = string.Empty;
+        public string IoReadAllStdinResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -58,6 +59,11 @@ public class AosTests
         public override string IoReadLine()
         {
             return IoReadLineResult;
+        }
+
+        public override string IoReadAllStdin()
+        {
+            return IoReadAllStdinResult;
         }
 
         public override string ProcessCwd()
@@ -449,6 +455,46 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("typed-line"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_IoReadAllStdin_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { IoReadAllStdinResult = "all-input" };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.IoReadAllStdin(), Is.EqualTo("all-input"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleReadAllStdin_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_readAllStdin) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { IoReadAllStdinResult = "all-stdin" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("all-stdin"));
         }
         finally
         {

@@ -15,6 +15,7 @@ public static class VmSyscallDispatcher
             "sys.console_write" or
             "sys.console_writeLine" or
             "sys.console_readLine" or
+            "sys.console_readAllStdin" or
             "sys.console_writeErrLine" or
             "sys.process_cwd" or
             "sys.stdout_writeLine" or
@@ -44,6 +45,7 @@ public static class VmSyscallDispatcher
             "sys.console_write" => 1,
             "sys.console_writeLine" => 1,
             "sys.console_readLine" => 0,
+            "sys.console_readAllStdin" => 0,
             "sys.console_writeErrLine" => 1,
             "sys.process_cwd" => 0,
             "sys.stdout_writeLine" => 1,
@@ -148,6 +150,13 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.String(VmSyscalls.IoReadLine());
+                return true;
+            case "sys.console_readAllStdin":
+                if (args.Count != 0)
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.IoReadAllStdin());
                 return true;
             case "sys.console_writeErrLine":
                 if (!TryGetString(args, 0, 1, out var errText))

@@ -75,6 +75,12 @@ public class AosTests
         public int LastNetUdpSendPort { get; private set; } = -1;
         public string? LastNetUdpSendData { get; private set; }
         public int NetUdpSendResult { get; set; } = -1;
+        public string? LastUiCreateTitle { get; private set; }
+        public int LastUiCreateWidth { get; private set; } = -1;
+        public int LastUiCreateHeight { get; private set; } = -1;
+        public int UiCreateWindowResult { get; set; } = -1;
+        public int LastUiPollHandle { get; private set; } = -1;
+        public VmUiEvent UiPollEventResult { get; set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -278,6 +284,20 @@ public class AosTests
             LastNetUdpSendPort = port;
             LastNetUdpSendData = data;
             return NetUdpSendResult;
+        }
+
+        public override int UiCreateWindow(string title, int width, int height)
+        {
+            LastUiCreateTitle = title;
+            LastUiCreateWidth = width;
+            LastUiCreateHeight = height;
+            return UiCreateWindowResult;
+        }
+
+        public override VmUiEvent UiPollEvent(int windowHandle)
+        {
+            LastUiPollHandle = windowHandle;
+            return UiPollEventResult;
         }
     }
 
@@ -1344,6 +1364,63 @@ public class AosTests
             Assert.That(packet.Attrs["data"].AsString(), Is.EqualTo("pong"));
             Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(22));
             Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiCreateWindow_ReturnsHandle()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_createWindow) { Lit#t1(value=\"demo\") Lit#w1(value=800) Lit#h1(value=600) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { UiCreateWindowResult = 9 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(9));
+            Assert.That(host.LastUiCreateTitle, Is.EqualTo("demo"));
+            Assert.That(host.LastUiCreateWidth, Is.EqualTo(800));
+            Assert.That(host.LastUiCreateHeight, Is.EqualTo(600));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiPollEvent_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { UiPollEventResult = new VmUiEvent("click", "left", 10, 20) };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Kind, Is.EqualTo("UiEvent"));
+            Assert.That(uiEvent.Attrs["type"].AsString(), Is.EqualTo("click"));
+            Assert.That(uiEvent.Attrs["detail"].AsString(), Is.EqualTo("left"));
+            Assert.That(uiEvent.Attrs["x"].AsInt(), Is.EqualTo(10));
+            Assert.That(uiEvent.Attrs["y"].AsInt(), Is.EqualTo(20));
+            Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
         }
         finally
         {

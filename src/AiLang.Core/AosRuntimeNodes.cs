@@ -62,4 +62,20 @@ public static class AosRuntimeNodes
             new List<AosNode>(),
             ZeroSpan);
     }
+
+    public static AosNode BuildUiEventNode(string type, string detail, int x, int y)
+    {
+        return new AosNode(
+            "UiEvent",
+            "uiEvent",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["type"] = new AosAttrValue(AosAttrKind.String, type),
+                ["detail"] = new AosAttrValue(AosAttrKind.String, detail),
+                ["x"] = new AosAttrValue(AosAttrKind.Int, x),
+                ["y"] = new AosAttrValue(AosAttrKind.Int, y)
+            },
+            new List<AosNode>(),
+            ZeroSpan);
+    }
 }

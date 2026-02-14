@@ -104,6 +104,28 @@ public sealed partial class AosInterpreter
             return true;
         }
 
+        if (target == "sys.ui_pollEvent")
+        {
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var handleValue = EvalNode(callNode.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return true;
+            }
+
+            var uiEvent = VmSyscalls.UiPollEvent(handleValue.AsInt());
+            result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+            return true;
+        }
+
         if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
         {
             return true;

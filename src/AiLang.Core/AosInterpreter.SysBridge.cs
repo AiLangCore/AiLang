@@ -1,4 +1,5 @@
 using AiVM.Core;
+using System.Buffers;
 
 namespace AiLang.Core;
 
@@ -91,19 +92,38 @@ public sealed partial class AosInterpreter
             return true;
         }
 
-        var args = new List<SysValue>(callNode.Children.Count);
-        for (var i = 0; i < callNode.Children.Count; i++)
+        if (callNode.Children.Count == 0)
         {
-            args.Add(ToSysValue(EvalNode(callNode.Children[i], runtime, env)));
+            if (!VmSyscallDispatcher.TryInvoke(syscallId, ReadOnlySpan<SysValue>.Empty, runtime.Network, out var noArgResult))
+            {
+                return false;
+            }
+
+            result = FromSysValue(noArgResult);
+            return true;
         }
 
-        if (!VmSyscallDispatcher.TryInvoke(syscallId, args, runtime.Network, out var sysResult))
+        var rented = ArrayPool<SysValue>.Shared.Rent(callNode.Children.Count);
+        try
         {
-            return false;
-        }
+            for (var i = 0; i < callNode.Children.Count; i++)
+            {
+                rented[i] = ToSysValue(EvalNode(callNode.Children[i], runtime, env));
+            }
 
-        result = FromSysValue(sysResult);
-        return true;
+            if (!VmSyscallDispatcher.TryInvoke(syscallId, rented.AsSpan(0, callNode.Children.Count), runtime.Network, out var sysResult))
+            {
+                return false;
+            }
+
+            result = FromSysValue(sysResult);
+            return true;
+        }
+        finally
+        {
+            Array.Clear(rented, 0, callNode.Children.Count);
+            ArrayPool<SysValue>.Shared.Return(rented);
+        }
     }
 
     private bool TryEvaluateCapabilityCall(

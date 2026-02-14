@@ -9,6 +9,11 @@ public static class VmSyscalls
         return Host.ProcessArgv();
     }
 
+    public static string ProcessEnvGet(string name)
+    {
+        return Host.ProcessEnvGet(name);
+    }
+
     public static void ConsoleWriteErrLine(string text)
     {
         Host.ConsoleWriteErrLine(text);

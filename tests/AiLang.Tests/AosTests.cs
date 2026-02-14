@@ -35,6 +35,7 @@ public class AosTests
         public string IoReadAllStdinResult { get; set; } = string.Empty;
         public bool FsPathExistsResult { get; set; }
         public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
+        public string ProcessEnvGetResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -90,6 +91,11 @@ public class AosTests
         public override string[] ProcessArgv()
         {
             return ProcessArgvResult;
+        }
+
+        public override string ProcessEnvGet(string name)
+        {
+            return ProcessEnvGetResult;
         }
 
         public override string ProcessCwd()
@@ -567,6 +573,46 @@ public class AosTests
             Assert.That(argv.Children[0].Attrs["value"].AsString(), Is.EqualTo("aic"));
             Assert.That(argv.Children[1].Attrs["value"].AsString(), Is.EqualTo("run"));
             Assert.That(argv.Children[2].Attrs["value"].AsString(), Is.EqualTo("sample.aos"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ProcessEnvGet_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessEnvGetResult = "v1" };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.ProcessEnvGet("NAME"), Is.EqualTo("v1"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ProcessEnvGet_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.process_envGet) { Lit#s1(value=\"NAME\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessEnvGetResult = "v1" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("v1"));
         }
         finally
         {

@@ -22,6 +22,8 @@ public class DefaultSyscallHost : ISyscallHost
 
     public virtual string ProcessCwd() => Directory.GetCurrentDirectory();
 
+    public virtual string ProcessEnvGet(string name) => Environment.GetEnvironmentVariable(name) ?? string.Empty;
+
     public virtual void ConsolePrintLine(string text) => Console.WriteLine(text);
 
     public virtual void IoPrint(string text) => Console.WriteLine(text);

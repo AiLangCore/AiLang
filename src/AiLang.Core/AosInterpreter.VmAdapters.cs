@@ -1,4 +1,5 @@
 using AiVM.Core;
+using System.Buffers;
 
 namespace AiLang.Core;
 
@@ -196,12 +197,12 @@ public sealed partial class AosInterpreter
 
         public AosNode ValueToNode(AosValue value) => ToRuntimeNode(value);
 
-        public bool TryExecuteSyscall(SyscallId id, IReadOnlyList<AosValue> args, out AosValue result)
+        public bool TryExecuteSyscall(SyscallId id, ReadOnlySpan<AosValue> args, out AosValue result)
         {
             switch (id)
             {
                 case SyscallId.ProcessArgv:
-                    if (args.Count != 0 || !_runtime.Permissions.Contains("sys"))
+                    if (args.Length != 0 || !_runtime.Permissions.Contains("sys"))
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -209,7 +210,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
                     return true;
                 case SyscallId.FsReadDir:
-                    if (!_runtime.Permissions.Contains("sys") || args.Count != 1 || args[0].Kind != AosValueKind.String)
+                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -217,7 +218,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(args[0].AsString())));
                     return true;
                 case SyscallId.FsStat:
-                    if (!_runtime.Permissions.Contains("sys") || args.Count != 1 || args[0].Kind != AosValueKind.String)
+                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -233,24 +234,41 @@ public sealed partial class AosInterpreter
                 return true;
             }
 
-            if (!TryConvertToSysValues(args, out var sysArgs))
+            if (!TryConvertToSysValues(args, out var rentedBuffer, out var sysArgs))
             {
                 result = AosValue.Unknown;
                 return true;
             }
 
-            if (!VmSyscallDispatcher.TryInvoke(id, sysArgs, _runtime.Network, out var sysResult))
+            try
             {
-                result = AosValue.Unknown;
-                return false;
-            }
+                if (!VmSyscallDispatcher.TryInvoke(id, sysArgs, _runtime.Network, out var sysResult))
+                {
+                    result = AosValue.Unknown;
+                    return false;
+                }
 
-            result = FromSysValue(sysResult);
-            return true;
+                result = FromSysValue(sysResult);
+                return true;
+            }
+            finally
+            {
+                if (rentedBuffer is not null)
+                {
+                    Array.Clear(rentedBuffer, 0, args.Length);
+                    ArrayPool<SysValue>.Shared.Return(rentedBuffer);
+                }
+            }
         }
 
-        public AosValue ExecuteCall(string target, IReadOnlyList<AosValue> args)
+        public AosValue ExecuteCall(string target, ReadOnlySpan<AosValue> args)
         {
+            var children = new List<AosNode>(args.Length);
+            for (var i = 0; i < args.Length; i++)
+            {
+                children.Add(ToRuntimeNode(args[i]));
+            }
+
             var callNode = new AosNode(
                 "Call",
                 "vm_call",
@@ -258,16 +276,23 @@ public sealed partial class AosInterpreter
                 {
                     ["target"] = new AosAttrValue(AosAttrKind.Identifier, target)
                 },
-                args.Select(ToRuntimeNode).ToList(),
+                children,
                 new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
             var env = new Dictionary<string, AosValue>(_runtime.Env, StringComparer.Ordinal);
             return _interpreter.EvalCall(callNode, _runtime, env);
         }
 
-        private static bool TryConvertToSysValues(IReadOnlyList<AosValue> args, out List<SysValue> sysArgs)
+        private static bool TryConvertToSysValues(ReadOnlySpan<AosValue> args, out SysValue[]? rentedBuffer, out ReadOnlySpan<SysValue> sysArgs)
         {
-            sysArgs = new List<SysValue>(args.Count);
-            for (var i = 0; i < args.Count; i++)
+            if (args.Length == 0)
+            {
+                rentedBuffer = null;
+                sysArgs = ReadOnlySpan<SysValue>.Empty;
+                return true;
+            }
+
+            rentedBuffer = ArrayPool<SysValue>.Shared.Rent(args.Length);
+            for (var i = 0; i < args.Length; i++)
             {
                 var arg = args[i];
                 var sysValue = arg.Kind switch
@@ -280,11 +305,16 @@ public sealed partial class AosInterpreter
                 };
                 if (sysValue.Kind == VmValueKind.Unknown)
                 {
+                    Array.Clear(rentedBuffer, 0, args.Length);
+                    ArrayPool<SysValue>.Shared.Return(rentedBuffer);
+                    rentedBuffer = null;
+                    sysArgs = ReadOnlySpan<SysValue>.Empty;
                     return false;
                 }
-                sysArgs.Add(sysValue);
+                rentedBuffer[i] = sysValue;
             }
 
+            sysArgs = rentedBuffer.AsSpan(0, args.Length);
             return true;
         }
 

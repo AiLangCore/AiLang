@@ -38,8 +38,11 @@ public class AosTests
         public string ProcessEnvGetResult { get; set; } = string.Empty;
         public string[] FsReadDirResult { get; set; } = Array.Empty<string>();
         public string? LastFsReadDirPath { get; private set; }
+        public VmFsStat FsStatResult { get; set; } = new("missing", 0, 0);
+        public string? LastFsStatPath { get; private set; }
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
+        public int LastSleepMs { get; private set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -92,6 +95,12 @@ public class AosTests
             return FsReadDirResult;
         }
 
+        public override VmFsStat FsStat(string path)
+        {
+            LastFsStatPath = path;
+            return FsStatResult;
+        }
+
         public override void FsWriteFile(string path, string text)
         {
             LastFsWritePath = path;
@@ -116,6 +125,11 @@ public class AosTests
         public override int TimeMonotonicMs()
         {
             return TimeMonotonicMsResult;
+        }
+
+        public override void TimeSleepMs(int ms)
+        {
+            LastSleepMs = ms;
         }
 
         public override string ProcessCwd()
@@ -641,14 +655,15 @@ public class AosTests
     }
 
     [Test]
-    public void VmSyscalls_TimeMonotonicMs_UsesConfiguredHost()
+    public void VmSyscalls_TimeSleepMs_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost { TimeMonotonicMsResult = 1234 };
+        var host = new RecordingSyscallHost();
         try
         {
             VmSyscalls.Host = host;
-            Assert.That(VmSyscalls.TimeMonotonicMs(), Is.EqualTo(1234));
+            VmSyscalls.TimeSleepMs(15);
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
         }
         finally
         {
@@ -665,6 +680,22 @@ public class AosTests
         {
             VmSyscalls.Host = host;
             Assert.That(VmSyscalls.TimeNowUnixMs(), Is.EqualTo(123456789));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_TimeMonotonicMs_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeMonotonicMsResult = 1234 };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.TimeMonotonicMs(), Is.EqualTo(1234));
         }
         finally
         {
@@ -713,6 +744,30 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
             Assert.That(value.AsInt(), Is.EqualTo(5678));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeSleepMs_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_sleepMs) { Lit#ms1(value=15) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastSleepMs, Is.EqualTo(15));
         }
         finally
         {
@@ -796,6 +851,26 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscalls_FsStat_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsStatResult = new VmFsStat("file", 12, 99) };
+        try
+        {
+            VmSyscalls.Host = host;
+            var stat = VmSyscalls.FsStat("x");
+            Assert.That(host.LastFsStatPath, Is.EqualTo("x"));
+            Assert.That(stat.Type, Is.EqualTo("file"));
+            Assert.That(stat.Size, Is.EqualTo(12));
+            Assert.That(stat.MtimeUnixMs, Is.EqualTo(99));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_FsReadDir_ReturnsNode()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.fs_readDir) { Lit#s1(value=\"x\") } }");
@@ -825,6 +900,34 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_FsStat_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_stat) { Lit#s1(value=\"x\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsStatResult = new VmFsStat("file", 12, 99) };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var stat = value.AsNode();
+            Assert.That(stat.Kind, Is.EqualTo("Stat"));
+            Assert.That(stat.Attrs["type"].AsString(), Is.EqualTo("file"));
+            Assert.That(stat.Attrs["size"].AsInt(), Is.EqualTo(12));
+            Assert.That(stat.Attrs["mtime"].AsInt(), Is.EqualTo(99));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void VmSyscallDispatcher_FsReadDir_IsWired()
     {
         Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_readDir"), Is.True);
@@ -843,6 +946,33 @@ public class AosTests
                 out var result);
             Assert.That(invoked, Is.True);
             Assert.That(host.LastFsReadDirPath, Is.EqualTo("path"));
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_FsStat_IsWired()
+    {
+        Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_stat"), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity("sys.fs_stat", out var arity), Is.True);
+        Assert.That(arity, Is.EqualTo(1));
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsStatResult = new VmFsStat("file", 12, 99) };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                "sys.fs_stat",
+                new[] { SysValue.String("path") },
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(host.LastFsStatPath, Is.EqualTo("path"));
             Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
         }
         finally

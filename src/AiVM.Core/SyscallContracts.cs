@@ -100,6 +100,10 @@ public static class SyscallContracts
                 ValidateArity(argKinds, 0, "VAL182", "sys.time_nowUnixMs expects 0 arguments.", addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
+            case "sys.time_monotonicMs":
+                ValidateArity(argKinds, 0, "VAL201", "sys.time_monotonicMs expects 0 arguments.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.stdout_writeLine":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL134", "sys.stdout_writeLine expects 1 argument.", "VAL135", "sys.stdout_writeLine arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.Void;

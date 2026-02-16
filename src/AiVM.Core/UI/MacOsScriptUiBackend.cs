@@ -101,6 +101,34 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawLine(int handle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.Line(x1, y1, x2, y2, color, strokeWidth));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryDrawEllipse(int handle, int x, int y, int width, int height, string color)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.Ellipse(x, y, width, height, color));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             MacWindowState? state;
@@ -214,6 +242,36 @@ public partial class DefaultSyscallHost
                     sb.Append(textBase64);
                     sb.Append('\n');
                 }
+                else if (command.Kind == "line")
+                {
+                    sb.Append("L|");
+                    sb.Append(command.X.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Y.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.X2.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Y2.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.StrokeWidth.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Color);
+                    sb.Append('\n');
+                }
+                else if (command.Kind == "ellipse")
+                {
+                    sb.Append("E|");
+                    sb.Append(command.X.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Y.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Width.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Height.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Color);
+                    sb.Append('\n');
+                }
             }
             return sb.ToString();
         }
@@ -241,7 +299,7 @@ public partial class DefaultSyscallHost
                     return _scriptPath;
                 }
 
-                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner.swift");
+                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner-v2.swift");
                 var script = @"
 import AppKit
 import Foundation
@@ -252,6 +310,9 @@ struct Cmd {
     var y: Int
     var w: Int
     var h: Int
+    var x2: Int
+    var y2: Int
+    var stroke: Int
     var size: Int
     var color: String
     var text: String
@@ -270,6 +331,16 @@ final class CanvasView: NSView {
             if c.kind == ""R"" {
                 parseColor(c.color).setFill()
                 NSRect(x: CGFloat(c.x), y: CGFloat(c.y), width: CGFloat(c.w), height: CGFloat(c.h)).fill()
+            } else if c.kind == ""E"" {
+                parseColor(c.color).setFill()
+                NSBezierPath(ovalIn: NSRect(x: CGFloat(c.x), y: CGFloat(c.y), width: CGFloat(c.w), height: CGFloat(c.h))).fill()
+            } else if c.kind == ""L"" {
+                parseColor(c.color).setStroke()
+                let line = NSBezierPath()
+                line.lineWidth = CGFloat(max(1, c.stroke))
+                line.move(to: NSPoint(x: CGFloat(c.x), y: CGFloat(c.y)))
+                line.line(to: NSPoint(x: CGFloat(c.x2), y: CGFloat(c.y2)))
+                line.stroke()
             } else if c.kind == ""T"" {
                 let attrs: [NSAttributedString.Key: Any] = [
                     .foregroundColor: parseColor(c.color),
@@ -307,10 +378,14 @@ func loadCommands(path: String) -> [Cmd] {
         let parts = line.split(separator: ""|"", omittingEmptySubsequences: false).map(String.init)
         if parts.count == 0 { continue }
         if parts[0] == ""R"" && parts.count >= 6 {
-            out.append(Cmd(kind: ""R"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, size: 0, color: parts[5], text: """"))
+            out.append(Cmd(kind: ""R"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """"))
+        } else if parts[0] == ""E"" && parts.count >= 6 {
+            out.append(Cmd(kind: ""E"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """"))
+        } else if parts[0] == ""L"" && parts.count >= 7 {
+            out.append(Cmd(kind: ""L"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: Int(parts[3]) ?? 0, y2: Int(parts[4]) ?? 0, stroke: Int(parts[5]) ?? 1, size: 0, color: parts[6], text: """"))
         } else if parts[0] == ""T"" && parts.count >= 6 {
             let decoded = Data(base64Encoded: parts[5]).flatMap { String(data: $0, encoding: .utf8) } ?? """"
-            out.append(Cmd(kind: ""T"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, size: Int(parts[3]) ?? 14, color: parts[4], text: decoded))
+            out.append(Cmd(kind: ""T"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: 0, y2: 0, stroke: 1, size: Int(parts[3]) ?? 14, color: parts[4], text: decoded))
         }
     }
     return out

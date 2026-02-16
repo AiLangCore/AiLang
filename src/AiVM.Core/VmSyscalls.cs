@@ -251,6 +251,21 @@ public static class VmSyscalls
         Host.UiDrawText(windowHandle, x, y, text, color, size);
     }
 
+    public static void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+    {
+        Host.UiDrawLine(windowHandle, x1, y1, x2, y2, color, strokeWidth);
+    }
+
+    public static void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color)
+    {
+        Host.UiDrawEllipse(windowHandle, x, y, width, height, color);
+    }
+
+    public static void UiDrawPath(int windowHandle, string path, string color, int strokeWidth)
+    {
+        Host.UiDrawPath(windowHandle, path, color, strokeWidth);
+    }
+
     public static void UiEndFrame(int windowHandle)
     {
         Host.UiEndFrame(windowHandle);

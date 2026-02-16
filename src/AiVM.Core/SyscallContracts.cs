@@ -245,6 +245,10 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL274", "sys.ui_closeWindow expects 1 argument.", "VAL275", "sys.ui_closeWindow arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
+            case "sys.ui_getWindowSize":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL276", "sys.ui_getWindowSize expects 1 argument.", "VAL277", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Node;
+                return true;
             case "sys.crypto_base64Encode":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL224", "sys.crypto_base64Encode expects 1 argument.", "VAL225", "sys.crypto_base64Encode arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.String;
@@ -372,6 +376,36 @@ public static class SyscallContracts
             case "sys.str_utf8ByteCount":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL142", "sys.str_utf8ByteCount expects 1 argument.", "VAL143", "sys.str_utf8ByteCount arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.Int;
+                return true;
+            case "sys.str_substring":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL278", "sys.str_substring arg 1 must be string."),
+                        (VmValueKind.Int, "VAL279", "sys.str_substring arg 2 must be int."),
+                        (VmValueKind.Int, "VAL280", "sys.str_substring arg 3 must be int.")
+                    },
+                    "VAL281",
+                    "sys.str_substring expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.str_remove":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL282", "sys.str_remove arg 1 must be string."),
+                        (VmValueKind.Int, "VAL283", "sys.str_remove arg 2 must be int."),
+                        (VmValueKind.Int, "VAL284", "sys.str_remove arg 3 must be int.")
+                    },
+                    "VAL285",
+                    "sys.str_remove expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.String;
                 return true;
             case "sys.http_get":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL148", "sys.http_get expects 1 argument.", "VAL149", "sys.http_get arg must be string.", addDiagnostic);

@@ -122,7 +122,37 @@ public sealed partial class AosInterpreter
             }
 
             var uiEvent = VmSyscalls.UiPollEvent(handleValue.AsInt());
-            result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+            result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(
+                uiEvent.Type,
+                uiEvent.TargetId,
+                uiEvent.X,
+                uiEvent.Y,
+                uiEvent.Key,
+                uiEvent.Text,
+                uiEvent.Modifiers,
+                uiEvent.Repeat));
+            return true;
+        }
+
+        if (target == "sys.ui_getWindowSize")
+        {
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var handleValue = EvalNode(callNode.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return true;
+            }
+
+            var size = VmSyscalls.UiGetWindowSize(handleValue.AsInt());
+            result = AosValue.FromNode(AosRuntimeNodes.BuildUiWindowSizeNode(size.Width, size.Height));
             return true;
         }
 

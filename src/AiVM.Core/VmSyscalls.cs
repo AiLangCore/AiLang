@@ -136,6 +136,43 @@ public static class VmSyscalls
         return Host.StrUtf8ByteCount(text);
     }
 
+    public static string StrSubstring(string text, int start, int length)
+    {
+        if (string.IsNullOrEmpty(text) || length <= 0)
+        {
+            return string.Empty;
+        }
+
+        var offsets = BuildRuneOffsets(text);
+        var runeCount = offsets.Length - 1;
+        var clampedStart = Math.Max(0, Math.Min(start, runeCount));
+        var clampedEnd = Math.Max(clampedStart, Math.Min(runeCount, clampedStart + length));
+        var startOffset = offsets[clampedStart];
+        var endOffset = offsets[clampedEnd];
+        return text.Substring(startOffset, endOffset - startOffset);
+    }
+
+    public static string StrRemove(string text, int start, int length)
+    {
+        if (string.IsNullOrEmpty(text) || length <= 0)
+        {
+            return text ?? string.Empty;
+        }
+
+        var offsets = BuildRuneOffsets(text);
+        var runeCount = offsets.Length - 1;
+        var clampedStart = Math.Max(0, Math.Min(start, runeCount));
+        var clampedEnd = Math.Max(clampedStart, Math.Min(runeCount, clampedStart + length));
+        if (clampedStart == clampedEnd)
+        {
+            return text;
+        }
+
+        var startOffset = offsets[clampedStart];
+        var endOffset = offsets[clampedEnd];
+        return string.Concat(text.AsSpan(0, startOffset), text.AsSpan(endOffset));
+    }
+
     public static string HttpGet(string url)
     {
         return Host.HttpGet(url);
@@ -258,7 +295,13 @@ public static class VmSyscalls
 
     public static VmUiEvent UiPollEvent(int windowHandle)
     {
-        return Host.UiPollEvent(windowHandle);
+        return CanonicalizeUiEvent(Host.UiPollEvent(windowHandle));
+    }
+
+    public static VmUiWindowSize UiGetWindowSize(int windowHandle)
+    {
+        var size = Host.UiGetWindowSize(windowHandle);
+        return new VmUiWindowSize(size.Width < 0 ? -1 : size.Width, size.Height < 0 ? -1 : size.Height);
     }
 
     public static void UiPresent(int windowHandle)
@@ -309,5 +352,86 @@ public static class VmSyscalls
     public static void ProcessExit(int code)
     {
         Host.ProcessExit(code);
+    }
+
+    private static VmUiEvent CanonicalizeUiEvent(VmUiEvent value)
+    {
+        var type = value.Type switch
+        {
+            "none" => "none",
+            "closed" => "closed",
+            "click" => "click",
+            "key" => "key",
+            _ => "none"
+        };
+
+        var targetId = value.TargetId ?? string.Empty;
+        var key = value.Key ?? string.Empty;
+        var text = value.Text ?? string.Empty;
+        var modifiers = CanonicalizeModifiers(value.Modifiers);
+        var repeat = value.Repeat;
+        var x = value.X;
+        var y = value.Y;
+
+        if (!string.Equals(type, "click", StringComparison.Ordinal))
+        {
+            x = -1;
+            y = -1;
+        }
+
+        if (!string.Equals(type, "key", StringComparison.Ordinal))
+        {
+            key = string.Empty;
+            text = string.Empty;
+            modifiers = string.Empty;
+            repeat = false;
+        }
+
+        if (string.Equals(type, "none", StringComparison.Ordinal) ||
+            string.Equals(type, "closed", StringComparison.Ordinal))
+        {
+            targetId = string.Empty;
+        }
+
+        return new VmUiEvent(type, targetId, x, y, key, text, modifiers, repeat);
+    }
+
+    private static int[] BuildRuneOffsets(string text)
+    {
+        var offsets = new List<int> { 0 };
+        var index = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            index += rune.Utf16SequenceLength;
+            offsets.Add(index);
+        }
+
+        return offsets.ToArray();
+    }
+
+    private static string CanonicalizeModifiers(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var parsed = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var token in parsed)
+        {
+            if (token is "alt" or "ctrl" or "meta" or "shift")
+            {
+                seen.Add(token);
+            }
+        }
+
+        if (seen.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var ordered = seen.OrderBy(static m => m, StringComparer.Ordinal);
+        return string.Join(',', ordered);
     }
 }

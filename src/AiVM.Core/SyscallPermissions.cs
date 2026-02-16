@@ -28,6 +28,7 @@ public static class SyscallPermissions
             SyscallId.UiPollEvent => "ui",
             SyscallId.UiPresent => "ui",
             SyscallId.UiCloseWindow => "ui",
+            SyscallId.UiGetWindowSize => "ui",
             SyscallId.ConsoleWrite => "console",
             SyscallId.ConsoleWriteLine => "console",
             SyscallId.ConsoleReadLine => "console",

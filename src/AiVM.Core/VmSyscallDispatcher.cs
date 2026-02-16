@@ -28,6 +28,7 @@ public static class VmSyscallDispatcher
             SyscallId.UiPollEvent => 1,
             SyscallId.UiPresent => 1,
             SyscallId.UiCloseWindow => 1,
+            SyscallId.UiGetWindowSize => 1,
             SyscallId.CryptoBase64Encode => 1,
             SyscallId.CryptoBase64Decode => 1,
             SyscallId.CryptoSha1 => 1,
@@ -55,6 +56,8 @@ public static class VmSyscallDispatcher
             SyscallId.FsWriteFile => 2,
             SyscallId.FsMakeDir => 1,
             SyscallId.StrUtf8ByteCount => 1,
+            SyscallId.StrSubstring => 3,
+            SyscallId.StrRemove => 3,
             SyscallId.HttpGet => 1,
             SyscallId.Platform => 0,
             SyscallId.Arch => 0,
@@ -284,6 +287,16 @@ public static class VmSyscallDispatcher
                 result = SysValue.Unknown();
                 return true;
 
+            case SyscallId.UiGetWindowSize:
+                if (!TryGetInt(args, 0, 1, out var uiSizeHandle))
+                {
+                    return true;
+                }
+                // Node-returning syscalls are materialized by interpreter adapters.
+                _ = VmSyscalls.UiGetWindowSize(uiSizeHandle);
+                result = SysValue.Unknown();
+                return true;
+
             case SyscallId.CryptoBase64Encode:
                 if (!TryGetString(args, 0, 1, out var base64EncodeText))
                 {
@@ -489,6 +502,26 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.Int(VmSyscalls.StrUtf8ByteCount(utf8Text));
+                return true;
+
+            case SyscallId.StrSubstring:
+                if (!TryGetString(args, 0, 3, out var substringText) ||
+                    !TryGetInt(args, 1, 3, out var substringStart) ||
+                    !TryGetInt(args, 2, 3, out var substringLength))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.StrSubstring(substringText, substringStart, substringLength));
+                return true;
+
+            case SyscallId.StrRemove:
+                if (!TryGetString(args, 0, 3, out var removeText) ||
+                    !TryGetInt(args, 1, 3, out var removeStart) ||
+                    !TryGetInt(args, 2, 3, out var removeLength))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.StrRemove(removeText, removeStart, removeLength));
                 return true;
 
             case SyscallId.HttpGet:

@@ -81,6 +81,8 @@ public class AosTests
         public int UiCreateWindowResult { get; set; } = -1;
         public int LastUiPollHandle { get; private set; } = -1;
         public VmUiEvent UiPollEventResult { get; set; }
+        public int LastUiGetWindowSizeHandle { get; private set; } = -1;
+        public VmUiWindowSize UiGetWindowSizeResult { get; set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -298,6 +300,12 @@ public class AosTests
         {
             LastUiPollHandle = windowHandle;
             return UiPollEventResult;
+        }
+
+        public override VmUiWindowSize UiGetWindowSize(int windowHandle)
+        {
+            LastUiGetWindowSizeHandle = windowHandle;
+            return UiGetWindowSizeResult;
         }
     }
 
@@ -671,6 +679,36 @@ public class AosTests
 
         Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
         Assert.That(value.AsInt(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void SyscallDispatch_StrSubstring_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.str_substring) { Lit#s1(value=\"a😀bc\") Lit#i1(value=1) Lit#i2(value=2) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(value.AsString(), Is.EqualTo("😀b"));
+    }
+
+    [Test]
+    public void SyscallDispatch_StrRemove_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.str_remove) { Lit#s1(value=\"a😀bc\") Lit#i1(value=1) Lit#i2(value=2) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(value.AsString(), Is.EqualTo("ac"));
     }
 
     [Test]
@@ -1405,7 +1443,10 @@ public class AosTests
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost { UiPollEventResult = new VmUiEvent("click", "left", 10, 20) };
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("click", "button_1", 10, 20, string.Empty, string.Empty, string.Empty, false)
+        };
         try
         {
             VmSyscalls.Host = host;
@@ -1417,10 +1458,45 @@ public class AosTests
             var uiEvent = value.AsNode();
             Assert.That(uiEvent.Kind, Is.EqualTo("UiEvent"));
             Assert.That(uiEvent.Attrs["type"].AsString(), Is.EqualTo("click"));
-            Assert.That(uiEvent.Attrs["detail"].AsString(), Is.EqualTo("left"));
+            Assert.That(uiEvent.Attrs["targetId"].AsString(), Is.EqualTo("button_1"));
             Assert.That(uiEvent.Attrs["x"].AsInt(), Is.EqualTo(10));
             Assert.That(uiEvent.Attrs["y"].AsInt(), Is.EqualTo(20));
+            Assert.That(uiEvent.Attrs["key"].AsString(), Is.EqualTo(string.Empty));
+            Assert.That(uiEvent.Attrs["text"].AsString(), Is.EqualTo(string.Empty));
+            Assert.That(uiEvent.Attrs["modifiers"].AsString(), Is.EqualTo(string.Empty));
+            Assert.That(uiEvent.Attrs["repeat"].AsBool(), Is.False);
             Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiGetWindowSize_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_getWindowSize) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiGetWindowSizeResult = new VmUiWindowSize(1024, 768)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var size = value.AsNode();
+            Assert.That(size.Kind, Is.EqualTo("UiWindowSize"));
+            Assert.That(size.Attrs["width"].AsInt(), Is.EqualTo(1024));
+            Assert.That(size.Attrs["height"].AsInt(), Is.EqualTo(768));
+            Assert.That(host.LastUiGetWindowSizeHandle, Is.EqualTo(9));
         }
         finally
         {
@@ -1684,6 +1760,66 @@ public class AosTests
         {
             VmSyscalls.Host = previous;
         }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_UiGetWindowSize_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiGetWindowSizeResult = new VmUiWindowSize(640, 480)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiGetWindowSize,
+                new[] { SysValue.Int(9) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+            Assert.That(host.LastUiGetWindowSizeHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_StrSubstring_IsWired()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.str_substring", out var syscallId), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var arity), Is.True);
+        Assert.That(arity, Is.EqualTo(3));
+
+        var invoked = VmSyscallDispatcher.TryInvoke(
+            syscallId,
+            new[] { SysValue.String("a😀bc"), SysValue.Int(1), SysValue.Int(2) }.AsSpan(),
+            new VmNetworkState(),
+            out var result);
+        Assert.That(invoked, Is.True);
+        Assert.That(result.Kind, Is.EqualTo(VmValueKind.String));
+        Assert.That(result.StringValue, Is.EqualTo("😀b"));
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_StrRemove_IsWired()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.str_remove", out var syscallId), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var arity), Is.True);
+        Assert.That(arity, Is.EqualTo(3));
+
+        var invoked = VmSyscallDispatcher.TryInvoke(
+            syscallId,
+            new[] { SysValue.String("a😀bc"), SysValue.Int(1), SysValue.Int(2) }.AsSpan(),
+            new VmNetworkState(),
+            out var result);
+        Assert.That(invoked, Is.True);
+        Assert.That(result.Kind, Is.EqualTo(VmValueKind.String));
+        Assert.That(result.StringValue, Is.EqualTo("ac"));
     }
 
     [Test]

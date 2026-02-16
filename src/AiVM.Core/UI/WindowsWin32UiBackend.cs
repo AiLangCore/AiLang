@@ -18,6 +18,11 @@ public partial class DefaultSyscallHost
         private const uint PmRemove = 0x0001;
         private const int ColorWindow = 5;
         private const int SwShow = 5;
+        private const int VkShift = 0x10;
+        private const int VkControl = 0x11;
+        private const int VkMenu = 0x12; // Alt
+        private const int VkLWin = 0x5B;
+        private const int VkRWin = 0x5C;
 
         private static readonly object StaticLock = new();
         private static readonly Dictionary<IntPtr, WindowsWindowState> GlobalWindows = new();
@@ -181,6 +186,28 @@ public partial class DefaultSyscallHost
             }
         }
 
+        public bool TryGetWindowSize(int handle, out int width, out int height)
+        {
+            width = -1;
+            height = -1;
+            lock (_lock)
+            {
+                if (!_windows.TryGetValue(handle, out var state))
+                {
+                    return false;
+                }
+
+                if (!GetClientRect(state.Hwnd, out var clientRect))
+                {
+                    return false;
+                }
+
+                width = Math.Max(0, clientRect.Right - clientRect.Left);
+                height = Math.Max(0, clientRect.Bottom - clientRect.Top);
+                return true;
+            }
+        }
+
         public VmUiEvent PollEvent(int handle)
         {
             PumpMessages();
@@ -188,7 +215,7 @@ public partial class DefaultSyscallHost
             {
                 if (!_windows.TryGetValue(handle, out var state))
                 {
-                    return new VmUiEvent("closed", string.Empty, 0, 0);
+                    return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                 }
 
                 if (state.Events.Count > 0)
@@ -196,7 +223,7 @@ public partial class DefaultSyscallHost
                     return state.Events.Dequeue();
                 }
 
-                return new VmUiEvent("none", string.Empty, 0, 0);
+                return new VmUiEvent("none", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
             }
         }
 
@@ -283,15 +310,24 @@ public partial class DefaultSyscallHost
                 {
                     var x = unchecked((short)(long)lParam);
                     var y = unchecked((short)((long)lParam >> 16));
-                    state.Events.Enqueue(new VmUiEvent("click", string.Empty, x, y));
+                    state.Events.Enqueue(new VmUiEvent("click", string.Empty, x, y, string.Empty, string.Empty, string.Empty, false));
                 }
                 else if (msg == WmKeyDown)
                 {
-                    state.Events.Enqueue(new VmUiEvent("key", string.Empty, 0, 0));
+                    var repeat = (((long)lParam >> 30) & 1L) != 0;
+                    state.Events.Enqueue(new VmUiEvent(
+                        "key",
+                        string.Empty,
+                        -1,
+                        -1,
+                        BuildKeyName((int)(long)wParam),
+                        string.Empty,
+                        BuildModifiers(),
+                        repeat));
                 }
                 else if (msg == WmClose || msg == WmDestroy)
                 {
-                    state.Events.Enqueue(new VmUiEvent("closed", string.Empty, 0, 0));
+                    state.Events.Enqueue(new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false));
                     lock (StaticLock)
                     {
                         GlobalWindows.Remove(hwnd);
@@ -326,6 +362,58 @@ public partial class DefaultSyscallHost
                 _ => 0x00ffffff
             };
         }
+
+        private static string BuildKeyName(int vk)
+        {
+            if (vk >= 'A' && vk <= 'Z')
+            {
+                return char.ToLowerInvariant((char)vk).ToString();
+            }
+            if (vk >= '0' && vk <= '9')
+            {
+                return ((char)vk).ToString();
+            }
+
+            return vk switch
+            {
+                0x08 => "backspace",
+                0x09 => "tab",
+                0x0D => "enter",
+                0x1B => "escape",
+                0x20 => "space",
+                0x25 => "left",
+                0x26 => "up",
+                0x27 => "right",
+                0x28 => "down",
+                0x2E => "delete",
+                _ => $"vk:{vk}"
+            };
+        }
+
+        private static string BuildModifiers()
+        {
+            var values = new List<string>(4);
+            if (IsPressed(VkMenu))
+            {
+                values.Add("alt");
+            }
+            if (IsPressed(VkControl))
+            {
+                values.Add("ctrl");
+            }
+            if (IsPressed(VkLWin) || IsPressed(VkRWin))
+            {
+                values.Add("meta");
+            }
+            if (IsPressed(VkShift))
+            {
+                values.Add("shift");
+            }
+
+            return values.Count == 0 ? string.Empty : string.Join(',', values);
+        }
+
+        private static bool IsPressed(int key) => (GetKeyState(key) & 0x8000) != 0;
 
         private static int ParseHexByte(string value, int start)
         {
@@ -442,6 +530,9 @@ public partial class DefaultSyscallHost
 
         [DllImport("user32.dll")]
         private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey);
 
         [DllImport("user32.dll")]
         private static extern int FillRect(IntPtr hDC, [In] ref RECT lprc, IntPtr hbr);

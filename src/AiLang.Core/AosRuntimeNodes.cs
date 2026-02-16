@@ -63,7 +63,15 @@ public static class AosRuntimeNodes
             ZeroSpan);
     }
 
-    public static AosNode BuildUiEventNode(string type, string detail, int x, int y)
+    public static AosNode BuildUiEventNode(
+        string type,
+        string targetId,
+        int x,
+        int y,
+        string key,
+        string text,
+        string modifiers,
+        bool repeat)
     {
         return new AosNode(
             "UiEvent",
@@ -71,9 +79,27 @@ public static class AosRuntimeNodes
             new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
             {
                 ["type"] = new AosAttrValue(AosAttrKind.String, type),
-                ["detail"] = new AosAttrValue(AosAttrKind.String, detail),
+                ["targetId"] = new AosAttrValue(AosAttrKind.String, targetId),
                 ["x"] = new AosAttrValue(AosAttrKind.Int, x),
-                ["y"] = new AosAttrValue(AosAttrKind.Int, y)
+                ["y"] = new AosAttrValue(AosAttrKind.Int, y),
+                ["key"] = new AosAttrValue(AosAttrKind.String, key),
+                ["text"] = new AosAttrValue(AosAttrKind.String, text),
+                ["modifiers"] = new AosAttrValue(AosAttrKind.String, modifiers),
+                ["repeat"] = new AosAttrValue(AosAttrKind.Bool, repeat)
+            },
+            new List<AosNode>(),
+            ZeroSpan);
+    }
+
+    public static AosNode BuildUiWindowSizeNode(int width, int height)
+    {
+        return new AosNode(
+            "UiWindowSize",
+            "uiWindowSize",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["width"] = new AosAttrValue(AosAttrKind.Int, width),
+                ["height"] = new AosAttrValue(AosAttrKind.Int, height)
             },
             new List<AosNode>(),
             ZeroSpan);

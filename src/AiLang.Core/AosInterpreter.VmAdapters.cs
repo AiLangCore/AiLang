@@ -245,7 +245,26 @@ public sealed partial class AosInterpreter
                         return true;
                     }
                     var uiEvent = VmSyscalls.UiPollEvent(args[0].AsInt());
-                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(
+                        uiEvent.Type,
+                        uiEvent.TargetId,
+                        uiEvent.X,
+                        uiEvent.Y,
+                        uiEvent.Key,
+                        uiEvent.Text,
+                        uiEvent.Modifiers,
+                        uiEvent.Repeat));
+                    return true;
+                case SyscallId.UiGetWindowSize:
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
+                        args.Length != 1 ||
+                        args[0].Kind != AosValueKind.Int)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var uiSize = VmSyscalls.UiGetWindowSize(args[0].AsInt());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiWindowSizeNode(uiSize.Width, uiSize.Height));
                     return true;
             }
 

@@ -54,6 +54,68 @@ This file is normative for `aic run` evaluation behavior.
 - No detached fire-and-forget execution in language semantics.
 - No implicit background retries/backoff in evaluator semantics.
 
+## UI Targeting Semantics
+
+- Event destination is language/runtime semantics, not host-owned behavior.
+- Each input event step resolves at most one destination node id (`targetId`).
+- Propagation is explicitly disabled in the base model: no capture phase, no bubble phase.
+- If no interactive node is hit, `targetId` is empty string.
+- If multiple candidates overlap, deterministic routing uses the first candidate in canonical draw order after applying hit-testing and clipping.
+
+## Canonical Hit-Testing Semantics
+
+- Hit-testing is evaluated in window coordinate space with integer coordinates.
+- Candidate geometry is rectangle-based in the base model (`x`, `y`, `w`, `h`).
+- A point `(px, py)` is inside a candidate iff:
+- `px >= x`
+- `py >= y`
+- `px < x + w`
+- `py < y + h`
+- Nodes with non-positive width or height are non-hittable.
+- Clipping is strict: pointer hits outside effective clip bounds are ignored.
+- Z-order precedence is canonical draw order within the same frame:
+- later drawn hittable candidate wins over earlier drawn candidate.
+- Tie-breaking for same z-order is stable node-id lexical order (`StringComparer.Ordinal`).
+
+## Focus Model
+
+- Focus is explicit runtime state represented by a single focused node id or empty string.
+- Initial focus is empty string.
+- Click-to-focus behavior:
+- on `click` with non-empty `targetId`, focus becomes `targetId`.
+- on `click` with empty `targetId`, focus becomes empty string.
+- `key` events are routed to the focused node id when focus is non-empty.
+- If focused node is no longer present in the current frame, focus is cleared before routing the next key event.
+- Focus transitions are deterministic state transitions and must not depend on host widget focus.
+
+## Text Editing State Transitions
+
+- Declarative text editing operates on explicit state only:
+- `text` (string)
+- `cursor` (int, inclusive range `0..len(text)`)
+- `selectionStart` (int)
+- `selectionEnd` (int)
+- Invariant: `0 <= selectionStart <= selectionEnd <= len(text)`.
+- Insert operation:
+- replace selected range with inserted text; cursor moves to end of inserted text; selection collapses at cursor.
+- Backspace operation:
+- if selection non-empty, delete selected range.
+- else delete one codepoint before cursor when cursor > 0.
+- Delete operation:
+- if selection non-empty, delete selected range.
+- else delete one codepoint at cursor when cursor < len(text).
+- All out-of-range cursor/selection inputs are clamped deterministically before mutation.
+- Text editing semantics are language-owned and must not depend on host text widgets.
+
+## UI Event Loop/Recompute Contract
+
+- Evaluation progresses in single-event deterministic steps.
+- One `UiEvent` is consumed per step (`type=none` means no input).
+- For non-`none` events, evaluator performs one deterministic state transition and one full declarative tree recompute before presenting the frame.
+- Recompute order is deterministic and matches canonical child order.
+- Idle behavior (`type=none`) performs no implicit state mutation.
+- Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
+
 ## Result Emission
 
 - `aic run` emits canonical AOS:

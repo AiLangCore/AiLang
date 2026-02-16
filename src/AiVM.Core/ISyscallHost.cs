@@ -55,6 +55,7 @@ public interface ISyscallHost
     void UiDrawText(int windowHandle, int x, int y, string text, string color, int size);
     void UiEndFrame(int windowHandle);
     VmUiEvent UiPollEvent(int windowHandle);
+    VmUiWindowSize UiGetWindowSize(int windowHandle);
     void UiPresent(int windowHandle);
     void UiCloseWindow(int windowHandle);
     string CryptoBase64Encode(string text);

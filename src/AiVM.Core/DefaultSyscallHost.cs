@@ -478,7 +478,27 @@ public partial class DefaultSyscallHost : ISyscallHost
             return _macUi.PollEvent(windowHandle);
         }
 
-        return new VmUiEvent("closed", "ui backend unavailable", 0, 0);
+        return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
+    }
+
+    public virtual VmUiWindowSize UiGetWindowSize(int windowHandle)
+    {
+        if (_linuxUi is not null && _linuxUi.TryGetWindowSize(windowHandle, out var linuxWidth, out var linuxHeight))
+        {
+            return new VmUiWindowSize(linuxWidth, linuxHeight);
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryGetWindowSize(windowHandle, out var windowsWidth, out var windowsHeight))
+        {
+            return new VmUiWindowSize(windowsWidth, windowsHeight);
+        }
+
+        if (_macUi is not null && _macUi.TryGetWindowSize(windowHandle, out var macWidth, out var macHeight))
+        {
+            return new VmUiWindowSize(macWidth, macHeight);
+        }
+
+        return new VmUiWindowSize(-1, -1);
     }
 
     public virtual void UiPresent(int windowHandle)

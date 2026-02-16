@@ -33,6 +33,26 @@ This file is normative for semantic validation used by `aic check` (default path
 - Capability calls are permission-gated (`VAL040` family).
 - Unknown call targets are rejected unless resolved as user-defined functions.
 
+## UI Event Payload Rules
+
+- `sys.ui_pollEvent` contract is canonical and deterministic:
+- return value is a `UiEvent` node as defined by `SPEC/IL.md`.
+- `type` must be one of `none`, `closed`, `click`, `key`.
+- `modifiers` tokens must be unique, sorted (`StringComparer.Ordinal`), and drawn from `alt,ctrl,meta,shift`.
+- For non-pointer events, `x` and `y` must be `-1`.
+- For non-key events, `key` and `text` must be empty string and `repeat` must be `false`.
+- `targetId` must be empty string when no deterministic destination exists.
+- These constraints are semantic runtime contract requirements and must not be delegated to host-specific UI behavior.
+
+- `sys.ui_getWindowSize` contract is canonical and deterministic:
+- return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.
+- `width` and `height` must be integers; `-1` is reserved for unavailable/invalid handles.
+
+- `sys.str_substring(text,start,length)` and `sys.str_remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
+- indexing is by Unicode scalar sequence (not bytes).
+- `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).
+- out-of-range inputs must not throw.
+
 ## Async Safety Rules
 
 - `Fn(async=...)` is optional; when present it must be bool (`VAL166`).

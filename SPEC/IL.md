@@ -31,8 +31,32 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
 - `Task(handle=...)` for async in-flight work handles returned by async calls.
+- `UiEvent(...)` for UI input payloads returned by `sys.ui_pollEvent`.
+- `UiWindowSize(width=... height=...)` for UI window size payloads returned by `sys.ui_getWindowSize`.
 - Function values are closures represented as block nodes containing:
 - function node + captured environment.
+
+## UI Event Value Contract
+
+- `sys.ui_pollEvent` returns one canonical `UiEvent` node per call.
+- Canonical attributes on `UiEvent`:
+- `type` (string): `none`, `closed`, `click`, `key`.
+- `targetId` (string): target node id, or empty string when no target applies.
+- `x` (int): window-space x coordinate for pointer events; `-1` when not applicable.
+- `y` (int): window-space y coordinate for pointer events; `-1` when not applicable.
+- `key` (string): canonical key identifier for key events, else empty string.
+- `text` (string): UTF-8 text payload for text input on key events, else empty string.
+- `modifiers` (string): comma-separated sorted set from `alt,ctrl,meta,shift`; empty string for none.
+- `repeat` (bool): `true` only for host key-repeat events, else `false`.
+- `UiEvent` has `0` children.
+
+## UI Window Size Value Contract
+
+- `sys.ui_getWindowSize` returns one canonical `UiWindowSize` node per call.
+- Canonical attributes on `UiWindowSize`:
+- `width` (int): current client-area width in pixels, or `-1` when unavailable.
+- `height` (int): current client-area height in pixels, or `-1` when unavailable.
+- `UiWindowSize` has `0` children.
 
 ## Async Function Contract
 

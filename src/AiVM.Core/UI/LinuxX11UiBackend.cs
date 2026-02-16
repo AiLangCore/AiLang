@@ -19,6 +19,10 @@ public partial class DefaultSyscallHost
         private const long ButtonPressMask = 1L << 2;
         private const long ExposureMask = 1L << 15;
         private const long StructureNotifyMask = 1L << 17;
+        private const uint ShiftMask = 1;
+        private const uint ControlMask = 4;
+        private const uint Mod1Mask = 8;   // Alt
+        private const uint Mod4Mask = 64;  // Meta/Super
 
         private readonly object _lock = new();
         private readonly Dictionary<int, LinuxWindowState> _windows = new();
@@ -176,7 +180,7 @@ public partial class DefaultSyscallHost
             {
                 if (!_windows.TryGetValue(handle, out var window))
                 {
-                    return new VmUiEvent("closed", string.Empty, 0, 0);
+                    return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                 }
 
                 while (XPending(_display) > 0)
@@ -191,7 +195,7 @@ public partial class DefaultSyscallHost
                     if (evt.Type == DestroyNotify && evt.Destroy.Window == window.Window)
                     {
                         _windows.Remove(handle);
-                        return new VmUiEvent("closed", string.Empty, 0, 0);
+                        return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                     }
 
                     if (evt.Type == ClientMessage && evt.Client.Window == window.Window)
@@ -199,22 +203,52 @@ public partial class DefaultSyscallHost
                         if (evt.Client.Data0 == _wmDeleteWindow)
                         {
                             TryCloseWindow(handle);
-                            return new VmUiEvent("closed", string.Empty, 0, 0);
+                            return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                         }
                     }
 
                     if (evt.Type == KeyPress && evt.Key.Window == window.Window)
                     {
-                        return new VmUiEvent("key", string.Empty, evt.Key.X, evt.Key.Y);
+                        return new VmUiEvent(
+                            "key",
+                            string.Empty,
+                            -1,
+                            -1,
+                            $"x11:{evt.Key.Keycode}",
+                            string.Empty,
+                            BuildModifiers(evt.Key.State),
+                            false);
                     }
 
                     if (evt.Type == ButtonPress && evt.Button.Window == window.Window)
                     {
-                        return new VmUiEvent("click", string.Empty, evt.Button.X, evt.Button.Y);
+                        return new VmUiEvent("click", string.Empty, evt.Button.X, evt.Button.Y, string.Empty, string.Empty, string.Empty, false);
                     }
                 }
 
-                return new VmUiEvent("none", string.Empty, 0, 0);
+                return new VmUiEvent("none", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
+            }
+        }
+
+        public bool TryGetWindowSize(int handle, out int width, out int height)
+        {
+            width = -1;
+            height = -1;
+            lock (_lock)
+            {
+                if (!_windows.TryGetValue(handle, out var window))
+                {
+                    return false;
+                }
+
+                if (XGetWindowAttributes(_display, window.Window, out var attrs) == 0)
+                {
+                    return false;
+                }
+
+                width = Math.Max(0, attrs.Width);
+                height = Math.Max(0, attrs.Height);
+                return true;
             }
         }
 
@@ -258,6 +292,29 @@ public partial class DefaultSyscallHost
                 "blue" => 0x000000ff,
                 _ => 0x00ffffff
             };
+        }
+
+        private static string BuildModifiers(uint state)
+        {
+            var values = new List<string>(4);
+            if ((state & Mod1Mask) != 0)
+            {
+                values.Add("alt");
+            }
+            if ((state & ControlMask) != 0)
+            {
+                values.Add("ctrl");
+            }
+            if ((state & Mod4Mask) != 0)
+            {
+                values.Add("meta");
+            }
+            if ((state & ShiftMask) != 0)
+            {
+                values.Add("shift");
+            }
+
+            return values.Count == 0 ? string.Empty : string.Join(',', values);
         }
 
         private sealed class LinuxWindowState
@@ -372,6 +429,34 @@ public partial class DefaultSyscallHost
             public IntPtr Data4;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct XWindowAttributes
+        {
+            public int X;
+            public int Y;
+            public int Width;
+            public int Height;
+            public int BorderWidth;
+            public int Depth;
+            public IntPtr Visual;
+            public IntPtr Root;
+            public int Class;
+            public int BitGravity;
+            public int WinGravity;
+            public int BackingStore;
+            public ulong BackingPlanes;
+            public ulong BackingPixel;
+            public int SaveUnder;
+            public IntPtr Colormap;
+            public int MapInstalled;
+            public int MapState;
+            public long AllEventMasks;
+            public long YourEventMask;
+            public long DoNotPropagateMask;
+            public int OverrideRedirect;
+            public IntPtr Screen;
+        }
+
         [DllImport("libX11.so.6")]
         private static extern IntPtr XOpenDisplay(IntPtr displayName);
 
@@ -443,5 +528,8 @@ public partial class DefaultSyscallHost
 
         [DllImport("libX11.so.6")]
         private static extern int XFreeGC(IntPtr display, IntPtr gc);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XGetWindowAttributes(IntPtr display, IntPtr window, out XWindowAttributes windowAttributes);
     }
 }

@@ -22,7 +22,11 @@ public partial class DefaultSyscallHost
             }
 
             var commandPath = Path.Combine(Path.GetTempPath(), $"ailang-mac-ui-{handle}.cmd");
+            var eventPath = Path.Combine(Path.GetTempPath(), $"ailang-mac-ui-{handle}.evt");
+            var sizePath = Path.Combine(Path.GetTempPath(), $"ailang-mac-ui-{handle}.siz");
             File.WriteAllText(commandPath, string.Empty);
+            File.WriteAllText(eventPath, string.Empty);
+            File.WriteAllText(sizePath, $"{Math.Max(64, width).ToString(CultureInfo.InvariantCulture)}|{Math.Max(64, height).ToString(CultureInfo.InvariantCulture)}", Encoding.UTF8);
 
             var info = new ProcessStartInfo("swift")
             {
@@ -33,6 +37,8 @@ public partial class DefaultSyscallHost
             };
             info.ArgumentList.Add(scriptPath);
             info.ArgumentList.Add(commandPath);
+            info.ArgumentList.Add(eventPath);
+            info.ArgumentList.Add(sizePath);
             info.ArgumentList.Add(title);
             info.ArgumentList.Add(Math.Max(64, width).ToString(CultureInfo.InvariantCulture));
             info.ArgumentList.Add(Math.Max(64, height).ToString(CultureInfo.InvariantCulture));
@@ -54,7 +60,7 @@ public partial class DefaultSyscallHost
 
             lock (_lock)
             {
-                _windows[handle] = new MacWindowState(title, width, height, commandPath, process);
+                _windows[handle] = new MacWindowState(title, width, height, commandPath, eventPath, sizePath, process);
                 return true;
             }
         }
@@ -134,17 +140,47 @@ public partial class DefaultSyscallHost
             {
                 if (!_windows.TryGetValue(handle, out var state))
                 {
-                    return new VmUiEvent("closed", string.Empty, 0, 0);
+                    return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                 }
 
                 if (state.Process.HasExited)
                 {
                     _windows.Remove(handle);
-                    TryDeleteCommandFile(state.CommandPath);
-                    return new VmUiEvent("closed", string.Empty, 0, 0);
+                    TryDeleteFile(state.CommandPath);
+                    TryDeleteFile(state.EventPath);
+                    TryDeleteFile(state.SizePath);
+                    return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
                 }
 
-                return new VmUiEvent("none", string.Empty, 0, 0);
+                if (TryReadQueuedEvent(state.EventPath, out var queued))
+                {
+                    return queued;
+                }
+
+                return new VmUiEvent("none", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
+            }
+        }
+
+        public bool TryGetWindowSize(int handle, out int width, out int height)
+        {
+            width = -1;
+            height = -1;
+            lock (_lock)
+            {
+                if (!_windows.TryGetValue(handle, out var state))
+                {
+                    return false;
+                }
+
+                if (TryReadWindowSize(state.SizePath, out var liveWidth, out var liveHeight))
+                {
+                    state.Width = liveWidth;
+                    state.Height = liveHeight;
+                }
+
+                width = Math.Max(0, state.Width);
+                height = Math.Max(0, state.Height);
+                return true;
             }
         }
 
@@ -168,7 +204,9 @@ public partial class DefaultSyscallHost
                 {
                 }
 
-                TryDeleteCommandFile(state.CommandPath);
+                TryDeleteFile(state.CommandPath);
+                TryDeleteFile(state.EventPath);
+                TryDeleteFile(state.SizePath);
                 return true;
             }
         }
@@ -218,7 +256,144 @@ public partial class DefaultSyscallHost
             return sb.ToString();
         }
 
-        private static void TryDeleteCommandFile(string path)
+        private static bool TryReadQueuedEvent(string eventPath, out VmUiEvent evt)
+        {
+            evt = default;
+            string[] lines;
+            try
+            {
+                if (!File.Exists(eventPath))
+                {
+                    return false;
+                }
+
+                lines = File.ReadAllLines(eventPath, Encoding.UTF8);
+            }
+            catch
+            {
+                return false;
+            }
+
+            if (lines.Length == 0)
+            {
+                return false;
+            }
+
+            var first = lines[0].Trim();
+            var rest = new string[Math.Max(0, lines.Length - 1)];
+            for (var i = 1; i < lines.Length; i++)
+            {
+                rest[i - 1] = lines[i];
+            }
+
+            try
+            {
+                File.WriteAllLines(eventPath, rest, Encoding.UTF8);
+            }
+            catch
+            {
+            }
+
+            if (string.IsNullOrEmpty(first))
+            {
+                return false;
+            }
+
+            if (string.Equals(first, "X", StringComparison.Ordinal))
+            {
+                evt = new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
+                return true;
+            }
+
+            var parts = first.Split('|', StringSplitOptions.None);
+            if (parts.Length == 0)
+            {
+                return false;
+            }
+
+            if (string.Equals(parts[0], "C", StringComparison.Ordinal) && parts.Length >= 4)
+            {
+                if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+                    !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
+                {
+                    return false;
+                }
+
+                evt = new VmUiEvent("click", string.Empty, x, y, string.Empty, string.Empty, parts[3], false);
+                return true;
+            }
+
+            if (string.Equals(parts[0], "K", StringComparison.Ordinal) && parts.Length >= 5)
+            {
+                var key = DecodeBase64Utf8(parts[1]);
+                var text = DecodeBase64Utf8(parts[2]);
+                var modifiers = parts[3];
+                var repeat = string.Equals(parts[4], "1", StringComparison.Ordinal);
+                evt = new VmUiEvent("key", string.Empty, -1, -1, key, text, modifiers, repeat);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string DecodeBase64Utf8(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var bytes = Convert.FromBase64String(value);
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static bool TryReadWindowSize(string sizePath, out int width, out int height)
+        {
+            width = -1;
+            height = -1;
+            try
+            {
+                if (!File.Exists(sizePath))
+                {
+                    return false;
+                }
+
+                var content = File.ReadAllText(sizePath, Encoding.UTF8).Trim();
+                if (string.IsNullOrEmpty(content))
+                {
+                    return false;
+                }
+
+                var parts = content.Split('|', StringSplitOptions.None);
+                if (parts.Length < 2)
+                {
+                    return false;
+                }
+
+                if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedWidth) ||
+                    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedHeight))
+                {
+                    return false;
+                }
+
+                width = Math.Max(0, parsedWidth);
+                height = Math.Max(0, parsedHeight);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void TryDeleteFile(string path)
         {
             try
             {
@@ -236,12 +411,7 @@ public partial class DefaultSyscallHost
         {
             lock (ScriptLock)
             {
-                if (!string.IsNullOrWhiteSpace(_scriptPath) && File.Exists(_scriptPath))
-                {
-                    return _scriptPath;
-                }
-
-                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner.swift");
+                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner-v3.swift");
                 var script = @"
 import AppKit
 import Foundation
@@ -257,10 +427,61 @@ struct Cmd {
     var text: String
 }
 
+func encodeBase64(_ value: String) -> String {
+    return Data(value.utf8).base64EncodedString()
+}
+
+func appendEvent(path: String, line: String) {
+    let payload = line + ""\n""
+    guard let data = payload.data(using: .utf8) else { return }
+
+    if !FileManager.default.fileExists(atPath: path) {
+        FileManager.default.createFile(atPath: path, contents: Data(), attributes: nil)
+    }
+
+    do {
+        let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: path))
+        defer { try? handle.close() }
+        try handle.seekToEnd()
+        try handle.write(contentsOf: data)
+    } catch {
+    }
+}
+
+func writeWindowSize(path: String, width: Int, height: Int) {
+    let payload = ""\(max(0, width))|\(max(0, height))""
+    do {
+        try payload.write(toFile: path, atomically: true, encoding: .utf8)
+    } catch {
+    }
+}
+
+func modifierText(_ flags: NSEvent.ModifierFlags) -> String {
+    var values: [String] = []
+    if flags.contains(.option) { values.append(""alt"") }
+    if flags.contains(.control) { values.append(""ctrl"") }
+    if flags.contains(.command) { values.append(""meta"") }
+    if flags.contains(.shift) { values.append(""shift"") }
+    return values.joined(separator: "","")
+}
+
 final class CanvasView: NSView {
     var cmds: [Cmd] = []
+    let eventPath: String
+    let sizePath: String
+
+    init(frame frameRect: NSRect, eventPath: String, sizePath: String) {
+        self.eventPath = eventPath
+        self.sizePath = sizePath
+        super.init(frame: frameRect)
+    }
+
+    required init?(coder: NSCoder) {
+        return nil
+    }
 
     override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor(calibratedWhite: 0.12, alpha: 1.0).setFill()
@@ -278,6 +499,27 @@ final class CanvasView: NSView {
                 NSString(string: c.text).draw(at: NSPoint(x: CGFloat(c.x), y: CGFloat(c.y)), withAttributes: attrs)
             }
         }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let x = Int(point.x.rounded())
+        let y = Int(point.y.rounded())
+        let mods = modifierText(event.modifierFlags)
+        appendEvent(path: eventPath, line: ""C|\(x)|\(y)|\(mods)"")
+    }
+
+    override func keyDown(with event: NSEvent) {
+        let key = (event.charactersIgnoringModifiers ?? """")
+            .lowercased()
+        let fallbackKey = ""mac:\(event.keyCode)""
+        let keyOut = key.isEmpty ? fallbackKey : key
+        let textOut = event.characters ?? """"
+        let mods = modifierText(event.modifierFlags)
+        let repeatFlag = event.isARepeat ? ""1"" : ""0""
+        let keyB64 = encodeBase64(keyOut)
+        let textB64 = encodeBase64(textOut)
+        appendEvent(path: eventPath, line: ""K|\(keyB64)|\(textB64)|\(mods)|\(repeatFlag)"")
     }
 }
 
@@ -316,11 +558,13 @@ func loadCommands(path: String) -> [Cmd] {
     return out
 }
 
-guard CommandLine.arguments.count >= 5 else { exit(1) }
+guard CommandLine.arguments.count >= 7 else { exit(1) }
 let commandPath = CommandLine.arguments[1]
-let title = CommandLine.arguments[2]
-let width = Int(CommandLine.arguments[3]) ?? 640
-let height = Int(CommandLine.arguments[4]) ?? 360
+let eventPath = CommandLine.arguments[2]
+let sizePath = CommandLine.arguments[3]
+let title = CommandLine.arguments[4]
+let width = Int(CommandLine.arguments[5]) ?? 640
+let height = Int(CommandLine.arguments[6]) ?? 360
 
 let app = NSApplication.shared
 app.setActivationPolicy(.regular)
@@ -330,17 +574,24 @@ let window = NSWindow(
     backing: .buffered,
     defer: false)
 window.title = title
-let view = CanvasView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+let view = CanvasView(frame: NSRect(x: 0, y: 0, width: width, height: height), eventPath: eventPath, sizePath: sizePath)
 window.contentView = view
 window.makeKeyAndOrderFront(nil)
+window.makeFirstResponder(view)
 NSApp.activate(ignoringOtherApps: true)
+writeWindowSize(path: sizePath, width: width, height: height)
 
 _ = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: nil) { _ in
+    appendEvent(path: eventPath, line: ""X"")
     NSApp.terminate(nil)
 }
 
 let timer = Timer.scheduledTimer(withTimeInterval: 0.10, repeats: true) { _ in
     view.cmds = loadCommands(path: commandPath)
+    if let contentView = window.contentView {
+        let bounds = contentView.bounds
+        writeWindowSize(path: sizePath, width: Int(bounds.width.rounded()), height: Int(bounds.height.rounded()))
+    }
     view.needsDisplay = true
 }
 RunLoop.current.add(timer, forMode: .default)
@@ -362,20 +613,24 @@ app.run()
 
         private sealed class MacWindowState
         {
-            public MacWindowState(string title, int width, int height, string commandPath, Process process)
+            public MacWindowState(string title, int width, int height, string commandPath, string eventPath, string sizePath, Process process)
             {
                 Title = title;
                 Width = width;
                 Height = height;
                 CommandPath = commandPath;
+                EventPath = eventPath;
+                SizePath = sizePath;
                 Process = process;
                 Commands = new List<UiDrawCommand>();
             }
 
             public string Title { get; }
-            public int Width { get; }
-            public int Height { get; }
+            public int Width { get; set; }
+            public int Height { get; set; }
             public string CommandPath { get; }
+            public string EventPath { get; }
+            public string SizePath { get; }
             public Process Process { get; }
             public List<UiDrawCommand> Commands { get; }
         }

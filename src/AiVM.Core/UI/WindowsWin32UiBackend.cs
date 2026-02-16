@@ -118,6 +118,34 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawLine(int handle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.Line(x1, y1, x2, y2, color, strokeWidth));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryDrawEllipse(int handle, int x, int y, int width, int height, string color)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.Ellipse(x, y, width, height, color));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             PumpMessages();
@@ -166,6 +194,47 @@ public partial class DefaultSyscallHost
                             finally
                             {
                                 DeleteObject(brush);
+                            }
+                        }
+                        else if (command.Kind == "ellipse")
+                        {
+                            var brush = CreateSolidBrush(ToColorRef(command.Color));
+                            try
+                            {
+                                var previousBrush = SelectObject(hdc, brush);
+                                try
+                                {
+                                    Ellipse(hdc, command.X, command.Y, command.X + command.Width, command.Y + command.Height);
+                                }
+                                finally
+                                {
+                                    _ = SelectObject(hdc, previousBrush);
+                                }
+                            }
+                            finally
+                            {
+                                DeleteObject(brush);
+                            }
+                        }
+                        else if (command.Kind == "line")
+                        {
+                            var pen = CreatePen(0, command.StrokeWidth, ToColorRef(command.Color));
+                            try
+                            {
+                                var previousPen = SelectObject(hdc, pen);
+                                try
+                                {
+                                    MoveToEx(hdc, command.X, command.Y, IntPtr.Zero);
+                                    LineTo(hdc, command.X2, command.Y2);
+                                }
+                                finally
+                                {
+                                    _ = SelectObject(hdc, previousPen);
+                                }
+                            }
+                            finally
+                            {
+                                DeleteObject(pen);
                             }
                         }
                         else if (command.Kind == "text")
@@ -541,7 +610,22 @@ public partial class DefaultSyscallHost
         private static extern IntPtr CreateSolidBrush(uint colorRef);
 
         [DllImport("gdi32.dll")]
+        private static extern IntPtr CreatePen(int fnPenStyle, int nWidth, uint crColor);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
+
+        [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr hObject);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool MoveToEx(IntPtr hdc, int x, int y, IntPtr lppt);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool LineTo(IntPtr hdc, int x, int y);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool Ellipse(IntPtr hdc, int left, int top, int right, int bottom);
 
         [DllImport("gdi32.dll")]
         private static extern uint SetTextColor(IntPtr hdc, uint color);

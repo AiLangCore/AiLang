@@ -24,6 +24,9 @@ public static class VmSyscallDispatcher
             SyscallId.UiBeginFrame => 1,
             SyscallId.UiDrawRect => 6,
             SyscallId.UiDrawText => 6,
+            SyscallId.UiDrawLine => 7,
+            SyscallId.UiDrawEllipse => 6,
+            SyscallId.UiDrawPath => 4,
             SyscallId.UiEndFrame => 1,
             SyscallId.UiPollEvent => 1,
             SyscallId.UiPresent => 1,
@@ -247,6 +250,47 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 VmSyscalls.UiDrawText(uiTextHandle, uiTextX, uiTextY, uiTextValue, uiTextColor, uiTextSize);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawLine:
+                if (!TryGetInt(args, 0, 7, out var uiLineHandle) ||
+                    !TryGetInt(args, 1, 7, out var uiLineX1) ||
+                    !TryGetInt(args, 2, 7, out var uiLineY1) ||
+                    !TryGetInt(args, 3, 7, out var uiLineX2) ||
+                    !TryGetInt(args, 4, 7, out var uiLineY2) ||
+                    !TryGetString(args, 5, 7, out var uiLineColor) ||
+                    !TryGetInt(args, 6, 7, out var uiLineStrokeWidth))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawLine(uiLineHandle, uiLineX1, uiLineY1, uiLineX2, uiLineY2, uiLineColor, uiLineStrokeWidth);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawEllipse:
+                if (!TryGetInt(args, 0, 6, out var uiEllipseHandle) ||
+                    !TryGetInt(args, 1, 6, out var uiEllipseX) ||
+                    !TryGetInt(args, 2, 6, out var uiEllipseY) ||
+                    !TryGetInt(args, 3, 6, out var uiEllipseWidth) ||
+                    !TryGetInt(args, 4, 6, out var uiEllipseHeight) ||
+                    !TryGetString(args, 5, 6, out var uiEllipseColor))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawEllipse(uiEllipseHandle, uiEllipseX, uiEllipseY, uiEllipseWidth, uiEllipseHeight, uiEllipseColor);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawPath:
+                if (!TryGetInt(args, 0, 4, out var uiPathHandle) ||
+                    !TryGetString(args, 1, 4, out var uiPathText) ||
+                    !TryGetString(args, 2, 4, out var uiPathColor) ||
+                    !TryGetInt(args, 3, 4, out var uiPathStrokeWidth))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawPath(uiPathHandle, uiPathText, uiPathColor, uiPathStrokeWidth);
                 result = SysValue.Void();
                 return true;
 

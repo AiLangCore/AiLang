@@ -56,7 +56,10 @@ public enum SyscallId : ushort
     UiPollEvent = 51,
     UiPresent = 52,
     UiCloseWindow = 53,
-    UiGetWindowSize = 54,
-    StrSubstring = 55,
-    StrRemove = 56
+    UiDrawLine = 54,
+    UiDrawEllipse = 55,
+    UiDrawPath = 56,
+    UiGetWindowSize = 57,
+    StrSubstring = 58,
+    StrRemove = 59
 }

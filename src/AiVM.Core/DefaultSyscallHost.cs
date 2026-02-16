@@ -456,6 +456,56 @@ public partial class DefaultSyscallHost : ISyscallHost
         }
     }
 
+    public virtual void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+    {
+        if (_linuxUi is not null && _linuxUi.TryDrawLine(windowHandle, x1, y1, x2, y2, color, strokeWidth))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryDrawLine(windowHandle, x1, y1, x2, y2, color, strokeWidth))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryDrawLine(windowHandle, x1, y1, x2, y2, color, strokeWidth))
+        {
+            return;
+        }
+    }
+
+    public virtual void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color)
+    {
+        if (_linuxUi is not null && _linuxUi.TryDrawEllipse(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryDrawEllipse(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryDrawEllipse(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
+    }
+
+    public virtual void UiDrawPath(int windowHandle, string path, string color, int strokeWidth)
+    {
+        var points = UiDrawCommand.ParsePathPoints(path);
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        for (var i = 1; i < points.Count; i++)
+        {
+            UiDrawLine(windowHandle, points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y, color, strokeWidth);
+        }
+    }
+
     public virtual void UiEndFrame(int windowHandle)
     {
         _ = _openWindows.Contains(windowHandle);

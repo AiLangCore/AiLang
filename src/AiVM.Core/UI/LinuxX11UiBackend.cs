@@ -144,6 +144,32 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawLine(int handle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var window))
+                {
+                    window.Commands.Add(UiDrawCommand.Line(x1, y1, x2, y2, color, strokeWidth));
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool TryDrawEllipse(int handle, int x, int y, int width, int height, string color)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var window))
+                {
+                    window.Commands.Add(UiDrawCommand.Ellipse(x, y, width, height, color));
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             lock (_lock)
@@ -161,6 +187,14 @@ public partial class DefaultSyscallHost
                     if (command.Kind == "rect")
                     {
                         XFillRectangle(_display, window.Window, window.Gc, command.X, command.Y, (uint)command.Width, (uint)command.Height);
+                    }
+                    else if (command.Kind == "ellipse")
+                    {
+                        XFillArc(_display, window.Window, window.Gc, command.X, command.Y, (uint)command.Width, (uint)command.Height, 0, 360 * 64);
+                    }
+                    else if (command.Kind == "line")
+                    {
+                        XDrawLine(_display, window.Window, window.Gc, command.X, command.Y, command.X2, command.Y2);
                     }
                     else if (command.Kind == "text")
                     {
@@ -501,6 +535,12 @@ public partial class DefaultSyscallHost
 
         [DllImport("libX11.so.6")]
         private static extern int XFillRectangle(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y, uint width, uint height);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XFillArc(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y, uint width, uint height, int angle1, int angle2);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XDrawLine(IntPtr display, IntPtr drawable, IntPtr gc, int x1, int y1, int x2, int y2);
 
         [DllImport("libX11.so.6")]
         private static extern int XDrawString(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y, byte[] text, int length);

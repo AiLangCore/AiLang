@@ -83,6 +83,23 @@ public class AosTests
         public VmUiEvent UiPollEventResult { get; set; }
         public int LastUiGetWindowSizeHandle { get; private set; } = -1;
         public VmUiWindowSize UiGetWindowSizeResult { get; set; }
+        public int LastUiLineHandle { get; private set; } = -1;
+        public int LastUiLineX1 { get; private set; } = -1;
+        public int LastUiLineY1 { get; private set; } = -1;
+        public int LastUiLineX2 { get; private set; } = -1;
+        public int LastUiLineY2 { get; private set; } = -1;
+        public string? LastUiLineColor { get; private set; }
+        public int LastUiLineStrokeWidth { get; private set; } = -1;
+        public int LastUiEllipseHandle { get; private set; } = -1;
+        public int LastUiEllipseX { get; private set; } = -1;
+        public int LastUiEllipseY { get; private set; } = -1;
+        public int LastUiEllipseWidth { get; private set; } = -1;
+        public int LastUiEllipseHeight { get; private set; } = -1;
+        public string? LastUiEllipseColor { get; private set; }
+        public int LastUiPathHandle { get; private set; } = -1;
+        public string? LastUiPathValue { get; private set; }
+        public string? LastUiPathColor { get; private set; }
+        public int LastUiPathStrokeWidth { get; private set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -306,6 +323,35 @@ public class AosTests
         {
             LastUiGetWindowSizeHandle = windowHandle;
             return UiGetWindowSizeResult;
+        }
+
+        public override void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+        {
+            LastUiLineHandle = windowHandle;
+            LastUiLineX1 = x1;
+            LastUiLineY1 = y1;
+            LastUiLineX2 = x2;
+            LastUiLineY2 = y2;
+            LastUiLineColor = color;
+            LastUiLineStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color)
+        {
+            LastUiEllipseHandle = windowHandle;
+            LastUiEllipseX = x;
+            LastUiEllipseY = y;
+            LastUiEllipseWidth = width;
+            LastUiEllipseHeight = height;
+            LastUiEllipseColor = color;
+        }
+
+        public override void UiDrawPath(int windowHandle, string path, string color, int strokeWidth)
+        {
+            LastUiPathHandle = windowHandle;
+            LastUiPathValue = path;
+            LastUiPathColor = color;
+            LastUiPathStrokeWidth = strokeWidth;
         }
     }
 
@@ -1291,6 +1337,17 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallRegistry_ResolvesUiShapeAliases()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawLine", out var lineId), Is.True);
+        Assert.That(lineId, Is.EqualTo(SyscallId.UiDrawLine));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawEllipse", out var ellipseId), Is.True);
+        Assert.That(ellipseId, Is.EqualTo(SyscallId.UiDrawEllipse));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPath", out var pathId), Is.True);
+        Assert.That(pathId, Is.EqualTo(SyscallId.UiDrawPath));
+    }
+
+    [Test]
     public void SyscallDispatch_NetTcpListen_CallsHost()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpListen) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=4040) } }");
@@ -1497,6 +1554,92 @@ public class AosTests
             Assert.That(size.Attrs["width"].AsInt(), Is.EqualTo(1024));
             Assert.That(size.Attrs["height"].AsInt(), Is.EqualTo(768));
             Assert.That(host.LastUiGetWindowSizeHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawLine_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawLine) { Lit#h1(value=9) Lit#x1(value=10) Lit#y1(value=20) Lit#x2(value=30) Lit#y2(value=40) Lit#c1(value=\"#ff0000\") Lit#s1(value=3) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiLineHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiLineX1, Is.EqualTo(10));
+            Assert.That(host.LastUiLineY1, Is.EqualTo(20));
+            Assert.That(host.LastUiLineX2, Is.EqualTo(30));
+            Assert.That(host.LastUiLineY2, Is.EqualTo(40));
+            Assert.That(host.LastUiLineColor, Is.EqualTo("#ff0000"));
+            Assert.That(host.LastUiLineStrokeWidth, Is.EqualTo(3));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawEllipse_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawEllipse) { Lit#h1(value=9) Lit#x1(value=11) Lit#y1(value=22) Lit#w1(value=33) Lit#h2(value=44) Lit#c1(value=\"blue\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiEllipseHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiEllipseX, Is.EqualTo(11));
+            Assert.That(host.LastUiEllipseY, Is.EqualTo(22));
+            Assert.That(host.LastUiEllipseWidth, Is.EqualTo(33));
+            Assert.That(host.LastUiEllipseHeight, Is.EqualTo(44));
+            Assert.That(host.LastUiEllipseColor, Is.EqualTo("blue"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawPath_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPath) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40\") Lit#c1(value=\"#00ff00\") Lit#s1(value=2) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiPathHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiPathValue, Is.EqualTo("10,20;30,40"));
+            Assert.That(host.LastUiPathColor, Is.EqualTo("#00ff00"));
+            Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(2));
         }
         finally
         {
@@ -1781,6 +1924,52 @@ public class AosTests
             Assert.That(invoked, Is.True);
             Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
             Assert.That(host.LastUiGetWindowSizeHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_UiShapeSyscalls_AreWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+
+            var lineInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawLine,
+                new[] { SysValue.Int(9), SysValue.Int(10), SysValue.Int(20), SysValue.Int(30), SysValue.Int(40), SysValue.String("red"), SysValue.Int(2) }.AsSpan(),
+                new VmNetworkState(),
+                out var lineResult);
+            Assert.That(lineInvoked, Is.True);
+            Assert.That(lineResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiLineHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiLineStrokeWidth, Is.EqualTo(2));
+
+            var ellipseInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawEllipse,
+                new[] { SysValue.Int(7), SysValue.Int(1), SysValue.Int(2), SysValue.Int(3), SysValue.Int(4), SysValue.String("#fff") }.AsSpan(),
+                new VmNetworkState(),
+                out var ellipseResult);
+            Assert.That(ellipseInvoked, Is.True);
+            Assert.That(ellipseResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiEllipseHandle, Is.EqualTo(7));
+            Assert.That(host.LastUiEllipseWidth, Is.EqualTo(3));
+
+            var pathInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawPath,
+                new[] { SysValue.Int(5), SysValue.String("1,1;2,2"), SysValue.String("green"), SysValue.Int(4) }.AsSpan(),
+                new VmNetworkState(),
+                out var pathResult);
+            Assert.That(pathInvoked, Is.True);
+            Assert.That(pathResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiPathHandle, Is.EqualTo(5));
+            Assert.That(host.LastUiPathValue, Is.EqualTo("1,1;2,2"));
+            Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(4));
         }
         finally
         {

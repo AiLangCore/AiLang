@@ -229,6 +229,59 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
+            case "sys.ui_drawLine":
+                ValidateArityAndTypes(
+                    argKinds,
+                    7,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL276", "sys.ui_drawLine arg 1 must be int."),
+                        (VmValueKind.Int, "VAL277", "sys.ui_drawLine arg 2 must be int."),
+                        (VmValueKind.Int, "VAL278", "sys.ui_drawLine arg 3 must be int."),
+                        (VmValueKind.Int, "VAL279", "sys.ui_drawLine arg 4 must be int."),
+                        (VmValueKind.Int, "VAL280", "sys.ui_drawLine arg 5 must be int."),
+                        (VmValueKind.String, "VAL281", "sys.ui_drawLine arg 6 must be string."),
+                        (VmValueKind.Int, "VAL282", "sys.ui_drawLine arg 7 must be int.")
+                    },
+                    "VAL283",
+                    "sys.ui_drawLine expects 7 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_drawEllipse":
+                ValidateArityAndTypes(
+                    argKinds,
+                    6,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL284", "sys.ui_drawEllipse arg 1 must be int."),
+                        (VmValueKind.Int, "VAL285", "sys.ui_drawEllipse arg 2 must be int."),
+                        (VmValueKind.Int, "VAL286", "sys.ui_drawEllipse arg 3 must be int."),
+                        (VmValueKind.Int, "VAL287", "sys.ui_drawEllipse arg 4 must be int."),
+                        (VmValueKind.Int, "VAL288", "sys.ui_drawEllipse arg 5 must be int."),
+                        (VmValueKind.String, "VAL289", "sys.ui_drawEllipse arg 6 must be string.")
+                    },
+                    "VAL290",
+                    "sys.ui_drawEllipse expects 6 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_drawPath":
+                ValidateArityAndTypes(
+                    argKinds,
+                    4,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL291", "sys.ui_drawPath arg 1 must be int."),
+                        (VmValueKind.String, "VAL292", "sys.ui_drawPath arg 2 must be string."),
+                        (VmValueKind.String, "VAL293", "sys.ui_drawPath arg 3 must be string."),
+                        (VmValueKind.Int, "VAL294", "sys.ui_drawPath arg 4 must be int.")
+                    },
+                    "VAL295",
+                    "sys.ui_drawPath expects 4 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
             case "sys.ui_endFrame":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL268", "sys.ui_endFrame expects 1 argument.", "VAL269", "sys.ui_endFrame arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;

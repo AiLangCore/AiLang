@@ -303,6 +303,16 @@ public static class VmSyscalls
         Host.UiDrawPath(windowHandle, path, color, strokeWidth);
     }
 
+    public static void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth)
+    {
+        Host.UiDrawPolyline(windowHandle, points, color, strokeWidth);
+    }
+
+    public static void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth)
+    {
+        Host.UiDrawPolygon(windowHandle, points, color, strokeWidth);
+    }
+
     public static void UiEndFrame(int windowHandle)
     {
         Host.UiEndFrame(windowHandle);

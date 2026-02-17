@@ -33,6 +33,8 @@ public static class SyscallRegistry
         ["sys.ui_drawLine"] = SyscallId.UiDrawLine,
         ["sys.ui_drawEllipse"] = SyscallId.UiDrawEllipse,
         ["sys.ui_drawPath"] = SyscallId.UiDrawPath,
+        ["sys.ui_drawPolyline"] = SyscallId.UiDrawPolyline,
+        ["sys.ui_drawPolygon"] = SyscallId.UiDrawPolygon,
         ["sys.ui_endFrame"] = SyscallId.UiEndFrame,
         ["sys.ui_pollEvent"] = SyscallId.UiPollEvent,
         ["sys.ui_present"] = SyscallId.UiPresent,

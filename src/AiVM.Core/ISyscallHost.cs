@@ -56,6 +56,8 @@ public interface ISyscallHost
     void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth);
     void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color);
     void UiDrawPath(int windowHandle, string path, string color, int strokeWidth);
+    void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth);
+    void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth);
     void UiEndFrame(int windowHandle);
     VmUiEvent UiPollEvent(int windowHandle);
     VmUiWindowSize UiGetWindowSize(int windowHandle);

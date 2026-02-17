@@ -27,6 +27,8 @@ public static class VmSyscallDispatcher
             SyscallId.UiDrawLine => 7,
             SyscallId.UiDrawEllipse => 6,
             SyscallId.UiDrawPath => 4,
+            SyscallId.UiDrawPolyline => 4,
+            SyscallId.UiDrawPolygon => 4,
             SyscallId.UiEndFrame => 1,
             SyscallId.UiPollEvent => 1,
             SyscallId.UiPresent => 1,
@@ -291,6 +293,30 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 VmSyscalls.UiDrawPath(uiPathHandle, uiPathText, uiPathColor, uiPathStrokeWidth);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawPolyline:
+                if (!TryGetInt(args, 0, 4, out var uiPolylineHandle) ||
+                    !TryGetString(args, 1, 4, out var uiPolylinePoints) ||
+                    !TryGetString(args, 2, 4, out var uiPolylineColor) ||
+                    !TryGetInt(args, 3, 4, out var uiPolylineStrokeWidth))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawPolyline(uiPolylineHandle, uiPolylinePoints, uiPolylineColor, uiPolylineStrokeWidth);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawPolygon:
+                if (!TryGetInt(args, 0, 4, out var uiPolygonHandle) ||
+                    !TryGetString(args, 1, 4, out var uiPolygonPoints) ||
+                    !TryGetString(args, 2, 4, out var uiPolygonColor) ||
+                    !TryGetInt(args, 3, 4, out var uiPolygonStrokeWidth))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawPolygon(uiPolygonHandle, uiPolygonPoints, uiPolygonColor, uiPolygonStrokeWidth);
                 result = SysValue.Void();
                 return true;
 

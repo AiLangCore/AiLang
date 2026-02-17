@@ -41,6 +41,38 @@ This file is normative for `aic run` evaluation behavior.
 - Circular imports fail deterministically with runtime `Err`.
 - Missing import files fail deterministically with runtime `Err`.
 
+## UI Syscall Surface (Minimal Contract)
+
+- VM-level UI syscalls are intentionally minimal and composable primitives.
+- Current required VM UI syscall set is:
+- `sys.ui_createWindow`
+- `sys.ui_beginFrame`
+- `sys.ui_drawRect`
+- `sys.ui_drawText`
+- `sys.ui_drawLine`
+- `sys.ui_drawEllipse`
+- `sys.ui_drawPath`
+- `sys.ui_drawPolyline`
+- `sys.ui_drawPolygon`
+- `sys.ui_drawTextPath`
+- `sys.ui_drawRectPaint`
+- `sys.ui_drawEllipsePaint`
+- `sys.ui_drawPolylinePaint`
+- `sys.ui_drawPolygonPaint`
+- `sys.ui_drawPathPaint`
+- `sys.ui_drawTextPaint`
+- `sys.ui_filterBlur`
+- `sys.ui_groupPush`
+- `sys.ui_groupPop`
+- `sys.ui_translate`
+- `sys.ui_scale`
+- `sys.ui_rotate`
+- `sys.ui_endFrame`
+- `sys.ui_pollEvent`
+- `sys.ui_present`
+- `sys.ui_closeWindow`
+- High-level style effects (for example drop shadow, glow, and inner shadow) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
+
 ## Async Determinism Rules
 
 - Observable result ordering is declaration order, never completion order.

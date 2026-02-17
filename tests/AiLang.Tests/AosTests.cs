@@ -100,6 +100,48 @@ public class AosTests
         public string? LastUiPathValue { get; private set; }
         public string? LastUiPathColor { get; private set; }
         public int LastUiPathStrokeWidth { get; private set; } = -1;
+        public int LastUiPolylineHandle { get; private set; } = -1;
+        public string? LastUiPolylinePoints { get; private set; }
+        public string? LastUiPolylineColor { get; private set; }
+        public int LastUiPolylineStrokeWidth { get; private set; } = -1;
+        public int LastUiPolygonHandle { get; private set; } = -1;
+        public string? LastUiPolygonPoints { get; private set; }
+        public string? LastUiPolygonColor { get; private set; }
+        public int LastUiPolygonStrokeWidth { get; private set; } = -1;
+        public int LastUiTextPathHandle { get; private set; } = -1;
+        public string? LastUiTextPathPath { get; private set; }
+        public string? LastUiTextPathText { get; private set; }
+        public string? LastUiTextPathColor { get; private set; }
+        public int LastUiTextPathSize { get; private set; } = -1;
+        public int LastUiRectPaintHandle { get; private set; } = -1;
+        public string? LastUiRectPaintFill { get; private set; }
+        public string? LastUiRectPaintStroke { get; private set; }
+        public int LastUiRectPaintStrokeWidth { get; private set; } = -1;
+        public int LastUiRectPaintOpacity { get; private set; } = -1;
+        public int LastUiPathPaintHandle { get; private set; } = -1;
+        public string? LastUiPathPaintPath { get; private set; }
+        public string? LastUiPathPaintFill { get; private set; }
+        public string? LastUiPathPaintStroke { get; private set; }
+        public int LastUiPathPaintStrokeWidth { get; private set; } = -1;
+        public int LastUiPathPaintOpacity { get; private set; } = -1;
+        public int LastUiPathPaintClosed { get; private set; } = -1;
+        public int LastUiBlurHandle { get; private set; } = -1;
+        public string? LastUiBlurPath { get; private set; }
+        public string? LastUiBlurColor { get; private set; }
+        public int LastUiBlurStrokeWidth { get; private set; } = -1;
+        public int LastUiBlurRadius { get; private set; } = -1;
+        public int LastUiBlurOpacity { get; private set; } = -1;
+        public int LastUiBlurClosed { get; private set; } = -1;
+        public int LastUiGroupPushHandle { get; private set; } = -1;
+        public int LastUiGroupPopHandle { get; private set; } = -1;
+        public int LastUiTranslateHandle { get; private set; } = -1;
+        public int LastUiTranslateDx { get; private set; } = -1;
+        public int LastUiTranslateDy { get; private set; } = -1;
+        public int LastUiScaleHandle { get; private set; } = -1;
+        public int LastUiScaleX { get; private set; } = -1;
+        public int LastUiScaleY { get; private set; } = -1;
+        public int LastUiRotateHandle { get; private set; } = -1;
+        public int LastUiRotateDegrees { get; private set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -352,6 +394,159 @@ public class AosTests
             LastUiPathValue = path;
             LastUiPathColor = color;
             LastUiPathStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth)
+        {
+            LastUiPolylineHandle = windowHandle;
+            LastUiPolylinePoints = points;
+            LastUiPolylineColor = color;
+            LastUiPolylineStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth)
+        {
+            LastUiPolygonHandle = windowHandle;
+            LastUiPolygonPoints = points;
+            LastUiPolygonColor = color;
+            LastUiPolygonStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawTextPath(int windowHandle, string path, string text, string color, int size)
+        {
+            LastUiTextPathHandle = windowHandle;
+            LastUiTextPathPath = path;
+            LastUiTextPathText = text;
+            LastUiTextPathColor = color;
+            LastUiTextPathSize = size;
+        }
+
+        public override void UiDrawRectPaint(int windowHandle, int x, int y, int width, int height, string fill, string stroke, int strokeWidth, int opacity)
+        {
+            LastUiRectPaintHandle = windowHandle;
+            LastUiRectPaintFill = fill;
+            LastUiRectPaintStroke = stroke;
+            LastUiRectPaintStrokeWidth = strokeWidth;
+            LastUiRectPaintOpacity = opacity;
+        }
+
+        public override void UiDrawEllipsePaint(int windowHandle, int x, int y, int width, int height, string fill, string stroke, int strokeWidth, int opacity)
+        {
+            LastUiEllipseHandle = windowHandle;
+            LastUiEllipseColor = fill;
+            LastUiLineColor = stroke;
+            LastUiLineStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawPolylinePaint(int windowHandle, string points, string stroke, int strokeWidth, int opacity)
+        {
+            LastUiPolylineHandle = windowHandle;
+            LastUiPolylinePoints = points;
+            LastUiPolylineColor = stroke;
+            LastUiPolylineStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawPolygonPaint(int windowHandle, string points, string fill, string stroke, int strokeWidth, int opacity)
+        {
+            LastUiPolygonHandle = windowHandle;
+            LastUiPolygonPoints = points;
+            LastUiPolygonColor = fill;
+            LastUiLineColor = stroke;
+            LastUiPolygonStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawPathPaint(int windowHandle, string path, string fill, string stroke, int strokeWidth, int opacity, int closed)
+        {
+            LastUiPathPaintHandle = windowHandle;
+            LastUiPathPaintPath = path;
+            LastUiPathPaintFill = fill;
+            LastUiPathPaintStroke = stroke;
+            LastUiPathPaintStrokeWidth = strokeWidth;
+            LastUiPathPaintOpacity = opacity;
+            LastUiPathPaintClosed = closed;
+        }
+
+        public override void UiDrawTextPaint(int windowHandle, int x, int y, string text, string color, int size, int opacity)
+        {
+            LastUiTextPathHandle = windowHandle;
+            LastUiTextPathText = text;
+            LastUiTextPathColor = color;
+            LastUiTextPathSize = size;
+        }
+
+        public override void UiFilterBlur(int windowHandle, string path, string color, int strokeWidth, int radius, int opacity, int closed)
+        {
+            LastUiBlurHandle = windowHandle;
+            LastUiBlurPath = path;
+            LastUiBlurColor = color;
+            LastUiBlurStrokeWidth = strokeWidth;
+            LastUiBlurRadius = radius;
+            LastUiBlurOpacity = opacity;
+            LastUiBlurClosed = closed;
+        }
+
+        public override void UiGroupPush(int windowHandle)
+        {
+            LastUiGroupPushHandle = windowHandle;
+        }
+
+        public override void UiGroupPop(int windowHandle)
+        {
+            LastUiGroupPopHandle = windowHandle;
+        }
+
+        public override void UiTranslate(int windowHandle, int dx, int dy)
+        {
+            LastUiTranslateHandle = windowHandle;
+            LastUiTranslateDx = dx;
+            LastUiTranslateDy = dy;
+        }
+
+        public override void UiScale(int windowHandle, int sx, int sy)
+        {
+            LastUiScaleHandle = windowHandle;
+            LastUiScaleX = sx;
+            LastUiScaleY = sy;
+        }
+
+        public override void UiRotate(int windowHandle, int degrees)
+        {
+            LastUiRotateHandle = windowHandle;
+            LastUiRotateDegrees = degrees;
+        }
+    }
+
+    private sealed class GradientCaptureHost : DefaultSyscallHost
+    {
+        public List<string> LineColors { get; } = new();
+        public List<string> TextColors { get; } = new();
+        public List<(int X, int Y, string Text)> TextDraws { get; } = new();
+
+        public override void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+        {
+            LineColors.Add(color);
+        }
+
+        public override void UiDrawText(int windowHandle, int x, int y, string text, string color, int size)
+        {
+            TextColors.Add(color);
+            TextDraws.Add((x, y, text));
+        }
+
+        public override void UiDrawRect(int windowHandle, int x, int y, int width, int height, string color)
+        {
+            LineColors.Add(color);
+        }
+    }
+
+    private sealed class TransformCaptureHost : DefaultSyscallHost
+    {
+        public List<int> Rotations { get; } = new();
+
+        public override void UiRotate(int windowHandle, int degrees)
+        {
+            Rotations.Add(degrees);
+            base.UiRotate(windowHandle, degrees);
         }
     }
 
@@ -1339,12 +1534,46 @@ public class AosTests
     [Test]
     public void SyscallRegistry_ResolvesUiShapeAliases()
     {
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawLine", out var lineId), Is.True);
-        Assert.That(lineId, Is.EqualTo(SyscallId.UiDrawLine));
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawEllipse", out var ellipseId), Is.True);
-        Assert.That(ellipseId, Is.EqualTo(SyscallId.UiDrawEllipse));
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPath", out var pathId), Is.True);
-        Assert.That(pathId, Is.EqualTo(SyscallId.UiDrawPath));
+        var requiredUiSyscalls = new (string Target, SyscallId Id)[]
+        {
+            ("sys.ui_createWindow", SyscallId.UiCreateWindow),
+            ("sys.ui_beginFrame", SyscallId.UiBeginFrame),
+            ("sys.ui_drawRect", SyscallId.UiDrawRect),
+            ("sys.ui_drawText", SyscallId.UiDrawText),
+            ("sys.ui_drawLine", SyscallId.UiDrawLine),
+            ("sys.ui_drawEllipse", SyscallId.UiDrawEllipse),
+            ("sys.ui_drawPath", SyscallId.UiDrawPath),
+            ("sys.ui_drawPolyline", SyscallId.UiDrawPolyline),
+            ("sys.ui_drawPolygon", SyscallId.UiDrawPolygon),
+            ("sys.ui_drawTextPath", SyscallId.UiDrawTextPath),
+            ("sys.ui_drawRectPaint", SyscallId.UiDrawRectPaint),
+            ("sys.ui_drawEllipsePaint", SyscallId.UiDrawEllipsePaint),
+            ("sys.ui_drawPolylinePaint", SyscallId.UiDrawPolylinePaint),
+            ("sys.ui_drawPolygonPaint", SyscallId.UiDrawPolygonPaint),
+            ("sys.ui_drawPathPaint", SyscallId.UiDrawPathPaint),
+            ("sys.ui_drawTextPaint", SyscallId.UiDrawTextPaint),
+            ("sys.ui_filterBlur", SyscallId.UiFilterBlur),
+            ("sys.ui_groupPush", SyscallId.UiGroupPush),
+            ("sys.ui_groupPop", SyscallId.UiGroupPop),
+            ("sys.ui_translate", SyscallId.UiTranslate),
+            ("sys.ui_scale", SyscallId.UiScale),
+            ("sys.ui_rotate", SyscallId.UiRotate),
+            ("sys.ui_endFrame", SyscallId.UiEndFrame),
+            ("sys.ui_pollEvent", SyscallId.UiPollEvent),
+            ("sys.ui_present", SyscallId.UiPresent),
+            ("sys.ui_closeWindow", SyscallId.UiCloseWindow)
+        };
+
+        foreach (var syscall in requiredUiSyscalls)
+        {
+            Assert.That(SyscallRegistry.TryResolve(syscall.Target, out var resolved), Is.True, $"{syscall.Target} must resolve.");
+            Assert.That(resolved, Is.EqualTo(syscall.Id), $"{syscall.Target} must map to the expected syscall id.");
+        }
+
+        // Keep VM UI syscall surface minimal: composed effects belong in higher-level libraries.
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterDropShadow", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterGlow", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterInnerShadow", out _), Is.False);
     }
 
     [Test]
@@ -1640,6 +1869,349 @@ public class AosTests
             Assert.That(host.LastUiPathValue, Is.EqualTo("10,20;30,40"));
             Assert.That(host.LastUiPathColor, Is.EqualTo("#00ff00"));
             Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(2));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawPolyline_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPolyline) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,60\") Lit#c1(value=\"#123456\") Lit#s1(value=4) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiPolylineHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiPolylinePoints, Is.EqualTo("10,20;30,40;50,60"));
+            Assert.That(host.LastUiPolylineColor, Is.EqualTo("#123456"));
+            Assert.That(host.LastUiPolylineStrokeWidth, Is.EqualTo(4));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawPolygon_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPolygon) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,60\") Lit#c1(value=\"red\") Lit#s1(value=2) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiPolygonHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiPolygonPoints, Is.EqualTo("10,20;30,40;50,60"));
+            Assert.That(host.LastUiPolygonColor, Is.EqualTo("red"));
+            Assert.That(host.LastUiPolygonStrokeWidth, Is.EqualTo(2));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawTextPath_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawTextPath) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40\") Lit#t1(value=\"hello\") Lit#c1(value=\"white\") Lit#s1(value=16) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiTextPathHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiTextPathPath, Is.EqualTo("10,20;30,40"));
+            Assert.That(host.LastUiTextPathText, Is.EqualTo("hello"));
+            Assert.That(host.LastUiTextPathColor, Is.EqualTo("white"));
+            Assert.That(host.LastUiTextPathSize, Is.EqualTo(16));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawRectPaint_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawRectPaint) { Lit#h1(value=9) Lit#x1(value=1) Lit#y1(value=2) Lit#w1(value=3) Lit#h2(value=4) Lit#f1(value=\"#112233\") Lit#s1(value=\"#445566\") Lit#sw1(value=2) Lit#o1(value=75) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiRectPaintHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiRectPaintFill, Is.EqualTo("#112233"));
+            Assert.That(host.LastUiRectPaintStroke, Is.EqualTo("#445566"));
+            Assert.That(host.LastUiRectPaintStrokeWidth, Is.EqualTo(2));
+            Assert.That(host.LastUiRectPaintOpacity, Is.EqualTo(75));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiDrawPathPaint_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPathPaint) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,20\") Lit#f1(value=\"red\") Lit#s1(value=\"blue\") Lit#sw1(value=3) Lit#o1(value=60) Lit#c1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiPathPaintHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiPathPaintPath, Is.EqualTo("10,20;30,40;50,20"));
+            Assert.That(host.LastUiPathPaintFill, Is.EqualTo("red"));
+            Assert.That(host.LastUiPathPaintStroke, Is.EqualTo("blue"));
+            Assert.That(host.LastUiPathPaintStrokeWidth, Is.EqualTo(3));
+            Assert.That(host.LastUiPathPaintOpacity, Is.EqualTo(60));
+            Assert.That(host.LastUiPathPaintClosed, Is.EqualTo(1));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void UiDrawRectPaint_LinearGradientFill_ProducesMultipleColors()
+    {
+        var host = new GradientCaptureHost();
+        host.UiDrawRectPaint(1, 0, 0, 4, 4, "linear(v,#000000,#FFFFFF)", string.Empty, 0, 100);
+        Assert.That(host.LineColors.Count, Is.GreaterThan(1));
+        Assert.That(host.LineColors.First(), Is.Not.EqualTo(host.LineColors.Last()));
+    }
+
+    [Test]
+    public void UiDrawTextPaint_LinearGradient_ProducesPerCharacterColors()
+    {
+        var host = new GradientCaptureHost();
+        host.UiDrawTextPaint(1, 0, 0, "ab", "linear(h,#000000,#FFFFFF)", 12, 100);
+        Assert.That(host.TextColors.Count, Is.EqualTo(2));
+        Assert.That(host.TextColors[0], Is.Not.EqualTo(host.TextColors[1]));
+    }
+
+    [Test]
+    public void UiDrawTextPath_DistributesCharactersAlongPath()
+    {
+        var host = new GradientCaptureHost();
+        host.UiDrawTextPath(1, "0,0;20,0", "abc", "#FFFFFF", 12);
+        Assert.That(host.TextDraws.Count, Is.EqualTo(3));
+        Assert.That(host.TextDraws[0].Text, Is.EqualTo("a"));
+        Assert.That(host.TextDraws[1].Text, Is.EqualTo("b"));
+        Assert.That(host.TextDraws[2].Text, Is.EqualTo("c"));
+        Assert.That(host.TextDraws[0].X, Is.EqualTo(0));
+        Assert.That(host.TextDraws[2].X, Is.EqualTo(20));
+    }
+
+    [Test]
+    public void UiDrawTextPath_DiagonalPath_RotatesGlyphsAlongTangent()
+    {
+        var host = new TransformCaptureHost();
+        host.UiDrawTextPath(1, "0,0;10,10", "abc", "#FFFFFF", 12);
+        Assert.That(host.Rotations.Count, Is.EqualTo(3));
+        Assert.That(host.Rotations.All(degrees => degrees == 45), Is.True);
+    }
+
+    [Test]
+    public void UiFilterBlur_ProducesMultipleLinePasses()
+    {
+        var host = new GradientCaptureHost();
+        host.UiFilterBlur(1, "0,0;20,0", "#FFFFFF", 1, 2, 100, 0);
+        Assert.That(host.LineColors.Count, Is.GreaterThan(3));
+    }
+
+    [Test]
+    public void SyscallDispatch_UiFilterBlur_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_filterBlur) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40\") Lit#c1(value=\"#00ff00\") Lit#s1(value=2) Lit#r1(value=3) Lit#o1(value=70) Lit#cl1(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiBlurHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiBlurPath, Is.EqualTo("10,20;30,40"));
+            Assert.That(host.LastUiBlurColor, Is.EqualTo("#00ff00"));
+            Assert.That(host.LastUiBlurStrokeWidth, Is.EqualTo(2));
+            Assert.That(host.LastUiBlurRadius, Is.EqualTo(3));
+            Assert.That(host.LastUiBlurOpacity, Is.EqualTo(70));
+            Assert.That(host.LastUiBlurClosed, Is.EqualTo(1));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiGroupPush_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_groupPush) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiGroupPushHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiGroupPop_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_groupPop) { Lit#h1(value=7) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiGroupPopHandle, Is.EqualTo(7));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiTranslate_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_translate) { Lit#h1(value=7) Lit#x1(value=11) Lit#y1(value=-3) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiTranslateHandle, Is.EqualTo(7));
+            Assert.That(host.LastUiTranslateDx, Is.EqualTo(11));
+            Assert.That(host.LastUiTranslateDy, Is.EqualTo(-3));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiScale_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_scale) { Lit#h1(value=3) Lit#x1(value=2) Lit#y1(value=4) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiScaleHandle, Is.EqualTo(3));
+            Assert.That(host.LastUiScaleX, Is.EqualTo(2));
+            Assert.That(host.LastUiScaleY, Is.EqualTo(4));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiRotate_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_rotate) { Lit#h1(value=4) Lit#d1(value=90) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiRotateHandle, Is.EqualTo(4));
+            Assert.That(host.LastUiRotateDegrees, Is.EqualTo(90));
         }
         finally
         {
@@ -1970,6 +2542,116 @@ public class AosTests
             Assert.That(host.LastUiPathHandle, Is.EqualTo(5));
             Assert.That(host.LastUiPathValue, Is.EqualTo("1,1;2,2"));
             Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(4));
+
+            var polylineInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawPolyline,
+                new[] { SysValue.Int(8), SysValue.String("1,1;2,2;3,3"), SysValue.String("#ccc"), SysValue.Int(3) }.AsSpan(),
+                new VmNetworkState(),
+                out var polylineResult);
+            Assert.That(polylineInvoked, Is.True);
+            Assert.That(polylineResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiPolylineHandle, Is.EqualTo(8));
+            Assert.That(host.LastUiPolylinePoints, Is.EqualTo("1,1;2,2;3,3"));
+
+            var polygonInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawPolygon,
+                new[] { SysValue.Int(6), SysValue.String("1,1;2,2;3,3"), SysValue.String("blue"), SysValue.Int(2) }.AsSpan(),
+                new VmNetworkState(),
+                out var polygonResult);
+            Assert.That(polygonInvoked, Is.True);
+            Assert.That(polygonResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiPolygonHandle, Is.EqualTo(6));
+            Assert.That(host.LastUiPolygonPoints, Is.EqualTo("1,1;2,2;3,3"));
+
+            var textPathInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawTextPath,
+                new[] { SysValue.Int(4), SysValue.String("1,1;2,2"), SysValue.String("txt"), SysValue.String("white"), SysValue.Int(14) }.AsSpan(),
+                new VmNetworkState(),
+                out var textPathResult);
+            Assert.That(textPathInvoked, Is.True);
+            Assert.That(textPathResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiTextPathHandle, Is.EqualTo(4));
+            Assert.That(host.LastUiTextPathText, Is.EqualTo("txt"));
+
+            var rectPaintInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawRectPaint,
+                new[] { SysValue.Int(1), SysValue.Int(2), SysValue.Int(3), SysValue.Int(4), SysValue.Int(5), SysValue.String("#111111"), SysValue.String("#eeeeee"), SysValue.Int(2), SysValue.Int(80) }.AsSpan(),
+                new VmNetworkState(),
+                out var rectPaintResult);
+            Assert.That(rectPaintInvoked, Is.True);
+            Assert.That(rectPaintResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiRectPaintHandle, Is.EqualTo(1));
+            Assert.That(host.LastUiRectPaintOpacity, Is.EqualTo(80));
+
+            var pathPaintInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawPathPaint,
+                new[] { SysValue.Int(2), SysValue.String("1,1;2,2;3,1"), SysValue.String("red"), SysValue.String("blue"), SysValue.Int(1), SysValue.Int(70), SysValue.Int(1) }.AsSpan(),
+                new VmNetworkState(),
+                out var pathPaintResult);
+            Assert.That(pathPaintInvoked, Is.True);
+            Assert.That(pathPaintResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiPathPaintHandle, Is.EqualTo(2));
+            Assert.That(host.LastUiPathPaintClosed, Is.EqualTo(1));
+
+            var blurInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiFilterBlur,
+                new[] { SysValue.Int(3), SysValue.String("1,1;2,2;3,1"), SysValue.String("#ffffff"), SysValue.Int(2), SysValue.Int(4), SysValue.Int(80), SysValue.Int(0) }.AsSpan(),
+                new VmNetworkState(),
+                out var blurResult);
+            Assert.That(blurInvoked, Is.True);
+            Assert.That(blurResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiBlurHandle, Is.EqualTo(3));
+            Assert.That(host.LastUiBlurRadius, Is.EqualTo(4));
+
+            var groupPushInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiGroupPush,
+                new[] { SysValue.Int(3) }.AsSpan(),
+                new VmNetworkState(),
+                out var groupPushResult);
+            Assert.That(groupPushInvoked, Is.True);
+            Assert.That(groupPushResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiGroupPushHandle, Is.EqualTo(3));
+
+            var groupPopInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiGroupPop,
+                new[] { SysValue.Int(2) }.AsSpan(),
+                new VmNetworkState(),
+                out var groupPopResult);
+            Assert.That(groupPopInvoked, Is.True);
+            Assert.That(groupPopResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiGroupPopHandle, Is.EqualTo(2));
+
+            var translateInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiTranslate,
+                new[] { SysValue.Int(7), SysValue.Int(10), SysValue.Int(-5) }.AsSpan(),
+                new VmNetworkState(),
+                out var translateResult);
+            Assert.That(translateInvoked, Is.True);
+            Assert.That(translateResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiTranslateHandle, Is.EqualTo(7));
+            Assert.That(host.LastUiTranslateDx, Is.EqualTo(10));
+            Assert.That(host.LastUiTranslateDy, Is.EqualTo(-5));
+
+            var scaleInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiScale,
+                new[] { SysValue.Int(5), SysValue.Int(2), SysValue.Int(3) }.AsSpan(),
+                new VmNetworkState(),
+                out var scaleResult);
+            Assert.That(scaleInvoked, Is.True);
+            Assert.That(scaleResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiScaleHandle, Is.EqualTo(5));
+            Assert.That(host.LastUiScaleX, Is.EqualTo(2));
+            Assert.That(host.LastUiScaleY, Is.EqualTo(3));
+
+            var rotateInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiRotate,
+                new[] { SysValue.Int(8), SysValue.Int(45) }.AsSpan(),
+                new VmNetworkState(),
+                out var rotateResult);
+            Assert.That(rotateInvoked, Is.True);
+            Assert.That(rotateResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiRotateHandle, Is.EqualTo(8));
+            Assert.That(host.LastUiRotateDegrees, Is.EqualTo(45));
         }
         finally
         {

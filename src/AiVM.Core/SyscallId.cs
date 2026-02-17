@@ -61,20 +61,7 @@ public enum SyscallId : ushort
     UiDrawPath = 56,
     UiDrawPolyline = 57,
     UiDrawPolygon = 58,
-    UiDrawTextPath = 59,
-    UiDrawRectPaint = 60,
-    UiDrawEllipsePaint = 61,
-    UiDrawPolylinePaint = 62,
-    UiDrawPolygonPaint = 63,
-    UiDrawPathPaint = 64,
-    UiDrawTextPaint = 65,
-    UiFilterBlur = 66,
-    UiGroupPush = 67,
-    UiGroupPop = 68,
-    UiTranslate = 69,
-    UiScale = 70,
-    UiRotate = 71,
-    UiGetWindowSize = 72,
-    StrSubstring = 73,
-    StrRemove = 74
+    UiGetWindowSize = 59,
+    StrSubstring = 60,
+    StrRemove = 61
 }

@@ -54,24 +54,12 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.ui_drawPath`
 - `sys.ui_drawPolyline`
 - `sys.ui_drawPolygon`
-- `sys.ui_drawTextPath`
-- `sys.ui_drawRectPaint`
-- `sys.ui_drawEllipsePaint`
-- `sys.ui_drawPolylinePaint`
-- `sys.ui_drawPolygonPaint`
-- `sys.ui_drawPathPaint`
-- `sys.ui_drawTextPaint`
-- `sys.ui_filterBlur`
-- `sys.ui_groupPush`
-- `sys.ui_groupPop`
-- `sys.ui_translate`
-- `sys.ui_scale`
-- `sys.ui_rotate`
 - `sys.ui_endFrame`
 - `sys.ui_pollEvent`
 - `sys.ui_present`
 - `sys.ui_closeWindow`
-- High-level style effects (for example drop shadow, glow, and inner shadow) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
+- `sys.ui_getWindowSize`
+- High-level style/composition effects (for example text-on-path layout, paint bundles, blur/shadow filters, and group transform helpers) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
 
 ## Async Determinism Rules
 

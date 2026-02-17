@@ -1545,23 +1545,11 @@ public class AosTests
             ("sys.ui_drawPath", SyscallId.UiDrawPath),
             ("sys.ui_drawPolyline", SyscallId.UiDrawPolyline),
             ("sys.ui_drawPolygon", SyscallId.UiDrawPolygon),
-            ("sys.ui_drawTextPath", SyscallId.UiDrawTextPath),
-            ("sys.ui_drawRectPaint", SyscallId.UiDrawRectPaint),
-            ("sys.ui_drawEllipsePaint", SyscallId.UiDrawEllipsePaint),
-            ("sys.ui_drawPolylinePaint", SyscallId.UiDrawPolylinePaint),
-            ("sys.ui_drawPolygonPaint", SyscallId.UiDrawPolygonPaint),
-            ("sys.ui_drawPathPaint", SyscallId.UiDrawPathPaint),
-            ("sys.ui_drawTextPaint", SyscallId.UiDrawTextPaint),
-            ("sys.ui_filterBlur", SyscallId.UiFilterBlur),
-            ("sys.ui_groupPush", SyscallId.UiGroupPush),
-            ("sys.ui_groupPop", SyscallId.UiGroupPop),
-            ("sys.ui_translate", SyscallId.UiTranslate),
-            ("sys.ui_scale", SyscallId.UiScale),
-            ("sys.ui_rotate", SyscallId.UiRotate),
             ("sys.ui_endFrame", SyscallId.UiEndFrame),
             ("sys.ui_pollEvent", SyscallId.UiPollEvent),
             ("sys.ui_present", SyscallId.UiPresent),
-            ("sys.ui_closeWindow", SyscallId.UiCloseWindow)
+            ("sys.ui_closeWindow", SyscallId.UiCloseWindow),
+            ("sys.ui_getWindowSize", SyscallId.UiGetWindowSize)
         };
 
         foreach (var syscall in requiredUiSyscalls)
@@ -1572,6 +1560,19 @@ public class AosTests
 
         // Keep VM UI syscall surface minimal: composed effects belong in higher-level libraries.
         Assert.That(SyscallRegistry.TryResolve("sys.ui_filterDropShadow", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawTextPath", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawRectPaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawEllipsePaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPolylinePaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPolygonPaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPathPaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawTextPaint", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterBlur", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_groupPush", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_groupPop", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_translate", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_scale", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_rotate", out _), Is.False);
         Assert.That(SyscallRegistry.TryResolve("sys.ui_filterGlow", out _), Is.False);
         Assert.That(SyscallRegistry.TryResolve("sys.ui_filterInnerShadow", out _), Is.False);
     }
@@ -1931,306 +1932,6 @@ public class AosTests
     }
 
     [Test]
-    public void SyscallDispatch_UiDrawTextPath_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawTextPath) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40\") Lit#t1(value=\"hello\") Lit#c1(value=\"white\") Lit#s1(value=16) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiTextPathHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiTextPathPath, Is.EqualTo("10,20;30,40"));
-            Assert.That(host.LastUiTextPathText, Is.EqualTo("hello"));
-            Assert.That(host.LastUiTextPathColor, Is.EqualTo("white"));
-            Assert.That(host.LastUiTextPathSize, Is.EqualTo(16));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiDrawRectPaint_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawRectPaint) { Lit#h1(value=9) Lit#x1(value=1) Lit#y1(value=2) Lit#w1(value=3) Lit#h2(value=4) Lit#f1(value=\"#112233\") Lit#s1(value=\"#445566\") Lit#sw1(value=2) Lit#o1(value=75) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiRectPaintHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiRectPaintFill, Is.EqualTo("#112233"));
-            Assert.That(host.LastUiRectPaintStroke, Is.EqualTo("#445566"));
-            Assert.That(host.LastUiRectPaintStrokeWidth, Is.EqualTo(2));
-            Assert.That(host.LastUiRectPaintOpacity, Is.EqualTo(75));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiDrawPathPaint_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPathPaint) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,20\") Lit#f1(value=\"red\") Lit#s1(value=\"blue\") Lit#sw1(value=3) Lit#o1(value=60) Lit#c1(value=1) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiPathPaintHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiPathPaintPath, Is.EqualTo("10,20;30,40;50,20"));
-            Assert.That(host.LastUiPathPaintFill, Is.EqualTo("red"));
-            Assert.That(host.LastUiPathPaintStroke, Is.EqualTo("blue"));
-            Assert.That(host.LastUiPathPaintStrokeWidth, Is.EqualTo(3));
-            Assert.That(host.LastUiPathPaintOpacity, Is.EqualTo(60));
-            Assert.That(host.LastUiPathPaintClosed, Is.EqualTo(1));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void UiDrawRectPaint_LinearGradientFill_ProducesMultipleColors()
-    {
-        var host = new GradientCaptureHost();
-        host.UiDrawRectPaint(1, 0, 0, 4, 4, "linear(v,#000000,#FFFFFF)", string.Empty, 0, 100);
-        Assert.That(host.LineColors.Count, Is.GreaterThan(1));
-        Assert.That(host.LineColors.First(), Is.Not.EqualTo(host.LineColors.Last()));
-    }
-
-    [Test]
-    public void UiDrawTextPaint_LinearGradient_ProducesPerCharacterColors()
-    {
-        var host = new GradientCaptureHost();
-        host.UiDrawTextPaint(1, 0, 0, "ab", "linear(h,#000000,#FFFFFF)", 12, 100);
-        Assert.That(host.TextColors.Count, Is.EqualTo(2));
-        Assert.That(host.TextColors[0], Is.Not.EqualTo(host.TextColors[1]));
-    }
-
-    [Test]
-    public void UiDrawTextPath_DistributesCharactersAlongPath()
-    {
-        var host = new GradientCaptureHost();
-        host.UiDrawTextPath(1, "0,0;20,0", "abc", "#FFFFFF", 12);
-        Assert.That(host.TextDraws.Count, Is.EqualTo(3));
-        Assert.That(host.TextDraws[0].Text, Is.EqualTo("a"));
-        Assert.That(host.TextDraws[1].Text, Is.EqualTo("b"));
-        Assert.That(host.TextDraws[2].Text, Is.EqualTo("c"));
-        Assert.That(host.TextDraws[0].X, Is.EqualTo(0));
-        Assert.That(host.TextDraws[2].X, Is.EqualTo(20));
-    }
-
-    [Test]
-    public void UiDrawTextPath_HandlesSurrogatePairsAsSingleGlyphs()
-    {
-        var host = new GradientCaptureHost();
-        host.UiDrawTextPath(1, "0,0;30,0", "a😀b", "#FFFFFF", 12);
-        Assert.That(host.TextDraws.Count, Is.EqualTo(3));
-        Assert.That(host.TextDraws[0].Text, Is.EqualTo("a"));
-        Assert.That(host.TextDraws[1].Text, Is.EqualTo("😀"));
-        Assert.That(host.TextDraws[2].Text, Is.EqualTo("b"));
-    }
-
-    [Test]
-    public void UiDrawTextPath_DiagonalPath_RotatesGlyphsAlongTangent()
-    {
-        var host = new TransformCaptureHost();
-        host.UiDrawTextPath(1, "0,0;10,10", "abc", "#FFFFFF", 12);
-        Assert.That(host.Rotations.Count, Is.EqualTo(3));
-        Assert.That(host.Rotations.All(degrees => degrees == 45), Is.True);
-    }
-
-    [Test]
-    public void UiFilterBlur_ProducesMultipleLinePasses()
-    {
-        var host = new GradientCaptureHost();
-        host.UiFilterBlur(1, "0,0;20,0", "#FFFFFF", 1, 2, 100, 0);
-        Assert.That(host.LineColors.Count, Is.GreaterThan(3));
-    }
-
-    [Test]
-    public void SyscallDispatch_UiFilterBlur_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_filterBlur) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40\") Lit#c1(value=\"#00ff00\") Lit#s1(value=2) Lit#r1(value=3) Lit#o1(value=70) Lit#cl1(value=1) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiBlurHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiBlurPath, Is.EqualTo("10,20;30,40"));
-            Assert.That(host.LastUiBlurColor, Is.EqualTo("#00ff00"));
-            Assert.That(host.LastUiBlurStrokeWidth, Is.EqualTo(2));
-            Assert.That(host.LastUiBlurRadius, Is.EqualTo(3));
-            Assert.That(host.LastUiBlurOpacity, Is.EqualTo(70));
-            Assert.That(host.LastUiBlurClosed, Is.EqualTo(1));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiGroupPush_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_groupPush) { Lit#h1(value=9) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiGroupPushHandle, Is.EqualTo(9));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiGroupPop_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_groupPop) { Lit#h1(value=7) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiGroupPopHandle, Is.EqualTo(7));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiTranslate_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_translate) { Lit#h1(value=7) Lit#x1(value=11) Lit#y1(value=-3) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiTranslateHandle, Is.EqualTo(7));
-            Assert.That(host.LastUiTranslateDx, Is.EqualTo(11));
-            Assert.That(host.LastUiTranslateDy, Is.EqualTo(-3));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiScale_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_scale) { Lit#h1(value=3) Lit#x1(value=2) Lit#y1(value=4) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiScaleHandle, Is.EqualTo(3));
-            Assert.That(host.LastUiScaleX, Is.EqualTo(2));
-            Assert.That(host.LastUiScaleY, Is.EqualTo(4));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiRotate_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_rotate) { Lit#h1(value=4) Lit#d1(value=90) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiRotateHandle, Is.EqualTo(4));
-            Assert.That(host.LastUiRotateDegrees, Is.EqualTo(90));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
     public void SyscallDispatch_CryptoBase64Encode_CallsHost()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Encode) { Lit#s1(value=\"hello\") } }");
@@ -2574,95 +2275,6 @@ public class AosTests
             Assert.That(host.LastUiPolygonHandle, Is.EqualTo(6));
             Assert.That(host.LastUiPolygonPoints, Is.EqualTo("1,1;2,2;3,3"));
 
-            var textPathInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiDrawTextPath,
-                new[] { SysValue.Int(4), SysValue.String("1,1;2,2"), SysValue.String("txt"), SysValue.String("white"), SysValue.Int(14) }.AsSpan(),
-                new VmNetworkState(),
-                out var textPathResult);
-            Assert.That(textPathInvoked, Is.True);
-            Assert.That(textPathResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiTextPathHandle, Is.EqualTo(4));
-            Assert.That(host.LastUiTextPathText, Is.EqualTo("txt"));
-
-            var rectPaintInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiDrawRectPaint,
-                new[] { SysValue.Int(1), SysValue.Int(2), SysValue.Int(3), SysValue.Int(4), SysValue.Int(5), SysValue.String("#111111"), SysValue.String("#eeeeee"), SysValue.Int(2), SysValue.Int(80) }.AsSpan(),
-                new VmNetworkState(),
-                out var rectPaintResult);
-            Assert.That(rectPaintInvoked, Is.True);
-            Assert.That(rectPaintResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiRectPaintHandle, Is.EqualTo(1));
-            Assert.That(host.LastUiRectPaintOpacity, Is.EqualTo(80));
-
-            var pathPaintInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiDrawPathPaint,
-                new[] { SysValue.Int(2), SysValue.String("1,1;2,2;3,1"), SysValue.String("red"), SysValue.String("blue"), SysValue.Int(1), SysValue.Int(70), SysValue.Int(1) }.AsSpan(),
-                new VmNetworkState(),
-                out var pathPaintResult);
-            Assert.That(pathPaintInvoked, Is.True);
-            Assert.That(pathPaintResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiPathPaintHandle, Is.EqualTo(2));
-            Assert.That(host.LastUiPathPaintClosed, Is.EqualTo(1));
-
-            var blurInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiFilterBlur,
-                new[] { SysValue.Int(3), SysValue.String("1,1;2,2;3,1"), SysValue.String("#ffffff"), SysValue.Int(2), SysValue.Int(4), SysValue.Int(80), SysValue.Int(0) }.AsSpan(),
-                new VmNetworkState(),
-                out var blurResult);
-            Assert.That(blurInvoked, Is.True);
-            Assert.That(blurResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiBlurHandle, Is.EqualTo(3));
-            Assert.That(host.LastUiBlurRadius, Is.EqualTo(4));
-
-            var groupPushInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiGroupPush,
-                new[] { SysValue.Int(3) }.AsSpan(),
-                new VmNetworkState(),
-                out var groupPushResult);
-            Assert.That(groupPushInvoked, Is.True);
-            Assert.That(groupPushResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiGroupPushHandle, Is.EqualTo(3));
-
-            var groupPopInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiGroupPop,
-                new[] { SysValue.Int(2) }.AsSpan(),
-                new VmNetworkState(),
-                out var groupPopResult);
-            Assert.That(groupPopInvoked, Is.True);
-            Assert.That(groupPopResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiGroupPopHandle, Is.EqualTo(2));
-
-            var translateInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiTranslate,
-                new[] { SysValue.Int(7), SysValue.Int(10), SysValue.Int(-5) }.AsSpan(),
-                new VmNetworkState(),
-                out var translateResult);
-            Assert.That(translateInvoked, Is.True);
-            Assert.That(translateResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiTranslateHandle, Is.EqualTo(7));
-            Assert.That(host.LastUiTranslateDx, Is.EqualTo(10));
-            Assert.That(host.LastUiTranslateDy, Is.EqualTo(-5));
-
-            var scaleInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiScale,
-                new[] { SysValue.Int(5), SysValue.Int(2), SysValue.Int(3) }.AsSpan(),
-                new VmNetworkState(),
-                out var scaleResult);
-            Assert.That(scaleInvoked, Is.True);
-            Assert.That(scaleResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiScaleHandle, Is.EqualTo(5));
-            Assert.That(host.LastUiScaleX, Is.EqualTo(2));
-            Assert.That(host.LastUiScaleY, Is.EqualTo(3));
-
-            var rotateInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiRotate,
-                new[] { SysValue.Int(8), SysValue.Int(45) }.AsSpan(),
-                new VmNetworkState(),
-                out var rotateResult);
-            Assert.That(rotateInvoked, Is.True);
-            Assert.That(rotateResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiRotateHandle, Is.EqualTo(8));
-            Assert.That(host.LastUiRotateDegrees, Is.EqualTo(45));
         }
         finally
         {

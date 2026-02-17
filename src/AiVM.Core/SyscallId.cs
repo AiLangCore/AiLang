@@ -73,5 +73,8 @@ public enum SyscallId : ushort
     UiGroupPop = 68,
     UiTranslate = 69,
     UiScale = 70,
-    UiRotate = 71
+    UiRotate = 71,
+    UiGetWindowSize = 72,
+    StrSubstring = 73,
+    StrRemove = 74
 }

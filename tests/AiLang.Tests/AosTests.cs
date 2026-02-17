@@ -2048,6 +2048,17 @@ public class AosTests
     }
 
     [Test]
+    public void UiDrawTextPath_HandlesSurrogatePairsAsSingleGlyphs()
+    {
+        var host = new GradientCaptureHost();
+        host.UiDrawTextPath(1, "0,0;30,0", "a😀b", "#FFFFFF", 12);
+        Assert.That(host.TextDraws.Count, Is.EqualTo(3));
+        Assert.That(host.TextDraws[0].Text, Is.EqualTo("a"));
+        Assert.That(host.TextDraws[1].Text, Is.EqualTo("😀"));
+        Assert.That(host.TextDraws[2].Text, Is.EqualTo("b"));
+    }
+
+    [Test]
     public void UiDrawTextPath_DiagonalPath_RotatesGlyphsAlongTangent()
     {
         var host = new TransformCaptureHost();

@@ -611,14 +611,14 @@ public partial class DefaultSyscallHost : ISyscallHost
             return;
         }
 
-        var content = text ?? string.Empty;
-        if (content.Length == 0)
+        var runes = (text ?? string.Empty).EnumerateRunes().ToArray();
+        if (runes.Length == 0)
         {
             return;
         }
 
-        var glyphPoses = BuildTextPathPoses(points, content.Length);
-        for (var i = 0; i < content.Length && i < glyphPoses.Count; i++)
+        var glyphPoses = BuildTextPathPoses(points, runes.Length);
+        for (var i = 0; i < runes.Length && i < glyphPoses.Count; i++)
         {
             UiGroupPush(windowHandle);
             UiTranslate(windowHandle, glyphPoses[i].X, glyphPoses[i].Y);
@@ -632,7 +632,7 @@ public partial class DefaultSyscallHost : ISyscallHost
                 windowHandle,
                 glyphPoses[i].X,
                 glyphPoses[i].Y,
-                content[i].ToString(),
+                runes[i].ToString(),
                 color,
                 size);
             UiGroupPop(windowHandle);

@@ -552,7 +552,7 @@ public static class SyscallContracts
                 returnKind = VmValueKind.Void;
                 return true;
             case "sys.ui_getWindowSize":
-                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL276", "sys.ui_getWindowSize expects 1 argument.", "VAL277", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL394", "sys.ui_getWindowSize expects 1 argument.", "VAL395", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Node;
                 return true;
             case "sys.crypto_base64Encode":
@@ -689,11 +689,11 @@ public static class SyscallContracts
                     3,
                     new[]
                     {
-                        (VmValueKind.String, "VAL278", "sys.str_substring arg 1 must be string."),
-                        (VmValueKind.Int, "VAL279", "sys.str_substring arg 2 must be int."),
-                        (VmValueKind.Int, "VAL280", "sys.str_substring arg 3 must be int.")
+                        (VmValueKind.String, "VAL396", "sys.str_substring arg 1 must be string."),
+                        (VmValueKind.Int, "VAL397", "sys.str_substring arg 2 must be int."),
+                        (VmValueKind.Int, "VAL398", "sys.str_substring arg 3 must be int.")
                     },
-                    "VAL281",
+                    "VAL399",
                     "sys.str_substring expects 3 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.String;
@@ -704,11 +704,11 @@ public static class SyscallContracts
                     3,
                     new[]
                     {
-                        (VmValueKind.String, "VAL282", "sys.str_remove arg 1 must be string."),
-                        (VmValueKind.Int, "VAL283", "sys.str_remove arg 2 must be int."),
-                        (VmValueKind.Int, "VAL284", "sys.str_remove arg 3 must be int.")
+                        (VmValueKind.String, "VAL400", "sys.str_remove arg 1 must be string."),
+                        (VmValueKind.Int, "VAL401", "sys.str_remove arg 2 must be int."),
+                        (VmValueKind.Int, "VAL402", "sys.str_remove arg 3 must be int.")
                     },
-                    "VAL285",
+                    "VAL403",
                     "sys.str_remove expects 3 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.String;

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -16,7 +15,6 @@ namespace AiVM.Core;
 
 public partial class DefaultSyscallHost : ISyscallHost
 {
-    private static readonly HttpClient HttpClient = new();
     private static readonly string[] EmptyArgv = Array.Empty<string>();
     private static readonly Stopwatch MonotonicStopwatch = Stopwatch.StartNew();
     private int _nextUiHandle = 1;
@@ -156,19 +154,6 @@ public partial class DefaultSyscallHost : ISyscallHost
         return Convert.ToBase64String(bytes);
     }
 
-    public virtual string HttpGet(string url)
-    {
-        try
-        {
-            var normalizedUrl = url.Replace(" ", "%20", StringComparison.Ordinal);
-            return HttpClient.GetStringAsync(normalizedUrl).GetAwaiter().GetResult();
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
     public virtual string Platform()
     {
         if (OperatingSystem.IsMacOS())
@@ -300,6 +285,22 @@ public partial class DefaultSyscallHost : ISyscallHost
     public virtual int NetTcpAccept(VmNetworkState state, int listenerHandle)
     {
         return NetAccept(state, listenerHandle);
+    }
+
+    public virtual int NetTcpConnect(VmNetworkState state, string host, int port)
+    {
+        try
+        {
+            var client = new TcpClient();
+            client.Connect(host, port);
+            var connectionHandle = state.NextNetHandle++;
+            state.NetConnections[connectionHandle] = client;
+            return connectionHandle;
+        }
+        catch
+        {
+            return -1;
+        }
     }
 
     public virtual string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)

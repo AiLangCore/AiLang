@@ -14,6 +14,7 @@ public static class VmSyscallDispatcher
             SyscallId.NetClose => 1,
             SyscallId.NetTcpListen => 2,
             SyscallId.NetTcpListenTls => 4,
+            SyscallId.NetTcpConnect => 2,
             SyscallId.NetTcpAccept => 1,
             SyscallId.NetTcpRead => 2,
             SyscallId.NetTcpWrite => 2,
@@ -62,7 +63,6 @@ public static class VmSyscallDispatcher
             SyscallId.StrUtf8ByteCount => 1,
             SyscallId.StrSubstring => 3,
             SyscallId.StrRemove => 3,
-            SyscallId.HttpGet => 1,
             SyscallId.Platform => 0,
             SyscallId.Arch => 0,
             SyscallId.OsVersion => 0,
@@ -156,6 +156,15 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.Int(VmSyscalls.NetTcpAccept(network, tcpAcceptListenerHandle));
+                return true;
+
+            case SyscallId.NetTcpConnect:
+                if (!TryGetString(args, 0, 2, out var tcpConnectHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpConnectPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpConnect(network, tcpConnectHost, tcpConnectPort));
                 return true;
 
             case SyscallId.NetTcpRead:
@@ -581,14 +590,6 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.String(VmSyscalls.StrRemove(removeText, removeStart, removeLength));
-                return true;
-
-            case SyscallId.HttpGet:
-                if (!TryGetString(args, 0, 1, out var url))
-                {
-                    return true;
-                }
-                result = SysValue.String(VmSyscalls.HttpGet(url));
                 return true;
 
             case SyscallId.Platform:

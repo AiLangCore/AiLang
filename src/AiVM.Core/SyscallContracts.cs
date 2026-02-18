@@ -102,6 +102,20 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL216", "sys.net_tcpAccept expects 1 argument.", "VAL217", "sys.net_tcpAccept arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
+            case "sys.net_tcpConnect":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL303", "sys.net_tcpConnect arg 1 must be string."),
+                        (VmValueKind.Int, "VAL304", "sys.net_tcpConnect arg 2 must be int.")
+                    },
+                    "VAL307",
+                    "sys.net_tcpConnect expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpRead":
                 ValidateArityAndTypes(
                     argKinds,
@@ -476,10 +490,6 @@ public static class SyscallContracts
                     "VAL285",
                     "sys.str_remove expects 3 arguments.",
                     addDiagnostic);
-                returnKind = VmValueKind.String;
-                return true;
-            case "sys.http_get":
-                ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL148", "sys.http_get expects 1 argument.", "VAL149", "sys.http_get arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
             case "sys.platform":

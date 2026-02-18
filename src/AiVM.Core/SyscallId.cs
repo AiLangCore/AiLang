@@ -29,7 +29,7 @@ public enum SyscallId : ushort
     FsWriteFile = 24,
     FsMakeDir = 25,
     StrUtf8ByteCount = 26,
-    HttpGet = 27,
+    NetTcpConnect = 27,
     Platform = 28,
     Arch = 29,
     OsVersion = 30,

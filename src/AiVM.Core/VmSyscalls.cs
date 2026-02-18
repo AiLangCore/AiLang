@@ -173,11 +173,6 @@ public static class VmSyscalls
         return string.Concat(text.AsSpan(0, startOffset), text.AsSpan(endOffset));
     }
 
-    public static string HttpGet(string url)
-    {
-        return Host.HttpGet(url);
-    }
-
     public static string Platform()
     {
         return Host.Platform();
@@ -236,6 +231,11 @@ public static class VmSyscalls
     public static int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath)
     {
         return Host.NetTcpListenTls(state, host, port, certPath, keyPath);
+    }
+
+    public static int NetTcpConnect(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnect(state, host, port);
     }
 
     public static int NetTcpAccept(VmNetworkState state, int listenerHandle)

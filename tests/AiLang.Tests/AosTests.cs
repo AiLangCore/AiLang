@@ -26,7 +26,6 @@ public class AosTests
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
         public string ProcessCwdResult { get; set; } = string.Empty;
-        public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
@@ -43,14 +42,19 @@ public class AosTests
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
         public int LastSleepMs { get; private set; } = -1;
+        public int StrUtf8ByteCountResult { get; set; } = 777;
         public string? LastNetTcpListenHost { get; private set; }
         public int LastNetTcpListenPort { get; private set; } = -1;
+        public string? LastNetTcpConnectHost { get; private set; }
+        public int LastNetTcpConnectPort { get; private set; } = -1;
+        public int NetTcpConnectResult { get; set; } = -1;
         public string? LastNetTcpReadPayload { get; set; }
         public int LastNetTcpReadHandle { get; private set; } = -1;
         public int LastNetTcpReadMaxBytes { get; private set; } = -1;
         public int LastNetTcpWriteHandle { get; private set; } = -1;
         public string? LastNetTcpWriteData { get; private set; }
         public int NetTcpWriteResult { get; set; } = -1;
+        public int LastNetCloseHandle { get; private set; } = -1;
         public string? LastCryptoBase64EncodeInput { get; private set; }
         public string CryptoBase64EncodeResult { get; set; } = string.Empty;
         public string? LastCryptoBase64DecodeInput { get; private set; }
@@ -202,12 +206,7 @@ public class AosTests
 
         public override int StrUtf8ByteCount(string text)
         {
-            return 777;
-        }
-
-        public override string HttpGet(string url)
-        {
-            return HttpGetResult;
+            return StrUtf8ByteCountResult;
         }
 
         public override string Platform()
@@ -237,6 +236,13 @@ public class AosTests
             return 77;
         }
 
+        public override int NetTcpConnect(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpConnectHost = host;
+            LastNetTcpConnectPort = port;
+            return NetTcpConnectResult;
+        }
+
         public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
         {
             LastNetTcpReadHandle = connectionHandle;
@@ -249,6 +255,11 @@ public class AosTests
             LastNetTcpWriteHandle = connectionHandle;
             LastNetTcpWriteData = data;
             return NetTcpWriteResult;
+        }
+
+        public override void NetClose(VmNetworkState state, int handle)
+        {
+            LastNetCloseHandle = handle;
         }
 
         public override string CryptoBase64Encode(string text)
@@ -1344,6 +1355,8 @@ public class AosTests
     {
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpListen", out var listenId), Is.True);
         Assert.That(listenId, Is.EqualTo(SyscallId.NetTcpListen));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpConnect", out var connectId), Is.True);
+        Assert.That(connectId, Is.EqualTo(SyscallId.NetTcpConnect));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpAccept", out var acceptId), Is.True);
         Assert.That(acceptId, Is.EqualTo(SyscallId.NetTcpAccept));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpRead", out var readId), Is.True);
@@ -1384,6 +1397,32 @@ public class AosTests
             Assert.That(value.AsInt(), Is.EqualTo(77));
             Assert.That(host.LastNetTcpListenHost, Is.EqualTo("127.0.0.1"));
             Assert.That(host.LastNetTcpListenPort, Is.EqualTo(4040));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpConnect_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetTcpConnectResult = 91 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(91));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
         }
         finally
         {
@@ -2282,22 +2321,24 @@ public class AosTests
     }
 
     [Test]
-    public void VmSyscalls_HttpGet_UsesConfiguredHost()
+    public void VmSyscalls_NetTcpConnect_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost { HttpGetResult = "http-ok" };
+        var host = new RecordingSyscallHost { NetTcpConnectResult = 44 };
         try
         {
             VmSyscalls.Host = host;
             var runtime = new AosRuntime();
             runtime.Permissions.Add("sys");
             var interpreter = new AosInterpreter();
-            var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+            var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } }");
             Assert.That(parse.Diagnostics, Is.Empty);
 
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
-            Assert.That(value.AsString(), Is.EqualTo("http-ok"));
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(44));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
         }
         finally
         {
@@ -2556,6 +2597,48 @@ public class AosTests
     }
 
     [Test]
+    public void StdHttpHelpers_HttpRequest_UsesTcpSyscalls()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetTcpConnectResult = 12,
+            NetTcpWriteResult = 84,
+            LastNetTcpReadPayload = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok",
+            StrUtf8ByteCountResult = 3
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
+            Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
+            var stdHttpResult = interpreter.EvaluateProgram(stdHttpProgram.Root!, runtime);
+            Assert.That(stdHttpResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+            var requestParse = Parse("Program#p1 { Call#c1(target=httpRequest) { Lit#m1(value=\"POST\") Lit#h1(value=\"example.com\") Lit#p1(value=80) Lit#pa1(value=\"/submit\") Lit#hd1(value=\"Accept: text/plain\") Lit#b1(value=\"abc\") Lit#mx1(value=4096) } }");
+            Assert.That(requestParse.Diagnostics, Is.Empty);
+            var responseValue = interpreter.EvaluateProgram(requestParse.Root!, runtime);
+            Assert.That(responseValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(responseValue.AsString(), Is.EqualTo("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
+            Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetTcpWriteData, Is.EqualTo("POST /submit HTTP/1.1\r\nHost: example.com\r\nAccept: text/plain\r\nContent-Length: 3\r\n\r\nabc"));
+            Assert.That(host.LastNetTcpReadHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(4096));
+            Assert.That(host.LastNetCloseHandle, Is.EqualTo(12));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void StdUiInput_KeySemantics_AreDeterministic()
     {
         var runtime = new AosRuntime();
@@ -2726,7 +2809,7 @@ public class AosTests
     [Test]
     public void Validator_ParComputeOnlyRejectsSyscalls()
     {
-        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } Lit#v1(value=1) } }");
+        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } Lit#v1(value=1) } }");
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };

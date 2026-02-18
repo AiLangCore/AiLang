@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace AiVM.Core;
 
 public partial class DefaultSyscallHost
@@ -91,8 +93,8 @@ public partial class DefaultSyscallHost
             {
                 var point = segment.Split(',', StringSplitOptions.TrimEntries);
                 if (point.Length != 2 ||
-                    !int.TryParse(point[0], out var x) ||
-                    !int.TryParse(point[1], out var y))
+                    !int.TryParse(point[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+                    !int.TryParse(point[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
                 {
                     continue;
                 }

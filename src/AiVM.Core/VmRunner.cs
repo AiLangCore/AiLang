@@ -85,6 +85,7 @@ public static class VmRunner
         {
             var inst = function.Instructions[pc];
             adapter.TraceInstruction(function.Name, pc, inst.Op);
+            adapter.TraceInstructionState(function.Name, pc, inst.Op, CollectionsMarshal.AsSpan(stack), locals);
             switch (inst.Op)
             {
                 case "CONST":

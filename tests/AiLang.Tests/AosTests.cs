@@ -75,6 +75,42 @@ public class AosTests
         public string NetAsyncResultStringResult { get; set; } = string.Empty;
         public int LastNetAsyncErrorHandle { get; private set; } = -1;
         public string NetAsyncErrorResult { get; set; } = string.Empty;
+        public string? LastWorkerTaskName { get; private set; }
+        public string? LastWorkerPayload { get; private set; }
+        public int WorkerStartResult { get; set; } = -1;
+        public int LastWorkerPollHandle { get; private set; } = -1;
+        public int WorkerPollResult { get; set; } = 0;
+        public int LastWorkerResultHandle { get; private set; } = -1;
+        public string WorkerResultValue { get; set; } = string.Empty;
+        public int LastWorkerErrorHandle { get; private set; } = -1;
+        public string WorkerErrorValue { get; set; } = string.Empty;
+        public int LastWorkerCancelHandle { get; private set; } = -1;
+        public bool WorkerCancelResult { get; set; }
+        public string? LastDebugEmitChannel { get; private set; }
+        public string? LastDebugEmitPayload { get; private set; }
+        public string DebugModeValue { get; set; } = "off";
+        public int LastDebugCaptureFrameBeginId { get; private set; } = -1;
+        public int LastDebugCaptureFrameBeginWidth { get; private set; } = -1;
+        public int LastDebugCaptureFrameBeginHeight { get; private set; } = -1;
+        public int LastDebugCaptureFrameEndId { get; private set; } = -1;
+        public string? LastDebugCaptureDrawOp { get; private set; }
+        public string? LastDebugCaptureDrawArgs { get; private set; }
+        public string? LastDebugCaptureInputPayload { get; private set; }
+        public string? LastDebugCaptureStateKey { get; private set; }
+        public string? LastDebugCaptureStatePayload { get; private set; }
+        public string? LastDebugReplayLoadPath { get; private set; }
+        public int DebugReplayLoadResult { get; set; } = -1;
+        public int LastDebugReplayNextHandle { get; private set; } = -1;
+        public string DebugReplayNextValue { get; set; } = string.Empty;
+        public bool LastDebugAssertCondition { get; private set; }
+        public string? LastDebugAssertCode { get; private set; }
+        public string? LastDebugAssertMessage { get; private set; }
+        public string? LastDebugArtifactWritePath { get; private set; }
+        public string? LastDebugArtifactWriteText { get; private set; }
+        public bool DebugArtifactWriteResult { get; set; }
+        public int LastDebugTraceAsyncOpId { get; private set; } = -1;
+        public string? LastDebugTraceAsyncPhase { get; private set; }
+        public string? LastDebugTraceAsyncDetail { get; private set; }
         public string? LastNetTcpReadPayload { get; set; }
         public int LastNetTcpReadHandle { get; private set; } = -1;
         public int LastNetTcpReadMaxBytes { get; private set; } = -1;
@@ -340,6 +376,114 @@ public class AosTests
         {
             LastNetAsyncErrorHandle = operationHandle;
             return NetAsyncErrorResult;
+        }
+
+        public override int WorkerStart(VmNetworkState state, string taskName, string payload)
+        {
+            LastWorkerTaskName = taskName;
+            LastWorkerPayload = payload;
+            return WorkerStartResult;
+        }
+
+        public override int WorkerPoll(VmNetworkState state, int workerHandle)
+        {
+            LastWorkerPollHandle = workerHandle;
+            return WorkerPollResult;
+        }
+
+        public override string WorkerResult(VmNetworkState state, int workerHandle)
+        {
+            LastWorkerResultHandle = workerHandle;
+            return WorkerResultValue;
+        }
+
+        public override string WorkerError(VmNetworkState state, int workerHandle)
+        {
+            LastWorkerErrorHandle = workerHandle;
+            return WorkerErrorValue;
+        }
+
+        public override bool WorkerCancel(VmNetworkState state, int workerHandle)
+        {
+            LastWorkerCancelHandle = workerHandle;
+            return WorkerCancelResult;
+        }
+
+        public override void DebugEmit(string channel, string payload)
+        {
+            LastDebugEmitChannel = channel;
+            LastDebugEmitPayload = payload;
+        }
+
+        public override string DebugMode()
+        {
+            return DebugModeValue;
+        }
+
+        public override void DebugCaptureFrameBegin(int frameId, int width, int height)
+        {
+            LastDebugCaptureFrameBeginId = frameId;
+            LastDebugCaptureFrameBeginWidth = width;
+            LastDebugCaptureFrameBeginHeight = height;
+        }
+
+        public override void DebugCaptureFrameEnd(int frameId)
+        {
+            LastDebugCaptureFrameEndId = frameId;
+        }
+
+        public override void DebugCaptureDraw(string op, string args)
+        {
+            LastDebugCaptureDrawOp = op;
+            LastDebugCaptureDrawArgs = args;
+        }
+
+        public override void DebugCaptureInput(string eventPayload)
+        {
+            LastDebugCaptureInputPayload = eventPayload;
+        }
+
+        public override void DebugCaptureState(string key, string valuePayload)
+        {
+            LastDebugCaptureStateKey = key;
+            LastDebugCaptureStatePayload = valuePayload;
+        }
+
+        public override int DebugReplayLoad(VmNetworkState state, string path)
+        {
+            LastDebugReplayLoadPath = path;
+            return DebugReplayLoadResult;
+        }
+
+        public override string DebugReplayNext(VmNetworkState state, int handle)
+        {
+            LastDebugReplayNextHandle = handle;
+            return DebugReplayNextValue;
+        }
+
+        public override void DebugAssert(bool cond, string code, string message)
+        {
+            LastDebugAssertCondition = cond;
+            LastDebugAssertCode = code;
+            LastDebugAssertMessage = message;
+            if (!cond)
+            {
+                throw new VmRuntimeException(code, message, "sys.debug_assert");
+            }
+        }
+
+        public override bool DebugArtifactWrite(string path, string text)
+        {
+            LastDebugArtifactWritePath = path;
+            LastDebugArtifactWriteText = text;
+            return DebugArtifactWriteResult;
+        }
+
+        public override void DebugTraceAsync(int opId, string phase, string detail)
+        {
+            LastDebugTraceAsyncOpId = opId;
+            LastDebugTraceAsyncPhase = phase;
+            LastDebugTraceAsyncDetail = detail;
         }
 
         public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
@@ -1504,6 +1648,50 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallRegistry_ResolvesWorkerAliases()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.worker_start", out var workerStartId), Is.True);
+        Assert.That(workerStartId, Is.EqualTo(SyscallId.WorkerStart));
+        Assert.That(SyscallRegistry.TryResolve("sys.worker_poll", out var workerPollId), Is.True);
+        Assert.That(workerPollId, Is.EqualTo(SyscallId.WorkerPoll));
+        Assert.That(SyscallRegistry.TryResolve("sys.worker_result", out var workerResultId), Is.True);
+        Assert.That(workerResultId, Is.EqualTo(SyscallId.WorkerResult));
+        Assert.That(SyscallRegistry.TryResolve("sys.worker_error", out var workerErrorId), Is.True);
+        Assert.That(workerErrorId, Is.EqualTo(SyscallId.WorkerError));
+        Assert.That(SyscallRegistry.TryResolve("sys.worker_cancel", out var workerCancelId), Is.True);
+        Assert.That(workerCancelId, Is.EqualTo(SyscallId.WorkerCancel));
+    }
+
+    [Test]
+    public void SyscallRegistry_ResolvesDebugAliases()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_emit", out var debugEmitId), Is.True);
+        Assert.That(debugEmitId, Is.EqualTo(SyscallId.DebugEmit));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_mode", out var debugModeId), Is.True);
+        Assert.That(debugModeId, Is.EqualTo(SyscallId.DebugMode));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_captureFrameBegin", out var debugFrameBeginId), Is.True);
+        Assert.That(debugFrameBeginId, Is.EqualTo(SyscallId.DebugCaptureFrameBegin));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_captureFrameEnd", out var debugFrameEndId), Is.True);
+        Assert.That(debugFrameEndId, Is.EqualTo(SyscallId.DebugCaptureFrameEnd));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_captureDraw", out var debugDrawId), Is.True);
+        Assert.That(debugDrawId, Is.EqualTo(SyscallId.DebugCaptureDraw));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_captureInput", out var debugInputId), Is.True);
+        Assert.That(debugInputId, Is.EqualTo(SyscallId.DebugCaptureInput));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_captureState", out var debugStateId), Is.True);
+        Assert.That(debugStateId, Is.EqualTo(SyscallId.DebugCaptureState));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_replayLoad", out var debugReplayLoadId), Is.True);
+        Assert.That(debugReplayLoadId, Is.EqualTo(SyscallId.DebugReplayLoad));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_replayNext", out var debugReplayNextId), Is.True);
+        Assert.That(debugReplayNextId, Is.EqualTo(SyscallId.DebugReplayNext));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_assert", out var debugAssertId), Is.True);
+        Assert.That(debugAssertId, Is.EqualTo(SyscallId.DebugAssert));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_artifactWrite", out var debugArtifactWriteId), Is.True);
+        Assert.That(debugArtifactWriteId, Is.EqualTo(SyscallId.DebugArtifactWrite));
+        Assert.That(SyscallRegistry.TryResolve("sys.debug_traceAsync", out var debugTraceAsyncId), Is.True);
+        Assert.That(debugTraceAsyncId, Is.EqualTo(SyscallId.DebugTraceAsync));
+    }
+
+    [Test]
     public void SyscallDispatch_NetTcpListen_CallsHost()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpListen) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=4040) } }");
@@ -2246,6 +2434,250 @@ public class AosTests
             Assert.That(invoked, Is.True);
             Assert.That(result.Kind, Is.EqualTo(VmValueKind.Void));
             Assert.That(host.LastUiWaitFrameHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_WorkerSyscalls_AreWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            WorkerStartResult = 41,
+            WorkerPollResult = 1,
+            WorkerResultValue = "ok",
+            WorkerErrorValue = string.Empty,
+            WorkerCancelResult = true
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var state = new VmNetworkState();
+
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.WorkerStart, out var startArity), Is.True);
+            Assert.That(startArity, Is.EqualTo(2));
+            var started = VmSyscallDispatcher.TryInvoke(
+                SyscallId.WorkerStart,
+                new[] { SysValue.String("echo"), SysValue.String("payload") }.AsSpan(),
+                state,
+                out var startResult);
+            Assert.That(started, Is.True);
+            Assert.That(startResult.Kind, Is.EqualTo(VmValueKind.Int));
+            Assert.That(startResult.IntValue, Is.EqualTo(41));
+            Assert.That(host.LastWorkerTaskName, Is.EqualTo("echo"));
+            Assert.That(host.LastWorkerPayload, Is.EqualTo("payload"));
+
+            var polled = VmSyscallDispatcher.TryInvoke(
+                SyscallId.WorkerPoll,
+                new[] { SysValue.Int(41) }.AsSpan(),
+                state,
+                out var pollResult);
+            Assert.That(polled, Is.True);
+            Assert.That(pollResult.Kind, Is.EqualTo(VmValueKind.Int));
+            Assert.That(pollResult.IntValue, Is.EqualTo(1));
+            Assert.That(host.LastWorkerPollHandle, Is.EqualTo(41));
+
+            var fetchedResult = VmSyscallDispatcher.TryInvoke(
+                SyscallId.WorkerResult,
+                new[] { SysValue.Int(41) }.AsSpan(),
+                state,
+                out var workerResult);
+            Assert.That(fetchedResult, Is.True);
+            Assert.That(workerResult.Kind, Is.EqualTo(VmValueKind.String));
+            Assert.That(workerResult.StringValue, Is.EqualTo("ok"));
+            Assert.That(host.LastWorkerResultHandle, Is.EqualTo(41));
+
+            var fetchedError = VmSyscallDispatcher.TryInvoke(
+                SyscallId.WorkerError,
+                new[] { SysValue.Int(41) }.AsSpan(),
+                state,
+                out var workerError);
+            Assert.That(fetchedError, Is.True);
+            Assert.That(workerError.Kind, Is.EqualTo(VmValueKind.String));
+            Assert.That(workerError.StringValue, Is.EqualTo(string.Empty));
+            Assert.That(host.LastWorkerErrorHandle, Is.EqualTo(41));
+
+            var cancelled = VmSyscallDispatcher.TryInvoke(
+                SyscallId.WorkerCancel,
+                new[] { SysValue.Int(41) }.AsSpan(),
+                state,
+                out var cancelResult);
+            Assert.That(cancelled, Is.True);
+            Assert.That(cancelResult.Kind, Is.EqualTo(VmValueKind.Bool));
+            Assert.That(cancelResult.BoolValue, Is.True);
+            Assert.That(host.LastWorkerCancelHandle, Is.EqualTo(41));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_DebugSyscalls_AreWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            DebugModeValue = "live",
+            DebugReplayLoadResult = 73,
+            DebugReplayNextValue = "event-1",
+            DebugArtifactWriteResult = true
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var state = new VmNetworkState();
+
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugEmit, out var emitArity), Is.True);
+            Assert.That(emitArity, Is.EqualTo(2));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugMode, out var modeArity), Is.True);
+            Assert.That(modeArity, Is.EqualTo(0));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugCaptureFrameBegin, out var frameBeginArity), Is.True);
+            Assert.That(frameBeginArity, Is.EqualTo(3));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugCaptureFrameEnd, out var frameEndArity), Is.True);
+            Assert.That(frameEndArity, Is.EqualTo(1));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugCaptureDraw, out var drawArity), Is.True);
+            Assert.That(drawArity, Is.EqualTo(2));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugCaptureInput, out var inputArity), Is.True);
+            Assert.That(inputArity, Is.EqualTo(1));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugCaptureState, out var stateArity), Is.True);
+            Assert.That(stateArity, Is.EqualTo(2));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugReplayLoad, out var replayLoadArity), Is.True);
+            Assert.That(replayLoadArity, Is.EqualTo(1));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugReplayNext, out var replayNextArity), Is.True);
+            Assert.That(replayNextArity, Is.EqualTo(1));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugAssert, out var assertArity), Is.True);
+            Assert.That(assertArity, Is.EqualTo(3));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugArtifactWrite, out var artifactArity), Is.True);
+            Assert.That(artifactArity, Is.EqualTo(2));
+            Assert.That(VmSyscallDispatcher.TryGetExpectedArity(SyscallId.DebugTraceAsync, out var traceArity), Is.True);
+            Assert.That(traceArity, Is.EqualTo(3));
+
+            var emitted = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugEmit,
+                new[] { SysValue.String("event"), SysValue.String("payload") }.AsSpan(),
+                state,
+                out var emitResult);
+            Assert.That(emitted, Is.True);
+            Assert.That(emitResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugEmitChannel, Is.EqualTo("event"));
+            Assert.That(host.LastDebugEmitPayload, Is.EqualTo("payload"));
+
+            var mode = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugMode,
+                ReadOnlySpan<SysValue>.Empty,
+                state,
+                out var modeResult);
+            Assert.That(mode, Is.True);
+            Assert.That(modeResult.Kind, Is.EqualTo(VmValueKind.String));
+            Assert.That(modeResult.StringValue, Is.EqualTo("live"));
+
+            var frameBegin = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugCaptureFrameBegin,
+                new[] { SysValue.Int(7), SysValue.Int(640), SysValue.Int(480) }.AsSpan(),
+                state,
+                out var frameBeginResult);
+            Assert.That(frameBegin, Is.True);
+            Assert.That(frameBeginResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugCaptureFrameBeginId, Is.EqualTo(7));
+            Assert.That(host.LastDebugCaptureFrameBeginWidth, Is.EqualTo(640));
+            Assert.That(host.LastDebugCaptureFrameBeginHeight, Is.EqualTo(480));
+
+            var frameEnd = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugCaptureFrameEnd,
+                new[] { SysValue.Int(7) }.AsSpan(),
+                state,
+                out var frameEndResult);
+            Assert.That(frameEnd, Is.True);
+            Assert.That(frameEndResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugCaptureFrameEndId, Is.EqualTo(7));
+
+            var draw = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugCaptureDraw,
+                new[] { SysValue.String("rect"), SysValue.String("x=1,y=2") }.AsSpan(),
+                state,
+                out var drawResult);
+            Assert.That(draw, Is.True);
+            Assert.That(drawResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugCaptureDrawOp, Is.EqualTo("rect"));
+            Assert.That(host.LastDebugCaptureDrawArgs, Is.EqualTo("x=1,y=2"));
+
+            var input = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugCaptureInput,
+                new[] { SysValue.String("key:<enter>") }.AsSpan(),
+                state,
+                out var inputResult);
+            Assert.That(input, Is.True);
+            Assert.That(inputResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugCaptureInputPayload, Is.EqualTo("key:<enter>"));
+
+            var captureState = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugCaptureState,
+                new[] { SysValue.String("focus"), SysValue.String("nameField") }.AsSpan(),
+                state,
+                out var captureStateResult);
+            Assert.That(captureState, Is.True);
+            Assert.That(captureStateResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugCaptureStateKey, Is.EqualTo("focus"));
+            Assert.That(host.LastDebugCaptureStatePayload, Is.EqualTo("nameField"));
+
+            var replayLoaded = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugReplayLoad,
+                new[] { SysValue.String("/tmp/replay.log") }.AsSpan(),
+                state,
+                out var replayLoadResult);
+            Assert.That(replayLoaded, Is.True);
+            Assert.That(replayLoadResult.Kind, Is.EqualTo(VmValueKind.Int));
+            Assert.That(replayLoadResult.IntValue, Is.EqualTo(73));
+            Assert.That(host.LastDebugReplayLoadPath, Is.EqualTo("/tmp/replay.log"));
+
+            var replayNext = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugReplayNext,
+                new[] { SysValue.Int(73) }.AsSpan(),
+                state,
+                out var replayNextResult);
+            Assert.That(replayNext, Is.True);
+            Assert.That(replayNextResult.Kind, Is.EqualTo(VmValueKind.String));
+            Assert.That(replayNextResult.StringValue, Is.EqualTo("event-1"));
+            Assert.That(host.LastDebugReplayNextHandle, Is.EqualTo(73));
+
+            var asserted = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugAssert,
+                new[] { SysValue.Bool(true), SysValue.String("DBGX"), SysValue.String("ok") }.AsSpan(),
+                state,
+                out var assertResult);
+            Assert.That(asserted, Is.True);
+            Assert.That(assertResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugAssertCondition, Is.True);
+            Assert.That(host.LastDebugAssertCode, Is.EqualTo("DBGX"));
+            Assert.That(host.LastDebugAssertMessage, Is.EqualTo("ok"));
+
+            var artifactWritten = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugArtifactWrite,
+                new[] { SysValue.String("/tmp/out.scene"), SysValue.String("frame=1") }.AsSpan(),
+                state,
+                out var artifactResult);
+            Assert.That(artifactWritten, Is.True);
+            Assert.That(artifactResult.Kind, Is.EqualTo(VmValueKind.Bool));
+            Assert.That(artifactResult.BoolValue, Is.True);
+            Assert.That(host.LastDebugArtifactWritePath, Is.EqualTo("/tmp/out.scene"));
+            Assert.That(host.LastDebugArtifactWriteText, Is.EqualTo("frame=1"));
+
+            var traced = VmSyscallDispatcher.TryInvoke(
+                SyscallId.DebugTraceAsync,
+                new[] { SysValue.Int(99), SysValue.String("done"), SysValue.String("ok") }.AsSpan(),
+                state,
+                out var traceResult);
+            Assert.That(traced, Is.True);
+            Assert.That(traceResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastDebugTraceAsyncOpId, Is.EqualTo(99));
+            Assert.That(host.LastDebugTraceAsyncPhase, Is.EqualTo("done"));
+            Assert.That(host.LastDebugTraceAsyncDetail, Is.EqualTo("ok"));
         }
         finally
         {
@@ -4001,10 +4433,19 @@ public class AosTests
 
         using var process = Process.Start(psi);
         Assert.That(process, Is.Not.Null);
-        var output = process!.StandardOutput.ReadToEnd().Trim();
-        process.WaitForExit(15000);
+        var stdoutTask = process!.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        var exited = process.WaitForExit(15000);
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail("bench did not exit within timeout.");
+        }
 
-        Assert.That(process.ExitCode, Is.EqualTo(0), process.StandardError.ReadToEnd());
+        Task.WaitAll(stdoutTask, stderrTask);
+        var output = stdoutTask.Result.Trim();
+        var error = stderrTask.Result;
+        Assert.That(process.ExitCode, Is.EqualTo(0), error);
         var parsed = Parse(output);
         Assert.That(parsed.Diagnostics, Is.Empty);
         Assert.That(parsed.Root, Is.Not.Null);
@@ -4091,6 +4532,52 @@ public class AosTests
         Assert.That(parse.Root!.Id, Is.EqualTo("program_cef1fc82ba90"));
         Assert.That(parse.Root.Children[0].Id, Is.EqualTo("let_3ad75de6b0e8"));
         Assert.That(parse.Root.Children[0].Children[0].Id, Is.EqualTo("lit_168514cb3fef"));
+    }
+
+    [Test]
+    public void DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll()
+    {
+        var host = new DefaultSyscallHost();
+        var state = new VmNetworkState();
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var acceptTask = Task.Run(() =>
+            {
+                using var accepted = listener.AcceptTcpClient();
+                Thread.Sleep(100);
+            });
+
+            var operationHandle = host.NetTcpConnectStart(state, "127.0.0.1", port);
+            Assert.That(operationHandle, Is.GreaterThan(0));
+            Assert.That(state.NetConnections.Count, Is.EqualTo(0));
+
+            var status = 0;
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (DateTime.UtcNow < deadline)
+            {
+                status = host.NetAsyncPoll(state, operationHandle);
+                if (status != 0)
+                {
+                    break;
+                }
+
+                Thread.Sleep(10);
+            }
+
+            Assert.That(status, Is.EqualTo(1));
+            var connectionHandle = host.NetAsyncResultInt(state, operationHandle);
+            Assert.That(connectionHandle, Is.GreaterThan(0));
+            Assert.That(state.NetConnections.ContainsKey(connectionHandle), Is.True);
+            host.NetClose(state, connectionHandle);
+            _ = acceptTask.Wait(2000);
+        }
+        finally
+        {
+            listener.Stop();
+        }
     }
 
     private static AosParseResult Parse(string source)

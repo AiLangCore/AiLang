@@ -192,7 +192,7 @@ Program#std_http_p1 {
   }
 
   Let#std_http_l18(name=httpMakeRequestState) {
-    Fn#std_http_f11(params=phase,requestText,maxBytes,op,connection,response,error) {
+    Fn#std_http_f11(params=phase,requestText,maxBytes,op,connection,response,error,remainingPolls) {
       Block#std_http_b17 {
         Let#std_http_l19(name=base) { MakeBlock#std_http_mb2 { Lit#std_http_i22(value="http_req_state") } }
         Let#std_http_l20(name=withPhase) {
@@ -249,12 +249,21 @@ Program#std_http_p1 {
             }
           }
         }
-        Return#std_http_r14 {
+        Let#std_http_l60(name=withError) {
           AppendChild#std_http_ap9 {
             Var#std_http_v54(name=withResponse)
             MakeLitString#std_http_mls4 {
               Lit#std_http_i29(value="http_state_error")
               Var#std_http_v55(name=error)
+            }
+          }
+        }
+        Return#std_http_r14 {
+          AppendChild#std_http_ap10 {
+            Var#std_http_v146(name=withError)
+            MakeLitInt#std_http_mli4 {
+              Lit#std_http_i111(value="http_state_remainingPolls")
+              Var#std_http_v147(name=remainingPolls)
             }
           }
         }
@@ -301,6 +310,12 @@ Program#std_http_p1 {
   Let#std_http_l27(name=httpRequestError) {
     Fn#std_http_f18(params=state) {
       Block#std_http_b24 { Return#std_http_r21 { AttrValueString#std_http_a7 { ChildAt#std_http_ca13 { Var#std_http_v57(name=state) Lit#std_http_i43(value=6) } Lit#std_http_i44(value=0) } } }
+    }
+  }
+
+  Let#std_http_l61(name=httpRequestRemaining) {
+    Fn#std_http_f27(params=state) {
+      Block#std_http_b69 { Return#std_http_r45 { AttrValueInt#std_http_ai4 { ChildAt#std_http_ca14 { Var#std_http_v148(name=state) Lit#std_http_i112(value=7) } Lit#std_http_i113(value=0) } } }
     }
   }
 
@@ -393,6 +408,7 @@ Program#std_http_p1 {
             Lit#std_http_i60(value=-1)
             Lit#std_http_i61(value="")
             Lit#std_http_i62(value="")
+            Lit#std_http_i114(value=600)
           }
         }
       }
@@ -404,9 +420,43 @@ Program#std_http_p1 {
       Block#std_http_b34 {
         Let#std_http_l37(name=op) { Call#std_http_c16(target=httpRequestOp) { Var#std_http_v79(name=state) } }
         Let#std_http_l38(name=status) { Call#std_http_c17(target=sys.net_asyncPoll) { Var#std_http_v80(name=op) } }
+        Let#std_http_l62(name=remaining) { Call#std_http_c74(target=httpRequestRemaining) { Var#std_http_v149(name=state) } }
         If#std_http_if65 {
           Eq#std_http_eq65 { Var#std_http_v81(name=status) Lit#std_http_i63(value=0) }
-          Block#std_http_b35 { Return#std_http_r25 { Var#std_http_v82(name=state) } }
+          Block#std_http_b35 {
+            If#std_http_if80 {
+              Eq#std_http_eq80 { Var#std_http_v150(name=remaining) Lit#std_http_i115(value=0) }
+              Block#std_http_b70 {
+                Call#std_http_c75(target=sys.net_asyncCancel) { Var#std_http_v151(name=op) }
+                Return#std_http_r46 {
+                  Call#std_http_c76(target=httpMakeRequestState) {
+                    Lit#std_http_i116(value="error")
+                    Call#std_http_c77(target=httpRequestText) { Var#std_http_v152(name=state) }
+                    Call#std_http_c78(target=httpRequestMaxBytes) { Var#std_http_v153(name=state) }
+                    Lit#std_http_i117(value=0)
+                    Lit#std_http_i118(value=-1)
+                    Lit#std_http_i119(value="")
+                    Lit#std_http_i120(value="timeout")
+                    Lit#std_http_i121(value=0)
+                  }
+                }
+              }
+              Block#std_http_b71 {
+                Return#std_http_r47 {
+                  Call#std_http_c79(target=httpMakeRequestState) {
+                    Lit#std_http_i122(value="connecting")
+                    Call#std_http_c80(target=httpRequestText) { Var#std_http_v154(name=state) }
+                    Call#std_http_c81(target=httpRequestMaxBytes) { Var#std_http_v155(name=state) }
+                    Call#std_http_c82(target=httpRequestOp) { Var#std_http_v156(name=state) }
+                    Lit#std_http_i123(value=-1)
+                    Lit#std_http_i124(value="")
+                    Lit#std_http_i125(value="")
+                    Add#std_http_add2 { Var#std_http_v157(name=remaining) Lit#std_http_i126(value=-1) }
+                  }
+                }
+              }
+            }
+          }
           Block#std_http_b36 {
             If#std_http_if66 {
               Eq#std_http_eq66 { Var#std_http_v83(name=status) Lit#std_http_i64(value=1) }
@@ -421,6 +471,7 @@ Program#std_http_p1 {
                     Lit#std_http_i68(value=-1)
                     Lit#std_http_i69(value="")
                     Lit#std_http_i70(value="connect_failed")
+                    Lit#std_http_i127(value=0)
                   }
                 }
               }
@@ -438,6 +489,7 @@ Program#std_http_p1 {
                     Lit#std_http_i74(value=-1)
                     Lit#std_http_i75(value="")
                     Lit#std_http_i76(value="connect_invalid")
+                    Lit#std_http_i128(value=0)
                   }
                 }
               }
@@ -457,6 +509,7 @@ Program#std_http_p1 {
                     Var#std_http_v95(name=connection)
                     Lit#std_http_i78(value="")
                     Lit#std_http_i79(value="")
+                    Call#std_http_c83(target=httpRequestRemaining) { Var#std_http_v158(name=state) }
                   }
                 }
               }
@@ -473,9 +526,44 @@ Program#std_http_p1 {
         Let#std_http_l42(name=op) { Call#std_http_c30(target=httpRequestOp) { Var#std_http_v96(name=state) } }
         Let#std_http_l43(name=connection) { Call#std_http_c31(target=httpRequestConnection) { Var#std_http_v97(name=state) } }
         Let#std_http_l44(name=status) { Call#std_http_c32(target=sys.net_asyncPoll) { Var#std_http_v98(name=op) } }
+        Let#std_http_l63(name=remaining) { Call#std_http_c84(target=httpRequestRemaining) { Var#std_http_v159(name=state) } }
         If#std_http_if68 {
           Eq#std_http_eq68 { Var#std_http_v99(name=status) Lit#std_http_i80(value=0) }
-          Block#std_http_b42 { Return#std_http_r29 { Var#std_http_v100(name=state) } }
+          Block#std_http_b42 {
+            If#std_http_if81 {
+              Eq#std_http_eq81 { Var#std_http_v160(name=remaining) Lit#std_http_i129(value=0) }
+              Block#std_http_b72 {
+                Call#std_http_c85(target=sys.net_asyncCancel) { Var#std_http_v161(name=op) }
+                Call#std_http_c86(target=sys.net_close) { Var#std_http_v162(name=connection) }
+                Return#std_http_r48 {
+                  Call#std_http_c87(target=httpMakeRequestState) {
+                    Lit#std_http_i130(value="error")
+                    Call#std_http_c88(target=httpRequestText) { Var#std_http_v163(name=state) }
+                    Call#std_http_c89(target=httpRequestMaxBytes) { Var#std_http_v164(name=state) }
+                    Lit#std_http_i131(value=0)
+                    Lit#std_http_i132(value=-1)
+                    Lit#std_http_i133(value="")
+                    Lit#std_http_i134(value="timeout")
+                    Lit#std_http_i135(value=0)
+                  }
+                }
+              }
+              Block#std_http_b73 {
+                Return#std_http_r49 {
+                  Call#std_http_c90(target=httpMakeRequestState) {
+                    Lit#std_http_i136(value="writing")
+                    Call#std_http_c91(target=httpRequestText) { Var#std_http_v165(name=state) }
+                    Call#std_http_c92(target=httpRequestMaxBytes) { Var#std_http_v166(name=state) }
+                    Call#std_http_c93(target=httpRequestOp) { Var#std_http_v167(name=state) }
+                    Call#std_http_c94(target=httpRequestConnection) { Var#std_http_v168(name=state) }
+                    Lit#std_http_i137(value="")
+                    Lit#std_http_i138(value="")
+                    Add#std_http_add3 { Var#std_http_v169(name=remaining) Lit#std_http_i139(value=-1) }
+                  }
+                }
+              }
+            }
+          }
           Block#std_http_b43 {
             If#std_http_if69 {
               Eq#std_http_eq69 { Var#std_http_v101(name=status) Lit#std_http_i81(value=1) }
@@ -491,6 +579,7 @@ Program#std_http_p1 {
                     Lit#std_http_i85(value=-1)
                     Lit#std_http_i86(value="")
                     Lit#std_http_i87(value="write_failed")
+                    Lit#std_http_i140(value=0)
                   }
                 }
               }
@@ -510,6 +599,7 @@ Program#std_http_p1 {
                 Var#std_http_v110(name=connection)
                 Lit#std_http_i89(value="")
                 Lit#std_http_i90(value="")
+                Call#std_http_c95(target=httpRequestRemaining) { Var#std_http_v170(name=state) }
               }
             }
           }
@@ -524,9 +614,44 @@ Program#std_http_p1 {
         Let#std_http_l47(name=op) { Call#std_http_c42(target=httpRequestOp) { Var#std_http_v111(name=state) } }
         Let#std_http_l48(name=connection) { Call#std_http_c43(target=httpRequestConnection) { Var#std_http_v112(name=state) } }
         Let#std_http_l49(name=status) { Call#std_http_c44(target=sys.net_asyncPoll) { Var#std_http_v113(name=op) } }
+        Let#std_http_l64(name=remaining) { Call#std_http_c96(target=httpRequestRemaining) { Var#std_http_v171(name=state) } }
         If#std_http_if70 {
           Eq#std_http_eq70 { Var#std_http_v114(name=status) Lit#std_http_i91(value=0) }
-          Block#std_http_b47 { Return#std_http_r32 { Var#std_http_v115(name=state) } }
+          Block#std_http_b47 {
+            If#std_http_if82 {
+              Eq#std_http_eq82 { Var#std_http_v172(name=remaining) Lit#std_http_i141(value=0) }
+              Block#std_http_b74 {
+                Call#std_http_c97(target=sys.net_asyncCancel) { Var#std_http_v173(name=op) }
+                Call#std_http_c98(target=sys.net_close) { Var#std_http_v174(name=connection) }
+                Return#std_http_r50 {
+                  Call#std_http_c99(target=httpMakeRequestState) {
+                    Lit#std_http_i142(value="error")
+                    Call#std_http_c100(target=httpRequestText) { Var#std_http_v175(name=state) }
+                    Call#std_http_c101(target=httpRequestMaxBytes) { Var#std_http_v176(name=state) }
+                    Lit#std_http_i143(value=0)
+                    Lit#std_http_i144(value=-1)
+                    Lit#std_http_i145(value="")
+                    Lit#std_http_i146(value="timeout")
+                    Lit#std_http_i147(value=0)
+                  }
+                }
+              }
+              Block#std_http_b75 {
+                Return#std_http_r51 {
+                  Call#std_http_c102(target=httpMakeRequestState) {
+                    Lit#std_http_i148(value="reading")
+                    Call#std_http_c103(target=httpRequestText) { Var#std_http_v177(name=state) }
+                    Call#std_http_c104(target=httpRequestMaxBytes) { Var#std_http_v178(name=state) }
+                    Call#std_http_c105(target=httpRequestOp) { Var#std_http_v179(name=state) }
+                    Call#std_http_c106(target=httpRequestConnection) { Var#std_http_v180(name=state) }
+                    Lit#std_http_i149(value="")
+                    Lit#std_http_i150(value="")
+                    Add#std_http_add4 { Var#std_http_v181(name=remaining) Lit#std_http_i151(value=-1) }
+                  }
+                }
+              }
+            }
+          }
           Block#std_http_b48 {
             If#std_http_if71 {
               Eq#std_http_eq71 { Var#std_http_v116(name=status) Lit#std_http_i92(value=1) }
@@ -542,6 +667,7 @@ Program#std_http_p1 {
                     Lit#std_http_i96(value=-1)
                     Lit#std_http_i97(value="")
                     Lit#std_http_i98(value="read_failed")
+                    Lit#std_http_i152(value=0)
                   }
                 }
               }
@@ -557,6 +683,7 @@ Program#std_http_p1 {
                 Lit#std_http_i101(value=0)
                 Var#std_http_v124(name=response)
                 Lit#std_http_i102(value="")
+                Lit#std_http_i153(value=0)
               }
             }
           }
@@ -661,4 +788,5 @@ Program#std_http_p1 {
   Export#std_http_e23(name=httpRequestPollConnecting)
   Export#std_http_e24(name=httpRequestPollWriting)
   Export#std_http_e25(name=httpRequestPollReading)
+  Export#std_http_e26(name=httpRequestRemaining)
 }

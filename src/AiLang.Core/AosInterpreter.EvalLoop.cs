@@ -16,7 +16,7 @@ public sealed partial class AosInterpreter
 
     private AosValue EvalNode(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
-        AddEvalTraceStep(runtime, node);
+        AddEvalTraceStep(runtime, node, env);
 
         _evalDepth++;
         if (_evalDepth > MaxEvalDepth)

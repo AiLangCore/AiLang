@@ -1,0 +1,9 @@
+[[scenario]]
+name = "minimal"
+app_path = "../apps/debug_minimal.aos"
+vm = "bytecode"
+debug_mode = "replay"
+events_path = "../events/minimal.events.toml"
+compare_path = "../golden/minimal.stdout.txt"
+out_dir = ".artifacts/debug/minimal"
+args = []

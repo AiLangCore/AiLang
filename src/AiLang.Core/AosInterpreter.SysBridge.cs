@@ -35,6 +35,7 @@ public sealed partial class AosInterpreter
             }
 
             result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
+            RecordDebugSyscall(runtime, target, Array.Empty<AosValue>(), result);
             return true;
         }
 
@@ -56,6 +57,7 @@ public sealed partial class AosInterpreter
             }
 
             result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(pathValue.AsString())));
+            RecordDebugSyscall(runtime, target, new[] { pathValue }, result);
             return true;
         }
 
@@ -78,6 +80,7 @@ public sealed partial class AosInterpreter
 
             var stat = VmSyscalls.FsStat(pathValue.AsString());
             result = AosValue.FromNode(AosRuntimeNodes.BuildFsStatNode(stat.Type, stat.Size, stat.MtimeUnixMs));
+            RecordDebugSyscall(runtime, target, new[] { pathValue }, result);
             return true;
         }
 
@@ -101,6 +104,7 @@ public sealed partial class AosInterpreter
 
             var packet = VmSyscalls.NetUdpRecv(runtime.Network, handleValue.AsInt(), maxBytesValue.AsInt());
             result = AosValue.FromNode(AosRuntimeNodes.BuildUdpPacketNode(packet.Host, packet.Port, packet.Data));
+            RecordDebugSyscall(runtime, target, new[] { handleValue, maxBytesValue }, result);
             return true;
         }
 
@@ -131,6 +135,8 @@ public sealed partial class AosInterpreter
                 uiEvent.Text,
                 uiEvent.Modifiers,
                 uiEvent.Repeat));
+            RecordDebugSyscall(runtime, target, new[] { handleValue }, result);
+            runtime.DebugRecorder?.RecordEvent("ui_poll", FormatDebugValue(result));
             return true;
         }
 
@@ -153,6 +159,7 @@ public sealed partial class AosInterpreter
 
             var size = VmSyscalls.UiGetWindowSize(handleValue.AsInt());
             result = AosValue.FromNode(AosRuntimeNodes.BuildUiWindowSizeNode(size.Width, size.Height));
+            RecordDebugSyscall(runtime, target, new[] { handleValue }, result);
             return true;
         }
 
@@ -175,6 +182,11 @@ public sealed partial class AosInterpreter
             }
 
             result = FromSysValue(noArgResult);
+            RecordDebugSyscall(runtime, target, Array.Empty<AosValue>(), result);
+            if (target == "sys.ui_pollEvent")
+            {
+                runtime.DebugRecorder?.RecordEvent("ui_poll", FormatDebugValue(result));
+            }
             return true;
         }
 
@@ -192,6 +204,16 @@ public sealed partial class AosInterpreter
             }
 
             result = FromSysValue(sysResult);
+            var args = new AosValue[callNode.Children.Count];
+            for (var i = 0; i < callNode.Children.Count; i++)
+            {
+                args[i] = FromSysValue(rented[i]);
+            }
+            RecordDebugSyscall(runtime, target, args, result);
+            if (target == "sys.ui_pollEvent")
+            {
+                runtime.DebugRecorder?.RecordEvent("ui_poll", FormatDebugValue(result));
+            }
             return true;
         }
         finally
@@ -283,6 +305,35 @@ public sealed partial class AosInterpreter
             VmValueKind.Bool => AosValue.FromBool(value.BoolValue),
             VmValueKind.Void => AosValue.Void,
             _ => AosValue.Unknown
+        };
+    }
+
+    private static void RecordDebugSyscall(AosRuntime runtime, string target, IReadOnlyList<AosValue> args, AosValue result)
+    {
+        if (runtime.DebugRecorder is null)
+        {
+            return;
+        }
+
+        var rendered = new List<string>(args.Count);
+        for (var i = 0; i < args.Count; i++)
+        {
+            rendered.Add(FormatDebugValue(args[i]));
+        }
+        runtime.DebugRecorder.RecordSyscall(target, rendered, FormatDebugValue(result), "ok");
+    }
+
+    private static string FormatDebugValue(AosValue value)
+    {
+        return value.Kind switch
+        {
+            AosValueKind.String => "\"" + value.AsString() + "\"",
+            AosValueKind.Int => value.AsInt().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            AosValueKind.Bool => value.AsBool() ? "true" : "false",
+            AosValueKind.Void => "void",
+            AosValueKind.Node => value.AsNode().Kind + "#" + value.AsNode().Id,
+            AosValueKind.Function => "fn",
+            _ => "unknown"
         };
     }
 }

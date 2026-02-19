@@ -1,0 +1,10 @@
+Program#dbg_app_p1 {
+  Let#dbg_app_l1(name=start) {
+    Fn#dbg_app_f1(params=argv) {
+      Block#dbg_app_b1 {
+        Return#dbg_app_r1 { Lit#dbg_app_i1(value=0) }
+      }
+    }
+  }
+  Export#dbg_app_e1(name=start)
+}

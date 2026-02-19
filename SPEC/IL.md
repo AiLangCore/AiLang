@@ -73,6 +73,32 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - No user-level locks/mutex primitives.
 - No ambient scheduler primitives in language IL.
 
+## Worker Syscall Value Contract
+
+- `sys.worker_start(taskName, payload)` returns an int worker handle.
+- `sys.worker_poll(workerHandle)` returns int status:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.worker_result(workerHandle)` returns string payload (empty when unavailable).
+- `sys.worker_error(workerHandle)` returns string error code (`unknown_worker` for unknown handles).
+- `sys.worker_cancel(workerHandle)` returns bool for cancellation transition success.
+
+## Debug Syscall Value Contract
+
+- `sys.debug_emit(channel, payload)` writes one deterministic debug record and returns `void`.
+- `sys.debug_mode()` returns current debug mode string: `off`, `live`, `snapshot`, `replay`, or `scene`.
+- `sys.debug_captureFrameBegin(frameId, width, height)` and `sys.debug_captureFrameEnd(frameId)` return `void`.
+- `sys.debug_captureDraw(op, args)` returns `void`; canonical `op` values: `rect`, `ellipse`, `path`, `text`, `line`, `transform`, `filter`, `image`.
+- `sys.debug_captureInput(eventPayload)` and `sys.debug_captureState(key, valuePayload)` return `void`.
+- `sys.debug_replayLoad(path)` returns int replay handle (`-1` on load failure).
+- `sys.debug_replayNext(handle)` returns next replay record string, or empty string at EOF/unknown handle.
+- `sys.debug_assert(cond, code, message)` returns `void` when `cond=true`, otherwise raises deterministic runtime error.
+- `sys.debug_artifactWrite(path, text)` returns bool success.
+- `sys.debug_traceAsync(opId, phase, detail)` returns `void`; canonical `phase` values: `start`, `poll`, `done`, `fail`, `cancel`.
+
 ## Stability Rule
 
 - Changes to kind set, attrs, arity, or value shape require updates to:

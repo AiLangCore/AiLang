@@ -72,6 +72,67 @@ This file is normative for `aic run` evaluation behavior.
 - Effectful operations should be modeled as non-blocking start/poll/result state transitions.
 - Host may complete effectful work asynchronously, but language-visible state mutations occur only inside the deterministic evaluator/event loop step.
 
+## Host Threading Contract (UI Owner + Workers)
+
+- AiLang/AiVM language-visible execution is single-owner and deterministic.
+- Exactly one owner thread (the evaluator/UI loop thread) may apply VM state transitions.
+- Host/runtime may use internal worker threads for effectful operations (network, file, process, heavy compute), but workers must not mutate VM state directly.
+- Worker completion is observed only through explicit syscall polling/result reads in evaluator steps.
+- UI rendering and input consumption are owner-thread responsibilities:
+- event step (`sys.ui_pollEvent`)
+- deterministic state transition/recompute
+- present (`sys.ui_present`)
+- pacing (`sys.ui_waitFrame` when available)
+- Worker scheduling order/timing may vary; observable program behavior for identical input/event logs must remain deterministic.
+
+## Non-Blocking Async Syscall Contract
+
+- Effectful async syscalls follow explicit `start -> poll -> result/cancel` phases.
+- `*Start` syscalls must return quickly with an operation handle and must not wait for completion.
+- `sys.net_asyncPoll(handle)` must be non-blocking and returns:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultString(handle)`, and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
+- `sys.net_asyncCancel(handle)` is best-effort and deterministic:
+- returns `false` for unknown/non-pending handles
+- returns `true` only when cancellation transitions a pending op to canceled
+- Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
+
+## Worker Execution Contract (Phase 1)
+
+- Worker APIs are host-executed effectful operations with owner-thread-visible completion:
+- `sys.worker_start(taskName, payload) -> workerHandle`
+- `sys.worker_poll(workerHandle) -> status`
+- `sys.worker_result(workerHandle) -> string`
+- `sys.worker_error(workerHandle) -> string`
+- `sys.worker_cancel(workerHandle) -> bool`
+- Worker task execution may overlap on host threads.
+- Completion becomes language-visible only when owner thread performs polling in evaluator steps.
+- For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
+- Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
+
+## Debug Instrumentation Contract
+
+- Debug syscalls are explicit effect syscalls, not implicit runtime side effects.
+- Canonical debug syscall surface:
+- `sys.debug_emit(channel, payload)`
+- `sys.debug_mode()`
+- `sys.debug_captureFrameBegin(frameId, width, height)`
+- `sys.debug_captureFrameEnd(frameId)`
+- `sys.debug_captureDraw(op, args)`
+- `sys.debug_captureInput(eventPayload)`
+- `sys.debug_captureState(key, valuePayload)`
+- `sys.debug_replayLoad(path)`
+- `sys.debug_replayNext(handle)`
+- `sys.debug_assert(cond, code, message)`
+- `sys.debug_artifactWrite(path, text)`
+- `sys.debug_traceAsync(opId, phase, detail)`
+- Host may store/write debug artifacts, but debug-visible state transitions remain deterministic for identical syscall sequences.
+- Replay consumption is pull-based (`debug_replayNext`) so evaluator order controls determinism.
+
 ## Update-Path Blocking Guard
 
 - During lifecycle `update` execution, blocking call targets are runtime errors (`RUN031`).

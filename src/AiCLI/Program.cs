@@ -7,10 +7,12 @@ return;
 
 static int RunCli(string[] args)
 {
-    VmSyscalls.Host = new CliSyscallHost();
+    var host = new CliSyscallHost();
+    VmSyscalls.Host = host;
 
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
     string vmMode = "bytecode";
+    string debugMode = "off";
     var filtered = new List<string>();
     foreach (var arg in args)
     {
@@ -23,9 +25,15 @@ static int RunCli(string[] args)
             vmMode = arg["--vm=".Length..];
             continue;
         }
+        if (arg.StartsWith("--debug-mode=", StringComparison.Ordinal))
+        {
+            debugMode = arg["--debug-mode=".Length..];
+            continue;
+        }
 
         filtered.Add(arg);
     }
+    host.SetDebugMode(debugMode);
 
     var filteredArgs = filtered.ToArray();
     if (!InAosDevMode() && string.Equals(vmMode, "ast", StringComparison.Ordinal))
@@ -114,6 +122,18 @@ static int RunCli(string[] args)
                 return 1;
             }
             return AosCliExecutionEngine.RunBench(filteredArgs.Skip(1).ToArray(), Console.WriteLine);
+        case "debug":
+            if (filteredArgs.Length < 2)
+            {
+                PrintUsage();
+                return 1;
+            }
+            if (!InAosDevMode())
+            {
+                Console.WriteLine("Err#err0(code=DEV007 message=\"Debug is unavailable in production build.\" nodeId=debug)");
+                return 1;
+            }
+            return CliDebugCommand.Run(filteredArgs.Skip(1).ToArray(), host, vmMode, Console.WriteLine);
         default:
             Console.WriteLine(CliHelpText.BuildUnknownCommand(filteredArgs[0]));
             PrintUsage();

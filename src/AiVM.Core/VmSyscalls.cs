@@ -308,6 +308,91 @@ public static class VmSyscalls
         return Host.NetAsyncError(state, operationHandle);
     }
 
+    public static int WorkerStart(VmNetworkState state, string taskName, string payload)
+    {
+        return Host.WorkerStart(state, taskName, payload);
+    }
+
+    public static int WorkerPoll(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerPoll(state, workerHandle);
+    }
+
+    public static string WorkerResult(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerResult(state, workerHandle);
+    }
+
+    public static string WorkerError(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerError(state, workerHandle);
+    }
+
+    public static bool WorkerCancel(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerCancel(state, workerHandle);
+    }
+
+    public static void DebugEmit(string channel, string payload)
+    {
+        Host.DebugEmit(channel, payload);
+    }
+
+    public static string DebugMode()
+    {
+        return Host.DebugMode();
+    }
+
+    public static void DebugCaptureFrameBegin(int frameId, int width, int height)
+    {
+        Host.DebugCaptureFrameBegin(frameId, width, height);
+    }
+
+    public static void DebugCaptureFrameEnd(int frameId)
+    {
+        Host.DebugCaptureFrameEnd(frameId);
+    }
+
+    public static void DebugCaptureDraw(string op, string args)
+    {
+        Host.DebugCaptureDraw(op, args);
+    }
+
+    public static void DebugCaptureInput(string eventPayload)
+    {
+        Host.DebugCaptureInput(eventPayload);
+    }
+
+    public static void DebugCaptureState(string key, string valuePayload)
+    {
+        Host.DebugCaptureState(key, valuePayload);
+    }
+
+    public static int DebugReplayLoad(VmNetworkState state, string path)
+    {
+        return Host.DebugReplayLoad(state, path);
+    }
+
+    public static string DebugReplayNext(VmNetworkState state, int handle)
+    {
+        return Host.DebugReplayNext(state, handle);
+    }
+
+    public static void DebugAssert(bool cond, string code, string message)
+    {
+        Host.DebugAssert(cond, code, message);
+    }
+
+    public static bool DebugArtifactWrite(string path, string text)
+    {
+        return Host.DebugArtifactWrite(path, text);
+    }
+
+    public static void DebugTraceAsync(int opId, string phase, string detail)
+    {
+        Host.DebugTraceAsync(opId, phase, detail);
+    }
+
     public static int NetUdpBind(VmNetworkState state, string host, int port)
     {
         return Host.NetUdpBind(state, host, port);

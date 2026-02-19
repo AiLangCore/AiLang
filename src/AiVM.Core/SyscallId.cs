@@ -74,5 +74,22 @@ public enum SyscallId : ushort
     NetAsyncResultInt = 69,
     NetAsyncResultString = 70,
     NetAsyncError = 71,
-    UiWaitFrame = 72
+    UiWaitFrame = 72,
+    WorkerStart = 73,
+    WorkerPoll = 74,
+    WorkerResult = 75,
+    WorkerError = 76,
+    WorkerCancel = 77,
+    DebugEmit = 78,
+    DebugMode = 79,
+    DebugCaptureFrameBegin = 80,
+    DebugCaptureFrameEnd = 81,
+    DebugCaptureDraw = 82,
+    DebugCaptureInput = 83,
+    DebugCaptureState = 84,
+    DebugReplayLoad = 85,
+    DebugReplayNext = 86,
+    DebugAssert = 87,
+    DebugArtifactWrite = 88,
+    DebugTraceAsync = 89
 }

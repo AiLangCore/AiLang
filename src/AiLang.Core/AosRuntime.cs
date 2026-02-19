@@ -16,4 +16,5 @@ public sealed class AosRuntime
     public AosNode? Program { get; set; }
     public VmNetworkState Network { get; } = new();
     public Stack<string> CallStack { get; } = new();
+    public AosDebugRecorder? DebugRecorder { get; set; }
 }

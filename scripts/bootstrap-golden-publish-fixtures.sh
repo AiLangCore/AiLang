@@ -207,3 +207,5 @@ Program#p1 {
   Project#proj1(name="AiVectra" entryFile="src/lib.aos" entryExport="library" version="0.1.0")
 }
 EOF
+
+"${ROOT_DIR}/scripts/bootstrap-debug-fixtures.sh"

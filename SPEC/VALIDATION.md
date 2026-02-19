@@ -63,6 +63,38 @@ This file is normative for semantic validation used by `aic check` (default path
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).
 - out-of-range inputs must not throw.
 
+- `sys.worker_start(taskName,payload)` contract:
+- args are `(string, string)` and return int worker handle.
+- `sys.worker_poll(workerHandle)` contract:
+- args are `(int)` and return status int (`0,1,-1,-2,-3`).
+- `sys.worker_result(workerHandle)` and `sys.worker_error(workerHandle)` return strings.
+- `sys.worker_cancel(workerHandle)` returns bool.
+
+- `sys.debug_emit(channel,payload)` contract:
+- args are `(string, string)`.
+- `sys.debug_mode()` contract:
+- no args; returns string mode.
+- `sys.debug_captureFrameBegin(frameId,width,height)` contract:
+- args are `(int, int, int)`.
+- `sys.debug_captureFrameEnd(frameId)` contract:
+- args are `(int)`.
+- `sys.debug_captureDraw(op,args)` contract:
+- args are `(string, string)`.
+- `sys.debug_captureInput(eventPayload)` contract:
+- args are `(string)`.
+- `sys.debug_captureState(key,valuePayload)` contract:
+- args are `(string, string)`.
+- `sys.debug_replayLoad(path)` contract:
+- args are `(string)` and returns int replay handle.
+- `sys.debug_replayNext(handle)` contract:
+- args are `(int)` and returns string.
+- `sys.debug_assert(cond,code,message)` contract:
+- args are `(bool, string, string)`.
+- `sys.debug_artifactWrite(path,text)` contract:
+- args are `(string, string)` and returns bool.
+- `sys.debug_traceAsync(opId,phase,detail)` contract:
+- args are `(int, string, string)`.
+
 ## Async Safety Rules
 
 - `Fn(async=...)` is optional; when present it must be bool (`VAL166`).
@@ -91,6 +123,15 @@ This file is normative for semantic validation used by `aic check` (default path
 - `io.readFile`
 - `httpRequestAwait`
 - Async diagnostics remain deterministic (stable code/message/nodeId).
+
+## Host Async Boundary Rules
+
+- Validation treats `*Start` + `net_async*` patterns as the canonical non-blocking effect model for UI/update paths.
+- Blocking waits in update paths remain invalid (`VAL340` set above), including `httpRequestAwait`.
+- Runtime contract requirements (normative, host-enforced):
+- `*Start` syscalls must not block on operation completion.
+- `sys.net_asyncPoll`/`sys.net_asyncResult*`/`sys.net_asyncError` must be non-blocking.
+- Host worker threads may execute effectful work, but VM state mutation is owner-thread only and must occur via deterministic evaluator steps.
 
 ## Contracts for `aic check`
 

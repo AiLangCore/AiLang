@@ -29,6 +29,23 @@ public static class VmSyscallDispatcher
             SyscallId.NetAsyncResultInt => 1,
             SyscallId.NetAsyncResultString => 1,
             SyscallId.NetAsyncError => 1,
+            SyscallId.WorkerStart => 2,
+            SyscallId.WorkerPoll => 1,
+            SyscallId.WorkerResult => 1,
+            SyscallId.WorkerError => 1,
+            SyscallId.WorkerCancel => 1,
+            SyscallId.DebugEmit => 2,
+            SyscallId.DebugMode => 0,
+            SyscallId.DebugCaptureFrameBegin => 3,
+            SyscallId.DebugCaptureFrameEnd => 1,
+            SyscallId.DebugCaptureDraw => 2,
+            SyscallId.DebugCaptureInput => 1,
+            SyscallId.DebugCaptureState => 2,
+            SyscallId.DebugReplayLoad => 1,
+            SyscallId.DebugReplayNext => 1,
+            SyscallId.DebugAssert => 3,
+            SyscallId.DebugArtifactWrite => 2,
+            SyscallId.DebugTraceAsync => 3,
             SyscallId.NetUdpBind => 2,
             SyscallId.NetUdpRecv => 2,
             SyscallId.NetUdpSend => 4,
@@ -288,6 +305,161 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.String(VmSyscalls.NetAsyncError(network, netAsyncErrorHandle));
+                return true;
+
+            case SyscallId.WorkerStart:
+                if (!TryGetString(args, 0, 2, out var workerTaskName) ||
+                    !TryGetString(args, 1, 2, out var workerPayload))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.WorkerStart(network, workerTaskName, workerPayload));
+                return true;
+
+            case SyscallId.WorkerPoll:
+                if (!TryGetInt(args, 0, 1, out var workerPollHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.WorkerPoll(network, workerPollHandle));
+                return true;
+
+            case SyscallId.WorkerResult:
+                if (!TryGetInt(args, 0, 1, out var workerResultHandle))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.WorkerResult(network, workerResultHandle));
+                return true;
+
+            case SyscallId.WorkerError:
+                if (!TryGetInt(args, 0, 1, out var workerErrorHandle))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.WorkerError(network, workerErrorHandle));
+                return true;
+
+            case SyscallId.WorkerCancel:
+                if (!TryGetInt(args, 0, 1, out var workerCancelHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Bool(VmSyscalls.WorkerCancel(network, workerCancelHandle));
+                return true;
+
+            case SyscallId.DebugEmit:
+                if (!TryGetString(args, 0, 2, out var debugEmitChannel) ||
+                    !TryGetString(args, 1, 2, out var debugEmitPayload))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugEmit(debugEmitChannel, debugEmitPayload);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugMode:
+                if (args.Length != 0)
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.DebugMode());
+                return true;
+
+            case SyscallId.DebugCaptureFrameBegin:
+                if (!TryGetInt(args, 0, 3, out var debugFrameId) ||
+                    !TryGetInt(args, 1, 3, out var debugFrameWidth) ||
+                    !TryGetInt(args, 2, 3, out var debugFrameHeight))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugCaptureFrameBegin(debugFrameId, debugFrameWidth, debugFrameHeight);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugCaptureFrameEnd:
+                if (!TryGetInt(args, 0, 1, out var debugFrameEndId))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugCaptureFrameEnd(debugFrameEndId);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugCaptureDraw:
+                if (!TryGetString(args, 0, 2, out var debugDrawOp) ||
+                    !TryGetString(args, 1, 2, out var debugDrawArgs))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugCaptureDraw(debugDrawOp, debugDrawArgs);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugCaptureInput:
+                if (!TryGetString(args, 0, 1, out var debugInputPayload))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugCaptureInput(debugInputPayload);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugCaptureState:
+                if (!TryGetString(args, 0, 2, out var debugStateKey) ||
+                    !TryGetString(args, 1, 2, out var debugStatePayload))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugCaptureState(debugStateKey, debugStatePayload);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugReplayLoad:
+                if (!TryGetString(args, 0, 1, out var debugReplayPath))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.DebugReplayLoad(network, debugReplayPath));
+                return true;
+
+            case SyscallId.DebugReplayNext:
+                if (!TryGetInt(args, 0, 1, out var debugReplayHandle))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.DebugReplayNext(network, debugReplayHandle));
+                return true;
+
+            case SyscallId.DebugAssert:
+                if (!TryGetBool(args, 0, 3, out var debugAssertCond) ||
+                    !TryGetString(args, 1, 3, out var debugAssertCode) ||
+                    !TryGetString(args, 2, 3, out var debugAssertMessage))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugAssert(debugAssertCond, debugAssertCode, debugAssertMessage);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.DebugArtifactWrite:
+                if (!TryGetString(args, 0, 2, out var debugArtifactPath) ||
+                    !TryGetString(args, 1, 2, out var debugArtifactText))
+                {
+                    return true;
+                }
+                result = SysValue.Bool(VmSyscalls.DebugArtifactWrite(debugArtifactPath, debugArtifactText));
+                return true;
+
+            case SyscallId.DebugTraceAsync:
+                if (!TryGetInt(args, 0, 3, out var debugAsyncOpId) ||
+                    !TryGetString(args, 1, 3, out var debugAsyncPhase) ||
+                    !TryGetString(args, 2, 3, out var debugAsyncDetail))
+                {
+                    return true;
+                }
+                VmSyscalls.DebugTraceAsync(debugAsyncOpId, debugAsyncPhase, debugAsyncDetail);
+                result = SysValue.Void();
                 return true;
 
             case SyscallId.NetUdpBind:
@@ -770,6 +942,21 @@ public static class VmSyscallDispatcher
             return false;
         }
         value = args[index].StringValue;
+        return true;
+    }
+
+    private static bool TryGetBool(ReadOnlySpan<SysValue> args, int index, int expectedCount, out bool value)
+    {
+        value = false;
+        if (args.Length != expectedCount)
+        {
+            return false;
+        }
+        if (args[index].Kind != VmValueKind.Bool)
+        {
+            return false;
+        }
+        value = args[index].BoolValue;
         return true;
     }
 

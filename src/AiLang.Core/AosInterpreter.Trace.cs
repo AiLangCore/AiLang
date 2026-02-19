@@ -2,10 +2,11 @@ namespace AiLang.Core;
 
 public sealed partial class AosInterpreter
 {
-    private static void AddEvalTraceStep(AosRuntime runtime, AosNode node)
+    private static void AddEvalTraceStep(AosRuntime runtime, AosNode node, Dictionary<string, AosValue> env)
     {
         if (!runtime.TraceEnabled)
         {
+            runtime.DebugRecorder?.RecordAstStep(node, env, runtime.CallStack);
             return;
         }
 
@@ -19,5 +20,7 @@ public sealed partial class AosInterpreter
             },
             new List<AosNode>(),
             node.Span));
+
+        runtime.DebugRecorder?.RecordAstStep(node, env, runtime.CallStack);
     }
 }

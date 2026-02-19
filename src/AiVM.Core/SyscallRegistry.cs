@@ -29,6 +29,23 @@ public static class SyscallRegistry
         ["sys.net_asyncResultInt"] = SyscallId.NetAsyncResultInt,
         ["sys.net_asyncResultString"] = SyscallId.NetAsyncResultString,
         ["sys.net_asyncError"] = SyscallId.NetAsyncError,
+        ["sys.worker_start"] = SyscallId.WorkerStart,
+        ["sys.worker_poll"] = SyscallId.WorkerPoll,
+        ["sys.worker_result"] = SyscallId.WorkerResult,
+        ["sys.worker_error"] = SyscallId.WorkerError,
+        ["sys.worker_cancel"] = SyscallId.WorkerCancel,
+        ["sys.debug_emit"] = SyscallId.DebugEmit,
+        ["sys.debug_mode"] = SyscallId.DebugMode,
+        ["sys.debug_captureFrameBegin"] = SyscallId.DebugCaptureFrameBegin,
+        ["sys.debug_captureFrameEnd"] = SyscallId.DebugCaptureFrameEnd,
+        ["sys.debug_captureDraw"] = SyscallId.DebugCaptureDraw,
+        ["sys.debug_captureInput"] = SyscallId.DebugCaptureInput,
+        ["sys.debug_captureState"] = SyscallId.DebugCaptureState,
+        ["sys.debug_replayLoad"] = SyscallId.DebugReplayLoad,
+        ["sys.debug_replayNext"] = SyscallId.DebugReplayNext,
+        ["sys.debug_assert"] = SyscallId.DebugAssert,
+        ["sys.debug_artifactWrite"] = SyscallId.DebugArtifactWrite,
+        ["sys.debug_traceAsync"] = SyscallId.DebugTraceAsync,
         ["sys.crypto_base64Encode"] = SyscallId.CryptoBase64Encode,
         ["sys.crypto_base64Decode"] = SyscallId.CryptoBase64Decode,
         ["sys.crypto_sha1"] = SyscallId.CryptoSha1,
@@ -84,5 +101,18 @@ public static class SyscallRegistry
     public static bool TryResolve(string target, out SyscallId id)
     {
         return NameToId.TryGetValue(target, out id);
+    }
+
+    public static string NameFor(SyscallId id)
+    {
+        foreach (var kv in NameToId)
+        {
+            if (kv.Value == id)
+            {
+                return kv.Key;
+            }
+        }
+
+        return id.ToString();
     }
 }

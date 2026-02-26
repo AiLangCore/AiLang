@@ -35,3 +35,5 @@ This scaffold does not introduce new language semantics or runtime behavior.
 ## Utility
 
 `aivm_parity_cli` is provided as an initial harness utility to compare two text outputs using deterministic normalization (CRLF/LF normalization and trailing newline trimming).
+
+`aivm_runtime.h` provides a minimal host-bridge execution API (`aivm_execute_program`) for future CLI/runtime integration phases.

@@ -43,7 +43,7 @@ Status: `in_progress`
 Output: matching codes/messages/node-id behavior.
 
 8. Build C bridge into CLI runtime selection.
-Status: `pending`
+Status: `in_progress`
 Output: C ABI adapter with feature-flagged dual runtime path.
 
 9. Add dual-run parity harness.
@@ -85,3 +85,4 @@ Output: code cleanup and doc/runbook updates.
 - Added parity normalization/equality helper module as groundwork for dual-run comparison tooling.
 - Added AiBC1 section-table bounds validation in loader (truncated and out-of-bounds detection) with unit tests.
 - Added `aivm_parity_cli` utility to support dual-run output comparison scripting.
+- Added initial runtime bridge API (`aivm_execute_program`) plus unit test as CLI integration groundwork.

@@ -53,3 +53,9 @@ For normalized output comparison in dual-run workflows:
 ```bash
 ./scripts/aivm-parity-compare.sh <left-output-file> <right-output-file>
 ```
+
+For command-driven dual-run comparison:
+
+```bash
+./scripts/aivm-dualrun-parity.sh "<left-command>" "<right-command>"
+```

@@ -94,3 +94,4 @@ Output: code cleanup and doc/runbook updates.
 - Added C-ABI adapter scaffold (`aivm_c_api`) and test coverage for host integration entrypoints.
 - Added deterministic control-flow opcode scaffolding (`JUMP`, `JUMP_IF_FALSE`) with bounds/type checks and tests.
 - Added deterministic boolean literal opcode (`PUSH_BOOL`) and moved branch tests to opcode-driven setup.
+- Added command-driven dual-run parity harness script (`scripts/aivm-dualrun-parity.sh`) for left/right command output comparison.

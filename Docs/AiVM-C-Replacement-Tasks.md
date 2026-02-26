@@ -84,3 +84,4 @@ Output: code cleanup and doc/runbook updates.
 - Added initial deterministic opcode execution primitives (`PUSH_INT`, `POP`, `STORE_LOCAL`, `LOAD_LOCAL`) with unit tests.
 - Added parity normalization/equality helper module as groundwork for dual-run comparison tooling.
 - Added AiBC1 section-table bounds validation in loader (truncated and out-of-bounds detection) with unit tests.
+- Added `aivm_parity_cli` utility to support dual-run output comparison scripting.

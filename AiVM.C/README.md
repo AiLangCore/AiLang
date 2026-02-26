@@ -31,3 +31,7 @@ C provides a thin, portable, embeddable runtime foundation:
 AiLang semantics remain governed by the AiLang specification (`SPEC/IL.md`, `SPEC/EVAL.md`, `SPEC/VALIDATION.md`).
 
 This scaffold does not introduce new language semantics or runtime behavior.
+
+## Utility
+
+`aivm_parity_cli` is provided as an initial harness utility to compare two text outputs using deterministic normalization (CRLF/LF normalization and trailing newline trimming).

@@ -35,6 +35,18 @@ else()
     target_compile_options(hello_vm PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_executable(aivm_parity_cli
+    examples/parity_cli.c
+)
+
+target_link_libraries(aivm_parity_cli PRIVATE aivm_core)
+
+if (MSVC)
+    target_compile_options(aivm_parity_cli PRIVATE /W4)
+else()
+    target_compile_options(aivm_parity_cli PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 include(CTest)
 if (BUILD_TESTING)
     add_executable(aivm_test_program_loader
@@ -113,4 +125,10 @@ if (BUILD_TESTING)
     add_test(NAME aivm_test_vm_frames_locals COMMAND aivm_test_vm_frames_locals)
     add_test(NAME aivm_test_vm_ops COMMAND aivm_test_vm_ops)
     add_test(NAME aivm_test_parity COMMAND aivm_test_parity)
+    add_test(
+        NAME aivm_test_parity_cli
+        COMMAND aivm_parity_cli
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_left.txt
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_right.txt
+    )
 endif()

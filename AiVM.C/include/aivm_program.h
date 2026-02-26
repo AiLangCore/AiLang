@@ -17,6 +17,8 @@ typedef struct {
 typedef struct {
     const AivmInstruction* instructions;
     size_t instruction_count;
+    uint32_t format_version;
+    uint32_t format_flags;
 } AivmProgram;
 
 typedef enum {

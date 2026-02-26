@@ -1,5 +1,13 @@
 #include "aivm_program.h"
 
+static uint32_t read_u32_le(const uint8_t* bytes, size_t offset)
+{
+    return (uint32_t)bytes[offset] |
+           ((uint32_t)bytes[offset + 1U] << 8U) |
+           ((uint32_t)bytes[offset + 2U] << 16U) |
+           ((uint32_t)bytes[offset + 3U] << 24U);
+}
+
 void aivm_program_clear(AivmProgram* program)
 {
     if (program == NULL) {
@@ -8,6 +16,8 @@ void aivm_program_clear(AivmProgram* program)
 
     program->instructions = NULL;
     program->instruction_count = 0U;
+    program->format_version = 0U;
+    program->format_flags = 0U;
 }
 
 void aivm_program_init(AivmProgram* program, const AivmInstruction* instructions, size_t instruction_count)
@@ -18,6 +28,8 @@ void aivm_program_init(AivmProgram* program, const AivmInstruction* instructions
 
     program->instructions = instructions;
     program->instruction_count = instruction_count;
+    program->format_version = 0U;
+    program->format_flags = 0U;
 }
 
 AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_count, AivmProgram* out_program)
@@ -35,10 +47,10 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
     }
 
     /*
-     * Minimum deterministic guard for AiBC1 container prefix.
-     * Full bytecode decoding is intentionally deferred to later phases.
+     * Deterministic header parse for AiBC1 prefix.
+     * Full instruction decode remains deferred to later phases.
      */
-    if (byte_count < 4U) {
+    if (byte_count < 12U) {
         result.status = AIVM_PROGRAM_ERR_TRUNCATED;
         result.error_offset = byte_count;
         return result;
@@ -53,7 +65,16 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
         return result;
     }
 
+    out_program->format_version = read_u32_le(bytes, 4U);
+    out_program->format_flags = read_u32_le(bytes, 8U);
+
+    if (out_program->format_version != 1U) {
+        result.status = AIVM_PROGRAM_ERR_UNSUPPORTED;
+        result.error_offset = 4U;
+        return result;
+    }
+
     result.status = AIVM_PROGRAM_ERR_UNSUPPORTED;
-    result.error_offset = 4U;
+    result.error_offset = 12U;
     return result;
 }

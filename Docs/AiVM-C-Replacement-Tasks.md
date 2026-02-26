@@ -80,3 +80,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic VM error code/message mapping scaffold with unit test coverage.
 - Added deterministic VM stack primitives (push/pop, overflow/underflow errors) with unit test coverage.
 - Added deterministic call-frame and locals primitives with overflow/underflow/bounds tests.
+- Extended AiBC1 loader scaffold to deterministic header parsing (magic/version/flags) with unit tests.

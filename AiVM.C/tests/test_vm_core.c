@@ -13,7 +13,12 @@ static int test_run_nop_halt(void)
         { AIVM_OP_NOP },
         { AIVM_OP_HALT }
     };
-    static const AivmProgram program = { instructions, 2U };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U
+    };
 
     aivm_init(&vm, &program);
     if (expect(vm.status == AIVM_VM_STATUS_READY) != 0) {
@@ -40,7 +45,12 @@ static int test_invalid_opcode_sets_error(void)
     static const AivmInstruction instructions[] = {
         { (AivmOpcode)99 }
     };
-    static const AivmProgram program = { instructions, 1U };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U
+    };
 
     aivm_init(&vm, &program);
     aivm_step(&vm);

@@ -10,8 +10,10 @@ int main(void)
         { AIVM_OP_HALT }
     };
     static const AivmProgram program = {
-        instructions,
-        sizeof(instructions) / sizeof(instructions[0])
+        .instructions = instructions,
+        .instruction_count = sizeof(instructions) / sizeof(instructions[0]),
+        .format_version = 0U,
+        .format_flags = 0U
     };
     AivmVm vm;
 

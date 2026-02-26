@@ -59,7 +59,7 @@ Status: `pending`
 Output: replay-stability checks and non-regressive perf smoke baselines.
 
 12. CI integration (multi-platform C build + parity jobs).
-Status: `pending`
+Status: `in_progress`
 Output: required checks on macOS/Linux/Windows.
 
 13. Cutover to C VM default.
@@ -86,3 +86,4 @@ Output: code cleanup and doc/runbook updates.
 - Added AiBC1 section-table bounds validation in loader (truncated and out-of-bounds detection) with unit tests.
 - Added `aivm_parity_cli` utility to support dual-run output comparison scripting.
 - Added initial runtime bridge API (`aivm_execute_program`) plus unit test as CLI integration groundwork.
+- Added deterministic `scripts/test-aivm-c.sh` test entrypoint for local/CI reuse.

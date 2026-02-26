@@ -91,3 +91,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic integer arithmetic opcode scaffold (`ADD_INT`) with type-safety error handling and tests.
 - Added deterministic syscall-contract validation scaffold (`target + typed args + return kind`) with unit tests.
 - Added `scripts/aivm-parity-compare.sh` and GitHub Actions workflow `aivm-c-ci.yml` for cross-platform build/test.
+- Added C-ABI adapter scaffold (`aivm_c_api`) and test coverage for host integration entrypoints.

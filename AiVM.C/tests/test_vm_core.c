@@ -81,6 +81,27 @@ static int test_halt_without_program_is_safe(void)
     return 0;
 }
 
+static int test_empty_program_halts(void)
+{
+    AivmVm vm;
+    static const AivmProgram program = {
+        .instructions = NULL,
+        .instruction_count = 0U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(void)
 {
     if (test_run_nop_halt() != 0) {
@@ -90,6 +111,9 @@ int main(void)
         return 1;
     }
     if (test_halt_without_program_is_safe() != 0) {
+        return 1;
+    }
+    if (test_empty_program_halts() != 0) {
         return 1;
     }
 

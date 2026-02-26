@@ -38,6 +38,7 @@ This scaffold does not introduce new language semantics or runtime behavior.
 
 `aivm_runtime.h` provides a minimal host-bridge execution API (`aivm_execute_program`) for future CLI/runtime integration phases.
 `aivm_syscall_contracts.h` provides deterministic typed syscall-contract validation scaffolding.
+`aivm_c_api.h` provides a C-ABI-friendly execution entrypoint for host integration.
 
 ## Build and Test
 

@@ -140,7 +140,18 @@ void aivm_step(AivmVm* vm)
 {
     const AivmInstruction* instruction;
 
-    if (vm == NULL || vm->program == NULL || vm->program->instructions == NULL) {
+    if (vm == NULL || vm->program == NULL) {
+        return;
+    }
+
+    if (vm->program->instructions == NULL) {
+        if (vm->program->instruction_count == 0U) {
+            vm->status = AIVM_VM_STATUS_HALTED;
+            return;
+        }
+        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        vm->instruction_pointer = vm->program->instruction_count;
         return;
     }
 
@@ -259,6 +270,11 @@ void aivm_run(AivmVm* vm)
         return;
     }
 
+    if (vm->program->instruction_count == 0U) {
+        vm->status = AIVM_VM_STATUS_HALTED;
+        return;
+    }
+
     while (vm->instruction_pointer < vm->program->instruction_count &&
            vm->status != AIVM_VM_STATUS_ERROR &&
            vm->status != AIVM_VM_STATUS_HALTED) {
@@ -285,6 +301,8 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM006";
         case AIVM_VM_ERR_TYPE_MISMATCH:
             return "AIVM007";
+        case AIVM_VM_ERR_INVALID_PROGRAM:
+            return "AIVM008";
         default:
             return "AIVM999";
     }
@@ -309,6 +327,8 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "Local index out of range.";
         case AIVM_VM_ERR_TYPE_MISMATCH:
             return "Type mismatch.";
+        case AIVM_VM_ERR_INVALID_PROGRAM:
+            return "Invalid program state.";
         default:
             return "Unknown VM error.";
     }

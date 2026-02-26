@@ -13,6 +13,7 @@ add_library(aivm_core STATIC
     src/aivm_syscall_contracts.c
     src/aivm_parity.c
     src/aivm_runtime.c
+    src/aivm_c_api.c
 )
 
 target_include_directories(aivm_core PUBLIC
@@ -106,6 +107,11 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_syscall_contracts PRIVATE aivm_core)
 
+    add_executable(aivm_test_c_api
+        tests/test_c_api.c
+    )
+    target_link_libraries(aivm_test_c_api PRIVATE aivm_core)
+
     if (MSVC)
         target_compile_options(aivm_test_program_loader PRIVATE /W4)
         target_compile_options(aivm_test_vm_core PRIVATE /W4)
@@ -118,6 +124,7 @@ if (BUILD_TESTING)
         target_compile_options(aivm_test_parity PRIVATE /W4)
         target_compile_options(aivm_test_runtime PRIVATE /W4)
         target_compile_options(aivm_test_syscall_contracts PRIVATE /W4)
+        target_compile_options(aivm_test_c_api PRIVATE /W4)
     else()
         target_compile_options(aivm_test_program_loader PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_vm_core PRIVATE -Wall -Wextra -Wpedantic)
@@ -130,6 +137,7 @@ if (BUILD_TESTING)
         target_compile_options(aivm_test_parity PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_runtime PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_syscall_contracts PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(aivm_test_c_api PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
     add_test(NAME aivm_test_program_loader COMMAND aivm_test_program_loader)
@@ -143,6 +151,7 @@ if (BUILD_TESTING)
     add_test(NAME aivm_test_parity COMMAND aivm_test_parity)
     add_test(NAME aivm_test_runtime COMMAND aivm_test_runtime)
     add_test(NAME aivm_test_syscall_contracts COMMAND aivm_test_syscall_contracts)
+    add_test(NAME aivm_test_c_api COMMAND aivm_test_c_api)
     add_test(
         NAME aivm_test_parity_cli
         COMMAND aivm_parity_cli

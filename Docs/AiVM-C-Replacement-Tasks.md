@@ -23,7 +23,7 @@ Status: `in_progress`
 Output: `aivm_program_*` API, deterministic load errors, no allocation in core.
 
 3. Implement full VM runtime state model.
-Status: `pending`
+Status: `in_progress`
 Output: stack, call frames, locals, constants, explicit halt/error state.
 
 4. Port opcode execution semantics.
@@ -74,3 +74,4 @@ Output: code cleanup and doc/runbook updates.
 
 - Task 2 started with deterministic loader scaffolding in `AiVM.C`.
 - Loader validates null/truncated/bad-magic and returns explicit `UNSUPPORTED` for full decode until bytecode phase is implemented.
+- Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.

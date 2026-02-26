@@ -32,3 +32,27 @@ if (MSVC)
 else()
     target_compile_options(hello_vm PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+include(CTest)
+if (BUILD_TESTING)
+    add_executable(aivm_test_program_loader
+        tests/test_program_loader.c
+    )
+    target_link_libraries(aivm_test_program_loader PRIVATE aivm_core)
+
+    add_executable(aivm_test_vm_core
+        tests/test_vm_core.c
+    )
+    target_link_libraries(aivm_test_vm_core PRIVATE aivm_core)
+
+    if (MSVC)
+        target_compile_options(aivm_test_program_loader PRIVATE /W4)
+        target_compile_options(aivm_test_vm_core PRIVATE /W4)
+    else()
+        target_compile_options(aivm_test_program_loader PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(aivm_test_vm_core PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    add_test(NAME aivm_test_program_loader COMMAND aivm_test_program_loader)
+    add_test(NAME aivm_test_vm_core COMMAND aivm_test_vm_core)
+endif()

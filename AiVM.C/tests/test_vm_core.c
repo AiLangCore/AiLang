@@ -1,0 +1,85 @@
+#include "aivm_program.h"
+#include "aivm_vm.h"
+
+static int expect(int condition)
+{
+    return condition ? 0 : 1;
+}
+
+static int test_run_nop_halt(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { AIVM_OP_NOP },
+        { AIVM_OP_HALT }
+    };
+    static const AivmProgram program = { instructions, 2U };
+
+    aivm_init(&vm, &program);
+    if (expect(vm.status == AIVM_VM_STATUS_READY) != 0) {
+        return 1;
+    }
+
+    aivm_run(&vm);
+    if (expect(vm.instruction_pointer == 2U) != 0) {
+        return 1;
+    }
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static int test_invalid_opcode_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { (AivmOpcode)99 }
+    };
+    static const AivmProgram program = { instructions, 1U };
+
+    aivm_init(&vm, &program);
+    aivm_step(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_OPCODE) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static int test_halt_without_program_is_safe(void)
+{
+    AivmVm vm;
+
+    aivm_init(&vm, NULL);
+    aivm_halt(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_READY) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int main(void)
+{
+    if (test_run_nop_halt() != 0) {
+        return 1;
+    }
+    if (test_invalid_opcode_sets_error() != 0) {
+        return 1;
+    }
+    if (test_halt_without_program_is_safe() != 0) {
+        return 1;
+    }
+
+    return 0;
+}

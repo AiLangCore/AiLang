@@ -1,0 +1,37 @@
+#include <string.h>
+
+#include "aivm_vm.h"
+
+static int expect(int condition)
+{
+    return condition ? 0 : 1;
+}
+
+int main(void)
+{
+    if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_NONE), "AIVM000") == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_INVALID_OPCODE), "AIVM001") == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(strcmp(aivm_vm_error_code((AivmVmError)99), "AIVM999") == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_NONE), "No error.") == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_INVALID_OPCODE), "Invalid opcode.") == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(strcmp(aivm_vm_error_message((AivmVmError)99), "Unknown VM error.") == 0) != 0) {
+        return 1;
+    }
+
+    return 0;
+}

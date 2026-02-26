@@ -92,3 +92,27 @@ void aivm_run(AivmVm* vm)
         aivm_step(vm);
     }
 }
+
+const char* aivm_vm_error_code(AivmVmError error)
+{
+    switch (error) {
+        case AIVM_VM_ERR_NONE:
+            return "AIVM000";
+        case AIVM_VM_ERR_INVALID_OPCODE:
+            return "AIVM001";
+        default:
+            return "AIVM999";
+    }
+}
+
+const char* aivm_vm_error_message(AivmVmError error)
+{
+    switch (error) {
+        case AIVM_VM_ERR_NONE:
+            return "No error.";
+        case AIVM_VM_ERR_INVALID_OPCODE:
+            return "Invalid opcode.";
+        default:
+            return "Unknown VM error.";
+    }
+}

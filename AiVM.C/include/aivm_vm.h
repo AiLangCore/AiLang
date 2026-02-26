@@ -50,5 +50,7 @@ void aivm_reset_state(AivmVm* vm);
 void aivm_halt(AivmVm* vm);
 void aivm_step(AivmVm* vm);
 void aivm_run(AivmVm* vm);
+const char* aivm_vm_error_code(AivmVmError error);
+const char* aivm_vm_error_message(AivmVmError error);
 
 #endif

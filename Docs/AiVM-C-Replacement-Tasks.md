@@ -39,7 +39,7 @@ Status: `in_progress`
 Output: typed target/arg validation, stable IDs, deterministic diagnostics.
 
 7. Runtime error and diagnostics parity.
-Status: `pending`
+Status: `in_progress`
 Output: matching codes/messages/node-id behavior.
 
 8. Build C bridge into CLI runtime selection.
@@ -77,3 +77,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.
 - Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
 - Added deterministic syscall dispatch-table skeleton and syscall unit test (`invoke` + `dispatch` paths).
+- Added deterministic VM error code/message mapping scaffold with unit test coverage.

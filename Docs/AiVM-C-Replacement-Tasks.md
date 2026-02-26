@@ -96,3 +96,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic boolean literal opcode (`PUSH_BOOL`) and moved branch tests to opcode-driven setup.
 - Added command-driven dual-run parity harness script (`scripts/aivm-dualrun-parity.sh`) for left/right command output comparison.
 - Added deterministic call/return opcode scaffolding (`CALL`, `RET`) with frame-stack validation tests.
+- Added deterministic integer equality opcode (`EQ_INT`) with type-safety tests.

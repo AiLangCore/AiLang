@@ -6,8 +6,8 @@
 int main(void)
 {
     static const AivmInstruction instructions[] = {
-        { AIVM_OP_NOP },
-        { AIVM_OP_HALT }
+        { .opcode = AIVM_OP_NOP, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
     };
     static const AivmProgram program = {
         .instructions = instructions,

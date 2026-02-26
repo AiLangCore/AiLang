@@ -10,8 +10,8 @@ static int test_run_nop_halt(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
-        { AIVM_OP_NOP },
-        { AIVM_OP_HALT }
+        { .opcode = AIVM_OP_NOP, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
     };
     static const AivmProgram program = {
         .instructions = instructions,
@@ -43,7 +43,7 @@ static int test_invalid_opcode_sets_error(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
-        { (AivmOpcode)99 }
+        { .opcode = (AivmOpcode)99, .operand_int = 0 }
     };
     static const AivmProgram program = {
         .instructions = instructions,

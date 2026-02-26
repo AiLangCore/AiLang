@@ -169,6 +169,56 @@ void aivm_step(AivmVm* vm)
             vm->instruction_pointer += 1U;
             break;
 
+        case AIVM_OP_PUSH_INT:
+            if (!aivm_stack_push(vm, aivm_value_int(instruction->operand_int))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+
+        case AIVM_OP_POP: {
+            AivmValue popped;
+            if (!aivm_stack_pop(vm, &popped)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_STORE_LOCAL: {
+            AivmValue popped;
+            size_t local_index = (size_t)instruction->operand_int;
+            if (!aivm_stack_pop(vm, &popped)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_local_set(vm, local_index, popped)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_LOAD_LOCAL: {
+            AivmValue local_value;
+            size_t local_index = (size_t)instruction->operand_int;
+            if (!aivm_local_get(vm, local_index, &local_value)) {
+                vm->error = AIVM_VM_ERR_LOCAL_OUT_OF_RANGE;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, local_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;

@@ -27,7 +27,7 @@ Status: `in_progress`
 Output: stack, call frames, locals, constants, explicit halt/error state.
 
 4. Port opcode execution semantics.
-Status: `pending`
+Status: `in_progress`
 Output: switch-based deterministic dispatch with parity to current VM.
 
 5. Complete C value model parity.
@@ -81,3 +81,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic VM stack primitives (push/pop, overflow/underflow errors) with unit test coverage.
 - Added deterministic call-frame and locals primitives with overflow/underflow/bounds tests.
 - Extended AiBC1 loader scaffold to deterministic header parsing (magic/version/flags) with unit tests.
+- Added initial deterministic opcode execution primitives (`PUSH_INT`, `POP`, `STORE_LOCAL`, `LOAD_LOCAL`) with unit tests.

@@ -20,6 +20,9 @@ int main(void)
     if (expect(strcmp(aivm_vm_error_code((AivmVmError)99), "AIVM999") == 0) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_TYPE_MISMATCH), "AIVM007") == 0) != 0) {
+        return 1;
+    }
 
     if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_NONE), "No error.") == 0) != 0) {
         return 1;
@@ -30,6 +33,9 @@ int main(void)
     }
 
     if (expect(strcmp(aivm_vm_error_message((AivmVmError)99), "Unknown VM error.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_TYPE_MISMATCH), "Type mismatch.") == 0) != 0) {
         return 1;
     }
 

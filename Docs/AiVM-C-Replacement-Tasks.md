@@ -88,3 +88,4 @@ Output: code cleanup and doc/runbook updates.
 - Added initial runtime bridge API (`aivm_execute_program`) plus unit test as CLI integration groundwork.
 - Added deterministic `scripts/test-aivm-c.sh` test entrypoint for local/CI reuse.
 - Added fixed-capacity section descriptor parsing in AiBC1 loader with section-limit and bounds validation tests.
+- Added deterministic integer arithmetic opcode scaffold (`ADD_INT`) with type-safety error handling and tests.

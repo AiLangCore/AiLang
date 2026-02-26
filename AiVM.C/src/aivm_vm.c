@@ -219,6 +219,27 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_ADD_INT: {
+            AivmValue right;
+            AivmValue left;
+            if (!aivm_stack_pop(vm, &right) || !aivm_stack_pop(vm, &left)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (left.type != AIVM_VAL_INT || right.type != AIVM_VAL_INT) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_int(left.int_value + right.int_value))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
@@ -262,6 +283,8 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM005";
         case AIVM_VM_ERR_LOCAL_OUT_OF_RANGE:
             return "AIVM006";
+        case AIVM_VM_ERR_TYPE_MISMATCH:
+            return "AIVM007";
         default:
             return "AIVM999";
     }
@@ -284,6 +307,8 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "Call frame underflow.";
         case AIVM_VM_ERR_LOCAL_OUT_OF_RANGE:
             return "Local index out of range.";
+        case AIVM_VM_ERR_TYPE_MISMATCH:
+            return "Type mismatch.";
         default:
             return "Unknown VM error.";
     }

@@ -20,11 +20,22 @@ typedef struct {
 } AivmInstruction;
 
 typedef struct {
+    uint32_t section_type;
+    uint32_t section_size;
+    uint32_t section_offset;
+} AivmProgramSection;
+
+enum {
+    AIVM_PROGRAM_MAX_SECTIONS = 32
+};
+
+typedef struct {
     const AivmInstruction* instructions;
     size_t instruction_count;
     uint32_t format_version;
     uint32_t format_flags;
     uint32_t section_count;
+    AivmProgramSection sections[AIVM_PROGRAM_MAX_SECTIONS];
 } AivmProgram;
 
 typedef enum {
@@ -33,7 +44,8 @@ typedef enum {
     AIVM_PROGRAM_ERR_TRUNCATED = 2,
     AIVM_PROGRAM_ERR_BAD_MAGIC = 3,
     AIVM_PROGRAM_ERR_UNSUPPORTED = 4,
-    AIVM_PROGRAM_ERR_SECTION_OOB = 5
+    AIVM_PROGRAM_ERR_SECTION_OOB = 5,
+    AIVM_PROGRAM_ERR_SECTION_LIMIT = 6
 } AivmProgramStatus;
 
 typedef struct {

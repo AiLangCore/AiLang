@@ -87,3 +87,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `aivm_parity_cli` utility to support dual-run output comparison scripting.
 - Added initial runtime bridge API (`aivm_execute_program`) plus unit test as CLI integration groundwork.
 - Added deterministic `scripts/test-aivm-c.sh` test entrypoint for local/CI reuse.
+- Added fixed-capacity section descriptor parsing in AiBC1 loader with section-limit and bounds validation tests.

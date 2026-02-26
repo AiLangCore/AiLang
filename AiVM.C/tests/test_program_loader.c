@@ -24,6 +24,21 @@ int main(void)
         3, 0, 0, 0, /* section type */
         4, 0, 0, 0  /* section size larger than remaining payload */
     };
+    static const uint8_t one_section_valid[28] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        9, 0, 0, 0,
+        1, 0, 0, 0,  /* section count */
+        7, 0, 0, 0,  /* section type */
+        4, 0, 0, 0,  /* section size */
+        1, 2, 3, 4   /* payload */
+    };
+    static const uint8_t section_limit_exceeded[16] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        9, 0, 0, 0,
+        33, 0, 0, 0  /* section count over max (32) */
+    };
 
     result = aivm_program_load_aibc1(NULL, 0U, &program);
     if (expect(result.status == AIVM_PROGRAM_ERR_NULL) != 0) {
@@ -81,6 +96,31 @@ int main(void)
         return 1;
     }
     if (expect(result.error_offset == 24U) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(section_limit_exceeded, 16U, &program);
+    if (expect(result.status == AIVM_PROGRAM_ERR_SECTION_LIMIT) != 0) {
+        return 1;
+    }
+    if (expect(result.error_offset == 12U) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(one_section_valid, 28U, &program);
+    if (expect(result.status == AIVM_PROGRAM_ERR_UNSUPPORTED) != 0) {
+        return 1;
+    }
+    if (expect(program.section_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(program.sections[0].section_type == 7U) != 0) {
+        return 1;
+    }
+    if (expect(program.sections[0].section_size == 4U) != 0) {
+        return 1;
+    }
+    if (expect(program.sections[0].section_offset == 24U) != 0) {
         return 1;
     }
 

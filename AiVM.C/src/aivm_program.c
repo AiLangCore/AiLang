@@ -10,6 +10,7 @@ static uint32_t read_u32_le(const uint8_t* bytes, size_t offset)
 
 void aivm_program_clear(AivmProgram* program)
 {
+    size_t index;
     if (program == NULL) {
         return;
     }
@@ -19,6 +20,11 @@ void aivm_program_clear(AivmProgram* program)
     program->format_version = 0U;
     program->format_flags = 0U;
     program->section_count = 0U;
+    for (index = 0U; index < AIVM_PROGRAM_MAX_SECTIONS; index += 1U) {
+        program->sections[index].section_type = 0U;
+        program->sections[index].section_size = 0U;
+        program->sections[index].section_offset = 0U;
+    }
 }
 
 void aivm_program_init(AivmProgram* program, const AivmInstruction* instructions, size_t instruction_count)
@@ -27,11 +33,9 @@ void aivm_program_init(AivmProgram* program, const AivmInstruction* instructions
         return;
     }
 
+    aivm_program_clear(program);
     program->instructions = instructions;
     program->instruction_count = instruction_count;
-    program->format_version = 0U;
-    program->format_flags = 0U;
-    program->section_count = 0U;
 }
 
 AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_count, AivmProgram* out_program)
@@ -77,10 +81,17 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
         return result;
     }
 
+    if (out_program->section_count > AIVM_PROGRAM_MAX_SECTIONS) {
+        result.status = AIVM_PROGRAM_ERR_SECTION_LIMIT;
+        result.error_offset = 12U;
+        return result;
+    }
+
     {
         size_t cursor = 16U;
         uint32_t section_index;
         for (section_index = 0U; section_index < out_program->section_count; section_index += 1U) {
+            uint32_t section_type;
             uint32_t section_size;
             if (cursor + 8U > byte_count) {
                 result.status = AIVM_PROGRAM_ERR_TRUNCATED;
@@ -88,8 +99,7 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
                 return result;
             }
 
-            /* Section type field reserved for later decode phases. */
-            (void)read_u32_le(bytes, cursor);
+            section_type = read_u32_le(bytes, cursor);
             section_size = read_u32_le(bytes, cursor + 4U);
             cursor += 8U;
 
@@ -98,6 +108,10 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
                 result.error_offset = cursor;
                 return result;
             }
+
+            out_program->sections[section_index].section_type = section_type;
+            out_program->sections[section_index].section_size = section_size;
+            out_program->sections[section_index].section_offset = (uint32_t)cursor;
 
             cursor += (size_t)section_size;
         }

@@ -11,6 +11,7 @@ int main(void)
     const AivmSyscallContract* contract;
     AivmValue draw_rect_args[4];
     AivmValue draw_text_args[3];
+    AivmValue str_args[3];
 
     draw_rect_args[0] = aivm_value_int(0);
     draw_rect_args[1] = aivm_value_int(0);
@@ -58,6 +59,24 @@ int main(void)
     if (expect(aivm_syscall_contract_validate("sys.unknown", draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
         return 1;
     }
+
+    str_args[0] = aivm_value_string("hello");
+    str_args[1] = aivm_value_int(1);
+    str_args[2] = aivm_value_int(3);
+    if (expect(aivm_syscall_contract_validate("sys.str_substring", str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(1102U, str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    str_args[1] = aivm_value_string("bad");
+    if (expect(aivm_syscall_contract_validate("sys.str_remove", str_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+        return 1;
+    }
+
     if (expect(aivm_syscall_contract_validate_id(1002U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
         return 1;
     }

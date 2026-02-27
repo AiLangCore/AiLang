@@ -109,3 +109,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic `TO_STRING` opcode support for int/bool/string/null-like values using VM string arena storage, with VM opcode tests.
 - Added contract-checked syscall dispatch path (`aivm_syscall_dispatch_checked`) enforcing deterministic arg/return type checks at runtime.
 - Enhanced manifest parity runner to emit per-case output artifacts and deterministic report entries for CI/debug traceability.
+- Added deterministic `STR_ESCAPE` opcode behavior (backslash/quote/newline/carriage-return/tab escaping) with strict type validation tests.

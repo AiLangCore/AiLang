@@ -55,6 +55,59 @@ static int push_string_copy(AivmVm* vm, const char* input)
     return aivm_stack_push(vm, aivm_value_string(output));
 }
 
+static int push_escaped_string(AivmVm* vm, const char* input)
+{
+    size_t length = 0U;
+    size_t escaped_length = 0U;
+    size_t i;
+    size_t out_index = 0U;
+    char* output;
+
+    if (vm == NULL || input == NULL) {
+        return 0;
+    }
+
+    while (input[length] != '\0') {
+        char ch = input[length];
+        if (ch == '\\' || ch == '"' || ch == '\n' || ch == '\r' || ch == '\t') {
+            escaped_length += 2U;
+        } else {
+            escaped_length += 1U;
+        }
+        length += 1U;
+    }
+
+    output = arena_alloc(vm, escaped_length + 1U);
+    if (output == NULL) {
+        return 0;
+    }
+
+    for (i = 0U; i < length; i += 1U) {
+        char ch = input[i];
+        if (ch == '\\') {
+            output[out_index++] = '\\';
+            output[out_index++] = '\\';
+        } else if (ch == '"') {
+            output[out_index++] = '\\';
+            output[out_index++] = '"';
+        } else if (ch == '\n') {
+            output[out_index++] = '\\';
+            output[out_index++] = 'n';
+        } else if (ch == '\r') {
+            output[out_index++] = '\\';
+            output[out_index++] = 'r';
+        } else if (ch == '\t') {
+            output[out_index++] = '\\';
+            output[out_index++] = 't';
+        } else {
+            output[out_index++] = ch;
+        }
+    }
+
+    output[out_index] = '\0';
+    return aivm_stack_push(vm, aivm_value_string(output));
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -616,6 +669,26 @@ void aivm_step(AivmVm* vm)
             vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
             vm->status = AIVM_VM_STATUS_ERROR;
             vm->instruction_pointer = vm->program->instruction_count;
+            break;
+        }
+
+        case AIVM_OP_STR_ESCAPE: {
+            AivmValue value;
+            if (!aivm_stack_pop(vm, &value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_escaped_string(vm, value.string_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
             break;
         }
 

@@ -33,12 +33,25 @@ typedef struct {
     size_t frame_base;
 } AivmCallFrame;
 
+typedef struct {
+    int64_t handle;
+    AivmValue result;
+} AivmCompletedTask;
+
+typedef struct {
+    size_t expected_count;
+    size_t start_index;
+} AivmParContext;
+
 enum {
     AIVM_VM_STACK_CAPACITY = 1024,
     AIVM_VM_CALLFRAME_CAPACITY = 256,
     AIVM_VM_LOCALS_CAPACITY = 1024,
     AIVM_VM_STRING_ARENA_CAPACITY = 8192,
-    AIVM_VM_MAX_SYSCALL_ARGS = 16
+    AIVM_VM_MAX_SYSCALL_ARGS = 16,
+    AIVM_VM_TASK_CAPACITY = 256,
+    AIVM_VM_PAR_CONTEXT_CAPACITY = 64,
+    AIVM_VM_PAR_VALUE_CAPACITY = 1024
 };
 
 typedef struct {
@@ -59,6 +72,13 @@ typedef struct {
     size_t string_arena_used;
     const AivmSyscallBinding* syscall_bindings;
     size_t syscall_binding_count;
+    AivmCompletedTask completed_tasks[AIVM_VM_TASK_CAPACITY];
+    size_t completed_task_count;
+    int64_t next_task_handle;
+    AivmParContext par_contexts[AIVM_VM_PAR_CONTEXT_CAPACITY];
+    size_t par_context_count;
+    AivmValue par_values[AIVM_VM_PAR_VALUE_CAPACITY];
+    size_t par_value_count;
 } AivmVm;
 
 void aivm_init(AivmVm* vm, const AivmProgram* program);

@@ -12,6 +12,7 @@ This matrix tracks `AiVM.C` parity work against the current AiLang contracts in:
 Status keys:
 
 - `implemented`: deterministic behavior exists in C runtime
+- `in_progress`: partially implemented deterministic behavior; remaining parity work tracked
 - `placeholder`: opcode/feature is explicitly rejected deterministically
 - `pending`: not yet ported into C runtime surface
 
@@ -36,7 +37,7 @@ Status keys:
 | `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE` | implemented | Uses fixed-capacity VM string arena (no heap). |
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
-| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | placeholder | Deterministic unsupported-op failure path. |
+| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | in_progress | `ASYNC_CALL_SYS`, `AWAIT`, `PAR_BEGIN/FORK/JOIN/CANCEL` now deterministic; `ASYNC_CALL` remains explicit unsupported. |
 | `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | placeholder | Deterministic unsupported-op failure path. |
 
 ## Syscall ABI

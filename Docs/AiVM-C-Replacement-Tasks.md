@@ -132,3 +132,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded parity manifest coverage with syscall-focused deterministic error fixtures for `sys.str_utf8ByteCount`, `sys.str_substring`, and `sys.str_remove` (non-zero status + exact output matching).
 - Made dual-run parity scripts shell-configurable (`AIVM_PARITY_SHELL`, default `bash`) to remove `/bin/zsh` coupling and improve cross-platform CI execution reliability.
 - Added Windows-friendly portable parity manifest (`parity_commands_portable.txt`) and CI execution step so parity report artifacts are generated across all workflow OS targets.
+- Implemented deterministic async/parallel scaffold semantics for `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL` with fixed-capacity VM state; `ASYNC_CALL` remains explicit unsupported.

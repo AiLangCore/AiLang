@@ -1405,33 +1405,142 @@ static int test_call_sys_string_contract_type_mismatch_sets_error(void)
     return 0;
 }
 
-static int test_async_and_parallel_opcodes_fail_deterministically(void)
+static int test_async_call_opcode_is_still_rejected(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
-        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 },
-        { .opcode = AIVM_OP_ASYNC_CALL_SYS, .operand_int = 0 },
-        { .opcode = AIVM_OP_AWAIT, .operand_int = 0 },
-        { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 0 },
-        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
-        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 0 },
-        { .opcode = AIVM_OP_PAR_CANCEL, .operand_int = 0 }
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 }
     };
-    size_t i;
-
-    for (i = 0U; i < sizeof(instructions) / sizeof(instructions[0]); i += 1U) {
-        AivmProgram program;
-        aivm_program_init(&program, &instructions[i], 1U);
-        aivm_init(&vm, &program);
-        aivm_run(&vm);
-        if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
-            return 1;
-        }
-        if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
-            return 1;
-        }
+    AivmProgram program;
+    aivm_program_init(&program, &instructions[0], 1U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
     }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    return 0;
+}
 
+static int test_async_call_sys_and_await_roundtrip(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_ASYNC_CALL_SYS, .operand_int = 1 },
+        { .opcode = AIVM_OP_AWAIT, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_utf8ByteCount" },
+        { .type = AIVM_VAL_STRING, .string_value = "a😀bc" }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.str_utf8ByteCount", host_str_utf8_byte_count }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 5U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 1U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 7) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_await_invalid_handle_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 999 },
+        { .opcode = AIVM_OP_AWAIT, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 2U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_parallel_begin_fork_join_and_cancel(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 2 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 41 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 2 },
+        { .opcode = AIVM_OP_PAR_CANCEL, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 8U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 2) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_parallel_join_mismatch_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 1 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 10 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 2 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 4U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -1636,7 +1745,19 @@ int main(void)
     if (test_call_sys_string_contract_type_mismatch_sets_error() != 0) {
         return 1;
     }
-    if (test_async_and_parallel_opcodes_fail_deterministically() != 0) {
+    if (test_async_call_opcode_is_still_rejected() != 0) {
+        return 1;
+    }
+    if (test_async_call_sys_and_await_roundtrip() != 0) {
+        return 1;
+    }
+    if (test_await_invalid_handle_sets_error() != 0) {
+        return 1;
+    }
+    if (test_parallel_begin_fork_join_and_cancel() != 0) {
+        return 1;
+    }
+    if (test_parallel_join_mismatch_sets_error() != 0) {
         return 1;
     }
     if (test_str_utf8_byte_count() != 0) {

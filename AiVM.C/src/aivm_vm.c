@@ -266,6 +266,87 @@ static int push_remove_by_runes(AivmVm* vm, const char* text, int64_t start, int
     return aivm_stack_push(vm, aivm_value_string(output));
 }
 
+static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_result)
+{
+    AivmValue args[AIVM_VM_MAX_SYSCALL_ARGS];
+    AivmValue target_value;
+    AivmSyscallStatus syscall_status;
+    size_t i;
+
+    if (vm == NULL || out_result == NULL) {
+        return 0;
+    }
+    if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
+        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    for (i = 0U; i < arg_count; i += 1U) {
+        if (!aivm_stack_pop(vm, &args[arg_count - i - 1U])) {
+            return 0;
+        }
+    }
+    if (!aivm_stack_pop(vm, &target_value)) {
+        return 0;
+    }
+    if (target_value.type != AIVM_VAL_STRING || target_value.string_value == NULL) {
+        vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    syscall_status = aivm_syscall_dispatch_checked(
+        vm->syscall_bindings,
+        vm->syscall_binding_count,
+        target_value.string_value,
+        args,
+        arg_count,
+        out_result);
+    if (syscall_status != AIVM_SYSCALL_OK) {
+        vm->error = AIVM_VM_ERR_SYSCALL;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    return 1;
+}
+
+static int push_completed_task(AivmVm* vm, AivmValue result)
+{
+    int64_t handle;
+    if (vm == NULL) {
+        return 0;
+    }
+    if (vm->completed_task_count >= AIVM_VM_TASK_CAPACITY) {
+        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    handle = vm->next_task_handle;
+    vm->next_task_handle += 1;
+    vm->completed_tasks[vm->completed_task_count].handle = handle;
+    vm->completed_tasks[vm->completed_task_count].result = result;
+    vm->completed_task_count += 1U;
+    return aivm_stack_push(vm, aivm_value_int(handle));
+}
+
+static int find_completed_task(const AivmVm* vm, int64_t handle, AivmValue* out_result)
+{
+    size_t i;
+    if (vm == NULL || out_result == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < vm->completed_task_count; i += 1U) {
+        if (vm->completed_tasks[i].handle == handle) {
+            *out_result = vm->completed_tasks[i].result;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -280,6 +361,10 @@ void aivm_reset_state(AivmVm* vm)
     vm->locals_count = 0U;
     vm->string_arena_used = 0U;
     vm->string_arena[0] = '\0';
+    vm->completed_task_count = 0U;
+    vm->next_task_handle = 1;
+    vm->par_context_count = 0U;
+    vm->par_value_count = 0U;
 }
 
 void aivm_init(AivmVm* vm, const AivmProgram* program)
@@ -923,54 +1008,13 @@ void aivm_step(AivmVm* vm)
 
         case AIVM_OP_CALL_SYS: {
             size_t arg_count;
-            AivmValue args[AIVM_VM_MAX_SYSCALL_ARGS];
-            AivmValue target_value;
             AivmValue result;
-            AivmSyscallStatus syscall_status;
-            size_t i;
 
             if (!operand_to_index(vm, instruction->operand_int, &arg_count)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
-            if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
-                vm->instruction_pointer = vm->program->instruction_count;
-                break;
-            }
-
-            for (i = 0U; i < arg_count; i += 1U) {
-                if (!aivm_stack_pop(vm, &args[arg_count - i - 1U])) {
-                    vm->instruction_pointer = vm->program->instruction_count;
-                    break;
-                }
-            }
-            if (vm->status == AIVM_VM_STATUS_ERROR) {
-                vm->instruction_pointer = vm->program->instruction_count;
-                break;
-            }
-            if (!aivm_stack_pop(vm, &target_value)) {
-                vm->instruction_pointer = vm->program->instruction_count;
-                break;
-            }
-            if (target_value.type != AIVM_VAL_STRING || target_value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
-                vm->instruction_pointer = vm->program->instruction_count;
-                break;
-            }
-
-            syscall_status = aivm_syscall_dispatch_checked(
-                vm->syscall_bindings,
-                vm->syscall_binding_count,
-                target_value.string_value,
-                args,
-                arg_count,
-                &result);
-            if (syscall_status != AIVM_SYSCALL_OK) {
-                vm->error = AIVM_VM_ERR_SYSCALL;
-                vm->status = AIVM_VM_STATUS_ERROR;
+            if (!call_sys_with_arity(vm, arg_count, &result)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -983,15 +1027,129 @@ void aivm_step(AivmVm* vm)
         }
 
         case AIVM_OP_ASYNC_CALL:
-        case AIVM_OP_ASYNC_CALL_SYS:
-        case AIVM_OP_AWAIT:
-        case AIVM_OP_PAR_BEGIN:
-        case AIVM_OP_PAR_FORK:
-        case AIVM_OP_PAR_JOIN:
-        case AIVM_OP_PAR_CANCEL:
             vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
             vm->status = AIVM_VM_STATUS_ERROR;
             vm->instruction_pointer = vm->program->instruction_count;
+            break;
+
+        case AIVM_OP_ASYNC_CALL_SYS: {
+            size_t arg_count;
+            AivmValue result;
+            if (!operand_to_index(vm, instruction->operand_int, &arg_count)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!call_sys_with_arity(vm, arg_count, &result)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_completed_task(vm, result)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_AWAIT: {
+            AivmValue handle_value;
+            AivmValue completed;
+            if (!aivm_stack_pop(vm, &handle_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (handle_value.type != AIVM_VAL_INT ||
+                !find_completed_task(vm, handle_value.int_value, &completed)) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, completed)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_PAR_BEGIN: {
+            size_t expected_count;
+            if (!operand_to_index(vm, instruction->operand_int, &expected_count)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (vm->par_context_count >= AIVM_VM_PAR_CONTEXT_CAPACITY) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->par_contexts[vm->par_context_count].expected_count = expected_count;
+            vm->par_contexts[vm->par_context_count].start_index = vm->par_value_count;
+            vm->par_context_count += 1U;
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_PAR_FORK: {
+            AivmValue value;
+            if (vm->par_context_count == 0U) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (vm->par_value_count >= AIVM_VM_PAR_VALUE_CAPACITY) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_pop(vm, &value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->par_values[vm->par_value_count] = value;
+            vm->par_value_count += 1U;
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_PAR_JOIN: {
+            AivmParContext context;
+            size_t join_count;
+            if (!operand_to_index(vm, instruction->operand_int, &join_count)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (vm->par_context_count == 0U) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            context = vm->par_contexts[vm->par_context_count - 1U];
+            if (context.expected_count != join_count ||
+                vm->par_value_count < context.start_index ||
+                (vm->par_value_count - context.start_index) != join_count) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->par_context_count -= 1U;
+            vm->par_value_count = context.start_index;
+            if (!aivm_stack_push(vm, aivm_value_int((int64_t)join_count))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_PAR_CANCEL:
+            vm->instruction_pointer += 1U;
             break;
 
         case AIVM_OP_STR_UTF8_BYTE_COUNT: {

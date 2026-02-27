@@ -31,7 +31,7 @@ Status: `in_progress`
 Output: switch-based deterministic dispatch with parity to current VM.
 
 5. Complete C value model parity.
-Status: `in_progress`
+Status: `completed`
 Output: all runtime value kinds and explicit ownership rules.
 
 6. Port syscall dispatch/contracts in C.

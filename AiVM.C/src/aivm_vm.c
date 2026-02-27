@@ -444,7 +444,8 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
-        case AIVM_OP_RET: {
+        case AIVM_OP_RET:
+        case AIVM_OP_RETURN: {
             AivmCallFrame frame;
             AivmValue return_value;
             int has_return_value = 0;

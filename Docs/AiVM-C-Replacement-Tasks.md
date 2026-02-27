@@ -112,3 +112,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic `STR_ESCAPE` opcode behavior (backslash/quote/newline/carriage-return/tab escaping) with strict type validation tests.
 - Added explicit VM tests for fixed-capacity string arena overflow across `STR_CONCAT`, `TO_STRING`, and `STR_ESCAPE` (`AIVM009` behavior).
 - Added deterministic syscall status code/message mapping (`AIVMS*`) for dispatch outcomes with unit coverage.
+- Added explicit `RETURN` opcode alias support (mapped to `RET` semantics) to align C opcode surface with C# VM instruction naming.

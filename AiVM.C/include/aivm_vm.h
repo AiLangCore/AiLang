@@ -22,7 +22,8 @@ typedef enum {
     AIVM_VM_ERR_FRAME_UNDERFLOW = 5,
     AIVM_VM_ERR_LOCAL_OUT_OF_RANGE = 6,
     AIVM_VM_ERR_TYPE_MISMATCH = 7,
-    AIVM_VM_ERR_INVALID_PROGRAM = 8
+    AIVM_VM_ERR_INVALID_PROGRAM = 8,
+    AIVM_VM_ERR_STRING_OVERFLOW = 9
 } AivmVmError;
 
 typedef struct {
@@ -33,7 +34,8 @@ typedef struct {
 enum {
     AIVM_VM_STACK_CAPACITY = 1024,
     AIVM_VM_CALLFRAME_CAPACITY = 256,
-    AIVM_VM_LOCALS_CAPACITY = 1024
+    AIVM_VM_LOCALS_CAPACITY = 1024,
+    AIVM_VM_STRING_ARENA_CAPACITY = 8192
 };
 
 typedef struct {
@@ -50,6 +52,8 @@ typedef struct {
 
     AivmValue locals[AIVM_VM_LOCALS_CAPACITY];
     size_t locals_count;
+    char string_arena[AIVM_VM_STRING_ARENA_CAPACITY];
+    size_t string_arena_used;
 } AivmVm;
 
 void aivm_init(AivmVm* vm, const AivmProgram* program);

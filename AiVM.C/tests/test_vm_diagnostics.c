@@ -26,6 +26,9 @@ int main(void)
     if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_INVALID_PROGRAM), "AIVM008") == 0) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_STRING_OVERFLOW), "AIVM009") == 0) != 0) {
+        return 1;
+    }
 
     if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_NONE), "No error.") == 0) != 0) {
         return 1;
@@ -42,6 +45,9 @@ int main(void)
         return 1;
     }
     if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_INVALID_PROGRAM), "Invalid program state.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_STRING_OVERFLOW), "VM string arena overflow.") == 0) != 0) {
         return 1;
     }
 

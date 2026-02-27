@@ -16,6 +16,23 @@ static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
     return 1;
 }
 
+static char* arena_alloc(AivmVm* vm, size_t size)
+{
+    char* start;
+    if (vm == NULL) {
+        return NULL;
+    }
+    if (vm->string_arena_used + size > AIVM_VM_STRING_ARENA_CAPACITY) {
+        vm->error = AIVM_VM_ERR_STRING_OVERFLOW;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return NULL;
+    }
+
+    start = &vm->string_arena[vm->string_arena_used];
+    vm->string_arena_used += size;
+    return start;
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -28,6 +45,8 @@ void aivm_reset_state(AivmVm* vm)
     vm->stack_count = 0U;
     vm->call_frame_count = 0U;
     vm->locals_count = 0U;
+    vm->string_arena_used = 0U;
+    vm->string_arena[0] = '\0';
 }
 
 void aivm_init(AivmVm* vm, const AivmProgram* program)
@@ -441,6 +460,57 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_STR_CONCAT: {
+            AivmValue right;
+            AivmValue left;
+            size_t left_length = 0U;
+            size_t right_length = 0U;
+            size_t i;
+            char* output;
+
+            if (!aivm_stack_pop(vm, &right) || !aivm_stack_pop(vm, &left)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (left.type != AIVM_VAL_STRING ||
+                right.type != AIVM_VAL_STRING ||
+                left.string_value == NULL ||
+                right.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            while (left.string_value[left_length] != '\0') {
+                left_length += 1U;
+            }
+            while (right.string_value[right_length] != '\0') {
+                right_length += 1U;
+            }
+
+            output = arena_alloc(vm, left_length + right_length + 1U);
+            if (output == NULL) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            for (i = 0U; i < left_length; i += 1U) {
+                output[i] = left.string_value[i];
+            }
+            for (i = 0U; i < right_length; i += 1U) {
+                output[left_length + i] = right.string_value[i];
+            }
+            output[left_length + right_length] = '\0';
+
+            if (!aivm_stack_push(vm, aivm_value_string(output))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
@@ -493,6 +563,8 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM007";
         case AIVM_VM_ERR_INVALID_PROGRAM:
             return "AIVM008";
+        case AIVM_VM_ERR_STRING_OVERFLOW:
+            return "AIVM009";
         default:
             return "AIVM999";
     }
@@ -519,6 +591,8 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "Type mismatch.";
         case AIVM_VM_ERR_INVALID_PROGRAM:
             return "Invalid program state.";
+        case AIVM_VM_ERR_STRING_OVERFLOW:
+            return "VM string arena overflow.";
         default:
             return "Unknown VM error.";
     }

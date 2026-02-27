@@ -105,3 +105,4 @@ Output: code cleanup and doc/runbook updates.
 - Extended C ABI runtime bridge with `aivm_c_execute_aibc1` to load+execute AiBC1 bytes and return deterministic loader/runtime status fields.
 - Added manifest-driven dual-run parity harness (`scripts/aivm-dualrun-parity-manifest.sh`) and wired a parity smoke case into `scripts/test-aivm-c.sh` and CI path filters.
 - Updated `aivm-c-ci` workflow with `workflow_dispatch` and parity-report artifact upload for deterministic parity debugging in CI.
+- Added deterministic `STR_CONCAT` opcode support with fixed-capacity VM string arena (no heap allocation), plus opcode and diagnostics tests.

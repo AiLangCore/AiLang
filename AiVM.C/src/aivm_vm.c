@@ -1647,10 +1647,82 @@ void aivm_step(AivmVm* vm)
         }
 
         case AIVM_OP_MAKE_NODE:
-            vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-            vm->status = AIVM_VM_STATUS_ERROR;
-            vm->instruction_pointer = vm->program->instruction_count;
+        {
+            AivmValue argc_value;
+            AivmValue template_value;
+            const AivmNodeRecord* template_node;
+            AivmNodeAttr attrs[AIVM_VM_NODE_ATTR_CAPACITY];
+            int64_t children[AIVM_VM_NODE_CHILD_CAPACITY];
+            int64_t handle;
+            size_t argc;
+            size_t i;
+
+            if (!aivm_stack_pop(vm, &argc_value) ||
+                !aivm_stack_pop(vm, &template_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (argc_value.type != AIVM_VAL_INT ||
+                argc_value.int_value < 0 ||
+                template_value.type != AIVM_VAL_NODE ||
+                !lookup_node(vm, template_value.node_handle, &template_node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            argc = (size_t)argc_value.int_value;
+            if (argc > AIVM_VM_NODE_CHILD_CAPACITY ||
+                template_node->attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
+                vm->stack_count < argc) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            for (i = 0U; i < template_node->attr_count; i += 1U) {
+                attrs[i] = vm->node_attrs[template_node->attr_start + i];
+            }
+            for (i = 0U; i < argc; i += 1U) {
+                AivmValue child_value;
+                if (!aivm_stack_pop(vm, &child_value)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                if (child_value.type != AIVM_VAL_NODE) {
+                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                    vm->status = AIVM_VM_STATUS_ERROR;
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                children[argc - i - 1U] = child_value.node_handle;
+            }
+            if (vm->status == AIVM_VM_STATUS_ERROR) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            if (!create_node_record(
+                vm,
+                template_node->kind,
+                template_node->id,
+                attrs,
+                template_node->attr_count,
+                children,
+                argc,
+                &handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_node(handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
             break;
+        }
 
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;

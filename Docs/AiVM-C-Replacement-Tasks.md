@@ -136,3 +136,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `AIVM_VAL_NODE` runtime value kind and deterministic node arena model (fixed-capacity nodes/attrs/children, no heap allocation in VM core).
 - Implemented deterministic node opcode semantics for `NODE_KIND`, `NODE_ID`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, and `MAKE_LIT_*`; retained explicit unsupported behavior for `MAKE_NODE`.
 - Expanded syscall-heavy parity manifest with REPL success/error fixtures for `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount` under explicit `sys` permission gating.
+- Added deterministic `MAKE_NODE` scaffold semantics in C VM (template + argument children from stack) with tests; exact bytecode operand-shape parity remains a tracked follow-up.

@@ -1735,21 +1735,84 @@ static int test_node_ops_core_semantics(void)
     return 0;
 }
 
-static int test_make_node_remains_placeholder_error(void)
+static int test_make_node_from_template_and_children(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_MAKE_LIT_STRING, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 1 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 1 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_MAKE_NODE, .operand_int = 0 },
+        { .opcode = AIVM_OP_CHILD_COUNT, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "tmpl" },
+        { .type = AIVM_VAL_STRING, .string_value = "c1" },
+        { .type = AIVM_VAL_STRING, .string_value = "value" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 13U,
+        .constants = constants,
+        .constant_count = 3U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 1) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_make_node_requires_node_args(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
         { .opcode = AIVM_OP_MAKE_NODE, .operand_int = 0 }
     };
-    AivmProgram program;
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "tmpl" },
+        { .type = AIVM_VAL_STRING, .string_value = "not_node" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 5U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
 
-    aivm_program_init(&program, instructions, 1U);
     aivm_init(&vm, &program);
     aivm_run(&vm);
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
-    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
     return 0;
@@ -1874,7 +1937,10 @@ int main(void)
     if (test_node_ops_core_semantics() != 0) {
         return 1;
     }
-    if (test_make_node_remains_placeholder_error() != 0) {
+    if (test_make_node_from_template_and_children() != 0) {
+        return 1;
+    }
+    if (test_make_node_requires_node_args() != 0) {
         return 1;
     }
 

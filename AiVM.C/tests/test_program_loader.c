@@ -33,6 +33,41 @@ int main(void)
         4, 0, 0, 0,  /* section size */
         1, 2, 3, 4   /* payload */
     };
+    static const uint8_t instruction_section_valid[56] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 0, 0, 0,
+        1, 0, 0, 0,   /* section type: instructions */
+        28, 0, 0, 0,  /* section size */
+        2, 0, 0, 0,   /* instruction_count */
+        3, 0, 0, 0,   /* PUSH_INT */
+        42, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0,   /* HALT */
+        0, 0, 0, 0, 0, 0, 0, 0
+    };
+    static const uint8_t instruction_section_bad_size[44] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 0, 0, 0,
+        1, 0, 0, 0,   /* section type: instructions */
+        15, 0, 0, 0,  /* invalid section size for 1 record */
+        1, 0, 0, 0,   /* instruction_count */
+        3, 0, 0, 0,   /* PUSH_INT */
+        1, 0, 0, 0
+    };
+    static const uint8_t instruction_section_invalid_opcode[44] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 0, 0, 0,
+        1, 0, 0, 0,   /* section type: instructions */
+        16, 0, 0, 0,  /* section size */
+        1, 0, 0, 0,   /* instruction_count */
+        99, 0, 0, 0,  /* invalid opcode */
+        0, 0, 0, 0
+    };
     static const uint8_t section_limit_exceeded[16] = {
         'A', 'I', 'B', 'C',
         1, 0, 0, 0,
@@ -108,7 +143,7 @@ int main(void)
     }
 
     result = aivm_program_load_aibc1(one_section_valid, 28U, &program);
-    if (expect(result.status == AIVM_PROGRAM_ERR_UNSUPPORTED) != 0) {
+    if (expect(result.status == AIVM_PROGRAM_OK) != 0) {
         return 1;
     }
     if (expect(program.section_count == 1U) != 0) {
@@ -125,10 +160,10 @@ int main(void)
     }
 
     result = aivm_program_load_aibc1(valid_header, 16U, &program);
-    if (expect(result.status == AIVM_PROGRAM_ERR_UNSUPPORTED) != 0) {
+    if (expect(result.status == AIVM_PROGRAM_OK) != 0) {
         return 1;
     }
-    if (expect(result.error_offset == 16U) != 0) {
+    if (expect(result.error_offset == 0U) != 0) {
         return 1;
     }
     if (expect(program.format_version == 1U) != 0) {
@@ -138,6 +173,42 @@ int main(void)
         return 1;
     }
     if (expect(program.section_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(program.instructions == NULL) != 0) {
+        return 1;
+    }
+    if (expect(program.instruction_count == 0U) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(instruction_section_valid, 56U, &program);
+    if (expect(result.status == AIVM_PROGRAM_OK) != 0) {
+        return 1;
+    }
+    if (expect(program.instructions != NULL) != 0) {
+        return 1;
+    }
+    if (expect(program.instruction_count == 2U) != 0) {
+        return 1;
+    }
+    if (expect(program.instructions[0].opcode == AIVM_OP_PUSH_INT) != 0) {
+        return 1;
+    }
+    if (expect(program.instructions[0].operand_int == 42) != 0) {
+        return 1;
+    }
+    if (expect(program.instructions[1].opcode == AIVM_OP_HALT) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(instruction_section_bad_size, 44U, &program);
+    if (expect(result.status == AIVM_PROGRAM_ERR_INVALID_SECTION) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(instruction_section_invalid_opcode, 44U, &program);
+    if (expect(result.status == AIVM_PROGRAM_ERR_INVALID_OPCODE) != 0) {
         return 1;
     }
 

@@ -19,7 +19,7 @@ Status: `pending`
 Output: explicit opcode/runtime/syscall parity matrix anchored to `SPEC/`.
 
 2. Define C bytecode/program model (`AiBC1`) and deterministic loader.
-Status: `in_progress`
+Status: `completed`
 Output: `aivm_program_*` API, deterministic load errors, no allocation in core.
 
 3. Implement full VM runtime state model.
@@ -72,8 +72,7 @@ Output: code cleanup and doc/runbook updates.
 
 ## Current Increment
 
-- Task 2 started with deterministic loader scaffolding in `AiVM.C`.
-- Loader validates null/truncated/bad-magic and returns explicit `UNSUPPORTED` for full decode until bytecode phase is implemented.
+- Completed deterministic AiBC1 instruction-section decode in `AiVM.C` with fixed-capacity storage and explicit decode errors.
 - Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.
 - Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
 - Added deterministic syscall dispatch-table skeleton and syscall unit test (`invoke` + `dispatch` paths).

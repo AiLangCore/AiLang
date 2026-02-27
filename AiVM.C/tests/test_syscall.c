@@ -31,7 +31,7 @@ static int handler_draw_rect(
 {
     (void)target;
     (void)args;
-    if (arg_count == 4U) {
+    if (arg_count == 6U) {
         *result = aivm_value_void();
         return AIVM_SYSCALL_OK;
     }
@@ -72,7 +72,7 @@ int main(void)
 {
     AivmValue result;
     AivmValue arg;
-    AivmValue rect_args[4];
+    AivmValue rect_args[6];
     AivmSyscallStatus status;
     static const AivmSyscallBinding bindings[] = {
         { "sys.echo", handler_echo }
@@ -119,7 +119,9 @@ int main(void)
     rect_args[1] = aivm_value_int(0);
     rect_args[2] = aivm_value_int(10);
     rect_args[3] = aivm_value_int(20);
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 4U, &result);
+    rect_args[4] = aivm_value_int(1);
+    rect_args[5] = aivm_value_string("#fff");
+    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 6U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
         return 1;
     }
@@ -127,7 +129,7 @@ int main(void)
         return 1;
     }
 
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 3U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 5U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_CONTRACT) != 0) {
         return 1;
     }

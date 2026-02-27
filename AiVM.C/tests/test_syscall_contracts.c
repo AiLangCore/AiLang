@@ -9,8 +9,9 @@ int main(void)
 {
     AivmValueType return_type;
     const AivmSyscallContract* contract;
-    AivmValue draw_rect_args[4];
-    AivmValue draw_text_args[3];
+    AivmValue draw_rect_args[6];
+    AivmValue draw_text_args[6];
+    AivmValue draw_line_args[7];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -18,8 +19,10 @@ int main(void)
     draw_rect_args[1] = aivm_value_int(0);
     draw_rect_args[2] = aivm_value_int(100);
     draw_rect_args[3] = aivm_value_int(50);
+    draw_rect_args[4] = aivm_value_int(1);
+    draw_rect_args[5] = aivm_value_string("#fff");
 
-    if (expect(aivm_syscall_contract_validate("sys.ui_drawRect", draw_rect_args, 4U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawRect", draw_rect_args, 6U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
     if (expect(aivm_value_equals(aivm_value_string(aivm_contract_status_code(AIVM_CONTRACT_OK)), aivm_value_string("AIVMC000")) == 1) != 0) {
@@ -36,11 +39,18 @@ int main(void)
         return 1;
     }
 
-    draw_text_args[0] = aivm_value_string("hello");
-    draw_text_args[1] = aivm_value_int(10);
-    draw_text_args[2] = aivm_value_int(20);
+    draw_text_args[0] = aivm_value_int(10);
+    draw_text_args[1] = aivm_value_int(20);
+    draw_text_args[2] = aivm_value_int(0);
+    draw_text_args[3] = aivm_value_string("hello");
+    draw_text_args[4] = aivm_value_string("#000");
+    draw_text_args[5] = aivm_value_int(14);
 
-    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", draw_text_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", draw_text_args, 6U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", draw_rect_args, 6U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
         return 1;
     }
 
@@ -48,16 +58,31 @@ int main(void)
         return 1;
     }
 
-    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", NULL, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", NULL, 6U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
         return 1;
     }
 
-    draw_text_args[0] = aivm_value_int(1);
-    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+    draw_text_args[3] = aivm_value_int(1);
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawText", draw_text_args, 6U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+        return 1;
+    }
+    draw_text_args[3] = aivm_value_string("hello");
+
+    if (expect(aivm_syscall_contract_validate("sys.unknown", draw_text_args, 6U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
         return 1;
     }
 
-    if (expect(aivm_syscall_contract_validate("sys.unknown", draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
+    draw_line_args[0] = aivm_value_int(0);
+    draw_line_args[1] = aivm_value_int(0);
+    draw_line_args[2] = aivm_value_int(20);
+    draw_line_args[3] = aivm_value_int(20);
+    draw_line_args[4] = aivm_value_int(2);
+    draw_line_args[5] = aivm_value_string("#f00");
+    draw_line_args[6] = aivm_value_int(255);
+    if (expect(aivm_syscall_contract_validate("sys.ui_drawLine", draw_line_args, 7U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(54U, draw_line_args, 7U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 
@@ -89,11 +114,10 @@ int main(void)
         return 1;
     }
 
-    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_COUNT) != 0) {
         return 1;
     }
-    draw_text_args[0] = aivm_value_string("hello");
-    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 6U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
     contract = aivm_syscall_contract_find_by_id(58U);

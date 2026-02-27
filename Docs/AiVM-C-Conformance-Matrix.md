@@ -47,6 +47,7 @@ Status keys:
 |---|---|---|
 | Typed syscall handler ABI | implemented | `AivmSyscallHandler` with target/typed args/result. |
 | Contract table + type validation | implemented | Name/id lookup and deterministic arg/return checks. |
+| UI draw syscall contract parity | in_progress | C contracts aligned for `ui_drawRect/ui_drawText/ui_drawLine/ui_drawEllipse/ui_drawPath/ui_drawImage` arities/types and canonical IDs. |
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |
 | UI syscall contracts (initial set) | implemented | Contract scaffold supports UI targets used by VM tests. |
 | Host mechanical boundary | implemented | VM does not call OS APIs directly. |

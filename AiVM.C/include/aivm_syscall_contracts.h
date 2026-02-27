@@ -18,7 +18,7 @@ typedef struct {
     uint32_t id;
     const char* target;
     size_t arg_count;
-    AivmValueType arg_types[4];
+    AivmValueType arg_types[8];
     AivmValueType return_type;
 } AivmSyscallContract;
 

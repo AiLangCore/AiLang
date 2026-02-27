@@ -29,7 +29,10 @@ static int host_ui_draw_rect(
 {
     (void)target;
     (void)args;
-    if (arg_count != 4U) {
+    if (arg_count != 6U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[5].type != AIVM_VAL_STRING) {
         return AIVM_SYSCALL_ERR_INVALID;
     }
     *result = aivm_value_void();
@@ -1215,13 +1218,16 @@ static int test_call_sys_success_and_void_result(void)
         { .opcode = AIVM_OP_CONST, .operand_int = 2 },
         { .opcode = AIVM_OP_CONST, .operand_int = 2 },
         { .opcode = AIVM_OP_CONST, .operand_int = 2 },
-        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 4 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 6 },
         { .opcode = AIVM_OP_HALT, .operand_int = 0 }
     };
     static const AivmValue constants[] = {
         { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" },
         { .type = AIVM_VAL_STRING, .string_value = "sys.ui_drawRect" },
-        { .type = AIVM_VAL_INT, .int_value = 1 }
+        { .type = AIVM_VAL_INT, .int_value = 1 },
+        { .type = AIVM_VAL_STRING, .string_value = "#fff" }
     };
     static const AivmSyscallBinding bindings[] = {
         { "sys.ui_getWindowSize", host_ui_get_window_size },
@@ -1229,9 +1235,9 @@ static int test_call_sys_success_and_void_result(void)
     };
     static const AivmProgram program = {
         .instructions = instructions,
-        .instruction_count = 9U,
+        .instruction_count = 11U,
         .constants = constants,
-        .constant_count = 3U,
+        .constant_count = 4U,
         .format_version = 0U,
         .format_flags = 0U,
         .section_count = 0U

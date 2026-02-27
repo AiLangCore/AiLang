@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "aivm_syscall.h"
 
 static int expect(int condition)
@@ -87,6 +89,9 @@ int main(void)
     if (expect(status == AIVM_SYSCALL_ERR_INVALID) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_syscall_status_code(status), "AIVMS001") == 0) != 0) {
+        return 1;
+    }
 
     status = aivm_syscall_dispatch(NULL, 0U, "sys.echo", NULL, 0U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_INVALID) != 0) {
@@ -137,6 +142,12 @@ int main(void)
 
     status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 1U, "sys.ui_getWindowSize", NULL, 0U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_RETURN_TYPE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_syscall_status_message(status), "Syscall return type violated contract.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_syscall_status_code((AivmSyscallStatus)-999), "AIVMS999") == 0) != 0) {
         return 1;
     }
 

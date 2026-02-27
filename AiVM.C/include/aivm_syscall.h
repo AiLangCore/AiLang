@@ -52,4 +52,7 @@ AivmSyscallStatus aivm_syscall_dispatch_checked(
     AivmValue* result
 );
 
+const char* aivm_syscall_status_code(AivmSyscallStatus status);
+const char* aivm_syscall_status_message(AivmSyscallStatus status);
+
 #endif

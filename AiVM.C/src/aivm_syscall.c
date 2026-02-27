@@ -90,3 +90,43 @@ AivmSyscallStatus aivm_syscall_dispatch_checked(
 
     return AIVM_SYSCALL_OK;
 }
+
+const char* aivm_syscall_status_code(AivmSyscallStatus status)
+{
+    switch (status) {
+        case AIVM_SYSCALL_OK:
+            return "AIVMS000";
+        case AIVM_SYSCALL_ERR_INVALID:
+            return "AIVMS001";
+        case AIVM_SYSCALL_ERR_NULL_RESULT:
+            return "AIVMS002";
+        case AIVM_SYSCALL_ERR_NOT_FOUND:
+            return "AIVMS003";
+        case AIVM_SYSCALL_ERR_CONTRACT:
+            return "AIVMS004";
+        case AIVM_SYSCALL_ERR_RETURN_TYPE:
+            return "AIVMS005";
+        default:
+            return "AIVMS999";
+    }
+}
+
+const char* aivm_syscall_status_message(AivmSyscallStatus status)
+{
+    switch (status) {
+        case AIVM_SYSCALL_OK:
+            return "Syscall dispatch succeeded.";
+        case AIVM_SYSCALL_ERR_INVALID:
+            return "Syscall dispatch input was invalid.";
+        case AIVM_SYSCALL_ERR_NULL_RESULT:
+            return "Syscall dispatch result pointer was null.";
+        case AIVM_SYSCALL_ERR_NOT_FOUND:
+            return "Syscall target was not found.";
+        case AIVM_SYSCALL_ERR_CONTRACT:
+            return "Syscall arguments violated contract.";
+        case AIVM_SYSCALL_ERR_RETURN_TYPE:
+            return "Syscall return type violated contract.";
+        default:
+            return "Unknown syscall dispatch status.";
+    }
+}

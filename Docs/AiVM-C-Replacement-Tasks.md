@@ -55,7 +55,7 @@ Status: `pending`
 Output: lifecycle/http/publish/syscall scenarios parity gates.
 
 11. Determinism + perf guardrails.
-Status: `pending`
+Status: `in_progress`
 Output: replay-stability checks and non-regressive perf smoke baselines.
 
 12. CI integration (multi-platform C build + parity jobs).
@@ -127,3 +127,4 @@ Output: code cleanup and doc/runbook updates.
 - Enhanced manifest-driven parity harness with deterministic exit-status parity checks (including expected non-zero cases) and status fields in report entries.
 - Added syscall-heavy VM opcode coverage for `CALL_SYS` across `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount`, including contract type-mismatch failure behavior.
 - Enforced warning-clean C builds by applying strict warning flags as errors (`-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`) across core, examples, and C tests.
+- Added deterministic replay-stability test (`aivm_test_vm_determinism`) that re-executes mixed opcode+syscall programs over 128 iterations and asserts identical VM outcomes.

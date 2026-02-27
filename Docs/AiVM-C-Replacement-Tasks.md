@@ -103,3 +103,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded syscall contract handling with stable numeric IDs, deterministic target/id lookup, and typed validation tests.
 - Added deterministic status-to-code/message mappings for AiBC1 loader and syscall-contract validation to support parity diagnostics.
 - Extended C ABI runtime bridge with `aivm_c_execute_aibc1` to load+execute AiBC1 bytes and return deterministic loader/runtime status fields.
+- Added manifest-driven dual-run parity harness (`scripts/aivm-dualrun-parity-manifest.sh`) and wired a parity smoke case into `scripts/test-aivm-c.sh` and CI path filters.

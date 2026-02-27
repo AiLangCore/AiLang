@@ -6,6 +6,9 @@ on:
       - 'AiVM.C/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/aivm-parity-compare.sh'
+      - 'scripts/aivm-dualrun-parity.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'AiVM.C/tests/parity_commands.txt'
       - '.github/workflows/aivm-c-ci.yml'
   push:
     branches:
@@ -15,6 +18,9 @@ on:
       - 'AiVM.C/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/aivm-parity-compare.sh'
+      - 'scripts/aivm-dualrun-parity.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'AiVM.C/tests/parity_commands.txt'
       - '.github/workflows/aivm-c-ci.yml'
 
 jobs:

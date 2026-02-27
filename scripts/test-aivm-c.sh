@@ -7,3 +7,4 @@ BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build"
 cmake -S "${ROOT_DIR}/AiVM.C" -B "${BUILD_DIR}"
 cmake --build "${BUILD_DIR}"
 ctest --test-dir "${BUILD_DIR}" --output-on-failure
+"${ROOT_DIR}/scripts/aivm-dualrun-parity-manifest.sh" "${ROOT_DIR}/AiVM.C/tests/parity_commands.txt" "${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt"

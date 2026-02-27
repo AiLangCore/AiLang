@@ -151,3 +151,4 @@ Output: code cleanup and doc/runbook updates.
 - Improved VM syscall diagnostics detail: `CALL_SYS` failure paths now emit deterministic `AIVMS*`-scoped detail strings (`not found`, `contract`, `return type`, etc.) and added assertions in VM opcode tests.
 - Expanded syscall-heavy parity manifest with REPL UI lifecycle/window validation-error fixtures for `sys.ui_getWindowSize` (type mismatch) and `sys.ui_createWindow` (arity mismatch).
 - Expanded C syscall-contract/dispatch unit coverage for UI lifecycle IDs (`46/47/50/52/53/58/72`) and node-return enforcement for `sys.ui_pollEvent`/`sys.ui_getWindowSize`.
+- Added parity-manifest coverage for CLI `--vm=c` deterministic bridge gate (`DEV008`) so current C-backend-not-linked behavior is regression-checked while Task 8 continues.

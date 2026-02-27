@@ -23,7 +23,7 @@ Status: `completed`
 Output: `aivm_program_*` API, deterministic load errors, no allocation in core.
 
 3. Implement full VM runtime state model.
-Status: `in_progress`
+Status: `completed`
 Output: stack, call frames, locals, constants, explicit halt/error state.
 
 4. Port opcode execution semantics.
@@ -98,3 +98,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic integer equality opcode (`EQ_INT`) with type-safety tests.
 - Added deterministic generic equality opcode (`EQ`) with value-equality and underflow tests.
 - Fixed generic value equality string semantics to compare deterministic string content (not pointer identity), with VM/value tests.
+- Hardened deterministic call-frame transitions: `RET` now restores frame base with single-value return semantics and rejects invalid negative control-flow/local operands.

@@ -291,6 +291,56 @@ static int test_call_ret_roundtrip(void)
     return 0;
 }
 
+static int test_call_ret_collapses_callee_stack_to_single_return(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 11 },
+        { .opcode = AIVM_OP_CALL, .operand_int = 3 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 7 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 8 },
+        { .opcode = AIVM_OP_RET, .operand_int = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 6U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 2U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(out.int_value == 8) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(out.int_value == 11) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_ret_underflow_sets_error(void)
 {
     AivmVm vm;
@@ -315,6 +365,33 @@ static int test_ret_underflow_sets_error(void)
         return 1;
     }
 
+    return 0;
+}
+
+static int test_negative_jump_operand_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_JUMP, .operand_int = -1 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -541,7 +618,13 @@ int main(void)
     if (test_call_ret_roundtrip() != 0) {
         return 1;
     }
+    if (test_call_ret_collapses_callee_stack_to_single_return() != 0) {
+        return 1;
+    }
     if (test_ret_underflow_sets_error() != 0) {
+        return 1;
+    }
+    if (test_negative_jump_operand_sets_error() != 0) {
         return 1;
     }
     if (test_eq_int_true_false() != 0) {

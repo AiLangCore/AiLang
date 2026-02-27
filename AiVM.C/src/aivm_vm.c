@@ -1,5 +1,21 @@
 #include "aivm_vm.h"
 
+static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
+{
+    if (vm == NULL || out_index == NULL) {
+        return 0;
+    }
+
+    if (operand < 0) {
+        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    *out_index = (size_t)operand;
+    return 1;
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -200,7 +216,11 @@ void aivm_step(AivmVm* vm)
 
         case AIVM_OP_STORE_LOCAL: {
             AivmValue popped;
-            size_t local_index = (size_t)instruction->operand_int;
+            size_t local_index;
+            if (!operand_to_index(vm, instruction->operand_int, &local_index)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             if (!aivm_stack_pop(vm, &popped)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
@@ -215,7 +235,11 @@ void aivm_step(AivmVm* vm)
 
         case AIVM_OP_LOAD_LOCAL: {
             AivmValue local_value;
-            size_t local_index = (size_t)instruction->operand_int;
+            size_t local_index;
+            if (!operand_to_index(vm, instruction->operand_int, &local_index)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             if (!aivm_local_get(vm, local_index, &local_value)) {
                 vm->error = AIVM_VM_ERR_LOCAL_OUT_OF_RANGE;
                 vm->status = AIVM_VM_STATUS_ERROR;
@@ -252,7 +276,11 @@ void aivm_step(AivmVm* vm)
         }
 
         case AIVM_OP_JUMP: {
-            size_t target = (size_t)instruction->operand_int;
+            size_t target;
+            if (!operand_to_index(vm, instruction->operand_int, &target)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             if (target > vm->program->instruction_count) {
                 vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
                 vm->status = AIVM_VM_STATUS_ERROR;
@@ -265,7 +293,11 @@ void aivm_step(AivmVm* vm)
 
         case AIVM_OP_JUMP_IF_FALSE: {
             AivmValue condition;
-            size_t target = (size_t)instruction->operand_int;
+            size_t target;
+            if (!operand_to_index(vm, instruction->operand_int, &target)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             if (!aivm_stack_pop(vm, &condition)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
@@ -299,7 +331,11 @@ void aivm_step(AivmVm* vm)
             break;
 
         case AIVM_OP_CALL: {
-            size_t target = (size_t)instruction->operand_int;
+            size_t target;
+            if (!operand_to_index(vm, instruction->operand_int, &target)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             if (target > vm->program->instruction_count) {
                 vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
                 vm->status = AIVM_VM_STATUS_ERROR;
@@ -316,6 +352,8 @@ void aivm_step(AivmVm* vm)
 
         case AIVM_OP_RET: {
             AivmCallFrame frame;
+            AivmValue return_value;
+            int has_return_value = 0;
             if (!aivm_frame_pop(vm, &frame)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
@@ -325,6 +363,23 @@ void aivm_step(AivmVm* vm)
                 vm->status = AIVM_VM_STATUS_ERROR;
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
+            }
+            if (vm->stack_count < frame.frame_base) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (vm->stack_count > frame.frame_base) {
+                return_value = vm->stack[vm->stack_count - 1U];
+                has_return_value = 1;
+            }
+            vm->stack_count = frame.frame_base;
+            if (has_return_value != 0) {
+                if (!aivm_stack_push(vm, return_value)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
             }
             vm->instruction_pointer = frame.return_instruction_pointer;
             break;

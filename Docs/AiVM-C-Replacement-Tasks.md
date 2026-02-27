@@ -144,3 +144,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded dual-run manifest parity with stable golden VM error-path cases (`vm_default_is_canonical`, `vm_unsupported_construct`) including explicit non-zero status parity.
 - Added deterministic perf-smoke baseline tooling (`scripts/aivm-c-perf-smoke.sh` + `AiVM.C/tests/perf_baseline.env`) and optional integration in `scripts/test-aivm-c.sh` via `AIVM_PERF_SMOKE=1`.
 - Aligned C syscall-contract IDs to canonical C# `SyscallId` numeric values for covered syscalls (`sys.str_*`, `sys.ui_*` subset), reducing ABI/id drift risk.
+- Wired Linux CI perf-smoke execution (`AIVM_PERF_SMOKE=1`) into `aivm-c-ci` so baseline guardrails run in automation.

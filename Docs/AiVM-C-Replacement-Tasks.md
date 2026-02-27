@@ -126,3 +126,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic parity diff-location helpers and CLI reporting (`index`, `line`, `col`, normalized lengths) for faster C-vs-C# mismatch triage.
 - Enhanced manifest-driven parity harness with deterministic exit-status parity checks (including expected non-zero cases) and status fields in report entries.
 - Added syscall-heavy VM opcode coverage for `CALL_SYS` across `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount`, including contract type-mismatch failure behavior.
+- Enforced warning-clean C builds by applying strict warning flags as errors (`-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`) across core, examples, and C tests.

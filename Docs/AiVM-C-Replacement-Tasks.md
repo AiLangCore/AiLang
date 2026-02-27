@@ -141,3 +141,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic VM error-detail channel (`aivm_vm_error_detail`) with stable messages for central failure paths (operand/stack/frame/local/syscall/unsupported opcode) and diagnostics test coverage.
 - Added CLI/runtime mode plumbing for `--vm=c` with deterministic `DEV008` backend gate, creating an explicit feature-flagged bridge point for future C backend activation without changing default VM behavior.
 - Implemented deterministic `ASYNC_CALL` subroutine-task scaffold (with `AWAIT` interop) and added async-call opcode tests for roundtrip and invalid-target behavior.
+- Expanded dual-run manifest parity with stable golden VM error-path cases (`vm_default_is_canonical`, `vm_unsupported_construct`) including explicit non-zero status parity.

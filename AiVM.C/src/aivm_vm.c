@@ -33,6 +33,28 @@ static char* arena_alloc(AivmVm* vm, size_t size)
     return start;
 }
 
+static int push_string_copy(AivmVm* vm, const char* input)
+{
+    size_t length = 0U;
+    size_t i;
+    char* output;
+    if (vm == NULL || input == NULL) {
+        return 0;
+    }
+    while (input[length] != '\0') {
+        length += 1U;
+    }
+    output = arena_alloc(vm, length + 1U);
+    if (output == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < length; i += 1U) {
+        output[i] = input[i];
+    }
+    output[length] = '\0';
+    return aivm_stack_push(vm, aivm_value_string(output));
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -508,6 +530,92 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_TO_STRING: {
+            AivmValue value;
+            char bool_buffer[6];
+            char int_buffer[32];
+            size_t int_index;
+            uint64_t magnitude;
+            int negative = 0;
+
+            if (!aivm_stack_pop(vm, &value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            if (value.type == AIVM_VAL_STRING) {
+                if (value.string_value == NULL || !push_string_copy(vm, value.string_value)) {
+                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                    vm->status = AIVM_VM_STATUS_ERROR;
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                vm->instruction_pointer += 1U;
+                break;
+            }
+            if (value.type == AIVM_VAL_BOOL) {
+                if (value.bool_value != 0) {
+                    bool_buffer[0] = 't';
+                    bool_buffer[1] = 'r';
+                    bool_buffer[2] = 'u';
+                    bool_buffer[3] = 'e';
+                    bool_buffer[4] = '\0';
+                } else {
+                    bool_buffer[0] = 'f';
+                    bool_buffer[1] = 'a';
+                    bool_buffer[2] = 'l';
+                    bool_buffer[3] = 's';
+                    bool_buffer[4] = 'e';
+                    bool_buffer[5] = '\0';
+                }
+                if (!push_string_copy(vm, bool_buffer)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                vm->instruction_pointer += 1U;
+                break;
+            }
+            if (value.type == AIVM_VAL_VOID) {
+                if (!push_string_copy(vm, "null")) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                vm->instruction_pointer += 1U;
+                break;
+            }
+            if (value.type == AIVM_VAL_INT) {
+                int_index = sizeof(int_buffer) - 1U;
+                int_buffer[int_index] = '\0';
+                if (value.int_value < 0) {
+                    negative = 1;
+                    magnitude = (uint64_t)(-(value.int_value + 1)) + 1U;
+                } else {
+                    magnitude = (uint64_t)value.int_value;
+                }
+                do {
+                    uint64_t digit = magnitude % 10U;
+                    magnitude /= 10U;
+                    int_index -= 1U;
+                    int_buffer[int_index] = (char)('0' + (char)digit);
+                } while (magnitude != 0U);
+                if (negative != 0) {
+                    int_index -= 1U;
+                    int_buffer[int_index] = '-';
+                }
+                if (!push_string_copy(vm, &int_buffer[int_index])) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                vm->instruction_pointer += 1U;
+                break;
+            }
+
+            vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+            vm->status = AIVM_VM_STATUS_ERROR;
+            vm->instruction_pointer = vm->program->instruction_count;
             break;
         }
 

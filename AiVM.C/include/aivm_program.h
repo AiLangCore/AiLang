@@ -23,7 +23,8 @@ typedef enum {
     AIVM_OP_EQ_INT = 13,
     AIVM_OP_EQ = 14,
     AIVM_OP_CONST = 15,
-    AIVM_OP_STR_CONCAT = 16
+    AIVM_OP_STR_CONCAT = 16,
+    AIVM_OP_TO_STRING = 17
 } AivmOpcode;
 
 typedef struct {

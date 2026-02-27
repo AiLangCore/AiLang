@@ -32,7 +32,7 @@ int main(void)
     if (expect(contract != NULL) != 0) {
         return 1;
     }
-    if (expect(contract->id == 1001U) != 0) {
+    if (expect(contract->id == 48U) != 0) {
         return 1;
     }
 
@@ -68,7 +68,7 @@ int main(void)
     if (expect(return_type == AIVM_VAL_INT) != 0) {
         return 1;
     }
-    if (expect(aivm_syscall_contract_validate_id(1100U, utf8_count_args, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(26U, utf8_count_args, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 
@@ -81,7 +81,7 @@ int main(void)
     if (expect(return_type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
-    if (expect(aivm_syscall_contract_validate_id(1102U, str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(60U, str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
     str_args[1] = aivm_value_string("bad");
@@ -89,14 +89,14 @@ int main(void)
         return 1;
     }
 
-    if (expect(aivm_syscall_contract_validate_id(1002U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_ARG_TYPE) != 0) {
         return 1;
     }
     draw_text_args[0] = aivm_value_string("hello");
-    if (expect(aivm_syscall_contract_validate_id(1002U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+    if (expect(aivm_syscall_contract_validate_id(49U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
-    contract = aivm_syscall_contract_find_by_id(1003U);
+    contract = aivm_syscall_contract_find_by_id(58U);
     if (expect(contract != NULL) != 0) {
         return 1;
     }

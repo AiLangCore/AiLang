@@ -3,12 +3,12 @@
 #include <string.h>
 
 static const AivmSyscallContract Contracts[] = {
-    { 1001U, "sys.ui_drawRect", 4U, { AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_INT }, AIVM_VAL_VOID },
-    { 1002U, "sys.ui_drawText", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_VOID },
-    { 1003U, "sys.ui_getWindowSize", 0U, { AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID }, AIVM_VAL_STRING },
-    { 1100U, "sys.str_utf8ByteCount", 1U, { AIVM_VAL_STRING, AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID }, AIVM_VAL_INT },
-    { 1101U, "sys.str_substring", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_STRING },
-    { 1102U, "sys.str_remove", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_STRING }
+    { 48U, "sys.ui_drawRect", 4U, { AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_INT }, AIVM_VAL_VOID },
+    { 49U, "sys.ui_drawText", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_VOID },
+    { 58U, "sys.ui_getWindowSize", 0U, { AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID }, AIVM_VAL_STRING },
+    { 26U, "sys.str_utf8ByteCount", 1U, { AIVM_VAL_STRING, AIVM_VAL_VOID, AIVM_VAL_VOID, AIVM_VAL_VOID }, AIVM_VAL_INT },
+    { 59U, "sys.str_substring", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_STRING },
+    { 60U, "sys.str_remove", 3U, { AIVM_VAL_STRING, AIVM_VAL_INT, AIVM_VAL_INT, AIVM_VAL_VOID }, AIVM_VAL_STRING }
 };
 
 static AivmContractStatus validate_contract(

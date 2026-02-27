@@ -108,6 +108,164 @@ static int push_escaped_string(AivmVm* vm, const char* input)
     return aivm_stack_push(vm, aivm_value_string(output));
 }
 
+static size_t utf8_next_index(const char* text, size_t index)
+{
+    unsigned char ch;
+    if (text == NULL || text[index] == '\0') {
+        return index;
+    }
+
+    ch = (unsigned char)text[index];
+    if ((ch & 0x80U) == 0U) {
+        return index + 1U;
+    }
+    if ((ch & 0xE0U) == 0xC0U &&
+        (text[index + 1U] & 0xC0) == 0x80) {
+        return index + 2U;
+    }
+    if ((ch & 0xF0U) == 0xE0U &&
+        (text[index + 1U] & 0xC0) == 0x80 &&
+        (text[index + 2U] & 0xC0) == 0x80) {
+        return index + 3U;
+    }
+    if ((ch & 0xF8U) == 0xF0U &&
+        (text[index + 1U] & 0xC0) == 0x80 &&
+        (text[index + 2U] & 0xC0) == 0x80 &&
+        (text[index + 3U] & 0xC0) == 0x80) {
+        return index + 4U;
+    }
+    return index + 1U;
+}
+
+static size_t utf8_rune_count(const char* text)
+{
+    size_t byte_index = 0U;
+    size_t count = 0U;
+    if (text == NULL) {
+        return 0U;
+    }
+    while (text[byte_index] != '\0') {
+        byte_index = utf8_next_index(text, byte_index);
+        count += 1U;
+    }
+    return count;
+}
+
+static size_t utf8_byte_offset_for_rune(const char* text, size_t rune_index)
+{
+    size_t byte_index = 0U;
+    size_t current_rune = 0U;
+    if (text == NULL) {
+        return 0U;
+    }
+    while (text[byte_index] != '\0' && current_rune < rune_index) {
+        byte_index = utf8_next_index(text, byte_index);
+        current_rune += 1U;
+    }
+    return byte_index;
+}
+
+static size_t clamp_rune_index(int64_t value, size_t max_value)
+{
+    if (value <= 0) {
+        return 0U;
+    }
+    if ((uint64_t)value >= (uint64_t)max_value) {
+        return max_value;
+    }
+    return (size_t)value;
+}
+
+static int push_substring_by_runes(AivmVm* vm, const char* text, int64_t start, int64_t length)
+{
+    size_t rune_count;
+    size_t start_rune;
+    size_t end_rune;
+    size_t start_byte;
+    size_t end_byte;
+    size_t copy_length;
+    size_t i;
+    char* output;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    if (text == NULL || length <= 0) {
+        return push_string_copy(vm, "");
+    }
+
+    rune_count = utf8_rune_count(text);
+    start_rune = clamp_rune_index(start, rune_count);
+    end_rune = clamp_rune_index(start + length, rune_count);
+    if (end_rune < start_rune) {
+        end_rune = start_rune;
+    }
+
+    start_byte = utf8_byte_offset_for_rune(text, start_rune);
+    end_byte = utf8_byte_offset_for_rune(text, end_rune);
+    copy_length = end_byte - start_byte;
+    output = arena_alloc(vm, copy_length + 1U);
+    if (output == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < copy_length; i += 1U) {
+        output[i] = text[start_byte + i];
+    }
+    output[copy_length] = '\0';
+    return aivm_stack_push(vm, aivm_value_string(output));
+}
+
+static int push_remove_by_runes(AivmVm* vm, const char* text, int64_t start, int64_t length)
+{
+    size_t rune_count;
+    size_t start_rune;
+    size_t end_rune;
+    size_t start_byte;
+    size_t end_byte;
+    size_t input_length = 0U;
+    size_t output_length;
+    size_t i;
+    char* output;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    if (text == NULL) {
+        return push_string_copy(vm, "");
+    }
+    if (length <= 0) {
+        return push_string_copy(vm, text);
+    }
+
+    while (text[input_length] != '\0') {
+        input_length += 1U;
+    }
+
+    rune_count = utf8_rune_count(text);
+    start_rune = clamp_rune_index(start, rune_count);
+    end_rune = clamp_rune_index(start + length, rune_count);
+    if (end_rune < start_rune) {
+        end_rune = start_rune;
+    }
+
+    start_byte = utf8_byte_offset_for_rune(text, start_rune);
+    end_byte = utf8_byte_offset_for_rune(text, end_rune);
+    output_length = input_length - (end_byte - start_byte);
+    output = arena_alloc(vm, output_length + 1U);
+    if (output == NULL) {
+        return 0;
+    }
+
+    for (i = 0U; i < start_byte; i += 1U) {
+        output[i] = text[i];
+    }
+    for (; i < output_length; i += 1U) {
+        output[i] = text[end_byte + (i - start_byte)];
+    }
+    output[output_length] = '\0';
+    return aivm_stack_push(vm, aivm_value_string(output));
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -686,6 +844,58 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (!push_escaped_string(vm, value.string_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_STR_SUBSTRING: {
+            AivmValue length_value;
+            AivmValue start_value;
+            AivmValue text_value;
+            if (!aivm_stack_pop(vm, &length_value) ||
+                !aivm_stack_pop(vm, &start_value) ||
+                !aivm_stack_pop(vm, &text_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (text_value.type != AIVM_VAL_STRING ||
+                start_value.type != AIVM_VAL_INT ||
+                length_value.type != AIVM_VAL_INT) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_substring_by_runes(vm, text_value.string_value, start_value.int_value, length_value.int_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_STR_REMOVE: {
+            AivmValue length_value;
+            AivmValue start_value;
+            AivmValue text_value;
+            if (!aivm_stack_pop(vm, &length_value) ||
+                !aivm_stack_pop(vm, &start_value) ||
+                !aivm_stack_pop(vm, &text_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (text_value.type != AIVM_VAL_STRING ||
+                start_value.type != AIVM_VAL_INT ||
+                length_value.type != AIVM_VAL_INT) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_remove_by_runes(vm, text_value.string_value, start_value.int_value, length_value.int_value)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }

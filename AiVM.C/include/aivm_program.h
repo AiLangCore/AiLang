@@ -26,7 +26,9 @@ typedef enum {
     AIVM_OP_STR_CONCAT = 16,
     AIVM_OP_TO_STRING = 17,
     AIVM_OP_STR_ESCAPE = 18,
-    AIVM_OP_RETURN = 19
+    AIVM_OP_RETURN = 19,
+    AIVM_OP_STR_SUBSTRING = 20,
+    AIVM_OP_STR_REMOVE = 21
 } AivmOpcode;
 
 typedef struct {

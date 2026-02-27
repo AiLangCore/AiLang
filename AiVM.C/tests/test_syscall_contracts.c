@@ -47,6 +47,9 @@ int main(void)
     if (expect(aivm_syscall_contract_validate("sys.ui_createWindow", ui_window_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate_id(46U, ui_window_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
     if (expect(return_type == AIVM_VAL_INT) != 0) {
         return 1;
     }
@@ -58,16 +61,31 @@ int main(void)
     if (expect(aivm_syscall_contract_validate("sys.ui_beginFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate_id(47U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
     if (expect(aivm_syscall_contract_validate("sys.ui_waitFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(72U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
     if (expect(aivm_syscall_contract_validate("sys.ui_endFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate_id(50U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
     if (expect(aivm_syscall_contract_validate("sys.ui_present", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate_id(52U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
     if (expect(aivm_syscall_contract_validate("sys.ui_closeWindow", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(53U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 
@@ -84,6 +102,9 @@ int main(void)
         return 1;
     }
     if (expect(return_type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(58U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 

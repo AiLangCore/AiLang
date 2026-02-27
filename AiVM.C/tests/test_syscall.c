@@ -67,6 +67,34 @@ static int handler_window_size_wrong_type(
     return AIVM_SYSCALL_OK;
 }
 
+static int handler_poll_event(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (args != NULL && arg_count == 1U && args[0].type == AIVM_VAL_INT) {
+        *result = aivm_value_node(2);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int handler_poll_event_wrong_type(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    (void)arg_count;
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
 int main(void)
 {
     AivmValue result;
@@ -79,10 +107,12 @@ int main(void)
     };
     static const AivmSyscallBinding ui_bindings[] = {
         { "sys.ui_drawRect", handler_draw_rect },
-        { "sys.ui_getWindowSize", handler_window_size }
+        { "sys.ui_getWindowSize", handler_window_size },
+        { "sys.ui_pollEvent", handler_poll_event }
     };
     static const AivmSyscallBinding ui_bad_return_bindings[] = {
-        { "sys.ui_getWindowSize", handler_window_size_wrong_type }
+        { "sys.ui_getWindowSize", handler_window_size_wrong_type },
+        { "sys.ui_pollEvent", handler_poll_event_wrong_type }
     };
 
     status = aivm_syscall_invoke(NULL, "sys.echo", NULL, 0U, &result);
@@ -121,7 +151,7 @@ int main(void)
     rect_args[3] = aivm_value_int(20);
     rect_args[4] = aivm_value_int(1);
     rect_args[5] = aivm_value_string("#fff");
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 6U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bindings, 3U, "sys.ui_drawRect", rect_args, 6U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
         return 1;
     }
@@ -129,13 +159,13 @@ int main(void)
         return 1;
     }
 
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_drawRect", rect_args, 5U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bindings, 3U, "sys.ui_drawRect", rect_args, 5U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_CONTRACT) != 0) {
         return 1;
     }
 
     window_arg = aivm_value_int(1);
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bindings, 3U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
         return 1;
     }
@@ -143,7 +173,20 @@ int main(void)
         return 1;
     }
 
-    status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 1U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 2U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
+    if (expect(status == AIVM_SYSCALL_ERR_RETURN_TYPE) != 0) {
+        return 1;
+    }
+
+    status = aivm_syscall_dispatch_checked(ui_bindings, 3U, "sys.ui_pollEvent", &window_arg, 1U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+
+    status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 2U, "sys.ui_pollEvent", &window_arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_RETURN_TYPE) != 0) {
         return 1;
     }

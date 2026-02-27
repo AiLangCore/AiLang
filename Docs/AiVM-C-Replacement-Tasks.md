@@ -150,3 +150,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C UI syscall contract coverage for lifecycle/window calls (`sys.ui_createWindow`, `sys.ui_beginFrame`, `sys.ui_endFrame`, `sys.ui_pollEvent`, `sys.ui_present`, `sys.ui_closeWindow`, `sys.ui_waitFrame`) and aligned `sys.ui_getWindowSize` to C# signature (`1 int -> node`) with runtime/ABI tests.
 - Improved VM syscall diagnostics detail: `CALL_SYS` failure paths now emit deterministic `AIVMS*`-scoped detail strings (`not found`, `contract`, `return type`, etc.) and added assertions in VM opcode tests.
 - Expanded syscall-heavy parity manifest with REPL UI lifecycle/window validation-error fixtures for `sys.ui_getWindowSize` (type mismatch) and `sys.ui_createWindow` (arity mismatch).
+- Expanded C syscall-contract/dispatch unit coverage for UI lifecycle IDs (`46/47/50/52/53/58/72`) and node-return enforcement for `sys.ui_pollEvent`/`sys.ui_getWindowSize`.

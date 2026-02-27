@@ -6,6 +6,36 @@ static int expect(int condition)
     return condition ? 0 : 1;
 }
 
+static int host_ui_get_window_size(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count != 0U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string("640x480");
+    return AIVM_SYSCALL_OK;
+}
+
+static int host_ui_draw_rect(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count != 4U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
 static int test_push_store_load_pop(void)
 {
     AivmVm vm;
@@ -1122,6 +1152,94 @@ static int test_str_substring_and_remove_type_mismatch(void)
     return 0;
 }
 
+static int test_call_sys_success_and_void_result(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 4 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" },
+        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_drawRect" },
+        { .type = AIVM_VAL_INT, .int_value = 1 }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.ui_getWindowSize", host_ui_get_window_size },
+        { "sys.ui_drawRect", host_ui_draw_rect }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 9U,
+        .constants = constants,
+        .constant_count = 3U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 2U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 2U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_VOID) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(out, aivm_value_string("640x480")) == 1) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_call_sys_failure_sets_vm_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.missing" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 2U,
+        .constants = constants,
+        .constant_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_SYSCALL) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -1203,6 +1321,12 @@ int main(void)
         return 1;
     }
     if (test_str_substring_and_remove_type_mismatch() != 0) {
+        return 1;
+    }
+    if (test_call_sys_success_and_void_result() != 0) {
+        return 1;
+    }
+    if (test_call_sys_failure_sets_vm_error() != 0) {
         return 1;
     }
 

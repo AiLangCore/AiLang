@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "aivm_program.h"
+#include "aivm_syscall.h"
 #include "aivm_types.h"
 
 typedef enum {
@@ -23,7 +24,8 @@ typedef enum {
     AIVM_VM_ERR_LOCAL_OUT_OF_RANGE = 6,
     AIVM_VM_ERR_TYPE_MISMATCH = 7,
     AIVM_VM_ERR_INVALID_PROGRAM = 8,
-    AIVM_VM_ERR_STRING_OVERFLOW = 9
+    AIVM_VM_ERR_STRING_OVERFLOW = 9,
+    AIVM_VM_ERR_SYSCALL = 10
 } AivmVmError;
 
 typedef struct {
@@ -35,7 +37,8 @@ enum {
     AIVM_VM_STACK_CAPACITY = 1024,
     AIVM_VM_CALLFRAME_CAPACITY = 256,
     AIVM_VM_LOCALS_CAPACITY = 1024,
-    AIVM_VM_STRING_ARENA_CAPACITY = 8192
+    AIVM_VM_STRING_ARENA_CAPACITY = 8192,
+    AIVM_VM_MAX_SYSCALL_ARGS = 16
 };
 
 typedef struct {
@@ -54,9 +57,16 @@ typedef struct {
     size_t locals_count;
     char string_arena[AIVM_VM_STRING_ARENA_CAPACITY];
     size_t string_arena_used;
+    const AivmSyscallBinding* syscall_bindings;
+    size_t syscall_binding_count;
 } AivmVm;
 
 void aivm_init(AivmVm* vm, const AivmProgram* program);
+void aivm_init_with_syscalls(
+    AivmVm* vm,
+    const AivmProgram* program,
+    const AivmSyscallBinding* bindings,
+    size_t binding_count);
 void aivm_reset_state(AivmVm* vm);
 void aivm_halt(AivmVm* vm);
 int aivm_stack_push(AivmVm* vm, AivmValue value);

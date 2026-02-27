@@ -289,6 +289,24 @@ void aivm_init(AivmVm* vm, const AivmProgram* program)
     }
 
     vm->program = program;
+    vm->syscall_bindings = NULL;
+    vm->syscall_binding_count = 0U;
+    aivm_reset_state(vm);
+}
+
+void aivm_init_with_syscalls(
+    AivmVm* vm,
+    const AivmProgram* program,
+    const AivmSyscallBinding* bindings,
+    size_t binding_count)
+{
+    if (vm == NULL) {
+        return;
+    }
+
+    vm->program = program;
+    vm->syscall_bindings = bindings;
+    vm->syscall_binding_count = binding_count;
     aivm_reset_state(vm);
 }
 
@@ -903,6 +921,67 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_CALL_SYS: {
+            size_t arg_count;
+            AivmValue args[AIVM_VM_MAX_SYSCALL_ARGS];
+            AivmValue target_value;
+            AivmValue result;
+            AivmSyscallStatus syscall_status;
+            size_t i;
+
+            if (!operand_to_index(vm, instruction->operand_int, &arg_count)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            for (i = 0U; i < arg_count; i += 1U) {
+                if (!aivm_stack_pop(vm, &args[arg_count - i - 1U])) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            }
+            if (vm->status == AIVM_VM_STATUS_ERROR) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_pop(vm, &target_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (target_value.type != AIVM_VAL_STRING || target_value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+
+            syscall_status = aivm_syscall_dispatch_checked(
+                vm->syscall_bindings,
+                vm->syscall_binding_count,
+                target_value.string_value,
+                args,
+                arg_count,
+                &result);
+            if (syscall_status != AIVM_SYSCALL_OK) {
+                vm->error = AIVM_VM_ERR_SYSCALL;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, result)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
@@ -957,6 +1036,8 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM008";
         case AIVM_VM_ERR_STRING_OVERFLOW:
             return "AIVM009";
+        case AIVM_VM_ERR_SYSCALL:
+            return "AIVM010";
         default:
             return "AIVM999";
     }
@@ -985,6 +1066,8 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "Invalid program state.";
         case AIVM_VM_ERR_STRING_OVERFLOW:
             return "VM string arena overflow.";
+        case AIVM_VM_ERR_SYSCALL:
+            return "Syscall dispatch failed.";
         default:
             return "Unknown VM error.";
     }

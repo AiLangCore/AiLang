@@ -28,7 +28,8 @@ typedef enum {
     AIVM_OP_STR_ESCAPE = 18,
     AIVM_OP_RETURN = 19,
     AIVM_OP_STR_SUBSTRING = 20,
-    AIVM_OP_STR_REMOVE = 21
+    AIVM_OP_STR_REMOVE = 21,
+    AIVM_OP_CALL_SYS = 22
 } AivmOpcode;
 
 typedef struct {

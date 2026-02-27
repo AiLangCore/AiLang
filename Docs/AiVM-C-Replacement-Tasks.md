@@ -116,3 +116,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall contract table with string operations (`sys.str_substring`, `sys.str_remove`) and added validation/id lookup tests.
 - Expanded parity manifest smoke coverage to include CRLF/LF normalization and trailing-newline equivalence cases.
 - Added rune-aware deterministic `STR_SUBSTRING` / `STR_REMOVE` VM opcodes (UTF-8 code-point clamped semantics) with unit tests.
+- Added deterministic `CALL_SYS` opcode path with contract-checked host binding dispatch and explicit VM syscall failure diagnostic (`AIVM010`).

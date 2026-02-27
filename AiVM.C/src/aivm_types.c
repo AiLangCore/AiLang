@@ -31,6 +31,14 @@ AivmValue aivm_value_void(void)
     return value;
 }
 
+AivmValue aivm_value_unknown(void)
+{
+    AivmValue value;
+    value.type = AIVM_VAL_UNKNOWN;
+    value.int_value = 0;
+    return value;
+}
+
 AivmValue aivm_value_int(int64_t input)
 {
     AivmValue value;
@@ -84,6 +92,9 @@ int aivm_value_equals(AivmValue left, AivmValue right)
 
         case AIVM_VAL_NODE:
             return left.node_handle == right.node_handle ? 1 : 0;
+
+        case AIVM_VAL_UNKNOWN:
+            return 1;
 
         default:
             return 0;

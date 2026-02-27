@@ -1,6 +1,7 @@
 name: aivm-c-ci
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'AiVM.C/**'
@@ -47,3 +48,11 @@ jobs:
           cmake -S AiVM.C -B .tmp/aivm-c-build
           cmake --build .tmp/aivm-c-build
           ctest --test-dir .tmp/aivm-c-build --output-on-failure
+
+      - name: Upload parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aivm-parity-report-${{ matrix.os }}
+          path: .tmp/aivm-dualrun-manifest/report.txt
+          if-no-files-found: ignore

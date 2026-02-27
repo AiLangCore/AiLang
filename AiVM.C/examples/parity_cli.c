@@ -28,6 +28,13 @@ int main(int argc, char** argv)
 {
     char left[65536];
     char right[65536];
+    char left_norm[4096];
+    char right_norm[4096];
+    size_t diff_index = 0U;
+    size_t left_length = 0U;
+    size_t right_length = 0U;
+    size_t line = 0U;
+    size_t col = 0U;
 
     if (argc != 3) {
         fprintf(stderr, "usage: aivm_parity_cli <left> <right>\n");
@@ -49,6 +56,16 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    printf("PARITY_DIFF\n");
+    (void)aivm_parity_normalize_text(left, left_norm, sizeof(left_norm));
+    (void)aivm_parity_normalize_text(right, right_norm, sizeof(right_norm));
+    (void)aivm_parity_first_diff(left, right, &diff_index, &left_length, &right_length);
+    aivm_parity_line_col_for_index(left_norm, diff_index, &line, &col);
+
+    printf("PARITY_DIFF index=%zu line=%zu col=%zu left_len=%zu right_len=%zu\n",
+        diff_index,
+        line,
+        col,
+        left_length,
+        right_length);
     return 1;
 }

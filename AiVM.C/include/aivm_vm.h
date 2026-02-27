@@ -33,6 +33,32 @@ typedef struct {
     size_t frame_base;
 } AivmCallFrame;
 
+typedef enum {
+    AIVM_NODE_ATTR_IDENTIFIER = 0,
+    AIVM_NODE_ATTR_STRING = 1,
+    AIVM_NODE_ATTR_INT = 2,
+    AIVM_NODE_ATTR_BOOL = 3
+} AivmNodeAttrKind;
+
+typedef struct {
+    const char* key;
+    AivmNodeAttrKind kind;
+    union {
+        const char* string_value;
+        int64_t int_value;
+        int bool_value;
+    };
+} AivmNodeAttr;
+
+typedef struct {
+    const char* kind;
+    const char* id;
+    size_t attr_start;
+    size_t attr_count;
+    size_t child_start;
+    size_t child_count;
+} AivmNodeRecord;
+
 typedef struct {
     int64_t handle;
     AivmValue result;
@@ -49,6 +75,9 @@ enum {
     AIVM_VM_LOCALS_CAPACITY = 1024,
     AIVM_VM_STRING_ARENA_CAPACITY = 8192,
     AIVM_VM_MAX_SYSCALL_ARGS = 16,
+    AIVM_VM_NODE_CAPACITY = 256,
+    AIVM_VM_NODE_ATTR_CAPACITY = 1024,
+    AIVM_VM_NODE_CHILD_CAPACITY = 2048,
     AIVM_VM_TASK_CAPACITY = 256,
     AIVM_VM_PAR_CONTEXT_CAPACITY = 64,
     AIVM_VM_PAR_VALUE_CAPACITY = 1024
@@ -79,6 +108,12 @@ typedef struct {
     size_t par_context_count;
     AivmValue par_values[AIVM_VM_PAR_VALUE_CAPACITY];
     size_t par_value_count;
+    AivmNodeRecord nodes[AIVM_VM_NODE_CAPACITY];
+    size_t node_count;
+    AivmNodeAttr node_attrs[AIVM_VM_NODE_ATTR_CAPACITY];
+    size_t node_attr_count;
+    int64_t node_children[AIVM_VM_NODE_CHILD_CAPACITY];
+    size_t node_child_count;
 } AivmVm;
 
 void aivm_init(AivmVm* vm, const AivmProgram* program);

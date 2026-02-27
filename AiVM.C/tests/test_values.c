@@ -15,6 +15,8 @@ int main(void)
     AivmValue false_value;
     AivmValue string_a;
     AivmValue string_b;
+    AivmValue node_a;
+    AivmValue node_b;
     const char hello_chars[] = { 'h', 'e', 'l', 'l', 'o', '\0' };
     const char hello_chars_copy[] = { 'h', 'e', 'l', 'l', 'o', '\0' };
 
@@ -62,6 +64,17 @@ int main(void)
         return 1;
     }
     if (expect(aivm_value_equals(aivm_value_string(NULL), string_a) == 0) != 0) {
+        return 1;
+    }
+    node_a = aivm_value_node(10);
+    node_b = aivm_value_node(10);
+    if (expect(node_a.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(node_a, node_b) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(node_a, aivm_value_node(11)) == 0) != 0) {
         return 1;
     }
 

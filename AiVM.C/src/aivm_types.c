@@ -55,6 +55,14 @@ AivmValue aivm_value_string(const char* input)
     return value;
 }
 
+AivmValue aivm_value_node(int64_t input)
+{
+    AivmValue value;
+    value.type = AIVM_VAL_NODE;
+    value.node_handle = input;
+    return value;
+}
+
 int aivm_value_equals(AivmValue left, AivmValue right)
 {
     if (left.type != right.type) {
@@ -73,6 +81,9 @@ int aivm_value_equals(AivmValue left, AivmValue right)
 
         case AIVM_VAL_STRING:
             return aivm_cstring_equals(left.string_value, right.string_value);
+
+        case AIVM_VAL_NODE:
+            return left.node_handle == right.node_handle ? 1 : 0;
 
         default:
             return 0;

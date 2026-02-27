@@ -1612,40 +1612,145 @@ static int test_str_utf8_byte_count_requires_string(void)
     return 0;
 }
 
-static int test_node_related_placeholders_fail_deterministically(void)
+static int test_node_ops_core_semantics(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_NODE_KIND, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_NODE_ID, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_MAKE_LIT_STRING, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 4 },
+        { .opcode = AIVM_OP_MAKE_LIT_INT, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 2 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 1 },
+        { .opcode = AIVM_OP_APPEND_CHILD, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 2 },
+        { .opcode = AIVM_OP_APPEND_CHILD, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_CHILD_COUNT, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 5 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 6 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 7 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 8 },
+        { .opcode = AIVM_OP_MAKE_ERR, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_ATTR_COUNT, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 9 },
+        { .opcode = AIVM_OP_ATTR_KEY, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 9 },
+        { .opcode = AIVM_OP_ATTR_VALUE_KIND, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 9 },
+        { .opcode = AIVM_OP_ATTR_VALUE_STRING, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 10 },
+        { .opcode = AIVM_OP_ATTR_VALUE_INT, .operand_int = 0 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 10 },
+        { .opcode = AIVM_OP_ATTR_VALUE_BOOL, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "blk1" },
+        { .type = AIVM_VAL_STRING, .string_value = "lit_s" },
+        { .type = AIVM_VAL_STRING, .string_value = "hello" },
+        { .type = AIVM_VAL_STRING, .string_value = "lit_i" },
+        { .type = AIVM_VAL_INT, .int_value = 42 },
+        { .type = AIVM_VAL_STRING, .string_value = "err1" },
+        { .type = AIVM_VAL_STRING, .string_value = "VAL999" },
+        { .type = AIVM_VAL_STRING, .string_value = "boom" },
+        { .type = AIVM_VAL_STRING, .string_value = "n42" },
+        { .type = AIVM_VAL_INT, .int_value = 0 },
+        { .type = AIVM_VAL_INT, .int_value = 1 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 49U,
+        .constants = constants,
+        .constant_count = 11U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(out.type == AIVM_VAL_BOOL && out.bool_value == 0) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(out.type == AIVM_VAL_INT && out.int_value == 0) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(aivm_value_equals(out, aivm_value_string("VAL999")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(aivm_value_equals(out, aivm_value_string("identifier")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(aivm_value_equals(out, aivm_value_string("code")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(out.type == AIVM_VAL_INT && out.int_value == 3) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(out.type == AIVM_VAL_INT && out.int_value == 2) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(aivm_value_equals(out, aivm_value_string("blk1")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0 ||
+        expect(aivm_value_equals(out, aivm_value_string("Block")) == 1) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_make_node_remains_placeholder_error(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
-        { .opcode = AIVM_OP_NODE_KIND, .operand_int = 0 },
-        { .opcode = AIVM_OP_NODE_ID, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_COUNT, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_KEY, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_VALUE_KIND, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_VALUE_STRING, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_VALUE_INT, .operand_int = 0 },
-        { .opcode = AIVM_OP_ATTR_VALUE_BOOL, .operand_int = 0 },
-        { .opcode = AIVM_OP_CHILD_COUNT, .operand_int = 0 },
-        { .opcode = AIVM_OP_CHILD_AT, .operand_int = 0 },
-        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
-        { .opcode = AIVM_OP_APPEND_CHILD, .operand_int = 0 },
-        { .opcode = AIVM_OP_MAKE_ERR, .operand_int = 0 },
-        { .opcode = AIVM_OP_MAKE_LIT_STRING, .operand_int = 0 },
-        { .opcode = AIVM_OP_MAKE_LIT_INT, .operand_int = 0 },
         { .opcode = AIVM_OP_MAKE_NODE, .operand_int = 0 }
     };
-    size_t i;
+    AivmProgram program;
 
-    for (i = 0U; i < sizeof(instructions) / sizeof(instructions[0]); i += 1U) {
-        AivmProgram program;
-        aivm_program_init(&program, &instructions[i], 1U);
-        aivm_init(&vm, &program);
-        aivm_run(&vm);
-        if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
-            return 1;
-        }
-        if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
-            return 1;
-        }
+    aivm_program_init(&program, instructions, 1U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
     }
     return 0;
 }
@@ -1766,7 +1871,10 @@ int main(void)
     if (test_str_utf8_byte_count_requires_string() != 0) {
         return 1;
     }
-    if (test_node_related_placeholders_fail_deterministically() != 0) {
+    if (test_node_ops_core_semantics() != 0) {
+        return 1;
+    }
+    if (test_make_node_remains_placeholder_error() != 0) {
         return 1;
     }
 

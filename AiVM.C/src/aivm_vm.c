@@ -33,25 +33,35 @@ static char* arena_alloc(AivmVm* vm, size_t size)
     return start;
 }
 
-static int push_string_copy(AivmVm* vm, const char* input)
+static char* copy_string_to_arena(AivmVm* vm, const char* input)
 {
     size_t length = 0U;
     size_t i;
     char* output;
     if (vm == NULL || input == NULL) {
-        return 0;
+        return NULL;
     }
     while (input[length] != '\0') {
         length += 1U;
     }
     output = arena_alloc(vm, length + 1U);
     if (output == NULL) {
-        return 0;
+        return NULL;
     }
     for (i = 0U; i < length; i += 1U) {
         output[i] = input[i];
     }
     output[length] = '\0';
+    return output;
+}
+
+static int push_string_copy(AivmVm* vm, const char* input)
+{
+    char* output;
+    output = copy_string_to_arena(vm, input);
+    if (output == NULL) {
+        return 0;
+    }
     return aivm_stack_push(vm, aivm_value_string(output));
 }
 
@@ -347,6 +357,88 @@ static int find_completed_task(const AivmVm* vm, int64_t handle, AivmValue* out_
     return 0;
 }
 
+static int lookup_node(const AivmVm* vm, int64_t handle, const AivmNodeRecord** out_node)
+{
+    size_t index;
+    if (vm == NULL || out_node == NULL) {
+        return 0;
+    }
+    if (handle <= 0) {
+        return 0;
+    }
+    index = (size_t)(handle - 1);
+    if (index >= vm->node_count) {
+        return 0;
+    }
+    *out_node = &vm->nodes[index];
+    return 1;
+}
+
+static int create_node_record(
+    AivmVm* vm,
+    const char* kind,
+    const char* id,
+    const AivmNodeAttr* attrs,
+    size_t attr_count,
+    const int64_t* children,
+    size_t child_count,
+    int64_t* out_handle)
+{
+    AivmNodeRecord* node;
+    size_t i;
+    if (vm == NULL || kind == NULL || id == NULL || out_handle == NULL) {
+        return 0;
+    }
+    if (vm->node_count >= AIVM_VM_NODE_CAPACITY ||
+        vm->node_attr_count + attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
+        vm->node_child_count + child_count > AIVM_VM_NODE_CHILD_CAPACITY) {
+        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    node = &vm->nodes[vm->node_count];
+    node->kind = copy_string_to_arena(vm, kind);
+    node->id = copy_string_to_arena(vm, id);
+    if (node->kind == NULL || node->id == NULL) {
+        return 0;
+    }
+    node->attr_start = vm->node_attr_count;
+    node->attr_count = attr_count;
+    node->child_start = vm->node_child_count;
+    node->child_count = child_count;
+
+    for (i = 0U; i < attr_count; i += 1U) {
+        AivmNodeAttr attr = attrs[i];
+        AivmNodeAttr* out_attr = &vm->node_attrs[vm->node_attr_count + i];
+        out_attr->key = copy_string_to_arena(vm, attr.key);
+        out_attr->kind = attr.kind;
+        if (out_attr->key == NULL) {
+            return 0;
+        }
+        if (attr.kind == AIVM_NODE_ATTR_IDENTIFIER || attr.kind == AIVM_NODE_ATTR_STRING) {
+            out_attr->string_value = copy_string_to_arena(vm, attr.string_value == NULL ? "" : attr.string_value);
+            if (out_attr->string_value == NULL) {
+                return 0;
+            }
+        } else if (attr.kind == AIVM_NODE_ATTR_INT) {
+            out_attr->int_value = attr.int_value;
+        } else {
+            out_attr->bool_value = attr.bool_value != 0 ? 1 : 0;
+        }
+    }
+
+    for (i = 0U; i < child_count; i += 1U) {
+        vm->node_children[vm->node_child_count + i] = children[i];
+    }
+
+    vm->node_attr_count += attr_count;
+    vm->node_child_count += child_count;
+    vm->node_count += 1U;
+    *out_handle = (int64_t)vm->node_count;
+    return 1;
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -365,6 +457,9 @@ void aivm_reset_state(AivmVm* vm)
     vm->next_task_handle = 1;
     vm->par_context_count = 0U;
     vm->par_value_count = 0U;
+    vm->node_count = 0U;
+    vm->node_attr_count = 0U;
+    vm->node_child_count = 0U;
 }
 
 void aivm_init(AivmVm* vm, const AivmProgram* program)
@@ -1176,21 +1271,381 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
-        case AIVM_OP_NODE_KIND:
-        case AIVM_OP_NODE_ID:
-        case AIVM_OP_ATTR_COUNT:
+        case AIVM_OP_NODE_KIND: {
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            if (!aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_string_copy(vm, node->kind)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_NODE_ID: {
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            if (!aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_string_copy(vm, node->id)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_ATTR_COUNT: {
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            if (!aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_int((int64_t)node->attr_count))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         case AIVM_OP_ATTR_KEY:
         case AIVM_OP_ATTR_VALUE_KIND:
         case AIVM_OP_ATTR_VALUE_STRING:
         case AIVM_OP_ATTR_VALUE_INT:
-        case AIVM_OP_ATTR_VALUE_BOOL:
-        case AIVM_OP_CHILD_COUNT:
-        case AIVM_OP_CHILD_AT:
-        case AIVM_OP_MAKE_BLOCK:
-        case AIVM_OP_APPEND_CHILD:
-        case AIVM_OP_MAKE_ERR:
+        case AIVM_OP_ATTR_VALUE_BOOL: {
+            AivmValue index_value;
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            const AivmNodeAttr* attr = NULL;
+            int has_attr = 0;
+            if (!aivm_stack_pop(vm, &index_value) || !aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || index_value.type != AIVM_VAL_INT || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (index_value.int_value >= 0 && (size_t)index_value.int_value < node->attr_count) {
+                attr = &vm->node_attrs[node->attr_start + (size_t)index_value.int_value];
+                has_attr = 1;
+            }
+
+            if (instruction->opcode == AIVM_OP_ATTR_KEY) {
+                if (!push_string_copy(vm, has_attr != 0 ? attr->key : "")) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_KIND) {
+                const char* kind_text = "";
+                if (has_attr != 0) {
+                    if (attr->kind == AIVM_NODE_ATTR_IDENTIFIER) {
+                        kind_text = "identifier";
+                    } else if (attr->kind == AIVM_NODE_ATTR_STRING) {
+                        kind_text = "string";
+                    } else if (attr->kind == AIVM_NODE_ATTR_INT) {
+                        kind_text = "int";
+                    } else if (attr->kind == AIVM_NODE_ATTR_BOOL) {
+                        kind_text = "bool";
+                    }
+                }
+                if (!push_string_copy(vm, kind_text)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_STRING) {
+                const char* value_text = "";
+                if (has_attr != 0 &&
+                    (attr->kind == AIVM_NODE_ATTR_IDENTIFIER || attr->kind == AIVM_NODE_ATTR_STRING) &&
+                    attr->string_value != NULL) {
+                    value_text = attr->string_value;
+                }
+                if (!push_string_copy(vm, value_text)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_INT) {
+                int64_t value_int = 0;
+                if (has_attr != 0 && attr->kind == AIVM_NODE_ATTR_INT) {
+                    value_int = attr->int_value;
+                }
+                if (!aivm_stack_push(vm, aivm_value_int(value_int))) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            } else {
+                int value_bool = 0;
+                if (has_attr != 0 && attr->kind == AIVM_NODE_ATTR_BOOL) {
+                    value_bool = attr->bool_value != 0 ? 1 : 0;
+                }
+                if (!aivm_stack_push(vm, aivm_value_bool(value_bool))) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_CHILD_COUNT: {
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            if (!aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_int((int64_t)node->child_count))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_CHILD_AT: {
+            AivmValue index_value;
+            AivmValue node_value;
+            const AivmNodeRecord* node;
+            int64_t child_handle;
+            if (!aivm_stack_pop(vm, &index_value) || !aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || index_value.type != AIVM_VAL_INT || !lookup_node(vm, node_value.node_handle, &node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (index_value.int_value < 0 || (size_t)index_value.int_value >= node->child_count) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            child_handle = vm->node_children[node->child_start + (size_t)index_value.int_value];
+            if (!aivm_stack_push(vm, aivm_value_node(child_handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_MAKE_BLOCK: {
+            AivmValue id_value;
+            int64_t handle;
+            if (!aivm_stack_pop(vm, &id_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!create_node_record(vm, "Block", id_value.string_value, NULL, 0U, NULL, 0U, &handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_node(handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_APPEND_CHILD: {
+            AivmValue child_value;
+            AivmValue node_value;
+            const AivmNodeRecord* base_node;
+            const AivmNodeRecord* child_node;
+            int64_t child_handle;
+            int64_t new_children[AIVM_VM_NODE_CHILD_CAPACITY];
+            AivmNodeAttr attrs[AIVM_VM_NODE_ATTR_CAPACITY];
+            int64_t handle;
+            size_t i;
+            if (!aivm_stack_pop(vm, &child_value) || !aivm_stack_pop(vm, &node_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_value.type != AIVM_VAL_NODE || child_value.type != AIVM_VAL_NODE ||
+                !lookup_node(vm, node_value.node_handle, &base_node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            child_handle = child_value.node_handle;
+            if (!lookup_node(vm, child_handle, &child_node)) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            (void)child_node;
+            if (base_node->attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
+                base_node->child_count + 1U > AIVM_VM_NODE_CHILD_CAPACITY) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            for (i = 0U; i < base_node->attr_count; i += 1U) {
+                attrs[i] = vm->node_attrs[base_node->attr_start + i];
+            }
+            for (i = 0U; i < base_node->child_count; i += 1U) {
+                new_children[i] = vm->node_children[base_node->child_start + i];
+            }
+            new_children[base_node->child_count] = child_handle;
+            if (!create_node_record(
+                vm,
+                base_node->kind,
+                base_node->id,
+                attrs,
+                base_node->attr_count,
+                new_children,
+                base_node->child_count + 1U,
+                &handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_node(handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
+        case AIVM_OP_MAKE_ERR: {
+            AivmValue node_id_value;
+            AivmValue message_value;
+            AivmValue code_value;
+            AivmValue id_value;
+            AivmNodeAttr attrs[3];
+            int64_t handle;
+            if (!aivm_stack_pop(vm, &node_id_value) ||
+                !aivm_stack_pop(vm, &message_value) ||
+                !aivm_stack_pop(vm, &code_value) ||
+                !aivm_stack_pop(vm, &id_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (node_id_value.type != AIVM_VAL_STRING || node_id_value.string_value == NULL ||
+                message_value.type != AIVM_VAL_STRING || message_value.string_value == NULL ||
+                code_value.type != AIVM_VAL_STRING || code_value.string_value == NULL ||
+                id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            attrs[0].key = "code";
+            attrs[0].kind = AIVM_NODE_ATTR_IDENTIFIER;
+            attrs[0].string_value = code_value.string_value;
+            attrs[1].key = "message";
+            attrs[1].kind = AIVM_NODE_ATTR_STRING;
+            attrs[1].string_value = message_value.string_value;
+            attrs[2].key = "nodeId";
+            attrs[2].kind = AIVM_NODE_ATTR_IDENTIFIER;
+            attrs[2].string_value = node_id_value.string_value;
+            if (!create_node_record(vm, "Err", id_value.string_value, attrs, 3U, NULL, 0U, &handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_node(handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         case AIVM_OP_MAKE_LIT_STRING:
-        case AIVM_OP_MAKE_LIT_INT:
+        case AIVM_OP_MAKE_LIT_INT: {
+            AivmValue value;
+            AivmValue id_value;
+            AivmNodeAttr attr;
+            int64_t handle;
+            if (!aivm_stack_pop(vm, &value) || !aivm_stack_pop(vm, &id_value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            attr.key = "value";
+            if (instruction->opcode == AIVM_OP_MAKE_LIT_STRING) {
+                if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
+                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                    vm->status = AIVM_VM_STATUS_ERROR;
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                attr.kind = AIVM_NODE_ATTR_STRING;
+                attr.string_value = value.string_value;
+            } else {
+                if (value.type != AIVM_VAL_INT) {
+                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                    vm->status = AIVM_VM_STATUS_ERROR;
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                attr.kind = AIVM_NODE_ATTR_INT;
+                attr.int_value = value.int_value;
+            }
+            if (!create_node_record(vm, "Lit", id_value.string_value, &attr, 1U, NULL, 0U, &handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_node(handle))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         case AIVM_OP_MAKE_NODE:
             vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
             vm->status = AIVM_VM_STATUS_ERROR;

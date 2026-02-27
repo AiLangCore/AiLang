@@ -309,3 +309,71 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
     result.error_offset = 0U;
     return result;
 }
+
+const char* aivm_program_status_code(AivmProgramStatus status)
+{
+    switch (status) {
+        case AIVM_PROGRAM_OK:
+            return "AIVMP000";
+        case AIVM_PROGRAM_ERR_NULL:
+            return "AIVMP001";
+        case AIVM_PROGRAM_ERR_TRUNCATED:
+            return "AIVMP002";
+        case AIVM_PROGRAM_ERR_BAD_MAGIC:
+            return "AIVMP003";
+        case AIVM_PROGRAM_ERR_UNSUPPORTED:
+            return "AIVMP004";
+        case AIVM_PROGRAM_ERR_SECTION_OOB:
+            return "AIVMP005";
+        case AIVM_PROGRAM_ERR_SECTION_LIMIT:
+            return "AIVMP006";
+        case AIVM_PROGRAM_ERR_INSTRUCTION_LIMIT:
+            return "AIVMP007";
+        case AIVM_PROGRAM_ERR_INVALID_SECTION:
+            return "AIVMP008";
+        case AIVM_PROGRAM_ERR_INVALID_OPCODE:
+            return "AIVMP009";
+        case AIVM_PROGRAM_ERR_CONSTANT_LIMIT:
+            return "AIVMP010";
+        case AIVM_PROGRAM_ERR_INVALID_CONSTANT:
+            return "AIVMP011";
+        case AIVM_PROGRAM_ERR_STRING_LIMIT:
+            return "AIVMP012";
+        default:
+            return "AIVMP999";
+    }
+}
+
+const char* aivm_program_status_message(AivmProgramStatus status)
+{
+    switch (status) {
+        case AIVM_PROGRAM_OK:
+            return "Program load completed.";
+        case AIVM_PROGRAM_ERR_NULL:
+            return "Program load input was null.";
+        case AIVM_PROGRAM_ERR_TRUNCATED:
+            return "Program bytes were truncated.";
+        case AIVM_PROGRAM_ERR_BAD_MAGIC:
+            return "Program magic was invalid.";
+        case AIVM_PROGRAM_ERR_UNSUPPORTED:
+            return "Program version or feature is unsupported.";
+        case AIVM_PROGRAM_ERR_SECTION_OOB:
+            return "Program section exceeded byte bounds.";
+        case AIVM_PROGRAM_ERR_SECTION_LIMIT:
+            return "Program section count exceeded limit.";
+        case AIVM_PROGRAM_ERR_INSTRUCTION_LIMIT:
+            return "Program instruction count exceeded limit.";
+        case AIVM_PROGRAM_ERR_INVALID_SECTION:
+            return "Program section encoding was invalid.";
+        case AIVM_PROGRAM_ERR_INVALID_OPCODE:
+            return "Program instruction opcode was invalid.";
+        case AIVM_PROGRAM_ERR_CONSTANT_LIMIT:
+            return "Program constant count exceeded limit.";
+        case AIVM_PROGRAM_ERR_INVALID_CONSTANT:
+            return "Program constant encoding was invalid.";
+        case AIVM_PROGRAM_ERR_STRING_LIMIT:
+            return "Program string storage exceeded limit.";
+        default:
+            return "Unknown program load status.";
+    }
+}

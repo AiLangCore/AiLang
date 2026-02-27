@@ -20,6 +20,9 @@ int main(void)
     if (expect(aivm_syscall_contract_validate("sys.ui_drawRect", draw_rect_args, 4U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
+    if (expect(aivm_value_equals(aivm_value_string(aivm_contract_status_code(AIVM_CONTRACT_OK)), aivm_value_string("AIVMC000")) == 1) != 0) {
+        return 1;
+    }
     if (expect(return_type == AIVM_VAL_VOID) != 0) {
         return 1;
     }
@@ -70,6 +73,11 @@ int main(void)
         return 1;
     }
     if (expect(aivm_syscall_contract_validate_id(9999U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_ID) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(
+            aivm_value_string(aivm_contract_status_message(AIVM_CONTRACT_ERR_UNKNOWN_ID)),
+            aivm_value_string("Syscall contract ID was not found.")) == 1) != 0) {
         return 1;
     }
 

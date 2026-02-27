@@ -84,5 +84,7 @@ typedef struct {
 void aivm_program_clear(AivmProgram* program);
 void aivm_program_init(AivmProgram* program, const AivmInstruction* instructions, size_t instruction_count);
 AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_count, AivmProgram* out_program);
+const char* aivm_program_status_code(AivmProgramStatus status);
+const char* aivm_program_status_message(AivmProgramStatus status);
 
 #endif

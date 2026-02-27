@@ -96,3 +96,39 @@ AivmContractStatus aivm_syscall_contract_validate_id(
     }
     return validate_contract(contract, args, arg_count, out_return_type);
 }
+
+const char* aivm_contract_status_code(AivmContractStatus status)
+{
+    switch (status) {
+        case AIVM_CONTRACT_OK:
+            return "AIVMC000";
+        case AIVM_CONTRACT_ERR_UNKNOWN_TARGET:
+            return "AIVMC001";
+        case AIVM_CONTRACT_ERR_ARG_COUNT:
+            return "AIVMC002";
+        case AIVM_CONTRACT_ERR_ARG_TYPE:
+            return "AIVMC003";
+        case AIVM_CONTRACT_ERR_UNKNOWN_ID:
+            return "AIVMC004";
+        default:
+            return "AIVMC999";
+    }
+}
+
+const char* aivm_contract_status_message(AivmContractStatus status)
+{
+    switch (status) {
+        case AIVM_CONTRACT_OK:
+            return "Syscall contract validation passed.";
+        case AIVM_CONTRACT_ERR_UNKNOWN_TARGET:
+            return "Syscall target was not found.";
+        case AIVM_CONTRACT_ERR_ARG_COUNT:
+            return "Syscall argument count was invalid.";
+        case AIVM_CONTRACT_ERR_ARG_TYPE:
+            return "Syscall argument type was invalid.";
+        case AIVM_CONTRACT_ERR_UNKNOWN_ID:
+            return "Syscall contract ID was not found.";
+        default:
+            return "Unknown syscall contract validation status.";
+    }
+}

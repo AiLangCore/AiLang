@@ -105,6 +105,9 @@ int main(void)
     if (expect(result.status == AIVM_PROGRAM_ERR_NULL) != 0) {
         return 1;
     }
+    if (expect(aivm_value_equals(aivm_value_string(aivm_program_status_code(result.status)), aivm_value_string("AIVMP001")) == 1) != 0) {
+        return 1;
+    }
 
     result = aivm_program_load_aibc1(valid_header, 16U, NULL);
     if (expect(result.status == AIVM_PROGRAM_ERR_NULL) != 0) {
@@ -116,6 +119,9 @@ int main(void)
         return 1;
     }
     if (expect(result.error_offset == 3U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(aivm_value_string(aivm_program_status_message(result.status)), aivm_value_string("Program bytes were truncated.")) == 1) != 0) {
         return 1;
     }
 
@@ -275,6 +281,9 @@ int main(void)
 
     result = aivm_program_load_aibc1(constants_section_invalid_kind, 29U, &program);
     if (expect(result.status == AIVM_PROGRAM_ERR_INVALID_CONSTANT) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(aivm_value_string(aivm_program_status_code(result.status)), aivm_value_string("AIVMP011")) == 1) != 0) {
         return 1;
     }
 

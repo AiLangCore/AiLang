@@ -19,6 +19,7 @@ public sealed partial class AosInterpreter
             AosValueKind.String => AosValue.FromBool(left.AsString() == right.AsString()),
             AosValueKind.Int => AosValue.FromBool(left.AsInt() == right.AsInt()),
             AosValueKind.Bool => AosValue.FromBool(left.AsBool() == right.AsBool()),
+            AosValueKind.Unknown => AosValue.FromBool(true),
             _ => AosValue.FromBool(false)
         };
     }
@@ -156,6 +157,26 @@ public sealed partial class AosInterpreter
         var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
         {
             ["value"] = new AosAttrValue(AosAttrKind.String, strValue.AsString())
+        };
+        var result = new AosNode("Lit", idValue.AsString(), attrs, new List<AosNode>(), node.Span);
+        return AosValue.FromNode(result);
+    }
+
+    private AosValue EvalMakeLitInt(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 2)
+        {
+            return AosValue.Unknown;
+        }
+        var idValue = EvalNode(node.Children[0], runtime, env);
+        var intValue = EvalNode(node.Children[1], runtime, env);
+        if (idValue.Kind != AosValueKind.String || intValue.Kind != AosValueKind.Int)
+        {
+            return AosValue.Unknown;
+        }
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["value"] = new AosAttrValue(AosAttrKind.Int, intValue.AsInt())
         };
         var result = new AosNode("Lit", idValue.AsString(), attrs, new List<AosNode>(), node.Span);
         return AosValue.FromNode(result);

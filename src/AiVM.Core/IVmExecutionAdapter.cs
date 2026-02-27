@@ -32,4 +32,8 @@ public interface IVmExecutionAdapter<TValue, TNode>
     void TraceInstruction(string functionName, int pc, string op)
     {
     }
+
+    void TraceInstructionState(string functionName, int pc, string op, ReadOnlySpan<TValue> stack, ReadOnlySpan<TValue> locals)
+    {
+    }
 }

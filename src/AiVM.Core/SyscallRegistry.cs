@@ -14,9 +14,38 @@ public static class SyscallRegistry
         ["sys.net_close"] = SyscallId.NetClose,
         ["sys.net_tcpListen"] = SyscallId.NetTcpListen,
         ["sys.net_tcpListenTls"] = SyscallId.NetTcpListenTls,
+        ["sys.net_tcpConnect"] = SyscallId.NetTcpConnect,
+        ["sys.net_tcpConnectTls"] = SyscallId.NetTcpConnectTls,
+        ["sys.net_tcpConnectStart"] = SyscallId.NetTcpConnectStart,
+        ["sys.net_tcpConnectTlsStart"] = SyscallId.NetTcpConnectTlsStart,
         ["sys.net_tcpAccept"] = SyscallId.NetTcpAccept,
         ["sys.net_tcpRead"] = SyscallId.NetTcpRead,
+        ["sys.net_tcpReadStart"] = SyscallId.NetTcpReadStart,
         ["sys.net_tcpWrite"] = SyscallId.NetTcpWrite,
+        ["sys.net_tcpWriteStart"] = SyscallId.NetTcpWriteStart,
+        ["sys.net_asyncPoll"] = SyscallId.NetAsyncPoll,
+        ["sys.net_asyncAwait"] = SyscallId.NetAsyncAwait,
+        ["sys.net_asyncCancel"] = SyscallId.NetAsyncCancel,
+        ["sys.net_asyncResultInt"] = SyscallId.NetAsyncResultInt,
+        ["sys.net_asyncResultString"] = SyscallId.NetAsyncResultString,
+        ["sys.net_asyncError"] = SyscallId.NetAsyncError,
+        ["sys.worker_start"] = SyscallId.WorkerStart,
+        ["sys.worker_poll"] = SyscallId.WorkerPoll,
+        ["sys.worker_result"] = SyscallId.WorkerResult,
+        ["sys.worker_error"] = SyscallId.WorkerError,
+        ["sys.worker_cancel"] = SyscallId.WorkerCancel,
+        ["sys.debug_emit"] = SyscallId.DebugEmit,
+        ["sys.debug_mode"] = SyscallId.DebugMode,
+        ["sys.debug_captureFrameBegin"] = SyscallId.DebugCaptureFrameBegin,
+        ["sys.debug_captureFrameEnd"] = SyscallId.DebugCaptureFrameEnd,
+        ["sys.debug_captureDraw"] = SyscallId.DebugCaptureDraw,
+        ["sys.debug_captureInput"] = SyscallId.DebugCaptureInput,
+        ["sys.debug_captureState"] = SyscallId.DebugCaptureState,
+        ["sys.debug_replayLoad"] = SyscallId.DebugReplayLoad,
+        ["sys.debug_replayNext"] = SyscallId.DebugReplayNext,
+        ["sys.debug_assert"] = SyscallId.DebugAssert,
+        ["sys.debug_artifactWrite"] = SyscallId.DebugArtifactWrite,
+        ["sys.debug_traceAsync"] = SyscallId.DebugTraceAsync,
         ["sys.crypto_base64Encode"] = SyscallId.CryptoBase64Encode,
         ["sys.crypto_base64Decode"] = SyscallId.CryptoBase64Decode,
         ["sys.crypto_sha1"] = SyscallId.CryptoSha1,
@@ -30,10 +59,16 @@ public static class SyscallRegistry
         ["sys.ui_beginFrame"] = SyscallId.UiBeginFrame,
         ["sys.ui_drawRect"] = SyscallId.UiDrawRect,
         ["sys.ui_drawText"] = SyscallId.UiDrawText,
+        ["sys.ui_drawLine"] = SyscallId.UiDrawLine,
+        ["sys.ui_drawEllipse"] = SyscallId.UiDrawEllipse,
+        ["sys.ui_drawPath"] = SyscallId.UiDrawPath,
+        ["sys.ui_drawImage"] = SyscallId.UiDrawImage,
         ["sys.ui_endFrame"] = SyscallId.UiEndFrame,
         ["sys.ui_pollEvent"] = SyscallId.UiPollEvent,
+        ["sys.ui_waitFrame"] = SyscallId.UiWaitFrame,
         ["sys.ui_present"] = SyscallId.UiPresent,
         ["sys.ui_closeWindow"] = SyscallId.UiCloseWindow,
+        ["sys.ui_getWindowSize"] = SyscallId.UiGetWindowSize,
         ["sys.console_write"] = SyscallId.ConsoleWrite,
         ["sys.console_writeLine"] = SyscallId.ConsoleWriteLine,
         ["sys.console_readLine"] = SyscallId.ConsoleReadLine,
@@ -55,7 +90,8 @@ public static class SyscallRegistry
         ["sys.fs_writeFile"] = SyscallId.FsWriteFile,
         ["sys.fs_makeDir"] = SyscallId.FsMakeDir,
         ["sys.str_utf8ByteCount"] = SyscallId.StrUtf8ByteCount,
-        ["sys.http_get"] = SyscallId.HttpGet,
+        ["sys.str_substring"] = SyscallId.StrSubstring,
+        ["sys.str_remove"] = SyscallId.StrRemove,
         ["sys.platform"] = SyscallId.Platform,
         ["sys.arch"] = SyscallId.Arch,
         ["sys.os_version"] = SyscallId.OsVersion,
@@ -65,5 +101,18 @@ public static class SyscallRegistry
     public static bool TryResolve(string target, out SyscallId id)
     {
         return NameToId.TryGetValue(target, out id);
+    }
+
+    public static string NameFor(SyscallId id)
+    {
+        foreach (var kv in NameToId)
+        {
+            if (kv.Value == id)
+            {
+                return kv.Key;
+            }
+        }
+
+        return id.ToString();
     }
 }

@@ -102,6 +102,62 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL216", "sys.net_tcpAccept expects 1 argument.", "VAL217", "sys.net_tcpAccept arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
+            case "sys.net_tcpConnect":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL303", "sys.net_tcpConnect arg 1 must be string."),
+                        (VmValueKind.Int, "VAL304", "sys.net_tcpConnect arg 2 must be int.")
+                    },
+                    "VAL307",
+                    "sys.net_tcpConnect expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpConnectTls":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL308", "sys.net_tcpConnectTls arg 1 must be string."),
+                        (VmValueKind.Int, "VAL309", "sys.net_tcpConnectTls arg 2 must be int.")
+                    },
+                    "VAL310",
+                    "sys.net_tcpConnectTls expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpConnectStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL311", "sys.net_tcpConnectStart arg 1 must be string."),
+                        (VmValueKind.Int, "VAL312", "sys.net_tcpConnectStart arg 2 must be int.")
+                    },
+                    "VAL313",
+                    "sys.net_tcpConnectStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpConnectTlsStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL314", "sys.net_tcpConnectTlsStart arg 1 must be string."),
+                        (VmValueKind.Int, "VAL315", "sys.net_tcpConnectTlsStart arg 2 must be int.")
+                    },
+                    "VAL316",
+                    "sys.net_tcpConnectTlsStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpRead":
                 ValidateArityAndTypes(
                     argKinds,
@@ -116,6 +172,20 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
+            case "sys.net_tcpReadStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL317", "sys.net_tcpReadStart arg 1 must be int."),
+                        (VmValueKind.Int, "VAL318", "sys.net_tcpReadStart arg 2 must be int.")
+                    },
+                    "VAL319",
+                    "sys.net_tcpReadStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpWrite":
                 ValidateArityAndTypes(
                     argKinds,
@@ -129,6 +199,195 @@ public static class SyscallContracts
                     "sys.net_tcpWrite expects 2 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpWriteStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL320", "sys.net_tcpWriteStart arg 1 must be int."),
+                        (VmValueKind.String, "VAL321", "sys.net_tcpWriteStart arg 2 must be string.")
+                    },
+                    "VAL322",
+                    "sys.net_tcpWriteStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncPoll":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL323", "sys.net_asyncPoll expects 1 argument.", "VAL324", "sys.net_asyncPoll arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncAwait":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL325", "sys.net_asyncAwait expects 1 argument.", "VAL326", "sys.net_asyncAwait arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncCancel":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL327", "sys.net_asyncCancel expects 1 argument.", "VAL328", "sys.net_asyncCancel arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Bool;
+                return true;
+            case "sys.net_asyncResultInt":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL329", "sys.net_asyncResultInt expects 1 argument.", "VAL330", "sys.net_asyncResultInt arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncResultString":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL331", "sys.net_asyncResultString expects 1 argument.", "VAL332", "sys.net_asyncResultString arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.net_asyncError":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL333", "sys.net_asyncError expects 1 argument.", "VAL334", "sys.net_asyncError arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.worker_start":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL342", "sys.worker_start arg 1 must be string."),
+                        (VmValueKind.String, "VAL343", "sys.worker_start arg 2 must be string.")
+                    },
+                    "VAL341",
+                    "sys.worker_start expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.worker_poll":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL344", "sys.worker_poll expects 1 argument.", "VAL345", "sys.worker_poll arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.worker_result":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL346", "sys.worker_result expects 1 argument.", "VAL347", "sys.worker_result arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.worker_error":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL348", "sys.worker_error expects 1 argument.", "VAL349", "sys.worker_error arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.worker_cancel":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL350", "sys.worker_cancel expects 1 argument.", "VAL351", "sys.worker_cancel arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Bool;
+                return true;
+            case "sys.debug_emit":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL353", "sys.debug_emit arg 1 must be string."),
+                        (VmValueKind.String, "VAL354", "sys.debug_emit arg 2 must be string.")
+                    },
+                    "VAL352",
+                    "sys.debug_emit expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_mode":
+                ValidateArity(argKinds, 0, "VAL355", "sys.debug_mode expects 0 arguments.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.debug_captureFrameBegin":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL357", "sys.debug_captureFrameBegin arg 1 must be int."),
+                        (VmValueKind.Int, "VAL358", "sys.debug_captureFrameBegin arg 2 must be int."),
+                        (VmValueKind.Int, "VAL359", "sys.debug_captureFrameBegin arg 3 must be int.")
+                    },
+                    "VAL356",
+                    "sys.debug_captureFrameBegin expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_captureFrameEnd":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL360", "sys.debug_captureFrameEnd expects 1 argument.", "VAL361", "sys.debug_captureFrameEnd arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_captureDraw":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL363", "sys.debug_captureDraw arg 1 must be string."),
+                        (VmValueKind.String, "VAL364", "sys.debug_captureDraw arg 2 must be string.")
+                    },
+                    "VAL362",
+                    "sys.debug_captureDraw expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_captureInput":
+                ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL365", "sys.debug_captureInput expects 1 argument.", "VAL366", "sys.debug_captureInput arg must be string.", addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_captureState":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL368", "sys.debug_captureState arg 1 must be string."),
+                        (VmValueKind.String, "VAL369", "sys.debug_captureState arg 2 must be string.")
+                    },
+                    "VAL367",
+                    "sys.debug_captureState expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_replayLoad":
+                ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL370", "sys.debug_replayLoad expects 1 argument.", "VAL371", "sys.debug_replayLoad arg must be string.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.debug_replayNext":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL372", "sys.debug_replayNext expects 1 argument.", "VAL373", "sys.debug_replayNext arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.debug_assert":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.Bool, "VAL375", "sys.debug_assert arg 1 must be bool."),
+                        (VmValueKind.String, "VAL376", "sys.debug_assert arg 2 must be string."),
+                        (VmValueKind.String, "VAL377", "sys.debug_assert arg 3 must be string.")
+                    },
+                    "VAL374",
+                    "sys.debug_assert expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.debug_artifactWrite":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL379", "sys.debug_artifactWrite arg 1 must be string."),
+                        (VmValueKind.String, "VAL380", "sys.debug_artifactWrite arg 2 must be string.")
+                    },
+                    "VAL378",
+                    "sys.debug_artifactWrite expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Bool;
+                return true;
+            case "sys.debug_traceAsync":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL382", "sys.debug_traceAsync arg 1 must be int."),
+                        (VmValueKind.String, "VAL383", "sys.debug_traceAsync arg 2 must be string."),
+                        (VmValueKind.String, "VAL384", "sys.debug_traceAsync arg 3 must be string.")
+                    },
+                    "VAL381",
+                    "sys.debug_traceAsync expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
                 return true;
             case "sys.net_udpBind":
                 ValidateArityAndTypes(
@@ -229,6 +488,77 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
+            case "sys.ui_drawLine":
+                ValidateArityAndTypes(
+                    argKinds,
+                    7,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL276", "sys.ui_drawLine arg 1 must be int."),
+                        (VmValueKind.Int, "VAL277", "sys.ui_drawLine arg 2 must be int."),
+                        (VmValueKind.Int, "VAL278", "sys.ui_drawLine arg 3 must be int."),
+                        (VmValueKind.Int, "VAL279", "sys.ui_drawLine arg 4 must be int."),
+                        (VmValueKind.Int, "VAL280", "sys.ui_drawLine arg 5 must be int."),
+                        (VmValueKind.String, "VAL281", "sys.ui_drawLine arg 6 must be string."),
+                        (VmValueKind.Int, "VAL282", "sys.ui_drawLine arg 7 must be int.")
+                    },
+                    "VAL283",
+                    "sys.ui_drawLine expects 7 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_drawEllipse":
+                ValidateArityAndTypes(
+                    argKinds,
+                    6,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL284", "sys.ui_drawEllipse arg 1 must be int."),
+                        (VmValueKind.Int, "VAL285", "sys.ui_drawEllipse arg 2 must be int."),
+                        (VmValueKind.Int, "VAL286", "sys.ui_drawEllipse arg 3 must be int."),
+                        (VmValueKind.Int, "VAL287", "sys.ui_drawEllipse arg 4 must be int."),
+                        (VmValueKind.Int, "VAL288", "sys.ui_drawEllipse arg 5 must be int."),
+                        (VmValueKind.String, "VAL289", "sys.ui_drawEllipse arg 6 must be string.")
+                    },
+                    "VAL290",
+                    "sys.ui_drawEllipse expects 6 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_drawPath":
+                ValidateArityAndTypes(
+                    argKinds,
+                    4,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL291", "sys.ui_drawPath arg 1 must be int."),
+                        (VmValueKind.String, "VAL292", "sys.ui_drawPath arg 2 must be string."),
+                        (VmValueKind.String, "VAL293", "sys.ui_drawPath arg 3 must be string."),
+                        (VmValueKind.Int, "VAL294", "sys.ui_drawPath arg 4 must be int.")
+                    },
+                    "VAL295",
+                    "sys.ui_drawPath expects 4 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_drawImage":
+                ValidateArityAndTypes(
+                    argKinds,
+                    6,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL296", "sys.ui_drawImage arg 1 must be int."),
+                        (VmValueKind.Int, "VAL297", "sys.ui_drawImage arg 2 must be int."),
+                        (VmValueKind.Int, "VAL298", "sys.ui_drawImage arg 3 must be int."),
+                        (VmValueKind.Int, "VAL299", "sys.ui_drawImage arg 4 must be int."),
+                        (VmValueKind.Int, "VAL300", "sys.ui_drawImage arg 5 must be int."),
+                        (VmValueKind.String, "VAL301", "sys.ui_drawImage arg 6 must be string.")
+                    },
+                    "VAL302",
+                    "sys.ui_drawImage expects 6 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
             case "sys.ui_endFrame":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL268", "sys.ui_endFrame expects 1 argument.", "VAL269", "sys.ui_endFrame arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;
@@ -237,6 +567,10 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL270", "sys.ui_pollEvent expects 1 argument.", "VAL271", "sys.ui_pollEvent arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Node;
                 return true;
+            case "sys.ui_waitFrame":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL335", "sys.ui_waitFrame expects 1 argument.", "VAL336", "sys.ui_waitFrame arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
             case "sys.ui_present":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL272", "sys.ui_present expects 1 argument.", "VAL273", "sys.ui_present arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;
@@ -244,6 +578,10 @@ public static class SyscallContracts
             case "sys.ui_closeWindow":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL274", "sys.ui_closeWindow expects 1 argument.", "VAL275", "sys.ui_closeWindow arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;
+                return true;
+            case "sys.ui_getWindowSize":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL276", "sys.ui_getWindowSize expects 1 argument.", "VAL277", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Node;
                 return true;
             case "sys.crypto_base64Encode":
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL224", "sys.crypto_base64Encode expects 1 argument.", "VAL225", "sys.crypto_base64Encode arg must be string.", addDiagnostic);
@@ -373,8 +711,34 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL142", "sys.str_utf8ByteCount expects 1 argument.", "VAL143", "sys.str_utf8ByteCount arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
-            case "sys.http_get":
-                ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL148", "sys.http_get expects 1 argument.", "VAL149", "sys.http_get arg must be string.", addDiagnostic);
+            case "sys.str_substring":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL278", "sys.str_substring arg 1 must be string."),
+                        (VmValueKind.Int, "VAL279", "sys.str_substring arg 2 must be int."),
+                        (VmValueKind.Int, "VAL280", "sys.str_substring arg 3 must be int.")
+                    },
+                    "VAL281",
+                    "sys.str_substring expects 3 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.str_remove":
+                ValidateArityAndTypes(
+                    argKinds,
+                    3,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL282", "sys.str_remove arg 1 must be string."),
+                        (VmValueKind.Int, "VAL283", "sys.str_remove arg 2 must be int."),
+                        (VmValueKind.Int, "VAL284", "sys.str_remove arg 3 must be int.")
+                    },
+                    "VAL285",
+                    "sys.str_remove expects 3 arguments.",
+                    addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
             case "sys.platform":

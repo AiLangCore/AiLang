@@ -41,6 +41,27 @@ This file is normative for `aic run` evaluation behavior.
 - Circular imports fail deterministically with runtime `Err`.
 - Missing import files fail deterministically with runtime `Err`.
 
+## UI Syscall Surface (Minimal Contract)
+
+- VM-level UI syscalls are intentionally minimal and composable primitives.
+- Current required VM UI syscall set is:
+- `sys.ui_createWindow`
+- `sys.ui_beginFrame`
+- `sys.ui_drawRect`
+- `sys.ui_drawText`
+- `sys.ui_drawLine`
+- `sys.ui_drawEllipse`
+- `sys.ui_drawPath`
+- `sys.ui_drawPolyline`
+- `sys.ui_drawPolygon`
+- `sys.ui_endFrame`
+- `sys.ui_pollEvent`
+- `sys.ui_waitFrame`
+- `sys.ui_present`
+- `sys.ui_closeWindow`
+- `sys.ui_getWindowSize`
+- High-level style/composition effects (for example text-on-path layout, paint bundles, blur/shadow filters, and group transform helpers) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
+
 ## Async Determinism Rules
 
 - Observable result ordering is declaration order, never completion order.
@@ -48,11 +69,164 @@ This file is normative for `aic run` evaluation behavior.
 - On first branch failure in a structured async scope, unresolved sibling branches are deterministically canceled.
 - Cancellation and failure propagation always resolve to deterministic `Err` values with stable `code/message/nodeId`.
 - Async execution may overlap in host scheduling, but language-visible state transitions must remain deterministic.
+- Effectful operations should be modeled as non-blocking start/poll/result state transitions.
+- Host may complete effectful work asynchronously, but language-visible state mutations occur only inside the deterministic evaluator/event loop step.
+
+## Host Threading Contract (UI Owner + Workers)
+
+- AiLang/AiVM language-visible execution is single-owner and deterministic.
+- Exactly one owner thread (the evaluator/UI loop thread) may apply VM state transitions.
+- Host/runtime may use internal worker threads for effectful operations (network, file, process, heavy compute), but workers must not mutate VM state directly.
+- Worker completion is observed only through explicit syscall polling/result reads in evaluator steps.
+- UI rendering and input consumption are owner-thread responsibilities:
+- event step (`sys.ui_pollEvent`)
+- deterministic state transition/recompute
+- present (`sys.ui_present`)
+- pacing (`sys.ui_waitFrame` when available)
+- Worker scheduling order/timing may vary; observable program behavior for identical input/event logs must remain deterministic.
+
+## Non-Blocking Async Syscall Contract
+
+- Effectful async syscalls follow explicit `start -> poll -> result/cancel` phases.
+- `*Start` syscalls must return quickly with an operation handle and must not wait for completion.
+- `sys.net_asyncPoll(handle)` must be non-blocking and returns:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultString(handle)`, and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
+- `sys.net_asyncCancel(handle)` is best-effort and deterministic:
+- returns `false` for unknown/non-pending handles
+- returns `true` only when cancellation transitions a pending op to canceled
+- Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
+
+## Worker Execution Contract (Phase 1)
+
+- Worker APIs are host-executed effectful operations with owner-thread-visible completion:
+- `sys.worker_start(taskName, payload) -> workerHandle`
+- `sys.worker_poll(workerHandle) -> status`
+- `sys.worker_result(workerHandle) -> string`
+- `sys.worker_error(workerHandle) -> string`
+- `sys.worker_cancel(workerHandle) -> bool`
+- Worker task execution may overlap on host threads.
+- Completion becomes language-visible only when owner thread performs polling in evaluator steps.
+- For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
+- Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
+
+## Debug Instrumentation Contract
+
+- Debug syscalls are explicit effect syscalls, not implicit runtime side effects.
+- Canonical debug syscall surface:
+- `sys.debug_emit(channel, payload)`
+- `sys.debug_mode()`
+- `sys.debug_captureFrameBegin(frameId, width, height)`
+- `sys.debug_captureFrameEnd(frameId)`
+- `sys.debug_captureDraw(op, args)`
+- `sys.debug_captureInput(eventPayload)`
+- `sys.debug_captureState(key, valuePayload)`
+- `sys.debug_replayLoad(path)`
+- `sys.debug_replayNext(handle)`
+- `sys.debug_assert(cond, code, message)`
+- `sys.debug_artifactWrite(path, text)`
+- `sys.debug_traceAsync(opId, phase, detail)`
+- Host may store/write debug artifacts, but debug-visible state transitions remain deterministic for identical syscall sequences.
+- Replay consumption is pull-based (`debug_replayNext`) so evaluator order controls determinism.
+
+## Update-Path Blocking Guard
+
+- During lifecycle `update` execution, blocking call targets are runtime errors (`RUN031`).
+- This includes direct and transitive calls made while `update` is active on the call stack.
 
 ## Async Non-Goals
 
 - No detached fire-and-forget execution in language semantics.
 - No implicit background retries/backoff in evaluator semantics.
+
+## UI Targeting Semantics
+
+- Event destination is language/runtime semantics, not host-owned behavior.
+- Each input event step resolves at most one destination node id (`targetId`).
+- Propagation is explicitly disabled in the base model: no capture phase, no bubble phase.
+- If no interactive node is hit, `targetId` is empty string.
+- If multiple candidates overlap, deterministic routing uses the first candidate in canonical draw order after applying hit-testing and clipping.
+
+## Canonical Hit-Testing Semantics
+
+- Hit-testing is evaluated in window coordinate space with integer coordinates.
+- Candidate geometry is rectangle-based in the base model (`x`, `y`, `w`, `h`).
+- A point `(px, py)` is inside a candidate iff:
+- `px >= x`
+- `py >= y`
+- `px < x + w`
+- `py < y + h`
+- Nodes with non-positive width or height are non-hittable.
+- Clipping is strict: pointer hits outside effective clip bounds are ignored.
+- Z-order precedence is canonical draw order within the same frame:
+- later drawn hittable candidate wins over earlier drawn candidate.
+- Tie-breaking for same z-order is stable node-id lexical order (`StringComparer.Ordinal`).
+
+## Focus Model
+
+- Focus is explicit runtime state represented by a single focused node id or empty string.
+- Initial focus is empty string.
+- Click-to-focus behavior:
+- on `click` with non-empty `targetId`, focus becomes `targetId`.
+- on `click` with empty `targetId`, focus becomes empty string.
+- `key` events are routed to the focused node id when focus is non-empty.
+- If focused node is no longer present in the current frame, focus is cleared before routing the next key event.
+- Focus transitions are deterministic state transitions and must not depend on host widget focus.
+
+## Text Editing State Transitions
+
+- Declarative text editing operates on explicit state only:
+- `text` (string)
+- `cursor` (int, inclusive range `0..len(text)`)
+- `selectionStart` (int)
+- `selectionEnd` (int)
+- Invariant: `0 <= selectionStart <= selectionEnd <= len(text)`.
+- Insert operation:
+- replace selected range with inserted text; cursor moves to end of inserted text; selection collapses at cursor.
+- Backspace operation:
+- if selection non-empty, delete selected range.
+- else delete one codepoint before cursor when cursor > 0.
+- Delete operation:
+- if selection non-empty, delete selected range.
+- else delete one codepoint at cursor when cursor < len(text).
+- All out-of-range cursor/selection inputs are clamped deterministically before mutation.
+- Text editing semantics are language-owned and must not depend on host text widgets.
+
+## UI Event Loop/Recompute Contract
+
+- Evaluation progresses in single-event deterministic steps.
+- One `UiEvent` is consumed per step (`type=none` means no input).
+- For non-`none` events, evaluator performs one deterministic state transition and one full declarative tree recompute before presenting the frame.
+- Recompute order is deterministic and matches canonical child order.
+- Idle behavior (`type=none`) performs no implicit state mutation.
+- For UI-driven loops, `sys.ui_waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time_sleepMs`, when host support is available.
+- Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
+
+## Host Normalization vs Library Semantics
+
+- Boundary rule:
+- AiVM/host owns transport normalization only.
+- AiLang libraries own input semantics.
+- Host normalization responsibilities:
+- normalize platform key identifiers to canonical tokens (for example `backspace`, `enter`, `left`, printable key tokens).
+- provide printable `text` payload when available.
+- populate canonical `type,key,text,x,y,modifiers,repeat,targetId` fields deterministically.
+- Host must not implement declarative editing semantics (no hidden insert/delete/caret/focus mutation rules).
+- Library responsibilities:
+- interpret canonical key/text payloads (`isBackspaceKey`, `isDeleteKey`, `isArrowKey`, `keyToText`, etc.).
+- define text-edit policy (insert/delete/caret movement/newline or tab policy).
+- route key behavior by explicit focus/target state in language-visible state transitions.
+
+## Raster Image Primitive
+
+- `sys.ui_drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
+- `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
+- Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
+- Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
 
 ## Result Emission
 

@@ -17,6 +17,29 @@ public sealed class AosValidator
     private readonly List<AosDiagnostic> _diagnostics = new();
     private readonly HashSet<string> _ids = new(StringComparer.Ordinal);
     private readonly AosStructuralValidator _structuralValidator = new();
+    private int _updateContextDepth;
+    private static readonly HashSet<string> BlockingCallTargets = new(StringComparer.Ordinal)
+    {
+        "sys.net_asyncAwait",
+        "sys.net_accept",
+        "sys.net_readHeaders",
+        "sys.net_tcpAccept",
+        "sys.net_tcpConnect",
+        "sys.net_tcpConnectTls",
+        "sys.net_tcpRead",
+        "sys.net_tcpWrite",
+        "sys.net_udpRecv",
+        "sys.time_sleepMs",
+        "sys.fs_readFile",
+        "sys.fs_readDir",
+        "sys.fs_stat",
+        "sys.console_readLine",
+        "sys.console_readAllStdin",
+        "io.readLine",
+        "io.readAllStdin",
+        "io.readFile",
+        "httpRequestAwait"
+    };
 
     public AosValidationResult Validate(AosNode root, Dictionary<string, AosValueKind>? envTypes, HashSet<string> permissions)
         => Validate(root, envTypes, permissions, runStructural: true, moduleBaseDir: null);
@@ -33,6 +56,7 @@ public sealed class AosValidator
     {
         _diagnostics.Clear();
         _ids.Clear();
+        _updateContextDepth = 0;
 
         if (runStructural)
         {
@@ -76,7 +100,22 @@ public sealed class AosValidator
                     env[fnNameAttr.AsString()] = AosValueKind.Function;
                 }
 
+                var enterUpdateContext = node.Children.Count == 1 &&
+                                         node.Children[0].Kind == "Fn" &&
+                                         node.Attrs.TryGetValue("name", out var letNameAttr) &&
+                                         letNameAttr.Kind == AosAttrKind.Identifier &&
+                                         string.Equals(letNameAttr.AsString(), "update", StringComparison.Ordinal);
+                if (enterUpdateContext)
+                {
+                    _updateContextDepth++;
+                }
+
                 var letType = node.Children.Count == 1 ? ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar) : AosValueKind.Unknown;
+
+                if (enterUpdateContext)
+                {
+                    _updateContextDepth--;
+                }
                 if (node.Attrs.TryGetValue("name", out var nameAttr) && nameAttr.Kind == AosAttrKind.Identifier)
                 {
                     env[nameAttr.AsString()] = letType;
@@ -332,6 +371,22 @@ public sealed class AosValidator
             case "MakeLitString":
                 RequireChildren(node, 2, 2);
                 ValidateChildrenAsStrings(node, env, permissions, "VAL062");
+                return AosValueKind.Node;
+            case "MakeLitInt":
+                RequireChildren(node, 2, 2);
+                if (node.Children.Count == 2)
+                {
+                    var idType = ValidateNode(node.Children[0], env, permissions, inComputeOnlyPar);
+                    var valueType = ValidateNode(node.Children[1], env, permissions, inComputeOnlyPar);
+                    if (idType != AosValueKind.String && idType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL338", "MakeLitInt id must be string.", node.Id, node.Span));
+                    }
+                    if (valueType != AosValueKind.Int && valueType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL339", "MakeLitInt value must be int.", node.Id, node.Span));
+                    }
+                }
                 return AosValueKind.Node;
             case "Event":
                 RequireChildren(node, 0, 0);
@@ -603,6 +658,11 @@ public sealed class AosValidator
             _diagnostics.Add(new AosDiagnostic("VAL169", "sys.* calls are not allowed inside compute-only Par branches.", node.Id, node.Span));
         }
 
+        if (_updateContextDepth > 0 && BlockingCallTargets.Contains(target))
+        {
+            _diagnostics.Add(new AosDiagnostic("VAL340", $"Blocking call '{target}' is not allowed in update context.", node.Id, node.Span));
+        }
+
         if (target == "math.add")
         {
             RequirePermission(node, "math", permissions);
@@ -757,6 +817,20 @@ public sealed class AosValidator
             return AosValueKind.String;
         }
 
+        if (target == "compiler.formatIds")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL171", "compiler.formatIds expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL172", "compiler.formatIds arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
         if (target == "compiler.parseHttpRequest")
         {
             RequirePermission(node, "compiler", permissions);
@@ -785,16 +859,16 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
-        if (target == "compiler.parseHttpBodyJson")
+        if (target == "std.json.parse")
         {
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL162", "compiler.parseHttpBodyJson expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL162", "std.json.parse expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL163", "compiler.parseHttpBodyJson arg must be string.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL163", "std.json.parse arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Node;
         }
@@ -820,16 +894,16 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
-        if (target == "compiler.toJson")
+        if (target == "std.json.stringify")
         {
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL115", "compiler.toJson expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL115", "std.json.stringify expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL116", "compiler.toJson arg must be node.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL116", "std.json.stringify arg must be node.", node.Id, node.Span));
             }
             return AosValueKind.String;
         }
@@ -1122,10 +1196,13 @@ public sealed class AosValidator
 
             if (child.Kind == "Export" &&
                 child.Attrs.TryGetValue("name", out var exportNameAttr) &&
-                exportNameAttr.Kind == AosAttrKind.Identifier &&
-                visible.TryGetValue(exportNameAttr.AsString(), out var exportType))
+                exportNameAttr.Kind == AosAttrKind.Identifier)
             {
-                env[exportNameAttr.AsString()] = exportType;
+                var exportName = exportNameAttr.AsString();
+                if (visible.TryGetValue(exportName, out var exportType))
+                {
+                    env[exportName] = exportType;
+                }
             }
         }
     }

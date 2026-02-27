@@ -63,14 +63,6 @@ public sealed partial class AosInterpreter
             return CreateRuntimeErr("RUN026", "Imported root must be Program.", node.Id, node.Span);
         }
 
-        var structural = new AosStructuralValidator();
-        var validation = structural.Validate(parse.Root);
-        if (validation.Count > 0)
-        {
-            var first = validation[0];
-            return CreateRuntimeErr(first.Code, first.Message, first.NodeId ?? node.Id, node.Span);
-        }
-
         var priorBaseDir = runtime.ModuleBaseDir;
         runtime.ModuleBaseDir = HostFileSystem.GetDirectoryName(absolutePath) ?? priorBaseDir;
         runtime.ModuleLoading.Add(absolutePath);
@@ -84,7 +76,17 @@ public sealed partial class AosInterpreter
                 return result;
             }
 
-            var exports = runtime.ExportScopes.Peek();
+            var exports = new Dictionary<string, AosValue>(StringComparer.Ordinal);
+            foreach (var exportName in CollectExportNames(parse.Root))
+            {
+                if (!moduleEnv.TryGetValue(exportName, out var exportValue))
+                {
+                    return CreateRuntimeErr("RUN029", $"Export name not found: {exportName}", node.Id, node.Span);
+                }
+
+                exports[exportName] = exportValue;
+            }
+
             runtime.ModuleExports[absolutePath] = new Dictionary<string, AosValue>(exports, StringComparer.Ordinal);
             foreach (var exportEntry in exports)
             {
@@ -99,6 +101,29 @@ public sealed partial class AosInterpreter
             runtime.ModuleLoading.Remove(absolutePath);
             runtime.ModuleBaseDir = priorBaseDir;
         }
+    }
+
+    private static List<string> CollectExportNames(AosNode program)
+    {
+        var names = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var child in program.Children)
+        {
+            if (child.Kind != "Export" ||
+                !child.Attrs.TryGetValue("name", out var nameAttr) ||
+                nameAttr.Kind != AosAttrKind.Identifier)
+            {
+                continue;
+            }
+
+            var name = nameAttr.AsString();
+            if (seen.Add(name))
+            {
+                names.Add(name);
+            }
+        }
+
+        return names;
     }
 
     private static AosNode ResolveImportsForBytecode(AosNode program, string moduleBaseDir, HashSet<string> loading)

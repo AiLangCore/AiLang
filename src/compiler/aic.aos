@@ -5,7 +5,7 @@ Program#aic_p1 {
         Let#aic_l2(name=cmd) { Call#aic_c1(target=readCmd) { Var#aic_v1(name=args) } }
         If#aic_if1 {
           Eq#aic_e1 { Var#aic_v2(name=cmd) Lit#aic_i1(value="fmt") }
-          Block#aic_b2 { Return#aic_r1 { Call#aic_c2(target=runFmt) { Lit#aic_i2(value=0) } } }
+          Block#aic_b2 { Return#aic_r1 { Call#aic_c2(target=runFmt) { Var#aic_v2f(name=args) } } }
           Block#aic_b3 {
             If#aic_if2 {
               Eq#aic_e2 { Var#aic_v3(name=cmd) Lit#aic_i3(value="check") }
@@ -148,14 +148,26 @@ Program#aic_p1 {
                   Call#aic_cn4t(target=isSupportedTemplate) { Var#aic_vn4t(name=resolvedTemplate) }
                   Block#aic_bn5a {
                     Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
+                    Let#aic_ln3a(name=assetsDir) { StrConcat#aic_sn1a { Var#aic_vn4a(name=name) Lit#aic_in7a(value="/Assets") } }
+                    Let#aic_ln3b(name=assetsImagesDir) { StrConcat#aic_sn1b { Var#aic_vn4b(name=name) Lit#aic_in7b(value="/Assets/images") } }
+                    Let#aic_ln3c(name=assetsFontsDir) { StrConcat#aic_sn1c { Var#aic_vn4c(name=name) Lit#aic_in7c(value="/Assets/fonts") } }
+                    Let#aic_ln3d(name=assetsLocaleDir) { StrConcat#aic_sn1d { Var#aic_vn4d(name=name) Lit#aic_in7d(value="/Assets/locale") } }
+                    Let#aic_ln3e(name=assetsLocaleEnPath) { StrConcat#aic_sn1e { Var#aic_vn4e(name=name) Lit#aic_in7e(value="/Assets/locale/en.toml") } }
                     Let#aic_ln4(name=projectPath) { StrConcat#aic_sn2 { Var#aic_vn5(name=name) Lit#aic_in8(value="/project.aiproj") } }
                     Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
                     Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
+                    Let#aic_ln6a(name=gitignorePath) { StrConcat#aic_sn4a { Var#aic_vn7a(name=name) Lit#aic_in10a(value="/.gitignore") } }
                     Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
                     Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
+                    Call#aic_cn6a(target=runIoMakeDir) { Var#aic_vn9a(name=assetsDir) }
+                    Call#aic_cn6b(target=runIoMakeDir) { Var#aic_vn9b(name=assetsImagesDir) }
+                    Call#aic_cn6c(target=runIoMakeDir) { Var#aic_vn9c(name=assetsFontsDir) }
+                    Call#aic_cn6d(target=runIoMakeDir) { Var#aic_vn9d(name=assetsLocaleDir) }
                     Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
                     Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildTemplateApp) { Var#aic_vn11t(name=resolvedTemplate) } }
                     Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Var#aic_vn11t2(name=resolvedTemplate) } }
+                    Call#aic_cn11a(target=runIoWriteFile) { Var#aic_vn13a(name=gitignorePath) Call#aic_cn12a(target=buildGitIgnore) { Lit#aic_in10b(value=0) } }
+                    Call#aic_cn11b(target=runIoWriteFile) { Var#aic_vn13b(name=assetsLocaleEnPath) Call#aic_cn12b(target=buildLocaleSeedData) { Lit#aic_in10c(value=0) } }
                     Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
                     Return#aic_rn3 { Lit#aic_in14(value=0) }
                   }
@@ -275,6 +287,22 @@ Program#aic_p1 {
     }
   }
 
+  Let#aic_ln55(name=buildGitIgnore) {
+    Fn#aic_fn55(params=_) {
+      Block#aic_bn55 {
+        Return#aic_rn55 { Lit#aic_in55(value=".toolchain/\n") }
+      }
+    }
+  }
+
+  Let#aic_ln56(name=buildLocaleSeedData) {
+    Fn#aic_fn56(params=_) {
+      Block#aic_bn56 {
+        Return#aic_rn56 { Lit#aic_in56(value="app.title = \"AiLang App\"\n") }
+      }
+    }
+  }
+
   Let#aic_ln60(name=buildAppTemplate) {
     Fn#aic_fn60(params=_) {
       Block#aic_bn60 {
@@ -376,7 +404,7 @@ Program#aic_p1 {
   Let#aic_ln70(name=buildAgentsDoc) {
     Fn#aic_fn70(params=_) {
       Block#aic_bn70 {
-        Return#aic_rn70 { Lit#aic_in70(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tDo not modify project.aiproj structure.\n\t•\tNo JSON.\n") }
+        Return#aic_rn70 { Lit#aic_in70(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tProject layout: src/app.aos for code, Assets/locale/*.toml for data.\n\t•\tNo JSON.\n") }
       }
     }
   }
@@ -642,10 +670,15 @@ Program#aic_p1 {
   }
 
   Let#aic_l30(name=runFmt) {
-    Fn#aic_f30(params=_) {
+    Fn#aic_f30(params=args) {
       Block#aic_b30 {
         Let#aic_l31(name=parsed) { Call#aic_c30(target=readAndParse) { Lit#aic_i30(value=0) } }
-        Call#aic_c31(target=io.write) { Call#aic_c32(target=compiler.format) { Var#aic_v30(name=parsed) } }
+        Let#aic_l31b(name=mode) { Call#aic_c30b(target=readArg) { Var#aic_v30b(name=args) Lit#aic_i30b(value=1) } }
+        If#aic_if30 {
+          Eq#aic_e30 { Var#aic_v30c(name=mode) Lit#aic_i30c(value="--ids") }
+          Block#aic_b30b { Call#aic_c31(target=io.write) { Call#aic_c32(target=compiler.formatIds) { Var#aic_v30(name=parsed) } } }
+          Block#aic_b30c { Call#aic_c31b(target=io.write) { Call#aic_c32b(target=compiler.format) { Var#aic_v30d(name=parsed) } } }
+        }
         Return#aic_r30
       }
     }

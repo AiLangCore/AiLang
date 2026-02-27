@@ -4,6 +4,8 @@ namespace AiLang.Core;
 
 public static class AosCliExecutionEngine
 {
+    public static AosDebugRecorder? ActiveDebugRecorder { get; set; }
+
     public static int RunRepl(Func<string?> readLine, Action<string> writeLine)
     {
         var session = new AosReplSession();
@@ -29,6 +31,7 @@ public static class AosCliExecutionEngine
             var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
             if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
             {
+                ActiveDebugRecorder?.RecordDiagnostic(errCode, errMessage, errNodeId);
                 writeLine(FormatErr("err1", errCode, errMessage, errNodeId));
                 return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
             }
@@ -44,11 +47,13 @@ public static class AosCliExecutionEngine
 
             if (IsErrNode(result, out var errNode))
             {
+                ActiveDebugRecorder?.RecordDiagnostic(errNode!.Attrs["code"].AsString(), errNode.Attrs["message"].AsString(), errNode.Attrs["nodeId"].AsString());
                 writeLine(AosFormatter.Format(errNode!));
                 return 3;
             }
             if (result.Kind == AosValueKind.Unknown)
             {
+                ActiveDebugRecorder?.RecordDiagnostic("RUN001", "Runtime returned unknown result.", "runtime.start");
                 writeLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
                 return 3;
             }
@@ -75,6 +80,7 @@ public static class AosCliExecutionEngine
         }
         catch (Exception ex)
         {
+            ActiveDebugRecorder?.RecordDiagnostic("RUN001", ex.Message, "unknown");
             writeLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
             return 3;
         }
@@ -86,6 +92,7 @@ public static class AosCliExecutionEngine
         {
             if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
             {
+                ActiveDebugRecorder?.RecordDiagnostic(errCode, errMessage, errNodeId);
                 writeLine(FormatErr("err1", errCode, errMessage, errNodeId));
                 return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
             }
@@ -94,11 +101,13 @@ public static class AosCliExecutionEngine
             var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port, tlsCertPath, tlsKeyPath));
             if (IsErrNode(result, out var errNode))
             {
+                ActiveDebugRecorder?.RecordDiagnostic(errNode!.Attrs["code"].AsString(), errNode.Attrs["message"].AsString(), errNode.Attrs["nodeId"].AsString());
                 writeLine(AosFormatter.Format(errNode!));
                 return 3;
             }
             if (result.Kind == AosValueKind.Unknown)
             {
+                ActiveDebugRecorder?.RecordDiagnostic("RUN001", "Runtime returned unknown result.", "runtime.start");
                 writeLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
                 return 3;
             }
@@ -116,6 +125,7 @@ public static class AosCliExecutionEngine
         }
         catch (Exception ex)
         {
+            ActiveDebugRecorder?.RecordDiagnostic("RUN001", ex.Message, "unknown");
             writeLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
             return 3;
         }
@@ -152,7 +162,7 @@ public static class AosCliExecutionEngine
                 return 3;
             }
 
-            var runtime = new AosRuntime();
+            var runtime = CreateRuntime();
             runtime.Permissions.Add("console");
             runtime.Permissions.Add("io");
             runtime.Permissions.Add("compiler");
@@ -255,7 +265,7 @@ public static class AosCliExecutionEngine
                 return 3;
             }
 
-            var runtime = new AosRuntime();
+            var runtime = CreateRuntime();
             runtime.Permissions.Add("console");
             runtime.Permissions.Add("io");
             runtime.Permissions.Add("compiler");
@@ -540,7 +550,7 @@ public static class AosCliExecutionEngine
             ? BuildManifestExecutionProgram(parse.Root, entryExportOverride)
             : parse.Root;
 
-        runtime = new AosRuntime();
+        runtime = CreateRuntime();
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
@@ -611,6 +621,24 @@ public static class AosCliExecutionEngine
         out string errMessage,
         out string errNodeId)
     {
+        if (HostFileSystem.DirectoryExists(path))
+        {
+            var manifestInDirectory = Path.Combine(path, "project.aiproj");
+            if (!HostFileSystem.FileExists(manifestInDirectory))
+            {
+                sourcePath = path;
+                moduleBaseDir = Path.GetFullPath(path);
+                entryExportOverride = string.Empty;
+                resolvedFromManifest = false;
+                errCode = "RUN002";
+                errMessage = "project.aiproj not found in directory.";
+                errNodeId = "project";
+                return false;
+            }
+
+            path = manifestInDirectory;
+        }
+
         sourcePath = path;
         moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
         entryExportOverride = string.Empty;
@@ -621,6 +649,13 @@ public static class AosCliExecutionEngine
 
         if (!path.EndsWith(".aiproj", StringComparison.OrdinalIgnoreCase))
         {
+            if (!HostFileSystem.FileExists(path))
+            {
+                errCode = "RUN002";
+                errMessage = "Source file not found.";
+                errNodeId = "source";
+                return false;
+            }
             return true;
         }
 
@@ -699,8 +734,8 @@ public static class AosCliExecutionEngine
         }
 
         var entryFile = entryFileAttr.AsString();
-        moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
-        sourcePath = Path.GetFullPath(Path.Combine(moduleBaseDir, entryFile));
+        var projectBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
+        sourcePath = Path.GetFullPath(Path.Combine(projectBaseDir, entryFile));
         if (!HostFileSystem.FileExists(sourcePath))
         {
             errCode = "RUN002";
@@ -709,6 +744,7 @@ public static class AosCliExecutionEngine
             return false;
         }
 
+        moduleBaseDir = Path.GetDirectoryName(sourcePath) ?? projectBaseDir;
         entryExportOverride = entryExportAttr.AsString();
         resolvedFromManifest = true;
         return true;
@@ -982,7 +1018,7 @@ public static class AosCliExecutionEngine
 
     private static AosRuntime NewBenchRuntime(string sourcePath)
     {
-        var runtime = new AosRuntime();
+        var runtime = CreateRuntime();
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
@@ -1044,5 +1080,13 @@ public static class AosCliExecutionEngine
         }
 
         return null;
+    }
+
+    private static AosRuntime CreateRuntime()
+    {
+        return new AosRuntime
+        {
+            DebugRecorder = ActiveDebugRecorder
+        };
     }
 }

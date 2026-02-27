@@ -15,4 +15,6 @@ public sealed class AosRuntime
     public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
     public VmNetworkState Network { get; } = new();
+    public Stack<string> CallStack { get; } = new();
+    public AosDebugRecorder? DebugRecorder { get; set; }
 }

@@ -136,9 +136,41 @@ public static class VmSyscalls
         return Host.StrUtf8ByteCount(text);
     }
 
-    public static string HttpGet(string url)
+    public static string StrSubstring(string text, int start, int length)
     {
-        return Host.HttpGet(url);
+        if (string.IsNullOrEmpty(text) || length <= 0)
+        {
+            return string.Empty;
+        }
+
+        var offsets = BuildRuneOffsets(text);
+        var runeCount = offsets.Length - 1;
+        var clampedStart = Math.Max(0, Math.Min(start, runeCount));
+        var clampedEnd = Math.Max(clampedStart, Math.Min(runeCount, clampedStart + length));
+        var startOffset = offsets[clampedStart];
+        var endOffset = offsets[clampedEnd];
+        return text.Substring(startOffset, endOffset - startOffset);
+    }
+
+    public static string StrRemove(string text, int start, int length)
+    {
+        if (string.IsNullOrEmpty(text) || length <= 0)
+        {
+            return text ?? string.Empty;
+        }
+
+        var offsets = BuildRuneOffsets(text);
+        var runeCount = offsets.Length - 1;
+        var clampedStart = Math.Max(0, Math.Min(start, runeCount));
+        var clampedEnd = Math.Max(clampedStart, Math.Min(runeCount, clampedStart + length));
+        if (clampedStart == clampedEnd)
+        {
+            return text;
+        }
+
+        var startOffset = offsets[clampedStart];
+        var endOffset = offsets[clampedEnd];
+        return string.Concat(text.AsSpan(0, startOffset), text.AsSpan(endOffset));
     }
 
     public static string Platform()
@@ -201,6 +233,26 @@ public static class VmSyscalls
         return Host.NetTcpListenTls(state, host, port, certPath, keyPath);
     }
 
+    public static int NetTcpConnect(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnect(state, host, port);
+    }
+
+    public static int NetTcpConnectTls(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectTls(state, host, port);
+    }
+
+    public static int NetTcpConnectStart(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectStart(state, host, port);
+    }
+
+    public static int NetTcpConnectTlsStart(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectTlsStart(state, host, port);
+    }
+
     public static int NetTcpAccept(VmNetworkState state, int listenerHandle)
     {
         return Host.NetTcpAccept(state, listenerHandle);
@@ -214,6 +266,131 @@ public static class VmSyscalls
     public static int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
     {
         return Host.NetTcpWrite(state, connectionHandle, data);
+    }
+
+    public static int NetTcpReadStart(VmNetworkState state, int connectionHandle, int maxBytes)
+    {
+        return Host.NetTcpReadStart(state, connectionHandle, maxBytes);
+    }
+
+    public static int NetTcpWriteStart(VmNetworkState state, int connectionHandle, string data)
+    {
+        return Host.NetTcpWriteStart(state, connectionHandle, data);
+    }
+
+    public static int NetAsyncPoll(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncPoll(state, operationHandle);
+    }
+
+    public static int NetAsyncAwait(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncAwait(state, operationHandle);
+    }
+
+    public static bool NetAsyncCancel(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncCancel(state, operationHandle);
+    }
+
+    public static int NetAsyncResultInt(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncResultInt(state, operationHandle);
+    }
+
+    public static string NetAsyncResultString(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncResultString(state, operationHandle);
+    }
+
+    public static string NetAsyncError(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncError(state, operationHandle);
+    }
+
+    public static int WorkerStart(VmNetworkState state, string taskName, string payload)
+    {
+        return Host.WorkerStart(state, taskName, payload);
+    }
+
+    public static int WorkerPoll(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerPoll(state, workerHandle);
+    }
+
+    public static string WorkerResult(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerResult(state, workerHandle);
+    }
+
+    public static string WorkerError(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerError(state, workerHandle);
+    }
+
+    public static bool WorkerCancel(VmNetworkState state, int workerHandle)
+    {
+        return Host.WorkerCancel(state, workerHandle);
+    }
+
+    public static void DebugEmit(string channel, string payload)
+    {
+        Host.DebugEmit(channel, payload);
+    }
+
+    public static string DebugMode()
+    {
+        return Host.DebugMode();
+    }
+
+    public static void DebugCaptureFrameBegin(int frameId, int width, int height)
+    {
+        Host.DebugCaptureFrameBegin(frameId, width, height);
+    }
+
+    public static void DebugCaptureFrameEnd(int frameId)
+    {
+        Host.DebugCaptureFrameEnd(frameId);
+    }
+
+    public static void DebugCaptureDraw(string op, string args)
+    {
+        Host.DebugCaptureDraw(op, args);
+    }
+
+    public static void DebugCaptureInput(string eventPayload)
+    {
+        Host.DebugCaptureInput(eventPayload);
+    }
+
+    public static void DebugCaptureState(string key, string valuePayload)
+    {
+        Host.DebugCaptureState(key, valuePayload);
+    }
+
+    public static int DebugReplayLoad(VmNetworkState state, string path)
+    {
+        return Host.DebugReplayLoad(state, path);
+    }
+
+    public static string DebugReplayNext(VmNetworkState state, int handle)
+    {
+        return Host.DebugReplayNext(state, handle);
+    }
+
+    public static void DebugAssert(bool cond, string code, string message)
+    {
+        Host.DebugAssert(cond, code, message);
+    }
+
+    public static bool DebugArtifactWrite(string path, string text)
+    {
+        return Host.DebugArtifactWrite(path, text);
+    }
+
+    public static void DebugTraceAsync(int opId, string phase, string detail)
+    {
+        Host.DebugTraceAsync(opId, phase, detail);
     }
 
     public static int NetUdpBind(VmNetworkState state, string host, int port)
@@ -251,6 +428,26 @@ public static class VmSyscalls
         Host.UiDrawText(windowHandle, x, y, text, color, size);
     }
 
+    public static void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
+    {
+        Host.UiDrawLine(windowHandle, x1, y1, x2, y2, color, strokeWidth);
+    }
+
+    public static void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color)
+    {
+        Host.UiDrawEllipse(windowHandle, x, y, width, height, color);
+    }
+
+    public static void UiDrawPath(int windowHandle, string path, string color, int strokeWidth)
+    {
+        Host.UiDrawPath(windowHandle, path, color, strokeWidth);
+    }
+
+    public static void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
+    {
+        Host.UiDrawImage(windowHandle, x, y, width, height, rgbaBase64);
+    }
+
     public static void UiEndFrame(int windowHandle)
     {
         Host.UiEndFrame(windowHandle);
@@ -258,7 +455,18 @@ public static class VmSyscalls
 
     public static VmUiEvent UiPollEvent(int windowHandle)
     {
-        return Host.UiPollEvent(windowHandle);
+        return CanonicalizeUiEvent(Host.UiPollEvent(windowHandle));
+    }
+
+    public static void UiWaitFrame(int windowHandle)
+    {
+        Host.UiWaitFrame(windowHandle);
+    }
+
+    public static VmUiWindowSize UiGetWindowSize(int windowHandle)
+    {
+        var size = Host.UiGetWindowSize(windowHandle);
+        return new VmUiWindowSize(size.Width < 0 ? -1 : size.Width, size.Height < 0 ? -1 : size.Height);
     }
 
     public static void UiPresent(int windowHandle)
@@ -309,5 +517,126 @@ public static class VmSyscalls
     public static void ProcessExit(int code)
     {
         Host.ProcessExit(code);
+    }
+
+    private static VmUiEvent CanonicalizeUiEvent(VmUiEvent value)
+    {
+        var type = value.Type switch
+        {
+            "none" => "none",
+            "closed" => "closed",
+            "click" => "click",
+            "key" => "key",
+            _ => "none"
+        };
+
+        var targetId = value.TargetId ?? string.Empty;
+        var key = CanonicalizeKeyToken(value.Key ?? string.Empty, value.Text ?? string.Empty);
+        var text = value.Text ?? string.Empty;
+        var modifiers = CanonicalizeModifiers(value.Modifiers);
+        var repeat = value.Repeat;
+        var x = value.X;
+        var y = value.Y;
+
+        if (!string.Equals(type, "click", StringComparison.Ordinal))
+        {
+            x = -1;
+            y = -1;
+        }
+
+        if (!string.Equals(type, "key", StringComparison.Ordinal))
+        {
+            key = string.Empty;
+            text = string.Empty;
+            modifiers = string.Empty;
+            repeat = false;
+        }
+
+        if (string.Equals(type, "none", StringComparison.Ordinal) ||
+            string.Equals(type, "closed", StringComparison.Ordinal))
+        {
+            targetId = string.Empty;
+        }
+
+        return new VmUiEvent(type, targetId, x, y, key, text, modifiers, repeat);
+    }
+
+    private static string CanonicalizeKeyToken(string key, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(key))
+        {
+            return key.ToLowerInvariant() switch
+            {
+                "return" => "enter",
+                "esc" => "escape",
+                "arrowleft" => "left",
+                "arrowright" => "right",
+                "arrowup" => "up",
+                "arrowdown" => "down",
+                _ => key.ToLowerInvariant()
+            };
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        if (text.Length != 1)
+        {
+            return string.Empty;
+        }
+
+        var ch = text[0];
+        if (char.IsControl(ch))
+        {
+            return string.Empty;
+        }
+
+        if (ch == ' ')
+        {
+            return "space";
+        }
+
+        return char.ToLowerInvariant(ch).ToString();
+    }
+
+    private static int[] BuildRuneOffsets(string text)
+    {
+        var offsets = new List<int> { 0 };
+        var index = 0;
+        foreach (var rune in text.EnumerateRunes())
+        {
+            index += rune.Utf16SequenceLength;
+            offsets.Add(index);
+        }
+
+        return offsets.ToArray();
+    }
+
+    private static string CanonicalizeModifiers(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var parsed = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var token in parsed)
+        {
+            if (token is "alt" or "ctrl" or "meta" or "shift")
+            {
+                seen.Add(token);
+            }
+        }
+
+        if (seen.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var ordered = seen.OrderBy(static m => m, StringComparer.Ordinal);
+        return string.Join(',', ordered);
     }
 }

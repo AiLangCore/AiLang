@@ -31,8 +31,33 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
 - `Task(handle=...)` for async in-flight work handles returned by async calls.
+- `UiEvent(...)` for UI input payloads returned by `sys.ui_pollEvent`.
+- `UiWindowSize(width=... height=...)` for UI window size payloads returned by `sys.ui_getWindowSize`.
 - Function values are closures represented as block nodes containing:
 - function node + captured environment.
+
+## UI Event Value Contract
+
+- `sys.ui_pollEvent` returns one canonical `UiEvent` node per call.
+- Canonical attributes on `UiEvent`:
+- `type` (string): `none`, `closed`, `click`, `key`.
+- `targetId` (string): target node id, or empty string when no target applies.
+- `x` (int): window-space x coordinate for pointer events; `-1` when not applicable.
+- `y` (int): window-space y coordinate for pointer events; `-1` when not applicable.
+- `key` (string): canonical key identifier for key events, else empty string.
+- `text` (string): UTF-8 text payload for text input on key events, else empty string.
+- `modifiers` (string): comma-separated sorted set from `alt,ctrl,meta,shift`; empty string for none.
+- `repeat` (bool): `true` only for host key-repeat events, else `false`.
+- `UiEvent` has `0` children.
+- Host/VM role is transport normalization only; key meaning (editing/navigation/submit policy) is defined in AiLang library code.
+
+## UI Window Size Value Contract
+
+- `sys.ui_getWindowSize` returns one canonical `UiWindowSize` node per call.
+- Canonical attributes on `UiWindowSize`:
+- `width` (int): current client-area width in pixels, or `-1` when unavailable.
+- `height` (int): current client-area height in pixels, or `-1` when unavailable.
+- `UiWindowSize` has `0` children.
 
 ## Async Function Contract
 
@@ -47,6 +72,32 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - No user-level threads.
 - No user-level locks/mutex primitives.
 - No ambient scheduler primitives in language IL.
+
+## Worker Syscall Value Contract
+
+- `sys.worker_start(taskName, payload)` returns an int worker handle.
+- `sys.worker_poll(workerHandle)` returns int status:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.worker_result(workerHandle)` returns string payload (empty when unavailable).
+- `sys.worker_error(workerHandle)` returns string error code (`unknown_worker` for unknown handles).
+- `sys.worker_cancel(workerHandle)` returns bool for cancellation transition success.
+
+## Debug Syscall Value Contract
+
+- `sys.debug_emit(channel, payload)` writes one deterministic debug record and returns `void`.
+- `sys.debug_mode()` returns current debug mode string: `off`, `live`, `snapshot`, `replay`, or `scene`.
+- `sys.debug_captureFrameBegin(frameId, width, height)` and `sys.debug_captureFrameEnd(frameId)` return `void`.
+- `sys.debug_captureDraw(op, args)` returns `void`; canonical `op` values: `rect`, `ellipse`, `path`, `text`, `line`, `transform`, `filter`, `image`.
+- `sys.debug_captureInput(eventPayload)` and `sys.debug_captureState(key, valuePayload)` return `void`.
+- `sys.debug_replayLoad(path)` returns int replay handle (`-1` on load failure).
+- `sys.debug_replayNext(handle)` returns next replay record string, or empty string at EOF/unknown handle.
+- `sys.debug_assert(cond, code, message)` returns `void` when `cond=true`, otherwise raises deterministic runtime error.
+- `sys.debug_artifactWrite(path, text)` returns bool success.
+- `sys.debug_traceAsync(opId, phase, detail)` returns `void`; canonical `phase` values: `start`, `poll`, `done`, `fail`, `cancel`.
 
 ## Stability Rule
 

@@ -197,6 +197,7 @@ public sealed partial class AosInterpreter
 
         public bool TryExecuteSyscall(SyscallId id, ReadOnlySpan<AosValue> args, out AosValue result)
         {
+            var syscallTarget = SyscallRegistry.NameFor(id);
             switch (id)
             {
                 case SyscallId.ProcessArgv:
@@ -206,6 +207,7 @@ public sealed partial class AosInterpreter
                         return true;
                     }
                     result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
+                    RecordSyscall(syscallTarget, args, result);
                     return true;
                 case SyscallId.FsReadDir:
                     if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
@@ -214,6 +216,7 @@ public sealed partial class AosInterpreter
                         return true;
                     }
                     result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(args[0].AsString())));
+                    RecordSyscall(syscallTarget, args, result);
                     return true;
                 case SyscallId.FsStat:
                     if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
@@ -223,6 +226,7 @@ public sealed partial class AosInterpreter
                     }
                     var stat = VmSyscalls.FsStat(args[0].AsString());
                     result = AosValue.FromNode(AosRuntimeNodes.BuildFsStatNode(stat.Type, stat.Size, stat.MtimeUnixMs));
+                    RecordSyscall(syscallTarget, args, result);
                     return true;
                 case SyscallId.NetUdpRecv:
                     if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
@@ -235,6 +239,7 @@ public sealed partial class AosInterpreter
                     }
                     var packet = VmSyscalls.NetUdpRecv(_runtime.Network, args[0].AsInt(), args[1].AsInt());
                     result = AosValue.FromNode(AosRuntimeNodes.BuildUdpPacketNode(packet.Host, packet.Port, packet.Data));
+                    RecordSyscall(syscallTarget, args, result);
                     return true;
                 case SyscallId.UiPollEvent:
                     if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
@@ -245,7 +250,29 @@ public sealed partial class AosInterpreter
                         return true;
                     }
                     var uiEvent = VmSyscalls.UiPollEvent(args[0].AsInt());
-                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(
+                        uiEvent.Type,
+                        uiEvent.TargetId,
+                        uiEvent.X,
+                        uiEvent.Y,
+                        uiEvent.Key,
+                        uiEvent.Text,
+                        uiEvent.Modifiers,
+                        uiEvent.Repeat));
+                    RecordSyscall(syscallTarget, args, result);
+                    _runtime.DebugRecorder?.RecordEvent("ui_poll", FormatAosValue(result));
+                    return true;
+                case SyscallId.UiGetWindowSize:
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
+                        args.Length != 1 ||
+                        args[0].Kind != AosValueKind.Int)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var uiSize = VmSyscalls.UiGetWindowSize(args[0].AsInt());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiWindowSizeNode(uiSize.Width, uiSize.Height));
+                    RecordSyscall(syscallTarget, args, result);
                     return true;
             }
 
@@ -266,10 +293,16 @@ public sealed partial class AosInterpreter
                 if (!VmSyscallDispatcher.TryInvoke(id, sysArgs, _runtime.Network, out var sysResult))
                 {
                     result = AosValue.Unknown;
+                    _runtime.DebugRecorder?.RecordSyscall(syscallTarget, FormatArgs(args), "unknown", "failed");
                     return false;
                 }
 
                 result = FromSysValue(sysResult);
+                RecordSyscall(syscallTarget, args, result);
+                if (id == SyscallId.UiPollEvent)
+                {
+                    _runtime.DebugRecorder?.RecordEvent("ui_poll", FormatAosValue(result));
+                }
                 return true;
             }
             finally
@@ -280,6 +313,59 @@ public sealed partial class AosInterpreter
                     ArrayPool<SysValue>.Shared.Return(rentedBuffer);
                 }
             }
+        }
+
+        public void TraceInstructionState(string functionName, int pc, string op, ReadOnlySpan<AosValue> stack, ReadOnlySpan<AosValue> locals)
+        {
+            if (_runtime.DebugRecorder is null)
+            {
+                return;
+            }
+
+            var stackValues = new List<string>(stack.Length);
+            for (var i = 0; i < stack.Length; i++)
+            {
+                stackValues.Add(FormatAosValue(stack[i]));
+            }
+
+            var localValues = new List<string>(locals.Length);
+            for (var i = 0; i < locals.Length; i++)
+            {
+                localValues.Add(FormatAosValue(locals[i]));
+            }
+
+            _runtime.DebugRecorder.RecordVmStep(functionName, pc, op, stackValues, localValues, _runtime.Env, _runtime.CallStack);
+        }
+
+        private void RecordSyscall(string target, ReadOnlySpan<AosValue> args, AosValue result)
+        {
+            _runtime.DebugRecorder?.RecordSyscall(target, FormatArgs(args), FormatAosValue(result), "ok");
+        }
+
+        private static List<string> FormatArgs(ReadOnlySpan<AosValue> args)
+        {
+            var list = new List<string>(args.Length);
+            for (var i = 0; i < args.Length; i++)
+            {
+                list.Add(FormatAosValue(args[i]));
+            }
+
+            return list;
+        }
+
+        private static string FormatAosValue(AosValue value)
+        {
+            return value.Kind switch
+            {
+                AosValueKind.String => "\"" + value.AsString() + "\"",
+                AosValueKind.Int => value.AsInt().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                AosValueKind.Bool => value.AsBool() ? "true" : "false",
+                AosValueKind.Void => "void",
+                AosValueKind.Unknown => "unknown",
+                AosValueKind.Node => value.AsNode().Kind + "#" + value.AsNode().Id,
+                AosValueKind.Function => "fn",
+                _ => "unknown"
+            };
         }
 
         private static bool TryConvertToSysValues(ReadOnlySpan<AosValue> args, out SysValue[]? rentedBuffer, out ReadOnlySpan<SysValue> sysArgs)

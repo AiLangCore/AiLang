@@ -56,26 +56,36 @@ AivmSyscallStatus aivm_syscall_dispatch(
     return AIVM_SYSCALL_ERR_NOT_FOUND;
 }
 
-AivmSyscallStatus aivm_syscall_dispatch_checked(
+AivmSyscallStatus aivm_syscall_dispatch_checked_with_contract(
     const AivmSyscallBinding* bindings,
     size_t binding_count,
     const char* target,
     const AivmValue* args,
     size_t arg_count,
-    AivmValue* result)
+    AivmValue* result,
+    AivmContractStatus* out_contract_status)
 {
     AivmValueType expected_return_type = AIVM_VAL_VOID;
     AivmContractStatus contract_status;
     AivmSyscallStatus invoke_status;
 
     if (result == NULL) {
+        if (out_contract_status != NULL) {
+            *out_contract_status = AIVM_CONTRACT_OK;
+        }
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
 
     contract_status = aivm_syscall_contract_validate(target, args, arg_count, &expected_return_type);
     if (contract_status != AIVM_CONTRACT_OK) {
+        if (out_contract_status != NULL) {
+            *out_contract_status = contract_status;
+        }
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (out_contract_status != NULL) {
+        *out_contract_status = AIVM_CONTRACT_OK;
     }
 
     invoke_status = aivm_syscall_dispatch(bindings, binding_count, target, args, arg_count, result);
@@ -89,6 +99,24 @@ AivmSyscallStatus aivm_syscall_dispatch_checked(
     }
 
     return AIVM_SYSCALL_OK;
+}
+
+AivmSyscallStatus aivm_syscall_dispatch_checked(
+    const AivmSyscallBinding* bindings,
+    size_t binding_count,
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return aivm_syscall_dispatch_checked_with_contract(
+        bindings,
+        binding_count,
+        target,
+        args,
+        arg_count,
+        result,
+        NULL);
 }
 
 const char* aivm_syscall_status_code(AivmSyscallStatus status)

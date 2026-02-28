@@ -10,7 +10,8 @@ static void set_vm_error(AivmVm* vm, AivmVmError error, const char* detail)
     vm->error_detail = detail;
 }
 
-static const char* syscall_failure_detail(AivmSyscallStatus status);
+static const char* syscall_failure_detail(AivmSyscallStatus status, AivmContractStatus contract_status);
+static const char* syscall_contract_failure_detail(AivmContractStatus status);
 
 static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
 {
@@ -291,6 +292,7 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
     AivmValue args[AIVM_VM_MAX_SYSCALL_ARGS];
     AivmValue target_value;
     AivmSyscallStatus syscall_status;
+    AivmContractStatus contract_status = AIVM_CONTRACT_OK;
     size_t i;
 
     if (vm == NULL || out_result == NULL) {
@@ -314,22 +316,23 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
         return 0;
     }
 
-    syscall_status = aivm_syscall_dispatch_checked(
+    syscall_status = aivm_syscall_dispatch_checked_with_contract(
         vm->syscall_bindings,
         vm->syscall_binding_count,
         target_value.string_value,
         args,
         arg_count,
-        out_result);
+        out_result,
+        &contract_status);
     if (syscall_status != AIVM_SYSCALL_OK) {
-        set_vm_error(vm, AIVM_VM_ERR_SYSCALL, syscall_failure_detail(syscall_status));
+        set_vm_error(vm, AIVM_VM_ERR_SYSCALL, syscall_failure_detail(syscall_status, contract_status));
         return 0;
     }
 
     return 1;
 }
 
-static const char* syscall_failure_detail(AivmSyscallStatus status)
+static const char* syscall_failure_detail(AivmSyscallStatus status, AivmContractStatus contract_status)
 {
     switch (status) {
         case AIVM_SYSCALL_ERR_INVALID:
@@ -339,13 +342,31 @@ static const char* syscall_failure_detail(AivmSyscallStatus status)
         case AIVM_SYSCALL_ERR_NOT_FOUND:
             return "AIVMS003: Syscall target was not found.";
         case AIVM_SYSCALL_ERR_CONTRACT:
-            return "AIVMS004: Syscall arguments violated contract.";
+            return syscall_contract_failure_detail(contract_status);
         case AIVM_SYSCALL_ERR_RETURN_TYPE:
             return "AIVMS005: Syscall return type violated contract.";
         case AIVM_SYSCALL_OK:
             return "AIVMS000: Syscall dispatch succeeded.";
         default:
             return "AIVMS999: Unknown syscall dispatch status.";
+    }
+}
+
+static const char* syscall_contract_failure_detail(AivmContractStatus status)
+{
+    switch (status) {
+        case AIVM_CONTRACT_ERR_UNKNOWN_TARGET:
+            return "AIVMS004/AIVMC001: Syscall target was not found.";
+        case AIVM_CONTRACT_ERR_ARG_COUNT:
+            return "AIVMS004/AIVMC002: Syscall argument count was invalid.";
+        case AIVM_CONTRACT_ERR_ARG_TYPE:
+            return "AIVMS004/AIVMC003: Syscall argument type was invalid.";
+        case AIVM_CONTRACT_ERR_UNKNOWN_ID:
+            return "AIVMS004/AIVMC004: Syscall contract ID was not found.";
+        case AIVM_CONTRACT_OK:
+            return "AIVMS004/AIVMC000: Syscall contract validation passed.";
+        default:
+            return "AIVMS004/AIVMC999: Unknown syscall contract validation status.";
     }
 }
 

@@ -101,6 +101,7 @@ int main(void)
     AivmValue arg;
     AivmValue window_arg;
     AivmValue rect_args[6];
+    AivmContractStatus contract_status = AIVM_CONTRACT_OK;
     AivmSyscallStatus status;
     static const AivmSyscallBinding bindings[] = {
         { "sys.echo", handler_echo }
@@ -164,6 +165,14 @@ int main(void)
         return 1;
     }
 
+    status = aivm_syscall_dispatch_checked_with_contract(ui_bindings, 3U, "sys.ui_drawRect", rect_args, 5U, &result, &contract_status);
+    if (expect(status == AIVM_SYSCALL_ERR_CONTRACT) != 0) {
+        return 1;
+    }
+    if (expect(contract_status == AIVM_CONTRACT_ERR_ARG_COUNT) != 0) {
+        return 1;
+    }
+
     window_arg = aivm_value_int(1);
     status = aivm_syscall_dispatch_checked(ui_bindings, 3U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
@@ -191,6 +200,13 @@ int main(void)
         return 1;
     }
     if (expect(strcmp(aivm_syscall_status_message(status), "Syscall return type violated contract.") == 0) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked_with_contract(ui_bindings, 3U, "sys.unknown", NULL, 0U, &result, &contract_status);
+    if (expect(status == AIVM_SYSCALL_ERR_CONTRACT) != 0) {
+        return 1;
+    }
+    if (expect(contract_status == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
         return 1;
     }
     if (expect(strcmp(aivm_syscall_status_code((AivmSyscallStatus)-999), "AIVMS999") == 0) != 0) {

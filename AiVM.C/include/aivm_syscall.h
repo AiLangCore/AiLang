@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+#include "aivm_syscall_contracts.h"
 #include "aivm_types.h"
 
 typedef enum {
@@ -50,6 +51,16 @@ AivmSyscallStatus aivm_syscall_dispatch_checked(
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result
+);
+
+AivmSyscallStatus aivm_syscall_dispatch_checked_with_contract(
+    const AivmSyscallBinding* bindings,
+    size_t binding_count,
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result,
+    AivmContractStatus* out_contract_status
 );
 
 const char* aivm_syscall_status_code(AivmSyscallStatus status);

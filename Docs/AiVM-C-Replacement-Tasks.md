@@ -47,11 +47,11 @@ Status: `in_progress`
 Output: C ABI adapter with feature-flagged dual runtime path.
 
 9. Add dual-run parity harness.
-Status: `in_progress`
+Status: `completed`
 Output: C# VM vs C VM output/diagnostic diff checks across goldens.
 
 10. Add syscall-heavy parity suites.
-Status: `in_progress`
+Status: `completed`
 Output: lifecycle/http/publish/syscall scenarios parity gates.
 
 11. Determinism + perf guardrails.

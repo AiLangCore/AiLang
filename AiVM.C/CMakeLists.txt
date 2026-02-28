@@ -34,6 +34,7 @@ if (AIVM_BUILD_SHARED)
     target_include_directories(aivm_core_shared PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
+    target_compile_definitions(aivm_core_shared PUBLIC AIVM_BUILD_SHARED_LIB PRIVATE AIVM_CORE_SHARED_IMPL)
     if (MSVC)
         target_compile_options(aivm_core_shared PRIVATE /W4 /WX)
     else()

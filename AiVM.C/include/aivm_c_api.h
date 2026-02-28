@@ -8,6 +8,16 @@
 #include "aivm_syscall.h"
 #include "aivm_vm.h"
 
+#if defined(_WIN32) && defined(AIVM_BUILD_SHARED_LIB)
+#if defined(AIVM_CORE_SHARED_IMPL)
+#define AIVM_API __declspec(dllexport)
+#else
+#define AIVM_API __declspec(dllimport)
+#endif
+#else
+#define AIVM_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,17 +31,17 @@ typedef struct {
     size_t load_error_offset;
 } AivmCResult;
 
-AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count);
-AivmCResult aivm_c_execute_instructions_with_syscalls(
+AIVM_API AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count);
+AIVM_API AivmCResult aivm_c_execute_instructions_with_syscalls(
     const AivmInstruction* instructions,
     size_t instruction_count,
     const AivmSyscallBinding* bindings,
     size_t binding_count);
-AivmCResult aivm_c_execute_program_with_syscalls(
+AIVM_API AivmCResult aivm_c_execute_program_with_syscalls(
     const AivmProgram* program,
     const AivmSyscallBinding* bindings,
     size_t binding_count);
-AivmCResult aivm_c_execute_aibc1(const uint8_t* bytes, size_t byte_count);
+AIVM_API AivmCResult aivm_c_execute_aibc1(const uint8_t* bytes, size_t byte_count);
 
 #ifdef __cplusplus
 }

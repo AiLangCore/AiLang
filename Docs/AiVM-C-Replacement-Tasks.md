@@ -164,3 +164,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded syscall-heavy parity manifest with REPL validation-error fixtures for `sys.net_tcpConnect`, `sys.crypto_hmacSha256`, and `sys.worker_cancel`.
 - Added optional shared-library build path (`AIVM_BUILD_SHARED=1`) in `AiVM.C`/test script to support future host bridge loading experiments without changing default static build behavior.
 - Added `scripts/build-aivm-c-shared.sh` to produce and print the shared-library artifact path (`.dylib/.so/.dll`) for deterministic host-bridge wiring work.
+- Added explicit C API export/import macros (`AIVM_API`) and shared-target compile definitions for Windows-compatible symbol export in host bridge scenarios.

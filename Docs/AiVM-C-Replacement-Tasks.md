@@ -161,3 +161,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall contract table for network surface parity (`sys.net_*`, `sys.net_tcp*`, `sys.net_udp*`, `sys.net_async*`) with typed validation coverage in unit tests.
 - Expanded C syscall contract table for worker/debug syscall surface (`sys.worker_*`, `sys.debug_*`) with canonical IDs and typed validation coverage.
 - Completed canonical syscall ID coverage in C contract table for `SyscallId` `0..89` with no missing or duplicate IDs.
+- Expanded syscall-heavy parity manifest with REPL validation-error fixtures for `sys.net_tcpConnect`, `sys.crypto_hmacSha256`, and `sys.worker_cancel`.

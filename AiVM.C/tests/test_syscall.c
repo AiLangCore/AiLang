@@ -189,6 +189,21 @@ static int handler_fs_read_file(
     return AIVM_SYSCALL_ERR_INVALID;
 }
 
+static int handler_crypto_base64_encode(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (args != NULL && arg_count == 1U && args[0].type == AIVM_VAL_STRING) {
+        *result = aivm_value_string("ZW5jb2RlZA==");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 int main(void)
 {
     AivmValue result;
@@ -220,6 +235,9 @@ int main(void)
     static const AivmSyscallBinding system_bindings[] = {
         { "sys.time_nowUnixMs", handler_time_now },
         { "sys.fs_readFile", handler_fs_read_file }
+    };
+    static const AivmSyscallBinding crypto_bindings[] = {
+        { "sys.crypto_base64Encode", handler_crypto_base64_encode }
     };
 
     status = aivm_syscall_invoke(NULL, "sys.echo", NULL, 0U, &result);
@@ -353,6 +371,13 @@ int main(void)
     }
     arg = aivm_value_string("x");
     status = aivm_syscall_dispatch_checked(system_bindings, 2U, "sys.fs_readFile", &arg, 1U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked(crypto_bindings, 1U, "sys.crypto_base64Encode", &arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
         return 1;
     }

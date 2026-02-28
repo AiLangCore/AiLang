@@ -17,6 +17,7 @@ int main(void)
     AivmValue console_write_arg[1];
     AivmValue int_arg[1];
     AivmValue fs_write_args[2];
+    AivmValue crypto_hmac_args[2];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -214,6 +215,47 @@ int main(void)
         return 1;
     }
     if (expect(aivm_syscall_contract_validate_id(25U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.crypto_base64Encode", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(37U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.crypto_base64Decode", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(38U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.crypto_sha1", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(39U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.crypto_sha256", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(40U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    crypto_hmac_args[0] = aivm_value_string("k");
+    crypto_hmac_args[1] = aivm_value_string("m");
+    if (expect(aivm_syscall_contract_validate("sys.crypto_hmacSha256", crypto_hmac_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(41U, crypto_hmac_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.crypto_randomBytes", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(42U, int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
 

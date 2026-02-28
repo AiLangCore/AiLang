@@ -162,3 +162,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall contract table for worker/debug syscall surface (`sys.worker_*`, `sys.debug_*`) with canonical IDs and typed validation coverage.
 - Completed canonical syscall ID coverage in C contract table for `SyscallId` `0..89` with no missing or duplicate IDs.
 - Expanded syscall-heavy parity manifest with REPL validation-error fixtures for `sys.net_tcpConnect`, `sys.crypto_hmacSha256`, and `sys.worker_cancel`.
+- Added optional shared-library build path (`AIVM_BUILD_SHARED=1`) in `AiVM.C`/test script to support future host bridge loading experiments without changing default static build behavior.

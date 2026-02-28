@@ -4,8 +4,9 @@ project(aivm_c_core C)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
+option(AIVM_BUILD_SHARED "Build shared AiVM.C library for host bridge experiments" OFF)
 
-add_library(aivm_core STATIC
+set(AIVM_CORE_SOURCES
     src/aivm_types.c
     src/aivm_vm.c
     src/aivm_program.c
@@ -16,6 +17,8 @@ add_library(aivm_core STATIC
     src/aivm_c_api.c
 )
 
+add_library(aivm_core STATIC ${AIVM_CORE_SOURCES})
+
 target_include_directories(aivm_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -24,6 +27,18 @@ if (MSVC)
     target_compile_options(aivm_core PRIVATE /W4 /WX)
 else()
     target_compile_options(aivm_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
+if (AIVM_BUILD_SHARED)
+    add_library(aivm_core_shared SHARED ${AIVM_CORE_SOURCES})
+    target_include_directories(aivm_core_shared PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    if (MSVC)
+        target_compile_options(aivm_core_shared PRIVATE /W4 /WX)
+    else()
+        target_compile_options(aivm_core_shared PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
 endif()
 
 add_executable(hello_vm

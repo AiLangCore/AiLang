@@ -154,3 +154,4 @@ Output: code cleanup and doc/runbook updates.
 - Added parity-manifest coverage for CLI `--vm=c` deterministic bridge gate (`DEV008`) so current C-backend-not-linked behavior is regression-checked while Task 8 continues.
 - Refined VM syscall diagnostics for contract failures to include deterministic contract subcodes in detail (`AIVMS004/AIVMC001..003`) via a contract-aware checked-dispatch path, with unit coverage.
 - Enhanced manifest-driven dual-run parity harness to support asymmetric expected left/right exit codes, enabling bridge-phase parity checks where status codes intentionally differ while output must remain normalized-equal.
+- Expanded C syscall contract table with core console/sysout IDs (`sys.console_*`, `sys.stdout_writeLine`) and added contract+dispatch tests for typed args and returns.

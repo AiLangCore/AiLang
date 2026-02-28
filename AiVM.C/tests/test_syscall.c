@@ -95,6 +95,37 @@ static int handler_poll_event_wrong_type(
     return AIVM_SYSCALL_OK;
 }
 
+static int handler_console_write(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (args != NULL && arg_count == 1U && args[0].type == AIVM_VAL_STRING) {
+        *result = aivm_value_void();
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int handler_console_read_line(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count == 0U) {
+        *result = aivm_value_string("line");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 int main(void)
 {
     AivmValue result;
@@ -114,6 +145,10 @@ int main(void)
     static const AivmSyscallBinding ui_bad_return_bindings[] = {
         { "sys.ui_getWindowSize", handler_window_size_wrong_type },
         { "sys.ui_pollEvent", handler_poll_event_wrong_type }
+    };
+    static const AivmSyscallBinding console_bindings[] = {
+        { "sys.console_write", handler_console_write },
+        { "sys.console_readLine", handler_console_read_line }
     };
 
     status = aivm_syscall_invoke(NULL, "sys.echo", NULL, 0U, &result);
@@ -207,6 +242,21 @@ int main(void)
         return 1;
     }
     if (expect(contract_status == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
+        return 1;
+    }
+    arg = aivm_value_string("hello");
+    status = aivm_syscall_dispatch_checked(console_bindings, 2U, "sys.console_write", &arg, 1U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_VOID) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked(console_bindings, 2U, "sys.console_readLine", NULL, 0U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
     if (expect(strcmp(aivm_syscall_status_code((AivmSyscallStatus)-999), "AIVMS999") == 0) != 0) {

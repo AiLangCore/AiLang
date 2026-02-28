@@ -14,6 +14,7 @@ int main(void)
     AivmValue draw_line_args[7];
     AivmValue ui_window_args[3];
     AivmValue ui_window_id_arg[1];
+    AivmValue console_write_arg[1];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -38,6 +39,50 @@ int main(void)
         return 1;
     }
     if (expect(contract->id == 48U) != 0) {
+        return 1;
+    }
+
+    console_write_arg[0] = aivm_value_string("hello");
+    if (expect(aivm_syscall_contract_validate("sys.console_write", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(6U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.console_writeLine", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(7U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.console_writeErrLine", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(10U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.stdout_writeLine", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(16U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_VOID) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.console_readLine", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(8U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.console_readAllStdin", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(9U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
 

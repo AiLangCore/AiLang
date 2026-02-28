@@ -33,7 +33,7 @@ int main(void)
         FreeLibrary(lib);
         return 1;
     }
-    abi_fn = (AivmAbiVersionFn)GetProcAddress(lib, \"aivm_c_abi_version\");
+    abi_fn = (AivmAbiVersionFn)GetProcAddress(lib, "aivm_c_abi_version");
     if (expect(abi_fn != NULL) != 0) {
         FreeLibrary(lib);
         return 1;

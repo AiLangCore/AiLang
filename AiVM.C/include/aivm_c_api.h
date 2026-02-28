@@ -32,9 +32,16 @@ typedef struct {
 } AivmCResult;
 
 AIVM_API AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count);
+AIVM_API AivmCResult aivm_c_execute_instructions_with_constants(
+    const AivmInstruction* instructions,
+    size_t instruction_count,
+    const AivmValue* constants,
+    size_t constant_count);
 AIVM_API AivmCResult aivm_c_execute_instructions_with_syscalls(
     const AivmInstruction* instructions,
     size_t instruction_count,
+    const AivmValue* constants,
+    size_t constant_count,
     const AivmSyscallBinding* bindings,
     size_t binding_count);
 AIVM_API AivmCResult aivm_c_execute_program_with_syscalls(

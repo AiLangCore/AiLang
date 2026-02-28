@@ -16,9 +16,24 @@ static AivmCResult result_defaults(void)
 
 AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count)
 {
+    return aivm_c_execute_instructions_with_constants(
+        instructions,
+        instruction_count,
+        NULL,
+        0U);
+}
+
+AivmCResult aivm_c_execute_instructions_with_constants(
+    const AivmInstruction* instructions,
+    size_t instruction_count,
+    const AivmValue* constants,
+    size_t constant_count)
+{
     return aivm_c_execute_instructions_with_syscalls(
         instructions,
         instruction_count,
+        constants,
+        constant_count,
         NULL,
         0U);
 }
@@ -26,6 +41,8 @@ AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, siz
 AivmCResult aivm_c_execute_instructions_with_syscalls(
     const AivmInstruction* instructions,
     size_t instruction_count,
+    const AivmValue* constants,
+    size_t constant_count,
     const AivmSyscallBinding* bindings,
     size_t binding_count)
 {
@@ -34,6 +51,10 @@ AivmCResult aivm_c_execute_instructions_with_syscalls(
     AivmCResult result = result_defaults();
 
     aivm_program_init(&program, instructions, instruction_count);
+    if (constants != NULL && constant_count > 0U) {
+        program.constants = constants;
+        program.constant_count = constant_count;
+    }
     result.loaded = 1;
     result.load_status = AIVM_PROGRAM_OK;
     result.load_error_offset = 0U;

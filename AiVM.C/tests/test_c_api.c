@@ -115,6 +115,32 @@ int main(void)
         return 1;
     }
 
+    result = aivm_c_execute_instructions_with_constants(
+        call_sys_instructions,
+        4U,
+        call_sys_constants,
+        2U);
+    if (expect(result.ok == 0) != 0) {
+        return 1;
+    }
+    if (expect(result.error == AIVM_VM_ERR_SYSCALL) != 0) {
+        return 1;
+    }
+
+    result = aivm_c_execute_instructions_with_syscalls(
+        call_sys_instructions,
+        4U,
+        call_sys_constants,
+        2U,
+        bindings,
+        1U);
+    if (expect(result.ok == 1) != 0) {
+        return 1;
+    }
+    if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+
     result = aivm_c_execute_program_with_syscalls(&call_sys_program, bindings, 1U);
     if (expect(result.ok == 1) != 0) {
         return 1;

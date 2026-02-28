@@ -166,3 +166,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `scripts/build-aivm-c-shared.sh` to produce and print the shared-library artifact path (`.dylib/.so/.dll`) for deterministic host-bridge wiring work.
 - Added explicit C API export/import macros (`AIVM_API`) and shared-target compile definitions for Windows-compatible symbol export in host bridge scenarios.
 - Added shared-bridge loader test (`AiVM.C/tests/test_shared_bridge_loader.c`) that dynamically loads `aivm_core_shared` and executes `aivm_c_execute_instructions`, validating runtime symbol wiring.
+- Added `scripts/test-aivm-c-bridge.sh` smoke command to run shared-build + dynamic loader test as a single bridge-readiness check.

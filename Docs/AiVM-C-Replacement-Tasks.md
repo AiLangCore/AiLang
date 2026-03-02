@@ -36,6 +36,7 @@ Status: `in_progress`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
 Current: `--vm=c` run-source/bytecode/bundle parity paths are active through native shared runtime loading; remaining blocker is `serve --vm=c`, which still routes to host-side `DEV008` backend-not-linked behavior.
 Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
+Note: native `AiCLI` wrapper stage is now present (`src/AiCLI/native/airun.c`), but still delegates non-`run --vm=c` flows to the legacy backend host binary.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
 Status: `completed`

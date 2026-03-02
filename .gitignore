@@ -17,6 +17,7 @@ artifacts/
 .artifacts/
 .tmp-aot/
 tools/airun
+tools/airun-host
 
 ############################################
 # Test results

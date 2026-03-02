@@ -1,8 +1,13 @@
 # AiCLI Native
 
-Reserved location for C implementation of `AiCLI` during zero-C# migration.
+Native C CLI entrypoint for zero-C# migration.
 
-Target:
+Current:
+- `airun.c` provides a deterministic native wrapper executable for `tools/airun`.
+- `scripts/build-airun.sh` compiles this wrapper and preserves the existing backend host at `tools/airun-host`.
+- `run --vm=c` routes through `scripts/airun-vm-c.sh` to force native shared-runtime loading.
+
+Target end-state:
 - CLI arg parsing and mode selection
 - syscall host binding
-- delegation to native core/vm layers
+- direct delegation to native core/vm layers (no backend-host dependency)

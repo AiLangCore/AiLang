@@ -15,4 +15,4 @@ if [[ -z "${LIB_PATH}" || ! -f "${LIB_PATH}" ]]; then
   printf '%s\n' "${LIB_PATH}" > "${LIB_PATH_FILE}"
 fi
 
-exec env AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${LIB_PATH}" ./tools/airun "$@" --vm=c
+exec env AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${LIB_PATH}" ./tools/airun-host "$@" --vm=c

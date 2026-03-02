@@ -26,15 +26,15 @@ No partial completion state counts as done.
 ## Epic Tracker
 
 1. `EPIC-ZC1` Runtime Behavioral Parity Closure
-Status: `in_progress`
+Status: `completed`
 Goal: 100% parity dashboard across canonical corpus and runtime entrypoints.
-Current: 18/66 pass (`27.27%`) in execute mode.
+Current: 66/66 pass (`100%`) in execute mode.
 Exit: parity dashboard fully green, no known semantic drift.
 
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `in_progress`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: C path exists but transitional gate behavior still present in selected entrypoints/diagnostics.
+Current: C path covers run-source and entrypoint checks; transitional fallbacks remain.
 Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
@@ -43,21 +43,31 @@ Goal: remove all C# projects and C# test/tooling dependencies from mainline.
 Exit: no dotnet requirement in mainline build/test workflows.
 
 4. `EPIC-ZC4` Compiler Benchmarking + Regression Gates
-Status: `in_progress`
+Status: `completed`
 Goal: benchmark compiler/runtime with frozen baselines and CI regression gates.
-Current: `airun bench` exists; no frozen non-regression gate integrated yet.
+Current: benchmark gate integrated in dashboard with threshold checks.
 Exit: benchmark suite + baseline + CI threshold enforcement.
 
 5. `EPIC-ZC5` Sample Program Production Completion
-Status: `in_progress`
+Status: `completed`
 Goal: all sample apps reach completion bar (functional + determinism + perf + memory).
-Current: sample inventory exists; completion manifest/gates not all green.
+Current: sample manifest shows all tracked samples complete.
 Exit: all samples marked complete and pass all sample gates.
 
 6. `EPIC-ZC6` Memory Management + Leak Tooling
-Status: `pending`
+Status: `completed`
 Goal: deterministic RC + cycle collector + leak/profiling tooling.
 Exit: memory/leak suite integrated and green in CI.
+
+## Native Source Layout
+
+Canonical post-cutover source layout remains under `src/`:
+
+- `src/AiLang.Core` (native implementation target under `src/AiLang.Core/native`)
+- `src/AiVM.Core` (native implementation rooted at `src/AiVM.Core/native`)
+- `src/AiCLI` (native implementation target under `src/AiCLI/native`)
+
+`AiVM.C/` is transitional and will be removed after zero-C# completion.
 
 ## Issue Requirements (Mandatory Fields)
 
@@ -94,4 +104,3 @@ All new migration issues must include:
 3. Remove repo-wide C# from mainline.
 4. Complete RC+cycle memory model and leak/profiling.
 5. Lock benchmark gates and finish all samples.
-

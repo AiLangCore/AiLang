@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'AiVM.C/**'
+      - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
@@ -16,6 +17,7 @@ on:
       - 'tests/AiLang.Tests/AosTests.cs'
       - 'AiVM.C/tests/parity_commands.txt'
       - 'AiVM.C/tests/parity_commands_portable.txt'
+      - 'AiVM.C/tests/parity_commands_ci.txt'
       - '.github/workflows/aivm-c-ci.yml'
   push:
     branches:
@@ -23,6 +25,7 @@ on:
       - main
     paths:
       - 'AiVM.C/**'
+      - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
@@ -34,6 +37,7 @@ on:
       - 'tests/AiLang.Tests/AosTests.cs'
       - 'AiVM.C/tests/parity_commands.txt'
       - 'AiVM.C/tests/parity_commands_portable.txt'
+      - 'AiVM.C/tests/parity_commands_ci.txt'
       - '.github/workflows/aivm-c-ci.yml'
 
 jobs:
@@ -68,9 +72,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cmake -S AiVM.C -B .tmp/aivm-c-build
+          cmake -S src/AiVM.Core/native -B .tmp/aivm-c-build
           cmake --build .tmp/aivm-c-build
-          ctest --test-dir .tmp/aivm-c-build --output-on-failure
+          ctest --test-dir .tmp/aivm-c-build/aivm_legacy --output-on-failure
 
       - name: Run parity manifest (Windows portable set)
         if: runner.os == 'Windows'

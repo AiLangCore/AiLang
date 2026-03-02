@@ -2,10 +2,24 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
+AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
+if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakeLists.txt" ]]; then
+  AIVM_C_SOURCE_DIR="${ROOT_DIR}/AiVM.C"
+fi
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${ROOT_DIR}/AiVM.C/tests}"
 REPORT_PATH="${1:-${ROOT_DIR}/Docs/AiVM-C-Parity-Status.md}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-parity-dashboard"
-BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build"
-PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
+BUILD_SUFFIX="legacy"
+if [[ "${AIVM_C_SOURCE_DIR}" == "${PREFERRED_C_SOURCE_DIR}" ]]; then
+  BUILD_SUFFIX="native"
+fi
+BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
+BUILD_OUTPUT_DIR="${BUILD_DIR}"
+if [[ "${BUILD_SUFFIX}" == "native" ]]; then
+  BUILD_OUTPUT_DIR="${BUILD_DIR}/aivm_legacy"
+fi
+PARITY_CLI="${BUILD_OUTPUT_DIR}/aivm_parity_cli"
 MODE="${AIVM_PARITY_DASHBOARD_MODE:-auto}"
 BRIDGE_LIB="${AIVM_C_BRIDGE_LIB:-}"
 BRIDGE_ENABLED=0
@@ -39,7 +53,7 @@ status_word() {
 }
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
-cmake -S "${ROOT_DIR}/AiVM.C" -B "${BUILD_DIR}" >/dev/null
+cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
 
 if [[ "${MODE}" != "gate" ]]; then
@@ -117,7 +131,7 @@ ENTRY_SERVE_DETAILS="c serve entrypoint check not run"
 
 if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
   set +e
-  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run AiVM.C/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
+  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
   entry_bytecode_rc=$?
   AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
   entry_bundle_rc=$?
@@ -178,7 +192,7 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   t1=$?
   ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
   t2=$?
-  ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+  ctest --test-dir "${BUILD_OUTPUT_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
   t3=$?
   set -e
   if [[ ${t1} -eq 0 ]]; then TEST_AIVM_C_STATUS="pass"; else TEST_AIVM_C_STATUS="fail"; fi
@@ -193,7 +207,7 @@ fi
 
 # Benchmark gate.
 BENCH_GATE_STATUS="PENDING"
-BENCH_BASELINE_FILE="${ROOT_DIR}/AiVM.C/tests/compiler_runtime_bench_baseline.tsv"
+BENCH_BASELINE_FILE="${AIVM_C_TESTS_DIR}/compiler_runtime_bench_baseline.tsv"
 BENCH_RUN_STATUS="not-run"
 BENCH_BASELINE_STATUS="missing"
 BENCH_THRESHOLD_STATUS="not-evaluated"
@@ -276,8 +290,8 @@ RC_TEST_PRESENT="no"
 CYCLE_TEST_PRESENT="no"
 LEAK_SCRIPT_PRESENT="no"
 PROFILE_SCRIPT_PRESENT="no"
-if [[ -f "${ROOT_DIR}/AiVM.C/tests/test_memory_rc.c" ]]; then RC_TEST_PRESENT="yes"; fi
-if [[ -f "${ROOT_DIR}/AiVM.C/tests/test_memory_cycle.c" ]]; then CYCLE_TEST_PRESENT="yes"; fi
+if [[ -f "${AIVM_C_TESTS_DIR}/test_memory_rc.c" ]]; then RC_TEST_PRESENT="yes"; fi
+if [[ -f "${AIVM_C_TESTS_DIR}/test_memory_cycle.c" ]]; then CYCLE_TEST_PRESENT="yes"; fi
 if [[ -x "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" ]]; then LEAK_SCRIPT_PRESENT="yes"; fi
 if [[ -x "${ROOT_DIR}/scripts/aivm-mem-profile.sh" ]]; then PROFILE_SCRIPT_PRESENT="yes"; fi
 if [[ "${RC_TEST_PRESENT}" == "yes" &&

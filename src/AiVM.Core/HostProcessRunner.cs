@@ -8,6 +8,7 @@ public static class HostProcessRunner
 
     public static ProcessResult? RunWithStdIn(string fileName, string arguments, string stdin)
     {
+        fileName = ResolveExecutablePath(fileName);
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -41,6 +42,7 @@ public static class HostProcessRunner
         string? workingDirectory = null,
         string? stdin = null)
     {
+        fileName = ResolveExecutablePath(fileName);
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -78,5 +80,23 @@ public static class HostProcessRunner
         process.WaitForExit();
         var stderr = stderrTask.GetAwaiter().GetResult();
         return new ProcessResult(process.ExitCode, stdout.ToArray(), stderr);
+    }
+
+    private static string ResolveExecutablePath(string fileName)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return fileName;
+        }
+
+        if (string.IsNullOrWhiteSpace(fileName) ||
+            Path.HasExtension(fileName) ||
+            File.Exists(fileName))
+        {
+            return fileName;
+        }
+
+        var withExe = fileName + ".exe";
+        return File.Exists(withExe) ? withExe : fileName;
     }
 }

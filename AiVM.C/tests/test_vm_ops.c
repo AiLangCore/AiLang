@@ -1827,7 +1827,7 @@ static int test_parallel_join_mismatch_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN count mismatch for active context.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN branch count mismatch.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1899,7 +1899,7 @@ static int test_parallel_fork_requires_context(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_FORK requires active PAR_BEGIN context.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_FORK requires active Par context.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1922,7 +1922,7 @@ static int test_parallel_join_requires_context(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN requires active PAR_BEGIN context.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN requires active Par context.") == 0) != 0) {
         return 1;
     }
     return 0;

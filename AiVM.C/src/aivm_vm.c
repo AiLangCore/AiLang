@@ -1384,7 +1384,7 @@ void aivm_step(AivmVm* vm)
         case AIVM_OP_PAR_FORK: {
             AivmValue value;
             if (vm->par_context_count == 0U) {
-                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_FORK requires active PAR_BEGIN context.");
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_FORK requires active Par context.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1416,7 +1416,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (vm->par_context_count == 0U) {
-                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN requires active PAR_BEGIN context.");
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN requires active Par context.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1424,7 +1424,7 @@ void aivm_step(AivmVm* vm)
             if (context.expected_count != join_count ||
                 vm->par_value_count < context.start_index ||
                 (vm->par_value_count - context.start_index) != join_count) {
-                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN count mismatch for active context.");
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN branch count mismatch.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }

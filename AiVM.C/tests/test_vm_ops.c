@@ -2436,6 +2436,62 @@ static int test_attr_key_requires_node_and_index(void)
     return 0;
 }
 
+static int run_attr_requires_node_and_index_test(AivmOpcode opcode, const char* expected_message)
+{
+    AivmVm vm;
+    AivmInstruction instructions[3];
+    AivmProgram program;
+
+    instructions[0].opcode = AIVM_OP_PUSH_INT;
+    instructions[0].operand_int = 1;
+    instructions[1].opcode = AIVM_OP_PUSH_INT;
+    instructions[1].operand_int = 0;
+    instructions[2].opcode = opcode;
+    instructions[2].operand_int = 0;
+
+    aivm_program_init(&program, instructions, 3U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), expected_message) == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_attr_value_kind_requires_node_and_index(void)
+{
+    return run_attr_requires_node_and_index_test(
+        AIVM_OP_ATTR_VALUE_KIND,
+        "ATTR_VALUE_KIND requires (node,int).");
+}
+
+static int test_attr_value_string_requires_node_and_index(void)
+{
+    return run_attr_requires_node_and_index_test(
+        AIVM_OP_ATTR_VALUE_STRING,
+        "ATTR_VALUE_STRING requires (node,int).");
+}
+
+static int test_attr_value_int_requires_node_and_index(void)
+{
+    return run_attr_requires_node_and_index_test(
+        AIVM_OP_ATTR_VALUE_INT,
+        "ATTR_VALUE_INT requires (node,int).");
+}
+
+static int test_attr_value_bool_requires_node_and_index(void)
+{
+    return run_attr_requires_node_and_index_test(
+        AIVM_OP_ATTR_VALUE_BOOL,
+        "ATTR_VALUE_BOOL requires (node,int).");
+}
+
 static int test_make_err_requires_string_operands(void)
 {
     AivmVm vm;
@@ -2647,6 +2703,18 @@ int main(void)
         return 1;
     }
     if (test_attr_key_requires_node_and_index() != 0) {
+        return 1;
+    }
+    if (test_attr_value_kind_requires_node_and_index() != 0) {
+        return 1;
+    }
+    if (test_attr_value_string_requires_node_and_index() != 0) {
+        return 1;
+    }
+    if (test_attr_value_int_requires_node_and_index() != 0) {
+        return 1;
+    }
+    if (test_attr_value_bool_requires_node_and_index() != 0) {
         return 1;
     }
     if (test_make_err_requires_string_operands() != 0) {

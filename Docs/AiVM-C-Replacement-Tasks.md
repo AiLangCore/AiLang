@@ -34,7 +34,7 @@ Exit: parity dashboard fully green, no known semantic drift.
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `in_progress`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: bridge-mode dashboard/CI plumbing removed; remaining blocker is linking `tools/airun` to native C runtime for `--vm=c` run/bundle/serve.
+Current: `--vm=c` run-source/bytecode/bundle parity paths are active through native shared runtime loading; remaining blocker is `serve --vm=c`, which still routes to host-side `DEV008` backend-not-linked behavior.
 Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion

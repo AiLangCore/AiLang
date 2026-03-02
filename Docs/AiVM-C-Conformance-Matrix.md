@@ -76,6 +76,6 @@ Status keys:
 |---|---|---|
 | Dual-run parity compare utility | implemented | Normalized compare CLI + scripts wired in test flow. |
 | Manifest parity runner | implemented | Per-case artifacts + exit-status parity checks, including optional asymmetric expected left/right status support. |
-| `--vm=c` runtime entrypoint parity | in_progress | Dashboard now uses strict native entrypoint checks (no bridge-mode execute path). Remaining blocker is linking `tools/airun` to native C runtime so `run`/`serve`/bundle entrypoints succeed without `DEV008`. |
+| `--vm=c` runtime entrypoint parity | in_progress | Dashboard uses strict entrypoint checks; run-source/bytecode/bundle are passing via native shared-runtime loading path. Remaining blocker is `serve --vm=c`, which still returns host `DEV008` backend-not-linked behavior. |
 | Multi-platform CI (macOS/Linux/Windows) | implemented | `aivm-c-ci` workflow builds/tests across matrix OSes. |
 | Syscall-heavy golden parity suites | implemented | Core `CALL_SYS` syscall-heavy C tests added; manifest covers string/UI/net/crypto/worker validation paths with deterministic expected output/status checks. |

@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
-      - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
@@ -21,7 +20,6 @@ on:
     paths:
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
-      - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
@@ -46,10 +44,6 @@ jobs:
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh
-
-      - name: Bridge smoke (Unix)
-        if: runner.os != 'Windows'
-        run: ./scripts/test-aivm-c-bridge.sh
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'

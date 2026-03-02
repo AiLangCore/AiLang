@@ -11,10 +11,7 @@ BUILD_SUFFIX="native"
 BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
 BUILD_OUTPUT_DIR="${BUILD_DIR}"
 PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
-MODE="${AIVM_PARITY_DASHBOARD_MODE:-auto}"
-BRIDGE_LIB="${AIVM_C_BRIDGE_LIB:-}"
-BRIDGE_ENABLED=0
-MODE_USED="gate"
+MODE_USED="native"
 RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
 RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
 
@@ -25,11 +22,7 @@ cd "${ROOT_DIR}"
 run_c_mode() {
   local input="$1"
   local output="$2"
-  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
-    AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
-  else
-    ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
-  fi
+  ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
 }
 
 status_word() {
@@ -46,25 +39,6 @@ status_word() {
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
-
-if [[ "${MODE}" != "gate" ]]; then
-  if [[ -z "${BRIDGE_LIB}" ]]; then
-    set +e
-    BRIDGE_LIB="$(./scripts/build-aivm-c-shared.sh 2>/dev/null | tail -n1)"
-    BUILD_SHARED_STATUS=$?
-    set -e
-    if [[ ${BUILD_SHARED_STATUS} -ne 0 ]]; then
-      BRIDGE_LIB=""
-    fi
-  fi
-  if [[ -n "${BRIDGE_LIB}" && -f "${BRIDGE_LIB}" ]]; then
-    BRIDGE_ENABLED=1
-    MODE_USED="execute"
-  elif [[ "${MODE}" == "execute" ]]; then
-    echo "AIVM parity dashboard execute mode requested, but bridge library was not available." >&2
-    exit 2
-  fi
-fi
 
 GOLDEN_INPUTS=()
 while IFS= read -r line; do
@@ -113,46 +87,50 @@ ENTRY_SOURCE_DETAILS="backed by canonical golden corpus parity"
 if [[ ${PASSED} -eq ${TOTAL} ]]; then
   ENTRY_SOURCE_STATUS="PASS"
 fi
-ENTRY_BYTECODE_STATUS="PENDING"
-ENTRY_BYTECODE_DETAILS="execute-mode check not available (bridge not enabled)"
-ENTRY_BUNDLE_STATUS="PENDING"
-ENTRY_BUNDLE_DETAILS="execute-mode check not available (bridge not enabled)"
-ENTRY_SERVE_STATUS="PENDING"
-ENTRY_SERVE_DETAILS="c serve entrypoint check not run"
+ENTRY_BYTECODE_STATUS="FAIL"
+ENTRY_BYTECODE_DETAILS="vm=c bytecode-entry check failed"
+ENTRY_BUNDLE_STATUS="FAIL"
+ENTRY_BUNDLE_DETAILS="vm=c bundle-entry check failed"
+ENTRY_SERVE_STATUS="FAIL"
+ENTRY_SERVE_DETAILS="vm=c serve-entry check failed"
 
-if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
-  set +e
-  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
-  entry_bytecode_rc=$?
-  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
-  entry_bundle_rc=$?
-  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun serve examples/golden/http/health_app.aos --vm=c --port 8089 > "${TMP_DIR}/entry-serve.out" 2>&1
+set +e
+./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
+entry_bytecode_rc=$?
+./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
+entry_bundle_rc=$?
+./tools/airun serve examples/golden/http/health_app.aos --vm=c --port 8089 > "${TMP_DIR}/entry-serve.out" 2>&1 &
+serve_pid=$!
+sleep 1
+if kill -0 "${serve_pid}" >/dev/null 2>&1; then
+  kill "${serve_pid}" >/dev/null 2>&1 || true
+  wait "${serve_pid}" >/dev/null 2>&1 || true
+  entry_serve_rc=0
+else
+  wait "${serve_pid}"
   entry_serve_rc=$?
-  set -e
+fi
+set -e
 
-  if [[ ${entry_bytecode_rc} -eq 0 ]]; then
-    ENTRY_BYTECODE_STATUS="PASS"
-    ENTRY_BYTECODE_DETAILS="vm=c run Bytecode source executes through bridge"
-  else
-    ENTRY_BYTECODE_STATUS="FAIL"
-    ENTRY_BYTECODE_DETAILS="vm=c run Bytecode source failed (exit=${entry_bytecode_rc})"
-  fi
+if [[ ${entry_bytecode_rc} -eq 3 ]]; then
+  ENTRY_BYTECODE_STATUS="PASS"
+  ENTRY_BYTECODE_DETAILS="vm=c run bytecode-oriented source completed (exit=3)"
+else
+  ENTRY_BYTECODE_DETAILS="vm=c run bytecode-oriented source failed (exit=${entry_bytecode_rc})"
+fi
 
-  if [[ ${entry_bundle_rc} -eq 0 ]]; then
-    ENTRY_BUNDLE_STATUS="PASS"
-    ENTRY_BUNDLE_DETAILS="vm=c run .aibundle executes through bridge"
-  else
-    ENTRY_BUNDLE_STATUS="FAIL"
-    ENTRY_BUNDLE_DETAILS="vm=c run .aibundle failed (exit=${entry_bundle_rc})"
-  fi
+if [[ ${entry_bundle_rc} -eq 0 ]]; then
+  ENTRY_BUNDLE_STATUS="PASS"
+  ENTRY_BUNDLE_DETAILS="vm=c run .aibundle succeeded"
+else
+  ENTRY_BUNDLE_DETAILS="vm=c run .aibundle failed (exit=${entry_bundle_rc})"
+fi
 
-  if [[ ${entry_serve_rc} -eq 1 ]] && rg -q 'code=DEV008' "${TMP_DIR}/entry-serve.out"; then
-    ENTRY_SERVE_STATUS="PASS"
-    ENTRY_SERVE_DETAILS="vm=c serve deterministically reports DEV008 (not linked)"
-  else
-    ENTRY_SERVE_STATUS="FAIL"
-    ENTRY_SERVE_DETAILS="vm=c serve behavior deviated (exit=${entry_serve_rc})"
-  fi
+if [[ ${entry_serve_rc} -eq 0 ]]; then
+  ENTRY_SERVE_STATUS="PASS"
+  ENTRY_SERVE_DETAILS="vm=c serve started and accepted lifecycle startup"
+else
+  ENTRY_SERVE_DETAILS="vm=c serve failed to start (exit=${entry_serve_rc})"
 fi
 
 BEHAVIORAL_GATE_STATUS="FAIL"

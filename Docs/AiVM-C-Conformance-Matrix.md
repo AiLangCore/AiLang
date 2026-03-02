@@ -2,7 +2,7 @@
 
 ## Scope
 
-This matrix tracks `AiVM.C` parity work against the current AiLang contracts in:
+This matrix tracks native `src/AiVM.Core/native` parity work against the current AiLang contracts in:
 
 - `SPEC/BYTECODE.md`
 - `SPEC/IL.md`
@@ -25,7 +25,7 @@ Status keys:
 | Deterministic step/run loop | implemented | Switch-based dispatch, no reflection/computed goto. |
 | VM diagnostics mapping | implemented | Stable deterministic code/message mapping in C layer. |
 | VM error detail strings | implemented | Deterministic detail channel (`aivm_vm_error_detail`) is in place across core opcode/runtime failure paths, including contract-subcoded syscall details from `CALL_SYS` (`AIVMS004/AIVMC*`) and opcode-specific node/attr diagnostics. |
-| Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters present; optional shared-library build path (`AIVM_BUILD_SHARED=1`) plus `AiLang.Core` opt-in native loader probe scaffold for host-loading experiments. |
+| Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters are present as deterministic host-boundary APIs. |
 
 ## Opcode Surface
 
@@ -39,7 +39,7 @@ Status keys:
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
 | `ASYNC_CALL*`, `AWAIT`, `PAR_*` | implemented | Deterministic semantics implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; `PAR_JOIN` now materializes a deterministic `Block` node with resolved child values (including completed task-handle resolution) to align runtime behavior with canonical VM structure. |
-| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | implemented | Deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE` semantics are implemented in the C runtime; bridge lowering also expands bytecode-shape `MAKE_NODE (a,b)` into `CONST a` + `PUSH_INT b` + `MAKE_NODE` for execute-mode compatibility checks. |
+| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | implemented | Deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE` semantics are implemented in the C runtime. |
 
 ## Syscall ABI
 
@@ -68,7 +68,7 @@ Status keys:
 | No time/random/threading dependence | implemented | Core code path is pure state transition logic. |
 | Replay stability checks | implemented | `aivm_test_vm_determinism` repeats mixed VM+syscall runs. |
 | Warning-clean build enforcement | implemented | CMake applies `-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`. |
-| Perf smoke baseline guard | implemented | `scripts/aivm-c-perf-smoke.sh` enforces median threshold from `AiVM.C/tests/perf_baseline.env` (optional via `AIVM_PERF_SMOKE=1`). |
+| Perf smoke baseline guard | implemented | `scripts/aivm-c-perf-smoke.sh` enforces median threshold from `src/AiVM.Core/native/tests/perf_baseline.env` (optional via `AIVM_PERF_SMOKE=1`). |
 
 ## Parity/CI
 
@@ -76,6 +76,6 @@ Status keys:
 |---|---|---|
 | Dual-run parity compare utility | implemented | Normalized compare CLI + scripts wired in test flow. |
 | Manifest parity runner | implemented | Per-case artifacts + exit-status parity checks, including optional asymmetric expected left/right status support. |
-| `--vm=c` bridge gate parity | in_progress | Manifest includes deterministic `DEV008` gate/bridge-compatibility cases (including execute-enabled source-bytecode diagnostics). Execute-enabled Program sources now enter the bridge path (load/validate -> `compiler.emitBytecode` -> native lowering/execute) and surface deterministic compatibility diagnostics, while non-execute `--vm=c` and non-bridged entrypoints remain on the backend gate path. |
+| `--vm=c` runtime entrypoint parity | in_progress | Dashboard now uses strict native entrypoint checks (no bridge-mode execute path). Remaining blocker is linking `tools/airun` to native C runtime so `run`/`serve`/bundle entrypoints succeed without `DEV008`. |
 | Multi-platform CI (macOS/Linux/Windows) | implemented | `aivm-c-ci` workflow builds/tests across matrix OSes. |
 | Syscall-heavy golden parity suites | implemented | Core `CALL_SYS` syscall-heavy C tests added; manifest covers string/UI/net/crypto/worker validation paths with deterministic expected output/status checks. |

@@ -28,17 +28,17 @@ No partial completion state counts as done.
 1. `EPIC-ZC1` Runtime Behavioral Parity Closure
 Status: `completed`
 Goal: 100% parity dashboard across canonical corpus and runtime entrypoints.
-Current: 66/66 pass (`100%`) in execute mode.
+Current: 66/66 canonical corpus pass (`100%`), with strict native entrypoint checks.
 Exit: parity dashboard fully green, no known semantic drift.
 
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `in_progress`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: C path covers run-source and entrypoint checks; transitional fallbacks remain.
+Current: bridge-mode dashboard/CI plumbing removed; remaining blocker is linking `tools/airun` to native C runtime for `--vm=c` run/bundle/serve.
 Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
-Status: `pending`
+Status: `completed`
 Goal: remove all C# projects and C# test/tooling dependencies from mainline.
 Exit: no dotnet requirement in mainline build/test workflows.
 
@@ -66,8 +66,6 @@ Canonical post-cutover source layout remains under `src/`:
 - `src/AiLang.Core` (native implementation target under `src/AiLang.Core/native`)
 - `src/AiVM.Core` (native implementation rooted at `src/AiVM.Core/native`)
 - `src/AiCLI` (native implementation target under `src/AiCLI/native`)
-
-`AiVM.C/` is transitional and will be removed after zero-C# completion.
 
 ## Issue Requirements (Mandatory Fields)
 

@@ -126,14 +126,30 @@ public static class AosCliExecutionEngine
         if (!AivmCBridge.TryExecuteEmbeddedBytecode(bytecodeNode!, out var nativeExitCode, out _))
         {
             // Transitional fallback while parity closes; Phase-2 removes this path.
-            var fallbackInterpreter = new AosInterpreter();
-            var fallbackResult = fallbackInterpreter.RunBytecode(bytecodeNode!, "main", AosRuntimeNodes.BuildArgvNode(argv), runtime!);
-            var fallbackSuppressOutput = (runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
-                                          suppressValue.Kind == AosValueKind.Bool &&
-                                          suppressValue.AsBool()) ||
-                                         (program is not null &&
-                                          HasNamedExport(program, "init") &&
-                                          HasNamedExport(program, "update"));
+            var fallbackIsLifecycle = program is not null &&
+                                      HasNamedExport(program, "init") &&
+                                      HasNamedExport(program, "update");
+            AosValue fallbackResult;
+            var fallbackSuppressOutput = false;
+            if (fallbackIsLifecycle)
+            {
+                if (!TryLoadProgramForExecution(path, traceEnabled: false, argv, evaluateProgram: true, vmMode, out _, out var lifecycleRuntime, out var lifecycleErrCode, out var lifecycleErrMessage, out var lifecycleErrNodeId))
+                {
+                    ActiveDebugRecorder?.RecordDiagnostic(lifecycleErrCode, lifecycleErrMessage, lifecycleErrNodeId);
+                    writeLine(FormatErr("err1", lifecycleErrCode, lifecycleErrMessage, lifecycleErrNodeId));
+                    return lifecycleErrCode.StartsWith("PAR", StringComparison.Ordinal) || lifecycleErrCode.StartsWith("VAL", StringComparison.Ordinal) || lifecycleErrCode == "RUN002" ? 2 : 3;
+                }
+                fallbackResult = ExecuteRuntimeStart(lifecycleRuntime!, BuildKernelRunArgs());
+                fallbackSuppressOutput = true;
+            }
+            else
+            {
+                var fallbackInterpreter = new AosInterpreter();
+                fallbackResult = fallbackInterpreter.RunBytecode(bytecodeNode!, "main", AosRuntimeNodes.BuildArgvNode(argv), runtime!);
+                fallbackSuppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
+                                         suppressValue.Kind == AosValueKind.Bool &&
+                                         suppressValue.AsBool();
+            }
 
             if (IsErrNode(fallbackResult, out var errNode))
             {

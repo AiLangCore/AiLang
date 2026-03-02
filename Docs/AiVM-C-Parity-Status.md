@@ -1,6 +1,6 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 17:36:44 UTC
+Generated: 2026-03-02 17:38:18 UTC
 
 Overall status: **FAIL**
 
@@ -8,10 +8,10 @@ Overall status: **FAIL**
 
 | Gate | Status | Details |
 |---|---|---|
-| Behavioral parity | FAIL | 62/66 (93.94%) with mode=execute |
+| Behavioral parity | FAIL | 66/66 (100.00%) with mode=execute |
 | Zero-C# | FAIL | tracked_csharp=91, dotnet_refs_in_ci_scripts=15 |
-| Test coverage | PENDING | test-aivm-c=not-run, test.sh=not-run, determinism=not-run |
-| Benchmark | PENDING | bench_run=not-run, baseline=missing, threshold=not-evaluated |
+| Test coverage | FAIL | test-aivm-c=fail, test.sh=pass, determinism=pass |
+| Benchmark | FAIL | bench_run=pass, baseline=present, threshold=baseline-not-calibrated |
 | Samples completion | FAIL | complete=0/4 (manifest=Docs/Sample-Completion-Manifest.md) |
 | Memory/GC | FAIL | rc_test=no, cycle_test=no, leak_script=yes, profile_script=yes |
 
@@ -19,7 +19,7 @@ Overall status: **FAIL**
 
 | Entrypoint | Status | Details |
 |---|---|---|
-| run source | FAIL | backed by canonical golden corpus parity |
+| run source | PASS | backed by canonical golden corpus parity |
 | embedded bytecode | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
 | embedded bundle | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
 | serve | PENDING | dedicated deterministic parity harness not finalized |
@@ -40,11 +40,11 @@ Overall status: **FAIL**
 | PASS | json_key_ordering | 3 | 3 |
 | PASS | json_order_keys | 3 | 3 |
 | PASS | lifecycle_app_basic | 0 | 0 |
-| FAIL | lifecycle_app_exit_code | 9 | 0 |
+| PASS | lifecycle_app_exit_code | 9 | 9 |
 | PASS | lifecycle_app_no_init_update | 0 | 0 |
-| FAIL | lifecycle_command_emit_stdout | 0 | 0 |
-| FAIL | lifecycle_command_exit_after_print | 7 | 0 |
-| FAIL | lifecycle_command_print | 0 | 0 |
+| PASS | lifecycle_command_emit_stdout | 0 | 0 |
+| PASS | lifecycle_command_exit_after_print | 7 | 7 |
+| PASS | lifecycle_command_print | 0 | 0 |
 | PASS | lifecycle_event_message_basic | 0 | 0 |
 | PASS | lifecycle_event_source_start | 0 | 0 |
 | PASS | lifecycle_loop_structure | 0 | 0 |

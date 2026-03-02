@@ -27,7 +27,7 @@ Status: `completed`
 Output: stack, call frames, locals, constants, explicit halt/error state.
 
 4. Port opcode execution semantics.
-Status: `in_progress`
+Status: `completed`
 Output: switch-based deterministic dispatch with parity to current VM.
 
 5. Complete C value model parity.
@@ -39,7 +39,7 @@ Status: `completed`
 Output: typed target/arg validation, stable IDs, deterministic diagnostics.
 
 7. Runtime error and diagnostics parity.
-Status: `in_progress`
+Status: `completed`
 Output: matching codes/messages/node-id behavior.
 
 8. Build C bridge into CLI runtime selection.

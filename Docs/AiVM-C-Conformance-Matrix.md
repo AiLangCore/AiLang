@@ -24,7 +24,7 @@ Status keys:
 | VM state container (stack/frames/locals/ip) | implemented | Explicit mutable state, no globals, no hidden effects. |
 | Deterministic step/run loop | implemented | Switch-based dispatch, no reflection/computed goto. |
 | VM diagnostics mapping | implemented | Stable deterministic code/message mapping in C layer. |
-| VM error detail strings | in_progress | Deterministic detail channel added (`aivm_vm_error_detail`) for central failure paths, including contract-subcoded syscall details from `CALL_SYS` (`AIVMS004/AIVMC*`); opcode-by-opcode parity wording still being expanded. |
+| VM error detail strings | implemented | Deterministic detail channel (`aivm_vm_error_detail`) is in place across core opcode/runtime failure paths, including contract-subcoded syscall details from `CALL_SYS` (`AIVMS004/AIVMC*`) and opcode-specific node/attr diagnostics. |
 | Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters present; optional shared-library build path (`AIVM_BUILD_SHARED=1`) plus `AiLang.Core` opt-in native loader probe scaffold for host-loading experiments. |
 
 ## Opcode Surface
@@ -39,7 +39,7 @@ Status keys:
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
 | `ASYNC_CALL*`, `AWAIT`, `PAR_*` | implemented | Deterministic semantics implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; `PAR_JOIN` now materializes a deterministic `Block` node with resolved child values (including completed task-handle resolution) to align runtime behavior with canonical VM structure. |
-| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | in_progress | Implemented deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE`; bridge lowering now expands bytecode-shape `MAKE_NODE (a,b)` into `CONST a` + `PUSH_INT b` + `MAKE_NODE`. Native bridge constant transport for node-template constants remains pending. |
+| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | implemented | Deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE` semantics are implemented in the C runtime; bridge lowering also expands bytecode-shape `MAKE_NODE (a,b)` into `CONST a` + `PUSH_INT b` + `MAKE_NODE` for execute-mode compatibility checks. |
 
 ## Syscall ABI
 

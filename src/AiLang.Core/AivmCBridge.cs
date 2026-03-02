@@ -80,6 +80,17 @@ internal static class AivmCBridge
         return 1;
     }
 
+    private static int GetFunctionPrologueInstructionCount(VmFunction function)
+    {
+        if (function.Params.Count <= 0)
+        {
+            return 0;
+        }
+
+        // C VM receives arguments on the value stack; bind to locals on entry.
+        return function.Params.Count;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeInstruction
     {
@@ -415,33 +426,15 @@ internal static class AivmCBridge
         }
 
         var main = program.Functions[mainIndex];
-        if (main.Params.Count != 0)
-        {
-            error = FormatCompatibilityError(
-                $"Entry function 'main' with params is not yet supported by C bridge execute path (count={main.Params.Count}).",
-                main.Name);
-            return false;
-        }
-
-        for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
-        {
-            var function = program.Functions[functionIndex];
-            if (function.Params.Count != 0)
-            {
-                error = FormatCompatibilityError(
-                    $"Function '{function.Name}' with params is not yet supported by C bridge execute path (count={function.Params.Count}).",
-                    function.Name);
-                return false;
-            }
-        }
 
         constants.AddRange(program.Constants);
         var functionStarts = new int[program.Functions.Count];
-        var nextFunctionStart = 1; // Entry JUMP is emitted at index 0.
+        var entryInstructionCount = 1 + main.Params.Count; // Optional default args + entry JUMP.
+        var nextFunctionStart = entryInstructionCount;
         for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
         {
             var function = program.Functions[functionIndex];
-            var emittedCount = 0;
+            var emittedCount = GetFunctionPrologueInstructionCount(function);
             for (var i = 0; i < function.Instructions.Count; i++)
             {
                 emittedCount += GetLoweredInstructionCount(function.Instructions[i]);
@@ -451,19 +444,34 @@ internal static class AivmCBridge
             nextFunctionStart += emittedCount + 1; // Synthetic RET sentinel.
         }
 
+        if (main.Params.Count > 0)
+        {
+            var unknownConstantIndex = constants.Count;
+            constants.Add(AosValue.Unknown);
+            for (var i = 0; i < main.Params.Count; i++)
+            {
+                instructions.Add((OpcodeMap["CONST"], unknownConstantIndex));
+            }
+        }
+
         instructions.Add((OpcodeMap["JUMP"], functionStarts[mainIndex]));
 
         for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
         {
             var function = program.Functions[functionIndex];
             var functionIndexMap = new int[function.Instructions.Count + 1];
-            var emittedOffset = 0;
+            var emittedOffset = GetFunctionPrologueInstructionCount(function);
             for (var i = 0; i < function.Instructions.Count; i++)
             {
                 functionIndexMap[i] = functionStarts[functionIndex] + emittedOffset;
                 emittedOffset += GetLoweredInstructionCount(function.Instructions[i]);
             }
             functionIndexMap[function.Instructions.Count] = functionStarts[functionIndex] + emittedOffset;
+
+            for (var paramIndex = function.Params.Count - 1; paramIndex >= 0; paramIndex--)
+            {
+                instructions.Add((OpcodeMap["STORE_LOCAL"], paramIndex));
+            }
 
             for (var i = 0; i < function.Instructions.Count; i++)
             {
@@ -483,6 +491,29 @@ internal static class AivmCBridge
                         error = FormatCompatibilityError(
                             $"Opcode '{inst.Op}' requires non-empty syscall target s in C bridge execute path.",
                         function.Name);
+                        return false;
+                    }
+                }
+                else if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
+                         string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal))
+                {
+                    if (inst.B < 0)
+                    {
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' requires non-negative arg count in b for C bridge execute path.",
+                            function.Name);
+                        return false;
+                    }
+                    if (inst.A < 0 || inst.A >= program.Functions.Count)
+                    {
+                        error = FormatCompatibilityError($"Call target out of range: {inst.A}.", function.Name);
+                        return false;
+                    }
+                    if (inst.B != program.Functions[inst.A].Params.Count)
+                    {
+                        error = FormatCompatibilityError(
+                            $"Arity mismatch for call to '{program.Functions[inst.A].Name}': expected {program.Functions[inst.A].Params.Count}, got {inst.B}.",
+                            function.Name);
                         return false;
                     }
                 }

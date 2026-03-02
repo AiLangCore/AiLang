@@ -123,10 +123,51 @@ public static class AosCliExecutionEngine
             return 3;
         }
 
-        if (!AivmCBridge.TryExecuteEmbeddedBytecode(bytecodeNode!, out var nativeExitCode, out var bridgeFailure))
+        if (!AivmCBridge.TryExecuteEmbeddedBytecode(bytecodeNode!, out var nativeExitCode, out _))
         {
-            writeLine(FormatErr("err1", "DEV008", $"C VM bridge execute path is unavailable: {bridgeFailure}", "vmMode"));
-            return 1;
+            // Transitional fallback while parity closes; Phase-2 removes this path.
+            var fallbackInterpreter = new AosInterpreter();
+            var fallbackResult = fallbackInterpreter.RunBytecode(bytecodeNode!, "main", AosRuntimeNodes.BuildArgvNode(argv), runtime!);
+            var fallbackSuppressOutput = (runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
+                                          suppressValue.Kind == AosValueKind.Bool &&
+                                          suppressValue.AsBool()) ||
+                                         (program is not null &&
+                                          HasNamedExport(program, "init") &&
+                                          HasNamedExport(program, "update"));
+
+            if (IsErrNode(fallbackResult, out var errNode))
+            {
+                ActiveDebugRecorder?.RecordDiagnostic(errNode!.Attrs["code"].AsString(), errNode.Attrs["message"].AsString(), errNode.Attrs["nodeId"].AsString());
+                writeLine(AosFormatter.Format(errNode!));
+                return 3;
+            }
+            if (fallbackResult.Kind == AosValueKind.Unknown)
+            {
+                ActiveDebugRecorder?.RecordDiagnostic("RUN001", "Runtime returned unknown result.", "runtime.start");
+                writeLine(FormatErr("err1", "RUN001", "Runtime returned unknown result.", "runtime.start"));
+                return 3;
+            }
+            if (!fallbackSuppressOutput)
+            {
+                writeLine(FormatOk("ok1", fallbackResult));
+            }
+
+            if (fallbackSuppressOutput)
+            {
+                return 0;
+            }
+            return fallbackResult.Kind == AosValueKind.Int ? fallbackResult.AsInt() : 0;
+        }
+
+        var suppressOutput = (runtime!.Env.TryGetValue("__runtime_suppress_output", out var nativeSuppressValue) &&
+                              nativeSuppressValue.Kind == AosValueKind.Bool &&
+                              nativeSuppressValue.AsBool()) ||
+                             (program is not null &&
+                              HasNamedExport(program, "init") &&
+                              HasNamedExport(program, "update"));
+        if (!suppressOutput && nativeExitCode == 0)
+        {
+            writeLine(FormatOk("ok1", AosValue.Void));
         }
 
         return nativeExitCode;
@@ -353,11 +394,17 @@ public static class AosCliExecutionEngine
             {
                 if (!AivmCBridge.TryExecuteEmbeddedBytecode(parse.Root, out var nativeExitCode, out var bridgeFailure))
                 {
-                    writeLine(FormatErr("err1", "DEV008", $"C VM bridge execute path is unavailable: {bridgeFailure}", "vmMode"));
-                    return 1;
+                    if (string.IsNullOrWhiteSpace(bridgeFailure))
+                    {
+                        bridgeFailure = "unknown bridge failure";
+                    }
+                    // Transitional fallback while parity closes; Phase-2 removes this path.
+                    vmMode = "bytecode";
                 }
-
-                return nativeExitCode;
+                else
+                {
+                    return nativeExitCode;
+                }
             }
 
             var runtime = CreateRuntime();

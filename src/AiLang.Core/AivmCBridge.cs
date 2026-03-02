@@ -60,13 +60,24 @@ internal static class AivmCBridge
         ["MAKE_ERR"] = 43,
         ["MAKE_LIT_STRING"] = 44,
         ["MAKE_LIT_INT"] = 45,
+        ["MAKE_NODE"] = 46,
         ["RET"] = 12
     };
 
-    private static bool UsesExpandedSyscallLowering(string op)
+    private static int GetLoweredInstructionCount(VmInstruction inst)
     {
-        return string.Equals(op, "CALL_SYS", StringComparison.Ordinal) ||
-               string.Equals(op, "ASYNC_CALL_SYS", StringComparison.Ordinal);
+        if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
+            string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal))
+        {
+            return 2;
+        }
+
+        if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
+        {
+            return 3;
+        }
+
+        return 1;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -433,7 +444,7 @@ internal static class AivmCBridge
             var emittedCount = 0;
             for (var i = 0; i < function.Instructions.Count; i++)
             {
-                emittedCount += UsesExpandedSyscallLowering(function.Instructions[i].Op) ? 2 : 1;
+                emittedCount += GetLoweredInstructionCount(function.Instructions[i]);
             }
 
             functionStarts[functionIndex] = nextFunctionStart;
@@ -450,21 +461,13 @@ internal static class AivmCBridge
             for (var i = 0; i < function.Instructions.Count; i++)
             {
                 functionIndexMap[i] = functionStarts[functionIndex] + emittedOffset;
-                emittedOffset += UsesExpandedSyscallLowering(function.Instructions[i].Op) ? 2 : 1;
+                emittedOffset += GetLoweredInstructionCount(function.Instructions[i]);
             }
             functionIndexMap[function.Instructions.Count] = functionStarts[functionIndex] + emittedOffset;
 
             for (var i = 0; i < function.Instructions.Count; i++)
             {
                 var inst = function.Instructions[i];
-                if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
-                {
-                    error = FormatCompatibilityError(
-                        $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.",
-                        function.Name);
-                    return false;
-                }
-
                 if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
                     string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal))
                 {
@@ -479,6 +482,23 @@ internal static class AivmCBridge
                     {
                         error = FormatCompatibilityError(
                             $"Opcode '{inst.Op}' requires non-empty syscall target s in C bridge execute path.",
+                        function.Name);
+                        return false;
+                    }
+                }
+                else if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
+                {
+                    if (inst.B < 0)
+                    {
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' requires non-negative child count in b for C bridge execute path.",
+                            function.Name);
+                        return false;
+                    }
+                    if (!string.IsNullOrEmpty(inst.S))
+                    {
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.",
                             function.Name);
                         return false;
                     }
@@ -536,6 +556,13 @@ internal static class AivmCBridge
                     var targetConstantIndex = constants.Count;
                     constants.Add(AosValue.FromString(inst.S));
                     instructions.Add((OpcodeMap["CONST"], targetConstantIndex));
+                }
+                else if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
+                {
+                    instructions.Add((OpcodeMap["CONST"], inst.A));
+                    instructions.Add((OpcodeMap["PUSH_INT"], inst.B));
+                    instructions.Add((OpcodeMap["MAKE_NODE"], 0));
+                    continue;
                 }
 
                 instructions.Add((opcode, operand));

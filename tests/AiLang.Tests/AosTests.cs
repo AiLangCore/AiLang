@@ -4699,7 +4699,7 @@ public class AosTests
     }
 
     [Test]
-    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledMakeNode_ReturnsCompatibilityError()
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledMakeNode_PassesCompatibilityAndFailsAtLibraryLoad()
     {
         const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=MAKE_NODE a=0 b=0) } }";
         var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
@@ -4709,7 +4709,7 @@ public class AosTests
         try
         {
             Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
-            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-make-node");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
 
             var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
                 bytecodeText,
@@ -4721,9 +4721,8 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
-            Assert.That(lines[0], Does.Contain("VM001:"));
-            Assert.That(lines[0], Does.Contain("Opcode 'MAKE_NODE' is not yet supported"));
-            Assert.That(lines[0], Does.Contain("nodeId=main"));
+            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Not.Contain("Opcode 'MAKE_NODE' is not yet supported"));
         }
         finally
         {
@@ -5495,6 +5494,36 @@ public class AosTests
         Assert.That(instructions, Has.Count.EqualTo(6));
         Assert.That(instructions[0], Is.EqualTo((8, 3)));
         Assert.That(instructions[3], Is.EqualTo((23, 1)));
+    }
+
+    [Test]
+    public void AivmCBridge_TryLowerMainFunction_MakeNodeExpandsToConstPushIntAndMakeNode()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=MAKE_NODE a=7 b=2) Inst#i2(op=RET) } }";
+        var parse = AosParsing.Parse(bytecodeText);
+        Assert.That(parse.Root, Is.Not.Null);
+
+        var bridgeType = Type.GetType("AiLang.Core.AivmCBridge, AiLang.Core");
+        Assert.That(bridgeType, Is.Not.Null);
+
+        var method = bridgeType!.GetMethod("TryLowerMainFunction", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null);
+
+        var args = new object?[] { parse.Root!, null, null, null };
+        var ok = (bool)method!.Invoke(null, args)!;
+        Assert.That(ok, Is.True);
+
+        var instructions = (List<(int opcode, long operand)>)args[1]!;
+        var error = (string)args[3]!;
+        Assert.That(error, Is.EqualTo(string.Empty));
+
+        Assert.That(instructions, Has.Count.EqualTo(6));
+        Assert.That(instructions[0], Is.EqualTo((8, 1)));
+        Assert.That(instructions[1], Is.EqualTo((15, 7)));
+        Assert.That(instructions[2], Is.EqualTo((3, 2)));
+        Assert.That(instructions[3], Is.EqualTo((46, 0)));
+        Assert.That(instructions[4], Is.EqualTo((12, 0)));
+        Assert.That(instructions[5], Is.EqualTo((12, 0)));
     }
 
     [Test]

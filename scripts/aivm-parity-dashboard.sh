@@ -14,7 +14,6 @@ PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 MODE_USED="native"
 RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
 RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
-AIRUN_VM_C_CMD="${ROOT_DIR}/scripts/airun-vm-c.sh"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -23,7 +22,7 @@ cd "${ROOT_DIR}"
 run_c_mode() {
   local input="$1"
   local output="$2"
-  "${AIRUN_VM_C_CMD}" run "${input}" >"${output}" 2>&1
+  ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
 }
 
 status_word() {
@@ -96,9 +95,9 @@ ENTRY_SERVE_STATUS="FAIL"
 ENTRY_SERVE_DETAILS="vm=c serve-entry check failed"
 
 set +e
-"${AIRUN_VM_C_CMD}" run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" > "${TMP_DIR}/entry-bytecode.out" 2>&1
+./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
 entry_bytecode_rc=$?
-"${AIRUN_VM_C_CMD}" run examples/golden/publishcases/include_success/app_include_ok.aibundle > "${TMP_DIR}/entry-bundle.out" 2>&1
+./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
 entry_bundle_rc=$?
 ./tools/airun serve examples/golden/http/health_app.aos --vm=c --port 8089 > "${TMP_DIR}/entry-serve.out" 2>&1 &
 serve_pid=$!

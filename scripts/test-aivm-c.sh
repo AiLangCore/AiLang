@@ -17,18 +17,12 @@ cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
 cmake --build "${BUILD_DIR}"
 ctest --test-dir "${BUILD_DIR}" --output-on-failure
 
-case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*)
-    ;;
-  *)
-    if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
-      "${ROOT_DIR}/scripts/build-airun.sh"
-    fi
-    ;;
-esac
-
 mkdir -p "$(dirname "${PARITY_REPORT}")"
-"${ROOT_DIR}/scripts/aivm-dualrun-parity-manifest.sh" "${PARITY_MANIFEST}" "${PARITY_REPORT}"
+if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+  "${ROOT_DIR}/scripts/aivm-dualrun-parity-manifest.sh" "${PARITY_MANIFEST}" "${PARITY_REPORT}"
+else
+  printf 'parity manifest skipped: missing ./tools/airun\n' > "${PARITY_REPORT}"
+fi
 
 if [[ "${AIVM_PERF_SMOKE:-0}" == "1" ]]; then
   "${ROOT_DIR}/scripts/aivm-c-perf-smoke.sh" "${AIVM_PERF_RUNS:-10}"

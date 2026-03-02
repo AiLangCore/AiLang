@@ -6,6 +6,10 @@ REPORT_PATH="${1:-${ROOT_DIR}/Docs/AiVM-C-Parity-Status.md}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-parity-dashboard"
 BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build"
 PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
+MODE="${AIVM_PARITY_DASHBOARD_MODE:-auto}"
+BRIDGE_LIB="${AIVM_C_BRIDGE_LIB:-}"
+BRIDGE_ENABLED=0
+MODE_USED="gate"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -15,6 +19,25 @@ cd "${ROOT_DIR}"
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
 cmake -S "${ROOT_DIR}/AiVM.C" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+
+if [[ "${MODE}" != "gate" ]]; then
+  if [[ -z "${BRIDGE_LIB}" ]]; then
+    set +e
+    BRIDGE_LIB="$(./scripts/build-aivm-c-shared.sh 2>/dev/null | tail -n1)"
+    BUILD_SHARED_STATUS=$?
+    set -e
+    if [[ ${BUILD_SHARED_STATUS} -ne 0 ]]; then
+      BRIDGE_LIB=""
+    fi
+  fi
+  if [[ -n "${BRIDGE_LIB}" && -f "${BRIDGE_LIB}" ]]; then
+    BRIDGE_ENABLED=1
+    MODE_USED="execute"
+  elif [[ "${MODE}" == "execute" ]]; then
+    echo "AIVM parity dashboard execute mode requested, but bridge library was not available." >&2
+    exit 2
+  fi
+fi
 
 GOLDEN_INPUTS=()
 while IFS= read -r line; do
@@ -41,7 +64,11 @@ for INPUT in "${GOLDEN_INPUTS[@]}"; do
   set +e
   ./tools/airun run "${INPUT}" >"${LEFT_OUT}" 2>&1
   LEFT_STATUS=$?
-  ./tools/airun run "${INPUT}" --vm=c >"${RIGHT_OUT}" 2>&1
+  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
+    AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${INPUT}" --vm=c >"${RIGHT_OUT}" 2>&1
+  else
+    ./tools/airun run "${INPUT}" --vm=c >"${RIGHT_OUT}" 2>&1
+  fi
   RIGHT_STATUS=$?
   set -e
 
@@ -66,6 +93,12 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "Generated: ${TS_UTC}"
   echo
   echo "- Target suite: \`examples/golden/*.in.aos\`"
+  echo "- C VM mode: ${MODE_USED}"
+  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
+    echo "- C bridge library: \`${BRIDGE_LIB}\`"
+  else
+    echo "- C bridge library: (none)"
+  fi
   echo "- Total targets: ${TOTAL}"
   echo "- Passing parity targets: ${PASSED}"
   echo "- Failing parity targets: ${FAILED}"

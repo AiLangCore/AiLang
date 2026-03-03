@@ -1,0 +1,75 @@
+name: aivm-c-ci
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/AiVM.Core/native/**'
+      - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c.ps1'
+      - 'scripts/build-airun.sh'
+      - 'scripts/build-airun.ps1'
+      - 'scripts/aivm-parity-compare.sh'
+      - 'scripts/aivm-dualrun-parity.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.ps1'
+      - 'src/AiVM.Core/native/tests/parity_commands.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
+      - '.github/workflows/aivm-c-ci.yml'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'src/AiVM.Core/native/**'
+      - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c.ps1'
+      - 'scripts/build-airun.sh'
+      - 'scripts/build-airun.ps1'
+      - 'scripts/aivm-parity-compare.sh'
+      - 'scripts/aivm-dualrun-parity.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.ps1'
+      - 'src/AiVM.Core/native/tests/parity_commands.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
+      - '.github/workflows/aivm-c-ci.yml'
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure + build + test (Unix)
+        if: runner.os != 'Windows'
+        run: ./scripts/test-aivm-c.sh
+
+      - name: Perf smoke (Linux)
+        if: runner.os == 'Linux'
+        run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
+
+      - name: Configure + build + test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/test-aivm-c.ps1
+
+      - name: Upload parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aivm-parity-artifacts-${{ matrix.os }}
+          path: |
+            .tmp/aivm-dualrun-manifest/report.txt
+            .tmp/aivm-dualrun-manifest/*.left.out
+            .tmp/aivm-dualrun-manifest/*.right.out
+          if-no-files-found: ignore

@@ -26,6 +26,7 @@ This file is normative for `aic run` evaluation behavior.
 - `Eq`: evaluate both sides, then compare by primitive type and value.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
 - `Add`: evaluate both sides, both must be int literals.
+- `bytes` values are first-class runtime values and participate in equality by length+byte-content.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
@@ -233,3 +234,8 @@ This file is normative for `aic run` evaluation behavior.
 - `aic run` emits canonical AOS:
 - `Ok#...` for successful value completion.
 - `Err#...` for runtime error completion.
+
+## Bytes Runtime Rules
+
+- Syscall-returned bytes and string payloads are materialized into VM-owned arenas before becoming observable runtime values.
+- `TO_STRING(bytes)` yields lowercase hex with `0x` prefix (`0x` for empty bytes).

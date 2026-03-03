@@ -1722,6 +1722,11 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 return 0;
             }
             const_payload_size += 1U + 4U + (uint32_t)len;
+        } else if (v.type == AIVM_VAL_BYTES) {
+            if (v.bytes_value.length > 0xffffffffU) {
+                return 0;
+            }
+            const_payload_size += 1U + 4U + (uint32_t)v.bytes_value.length;
         } else {
             const_payload_size += 1U;
         }
@@ -1771,6 +1776,13 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 write_u32_le(f, len);
                 if (len > 0U) {
                     (void)fwrite(v.string_value, 1U, len, f);
+                }
+            } else if (v.type == AIVM_VAL_BYTES) {
+                uint32_t len = (uint32_t)v.bytes_value.length;
+                (void)fputc(5, f);
+                write_u32_le(f, len);
+                if (len > 0U && v.bytes_value.data != NULL) {
+                    (void)fwrite(v.bytes_value.data, 1U, len, f);
                 }
             } else {
                 (void)fputc(4, f);

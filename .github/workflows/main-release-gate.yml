@@ -30,7 +30,7 @@ jobs:
             frontend: aos_frontend
             airun: airun
             artifact_dir: .artifacts/airun-linux-arm64
-          - os: macos-13
+          - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
@@ -166,7 +166,7 @@ jobs:
           if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
 
       - name: Runtime smoke (Unix)
-        if: matrix.platform != 'windows' && !(matrix.platform == 'linux' && matrix.arch == 'arm64')
+        if: matrix.platform != 'windows' && !((matrix.platform == 'linux' && matrix.arch == 'arm64') || (matrix.platform == 'osx' && matrix.arch == 'x64'))
         shell: bash
         run: |
           set -euo pipefail

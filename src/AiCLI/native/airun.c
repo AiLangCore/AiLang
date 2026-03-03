@@ -864,6 +864,22 @@ static int is_reserved_cv_selector(const char* mode)
     return 1;
 }
 
+static int native_host_supports_syscall(const char* target)
+{
+    if (target == NULL) {
+        return 0;
+    }
+    if (strcmp(target, "sys.stdout_writeLine") == 0 ||
+        strcmp(target, "io.print") == 0 ||
+        strcmp(target, "io.write") == 0 ||
+        strcmp(target, "sys.process_argv") == 0 ||
+        strcmp(target, "sys.http_get") == 0 ||
+        strcmp(target, "sys.capability_has") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int native_syscall_stdout_write_line(
     const char* target,
     const AivmValue* args,
@@ -990,13 +1006,31 @@ static int native_syscall_http_get(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_capability_has(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_bool(native_host_supports_syscall(args[0].string_value) ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[5];
+    AivmSyscallBinding bindings[6];
     AivmCResult result;
 
     if (program == NULL) {
@@ -1013,10 +1047,12 @@ static int run_native_compiled_program(
     bindings[3].handler = native_syscall_process_argv;
     bindings[4].target = "sys.http_get";
     bindings[4].handler = native_syscall_http_get;
+    bindings[5].target = "sys.capability_has";
+    bindings[5].handler = native_syscall_capability_has;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        5U,
+        6U,
         process_argv,
         process_argv_count);
 
@@ -1905,7 +1941,8 @@ static int wasm_profile_supports_syscall(const char* wasm_profile, const char* s
     if (strcmp(syscall_target, "sys.stdout_writeLine") == 0 ||
         strcmp(syscall_target, "io.print") == 0 ||
         strcmp(syscall_target, "io.write") == 0 ||
-        strcmp(syscall_target, "sys.process_argv") == 0) {
+        strcmp(syscall_target, "sys.process_argv") == 0 ||
+        strcmp(syscall_target, "sys.capability_has") == 0) {
         return 1;
     }
     if (strcmp(syscall_target, "sys.http_get") == 0) {

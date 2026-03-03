@@ -124,7 +124,7 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.process_stderr(processHandle) -> string`
 - `sys.process_exitCode(processHandle) -> int`
 - `sys.process_kill(processHandle) -> bool`
-- Status contract is deterministic (`1,-1,-3` as defined in `SPEC/IL.md`).
+- Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
 - Native baseline may complete work synchronously during `sys.process_start`; libraries should still consume state through `poll/wait/result` calls.
 - Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
 

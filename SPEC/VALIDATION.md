@@ -73,7 +73,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - `sys.process_start(command,argvText,cwd,envText)` contract:
 - args are `(string, string, string, string)` and return int process handle.
 - `sys.process_poll(processHandle)` and `sys.process_wait(processHandle)` contract:
-- args are `(int)` and return int status.
+- args are `(int)` and return int status (`0,1,-1,-2,-3`).
 - `sys.process_stdout(processHandle)` and `sys.process_stderr(processHandle)` contract:
 - args are `(int)` and return string payloads.
 - `sys.process_exitCode(processHandle)` contract:

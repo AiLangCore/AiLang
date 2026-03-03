@@ -1911,13 +1911,107 @@ static int parse_int(const char* text, int* out)
     return 1;
 }
 
+static int bench_syscall_sink(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    (void)arg_count;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int bench_execute_program_iterations(const AivmProgram* program, int iterations, uint64_t* out_ticks)
+{
+    AivmSyscallBinding bindings[3];
+    int i;
+    uint64_t ticks = 0U;
+
+    if (program == NULL || out_ticks == NULL || iterations <= 0) {
+        return 0;
+    }
+
+    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].handler = bench_syscall_sink;
+    bindings[1].target = "io.print";
+    bindings[1].handler = bench_syscall_sink;
+    bindings[2].target = "io.write";
+    bindings[2].handler = bench_syscall_sink;
+
+    for (i = 0; i < iterations; i += 1) {
+        AivmCResult result = aivm_c_execute_program_with_syscalls(program, bindings, 3U);
+        if (!result.loaded || result.load_status != AIVM_PROGRAM_OK || !result.ok || result.status == AIVM_VM_STATUS_ERROR) {
+            return 0;
+        }
+        ticks += (uint64_t)program->instruction_count;
+    }
+
+    *out_ticks = ticks;
+    return 1;
+}
+
 static int handle_bench(int argc, char** argv)
 {
     int iterations = 10000;
     int human = 0;
     int i;
-    AivmInstruction instructions[2];
-    AivmCResult result;
+    int failures = 0;
+    AivmInstruction loop_instructions[2];
+    uint64_t runtime_loop_ticks = 0U;
+    uint64_t compiler_program_ticks = 0U;
+    uint64_t compiler_bytecode_ticks = 0U;
+    uint64_t app_hello_ticks = 0U;
+    uint64_t app_echo_ticks = 0U;
+    uint64_t app_bundle_ticks = 0U;
+    const char* compiler_program_status = "ok";
+    const char* compiler_bytecode_status = "ok";
+    const char* runtime_loop_status = "ok";
+    const char* app_hello_status = "ok";
+    const char* app_echo_status = "ok";
+    const char* app_bundle_status = "ok";
+    static const char* program_bench_source =
+        "Program#p1 {\n"
+        "  Let#l1(name=message) { Lit#s1(value=\"Hello from VM\") }\n"
+        "  Call#c1(target=io.print) { Var#v1(name=message) }\n"
+        "}";
+    static const char* bytecode_bench_source =
+        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) {\n"
+        "  Const#k0(kind=string value=\"hello\")\n"
+        "  Func#f1(name=main params=\"argv\" locals=\"\") {\n"
+        "    Inst#i1(op=HALT)\n"
+        "  }\n"
+        "}";
+    static const char* app_hello_source =
+        "Program#p1 {\n"
+        "  Let#l1(name=message) { Lit#s1(value=\"Hello from VM\") }\n"
+        "  Call#c1(target=io.print) { Var#v1(name=message) }\n"
+        "}";
+    static const char* app_echo_source =
+        "Program#p1 {\n"
+        "  Let#l1(name=line) { Lit#s0(value=\"vm-echo\") }\n"
+        "  Let#l2(name=out) {\n"
+        "    StrConcat#s1 {\n"
+        "      Lit#s2(value=\"echo:\")\n"
+        "      Var#v1(name=line)\n"
+        "    }\n"
+        "  }\n"
+        "  Call#c2(target=io.print) { Var#v2(name=out) }\n"
+        "}";
+    static const char* app_bundle_source =
+        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=1) {\n"
+        "  Const#k0(kind=int value=0)\n"
+        "  Func#f_main(locals=\"argv,start\" name=main params=\"argv\") {\n"
+        "    Inst#i0(a=0 op=CONST)\n"
+        "    Inst#i1(a=1 op=STORE_LOCAL)\n"
+        "    Inst#i2(op=RETURN)\n"
+        "  }\n"
+        "}";
 
     for (i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--human") == 0) {
@@ -1938,24 +2032,83 @@ static int handle_bench(int argc, char** argv)
         return 2;
     }
 
-    instructions[0].opcode = AIVM_OP_PUSH_INT;
-    instructions[0].operand_int = 1;
-    instructions[1].opcode = AIVM_OP_HALT;
-    instructions[1].operand_int = 0;
+    loop_instructions[0].opcode = AIVM_OP_PUSH_INT;
+    loop_instructions[0].operand_int = 1;
+    loop_instructions[1].opcode = AIVM_OP_HALT;
+    loop_instructions[1].operand_int = 0;
 
-    for (i = 0; i < iterations; i++) {
-        result = aivm_c_execute_instructions(instructions, 2U);
+    for (i = 0; i < iterations; i += 1) {
+        AivmCResult result = aivm_c_execute_instructions(loop_instructions, 2U);
         if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Native benchmark VM execution failed.\" nodeId=bench)\n");
-            return 3;
+            runtime_loop_status = "fail";
+            failures += 1;
+            break;
+        }
+        runtime_loop_ticks += 2U;
+    }
+
+    for (i = 0; i < iterations; i += 1) {
+        AivmProgram program;
+        if (!parse_simple_program_aos_to_program_text(program_bench_source, &program)) {
+            compiler_program_status = "fail";
+            failures += 1;
+            break;
+        }
+        compiler_program_ticks += (uint64_t)(program.instruction_count + program.constant_count);
+    }
+
+    for (i = 0; i < iterations; i += 1) {
+        AivmProgram program;
+        if (!parse_bytecode_aos_to_program_text(bytecode_bench_source, &program)) {
+            compiler_bytecode_status = "fail";
+            failures += 1;
+            break;
+        }
+        compiler_bytecode_ticks += (uint64_t)(program.instruction_count + program.constant_count);
+    }
+
+    {
+        AivmProgram hello_program;
+        if (!parse_simple_program_aos_to_program_text(app_hello_source, &hello_program) ||
+            !bench_execute_program_iterations(&hello_program, iterations, &app_hello_ticks)) {
+            app_hello_status = "fail";
+            failures += 1;
+        }
+    }
+
+    {
+        AivmProgram echo_program;
+        if (!parse_simple_program_aos_to_program_text(app_echo_source, &echo_program) ||
+            !bench_execute_program_iterations(&echo_program, iterations, &app_echo_ticks)) {
+            app_echo_status = "fail";
+            failures += 1;
+        }
+    }
+
+    {
+        AivmProgram bundle_program;
+        if (!parse_bytecode_aos_to_program_text(app_bundle_source, &bundle_program) ||
+            !bench_execute_program_iterations(&bundle_program, iterations, &app_bundle_ticks)) {
+            app_bundle_status = "fail";
+            failures += 1;
         }
     }
 
     if (human) {
-        printf("bench complete: iterations=%d\n", iterations);
+        printf("name\tstatus\tunit\tvalue\n");
+        printf("runtime_loop\t%s\tvm_ticks\t%llu\n", runtime_loop_status, (unsigned long long)runtime_loop_ticks);
+        printf("compiler_parse_program\t%s\tvm_ticks\t%llu\n", compiler_program_status, (unsigned long long)compiler_program_ticks);
+        printf("compiler_parse_bytecode\t%s\tvm_ticks\t%llu\n", compiler_bytecode_status, (unsigned long long)compiler_bytecode_ticks);
+        printf("app_run_hello\t%s\tvm_ticks\t%llu\n", app_hello_status, (unsigned long long)app_hello_ticks);
+        printf("app_run_echo\t%s\tvm_ticks\t%llu\n", app_echo_status, (unsigned long long)app_echo_ticks);
+        printf("app_run_bundle\t%s\tvm_ticks\t%llu\n", app_bundle_status, (unsigned long long)app_bundle_ticks);
     } else {
-        printf("Ok#ok1(type=int value=%d)\n", iterations);
+        printf("Ok#ok1(type=int value=%d)\n", iterations - failures);
+    }
+    if (failures > 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Native benchmark VM execution failed.\" nodeId=bench)\n");
+        return 3;
     }
     return 0;
 }

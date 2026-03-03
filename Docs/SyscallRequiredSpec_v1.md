@@ -55,8 +55,8 @@ Current status: partial (`sys.fs_readFile`, `sys.fs_fileExists`).
 
 Required minimal primitives:
 
-- `sys.fs_readFile(path:string) -> string`
-- `sys.fs_writeFile(path:string, text:string) -> void`
+- `sys.fs_readFile(path:string) -> bytes`
+- `sys.fs_writeFile(path:string, data:bytes) -> void`
 - `sys.fs_fileExists(path:string) -> bool`
 - `sys.fs_pathExists(path:string) -> bool`
 - `sys.fs_makeDir(path:string) -> void`
@@ -72,12 +72,12 @@ Required minimal primitives:
 - `sys.net_tcpListen(host:string, port:int) -> int`
 - `sys.net_tcpListenTls(host:string, port:int, certPath:string, keyPath:string) -> int`
 - `sys.net_tcpAccept(listenerHandle:int) -> int`
-- `sys.net_tcpRead(connectionHandle:int, maxBytes:int) -> string`
-- `sys.net_tcpWrite(connectionHandle:int, data:string) -> int` (bytes written)
+- `sys.net_tcpRead(connectionHandle:int, maxBytes:int) -> bytes`
+- `sys.net_tcpWrite(connectionHandle:int, data:bytes) -> int` (bytes written)
 - `sys.net_close(handle:int) -> void`
 - `sys.net_udpBind(host:string, port:int) -> int`
 - `sys.net_udpRecv(handle:int, maxBytes:int) -> node` (payload + peer)
-- `sys.net_udpSend(handle:int, host:string, port:int, data:string) -> int`
+- `sys.net_udpSend(handle:int, host:string, port:int, data:bytes) -> int`
 
 Notes:
 

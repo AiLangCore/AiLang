@@ -45,11 +45,11 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.net_listen_tls` | `(port:int, certPath:string, keyPath:string)` | `int` | Start TLS listener on loopback; returns listener handle or `-1` on cert failure. |
 | `sys.net_accept` | `(listenerHandle:int)` | `int` | Blocking accept; returns connection handle or `-1`. |
 | `sys.net_readHeaders` | `(connectionHandle:int)` | `string` | Reads HTTP-like header block and optional body via Content-Length. |
-| `sys.net_write` | `(connectionHandle:int, text:string)` | `void` | Writes UTF-8 bytes to socket stream. |
+| `sys.net_write` | `(connectionHandle:int, data:bytes)` | `void` | Writes raw bytes to socket stream. |
 | `sys.net_close` | `(handle:int)` | `void` | Closes listener/connection handle. |
 | `sys.stdout_writeLine` | `(text:string)` | `void` | Writes line to stdout. |
 | `sys.proc_exit` | `(code:int)` | `void` | Raises process-exit exception boundary. |
-| `sys.fs_readFile` | `(path:string)` | `string` | Reads full file text. |
+| `sys.fs_readFile` | `(path:string)` | `bytes` | Reads full file bytes. |
 | `sys.fs_fileExists` | `(path:string)` | `bool` | Returns file existence. |
 | `sys.str_utf8ByteCount` | `(text:string)` | `int` | UTF-8 byte count utility. |
 | `sys.platform` | `()` | `string` | Host OS family (`macos`, `windows`, `linux`, `unknown`). |

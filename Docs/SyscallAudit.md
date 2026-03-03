@@ -44,7 +44,6 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.net_listen` | `(port:int)` | `int` | Start TCP listener on loopback; returns listener handle. |
 | `sys.net_listen_tls` | `(port:int, certPath:string, keyPath:string)` | `int` | Start TLS listener on loopback; returns listener handle or `-1` on cert failure. |
 | `sys.net_accept` | `(listenerHandle:int)` | `int` | Blocking accept; returns connection handle or `-1`. |
-| `sys.net_readHeaders` | `(connectionHandle:int)` | `string` | Reads HTTP-like header block and optional body via Content-Length. |
 | `sys.net_write` | `(connectionHandle:int, text:string)` | `void` | Writes UTF-8 bytes to socket stream. |
 | `sys.net_close` | `(handle:int)` | `void` | Closes listener/connection handle. |
 | `sys.stdout_writeLine` | `(text:string)` | `void` | Writes line to stdout. |
@@ -85,7 +84,7 @@ Relative to required minimal capability model:
 Concrete gaps:
 
 - No per-group syscall capability gating (`sys` is a single permission).
-- No generic stream socket read primitive (`sys.net_readHeaders` is HTTP-specific).
+- No generic framed protocol helpers in VM/host syscall layer (by design); protocol parsing belongs in AiLang libraries.
 - No UDP primitives.
 - No WebSocket support primitives (can be library-level, but missing required low-level socket reads and timeouts).
 - No time primitives (`now`, monotonic clock, sleep, timers).

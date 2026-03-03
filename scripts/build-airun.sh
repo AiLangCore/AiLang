@@ -35,13 +35,7 @@ OUT_DIR="${ROOT_DIR}/.artifacts/airun-${PLATFORM}-${ARCH}"
 mkdir -p "${OUT_DIR}"
 
 if [[ ! -x "${BACKEND_PATH}" ]]; then
-  if [[ -x "${WRAPPER_PATH}" ]]; then
-    cp "${WRAPPER_PATH}" "${BACKEND_PATH}"
-    chmod +x "${BACKEND_PATH}"
-  else
-    echo "missing backend host binary; expected ${BACKEND_PATH} or ${WRAPPER_PATH}" >&2
-    exit 1
-  fi
+  "${ROOT_DIR}/scripts/build-airun-host.sh"
 fi
 
 cc -std=c17 -Wall -Wextra -Werror -O2 \

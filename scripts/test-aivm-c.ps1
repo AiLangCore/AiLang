@@ -33,6 +33,8 @@ if ($IsWindows) {
     .\src\AiVM.Core\native\src\aivm_c_api.c
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   if (!(Test-Path .\tools\airun.exe)) { throw 'failed to compile tools/airun.exe' }
+  & (Join-Path $root 'scripts/build-airun-host.ps1')
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   Remove-Item -Force .\airun.obj -ErrorAction SilentlyContinue
   Remove-Item -Force .\aivm_*.obj -ErrorAction SilentlyContinue
 } else {

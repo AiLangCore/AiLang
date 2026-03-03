@@ -46,8 +46,9 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
 - `publish --target wasm32`:
-  - default profile `web` writes `index.html` + `main.js`.
+  - default profile `spa` writes `index.html` + `main.js`.
   - `--wasm-profile cli` writes `run.sh` + `run.ps1`.
+  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` native-server guidance.
 
 ## Failure Codes
 

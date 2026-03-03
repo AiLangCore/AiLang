@@ -1897,6 +1897,77 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     return 1;
 }
 
+static int wasm_profile_supports_syscall(const char* wasm_profile, const char* syscall_target)
+{
+    if (wasm_profile == NULL || syscall_target == NULL) {
+        return 0;
+    }
+    if (strcmp(syscall_target, "sys.stdout_writeLine") == 0 ||
+        strcmp(syscall_target, "io.print") == 0 ||
+        strcmp(syscall_target, "io.write") == 0 ||
+        strcmp(syscall_target, "sys.process_argv") == 0) {
+        return 1;
+    }
+    if (strcmp(syscall_target, "sys.http_get") == 0) {
+        return strcmp(wasm_profile, "spa") == 0 || strcmp(wasm_profile, "fullstack") == 0;
+    }
+    return 0;
+}
+
+static void emit_wasm_profile_capability_warnings(const char* aibc1_path, const char* wasm_profile)
+{
+    unsigned char* bytes = NULL;
+    size_t byte_count = 0U;
+    AivmProgram program;
+    AivmProgramLoadResult load_result;
+    const char* warned_targets[64];
+    size_t warned_count = 0U;
+    size_t i;
+    size_t j;
+
+    if (aibc1_path == NULL || wasm_profile == NULL) {
+        return;
+    }
+    if (!read_binary_file(aibc1_path, &bytes, &byte_count)) {
+        return;
+    }
+    load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
+    free(bytes);
+    if (load_result.status != AIVM_PROGRAM_OK) {
+        return;
+    }
+    for (i = 0U; i < program.constant_count; i += 1U) {
+        const char* target;
+        int seen = 0;
+        if (program.constants[i].type != AIVM_VAL_STRING || program.constants[i].string_value == NULL) {
+            continue;
+        }
+        target = program.constants[i].string_value;
+        if (!(starts_with(target, "sys.") || starts_with(target, "io."))) {
+            continue;
+        }
+        if (wasm_profile_supports_syscall(wasm_profile, target)) {
+            continue;
+        }
+        for (j = 0U; j < warned_count; j += 1U) {
+            if (strcmp(warned_targets[j], target) == 0) {
+                seen = 1;
+                break;
+            }
+        }
+        if (seen != 0) {
+            continue;
+        }
+        if (warned_count < (sizeof(warned_targets) / sizeof(warned_targets[0]))) {
+            warned_targets[warned_count++] = target;
+        }
+        fprintf(stderr,
+            "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN001 if executed.\" nodeId=publish)\n",
+            target,
+            wasm_profile);
+    }
+}
+
 static int compile_input_to_aibc1(const char* program_input, const char* out_dir, char* out_aibc1, size_t out_aibc1_len)
 {
     char resolved_program[PATH_MAX];
@@ -2501,6 +2572,9 @@ static int handle_publish(int argc, char** argv)
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to derive publish app name.\" nodeId=publish)\n");
         return 2;
+    }
+    if (strcmp(target, "wasm32") == 0) {
+        emit_wasm_profile_capability_warnings(built_aibc1, wasm_profile);
     }
     {
         const char* runtime_ext = strrchr(runtime_bin, '.');

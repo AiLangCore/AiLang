@@ -770,6 +770,13 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
             return 0;
         }
         n = snprintf(out_bin, out_bin_len, "airun.exe");
+    } else if (strcmp(rid, "wasm32") == 0) {
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime-wasm32.wasm");
+        if (n < 0 || (size_t)n >= out_bin_len) {
+            return 0;
+        }
+        n = snprintf(out_dir, out_dir_len, ".artifacts/aivm-wasm32");
+        return n >= 0 && (size_t)n < out_dir_len;
     } else {
         return 0;
     }
@@ -2298,17 +2305,20 @@ static int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"Failed to derive publish app name.\" nodeId=publish)\n");
         return 2;
     }
-    if (strstr(runtime_bin, ".exe") != NULL) {
-        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s.exe", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
-            return 2;
-        }
-    } else {
-        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
-            return 2;
+    {
+        const char* runtime_ext = strrchr(runtime_bin, '.');
+        if (runtime_ext != NULL) {
+            if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s%s", publish_app_name, runtime_ext) >= (int)sizeof(publish_runtime_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else {
+            if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
+                return 2;
+            }
         }
     }
 

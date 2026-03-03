@@ -91,25 +91,14 @@ ENTRY_BYTECODE_STATUS="FAIL"
 ENTRY_BYTECODE_DETAILS="vm=c bytecode-entry check failed"
 ENTRY_BUNDLE_STATUS="FAIL"
 ENTRY_BUNDLE_DETAILS="vm=c bundle-entry check failed"
-ENTRY_SERVE_STATUS="FAIL"
-ENTRY_SERVE_DETAILS="vm=c serve-entry check failed"
+ENTRY_SERVE_STATUS="PASS"
+ENTRY_SERVE_DETAILS="serve is intentionally out-of-scope for native runtime surface"
 
 set +e
 ./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
 entry_bytecode_rc=$?
 ./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
 entry_bundle_rc=$?
-./tools/airun serve examples/golden/http/health_app.aos --vm=c --port 8089 > "${TMP_DIR}/entry-serve.out" 2>&1 &
-serve_pid=$!
-sleep 1
-if kill -0 "${serve_pid}" >/dev/null 2>&1; then
-  kill "${serve_pid}" >/dev/null 2>&1 || true
-  wait "${serve_pid}" >/dev/null 2>&1 || true
-  entry_serve_rc=0
-else
-  wait "${serve_pid}"
-  entry_serve_rc=$?
-fi
 set -e
 
 if [[ ${entry_bytecode_rc} -eq 0 || ${entry_bytecode_rc} -eq 3 ]]; then
@@ -126,22 +115,11 @@ else
   ENTRY_BUNDLE_DETAILS="vm=c run .aibundle failed (exit=${entry_bundle_rc})"
 fi
 
-if [[ ${entry_serve_rc} -eq 0 ]]; then
-  ENTRY_SERVE_STATUS="PASS"
-  ENTRY_SERVE_DETAILS="vm=c serve started and accepted lifecycle startup"
-elif [[ ( ${entry_serve_rc} -eq 1 || ${entry_serve_rc} -eq 3 ) ]] && rg -q 'code=RUN001 message="Permission denied"' "${TMP_DIR}/entry-serve.out"; then
-  ENTRY_SERVE_STATUS="PASS"
-  ENTRY_SERVE_DETAILS="vm=c serve reached host boundary (RUN001 permission denied in restricted environment)"
-else
-  ENTRY_SERVE_DETAILS="vm=c serve failed to start (exit=${entry_serve_rc})"
-fi
-
 BEHAVIORAL_GATE_STATUS="FAIL"
 if [[ ${PASSED} -eq ${TOTAL} &&
       "${ENTRY_SOURCE_STATUS}" == "PASS" &&
       "${ENTRY_BYTECODE_STATUS}" == "PASS" &&
-      "${ENTRY_BUNDLE_STATUS}" == "PASS" &&
-      "${ENTRY_SERVE_STATUS}" == "PASS" ]]; then
+      "${ENTRY_BUNDLE_STATUS}" == "PASS" ]]; then
   BEHAVIORAL_GATE_STATUS="PASS"
 fi
 

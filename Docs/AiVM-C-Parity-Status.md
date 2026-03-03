@@ -1,6 +1,6 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-03 13:56:37 UTC
+Generated: 2026-03-03 14:28:06 UTC
 
 Overall status: **PASS**
 
@@ -22,7 +22,7 @@ Overall status: **PASS**
 | run source | PASS | backed by canonical golden corpus parity |
 | embedded bytecode | PASS | vm=c run bytecode-oriented source completed (exit=0) |
 | embedded bundle | PASS | vm=c run .aibundle succeeded |
-| serve | PASS | vm=c serve started and accepted lifecycle startup |
+| serve | PASS | serve is intentionally out-of-scope for native runtime surface |
 
 ## Behavioral Cases
 

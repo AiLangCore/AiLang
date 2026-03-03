@@ -20,6 +20,95 @@
 #define AIVM_EXE_EXT ""
 #endif
 
+#include "aivm_c_api.h"
+
+static int ends_with(const char* value, const char* suffix)
+{
+    size_t value_len;
+    size_t suffix_len;
+    if (value == NULL || suffix == NULL) {
+        return 0;
+    }
+    value_len = strlen(value);
+    suffix_len = strlen(suffix);
+    if (value_len < suffix_len) {
+        return 0;
+    }
+    return strcmp(value + (value_len - suffix_len), suffix) == 0 ? 1 : 0;
+}
+
+static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
+{
+    FILE* f;
+    long length;
+    unsigned char* bytes;
+    size_t read_count;
+    if (path == NULL || out_bytes == NULL || out_size == NULL) {
+        return 0;
+    }
+    f = fopen(path, "rb");
+    if (f == NULL) {
+        return 0;
+    }
+    if (fseek(f, 0L, SEEK_END) != 0) {
+        fclose(f);
+        return 0;
+    }
+    length = ftell(f);
+    if (length < 0) {
+        fclose(f);
+        return 0;
+    }
+    if (fseek(f, 0L, SEEK_SET) != 0) {
+        fclose(f);
+        return 0;
+    }
+    bytes = (unsigned char*)malloc((size_t)length);
+    if (bytes == NULL && length > 0) {
+        fclose(f);
+        return 0;
+    }
+    read_count = fread(bytes, 1U, (size_t)length, f);
+    fclose(f);
+    if (read_count != (size_t)length) {
+        free(bytes);
+        return 0;
+    }
+    *out_bytes = bytes;
+    *out_size = (size_t)length;
+    return 1;
+}
+
+static int try_native_aibc1_run(const char* path)
+{
+    unsigned char* bytes = NULL;
+    size_t byte_count = 0U;
+    AivmCResult result;
+    if (!ends_with(path, ".aibc1")) {
+        return -1;
+    }
+    if (!read_binary_file(path, &bytes, &byte_count)) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to read AiBC1 file.\" nodeId=program)\n");
+        return 2;
+    }
+    result = aivm_c_execute_aibc1(bytes, byte_count);
+    free(bytes);
+
+    if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load AiBC1 program.\" nodeId=program)\n");
+        return 2;
+    }
+    if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"AiBC1 execution failed.\" nodeId=vm)\n");
+        return 3;
+    }
+    if (result.has_exit_code) {
+        printf("Ok#ok1(type=int value=%d)\n", result.exit_code);
+        return result.exit_code;
+    }
+    return 0;
+}
+
 static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
 {
 #ifdef _WIN32
@@ -267,6 +356,7 @@ int main(int argc, char** argv)
     int had_vm_c;
     int wants_vm_c_run;
     int use_filtered_backend_args;
+    int native_run_rc;
     int trace_enabled;
     int i;
 
@@ -297,11 +387,6 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    if (!is_executable(backend_path)) {
-        fprintf(stderr, "airun native wrapper: missing backend binary at %s\n", backend_path);
-        return 2;
-    }
-
     if (!strip_vm_c(argv, argc, &filtered_argv, &filtered_argc, &had_vm_c)) {
         fprintf(stderr, "airun native wrapper: failed to process arguments\n");
         return 2;
@@ -320,6 +405,21 @@ int main(int argc, char** argv)
         wants_vm_c_run = 1;
     } else if (had_vm_c) {
         use_filtered_backend_args = 1;
+    }
+
+    native_run_rc = -1;
+    if (filtered_argc >= 3 && strcmp(filtered_argv[1], "run") == 0) {
+        native_run_rc = try_native_aibc1_run(filtered_argv[2]);
+        if (native_run_rc >= 0) {
+            free(filtered_argv);
+            return native_run_rc;
+        }
+    }
+
+    if (!is_executable(backend_path)) {
+        fprintf(stderr, "airun native wrapper: missing backend binary at %s\n", backend_path);
+        free(filtered_argv);
+        return 2;
     }
 
     if (wants_vm_c_run) {

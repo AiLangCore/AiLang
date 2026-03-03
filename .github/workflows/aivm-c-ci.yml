@@ -60,9 +60,19 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cl /nologo /std:c17 /W4 /Fe:.\tools\airun.exe .\src\AiCLI\native\airun.c
+          cl /nologo /std:c17 /W4 /D_CRT_SECURE_NO_WARNINGS /I .\src\AiVM.Core\native\include /Fe:.\tools\airun.exe `
+            .\src\AiCLI\native\airun.c `
+            .\src\AiVM.Core\native\src\aivm_types.c `
+            .\src\AiVM.Core\native\src\aivm_vm.c `
+            .\src\AiVM.Core\native\src\aivm_program.c `
+            .\src\AiVM.Core\native\src\aivm_syscall.c `
+            .\src\AiVM.Core\native\src\aivm_syscall_contracts.c `
+            .\src\AiVM.Core\native\src\aivm_parity.c `
+            .\src\AiVM.Core\native\src\aivm_runtime.c `
+            .\src\AiVM.Core\native\src\aivm_c_api.c
           if (!(Test-Path .\tools\airun.exe)) { throw "failed to compile tools/airun.exe" }
           Remove-Item -Force .\airun.obj -ErrorAction SilentlyContinue
+          Remove-Item -Force .\aivm_*.obj -ErrorAction SilentlyContinue
 
       - name: Run parity manifest (Windows portable set)
         if: runner.os == 'Windows'

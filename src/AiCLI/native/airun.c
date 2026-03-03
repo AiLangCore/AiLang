@@ -786,9 +786,29 @@ static int native_syscall_stdout_write_line(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_process_argv(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    /* Native wrapper currently exposes an empty argv node sentinel. */
+    *result = aivm_value_node(0);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(const AivmProgram* program, const char* vm_error_message)
 {
-    AivmSyscallBinding bindings[3];
+    AivmSyscallBinding bindings[4];
     AivmCResult result;
 
     if (program == NULL) {
@@ -801,7 +821,9 @@ static int run_native_compiled_program(const AivmProgram* program, const char* v
     bindings[1].handler = native_syscall_stdout_write_line;
     bindings[2].target = "io.write";
     bindings[2].handler = native_syscall_stdout_write_line;
-    result = aivm_c_execute_program_with_syscalls(program, bindings, 3U);
+    bindings[3].target = "sys.process_argv";
+    bindings[3].handler = native_syscall_process_argv;
+    result = aivm_c_execute_program_with_syscalls(program, bindings, 4U);
 
     if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
@@ -1706,6 +1728,11 @@ static int parse_run_target(int argc, char** argv, int start_index, const char**
         if (program_path == NULL && arg[0] != '-') {
             program_path = arg;
             continue;
+        }
+        if (program_path != NULL && arg[0] != '-') {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Unsupported app arguments for native C runtime.\" nodeId=argv)\n");
+            return 2;
         }
         if (arg[0] == '-') {
             fprintf(stderr,

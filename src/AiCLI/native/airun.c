@@ -10,12 +10,17 @@
 #include <process.h>
 #include <sys/stat.h>
 #include <windows.h>
+#include <io.h>
 #ifndef PATH_MAX
 #define PATH_MAX 260
 #endif
 #define AIVM_PATH_SEP '\\'
 #define AIVM_EXE_EXT ".exe"
+#define aivm_chdir _chdir
+#define aivm_getcwd _getcwd
 #else
+#include <fcntl.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -25,6 +30,8 @@
 #endif
 #define AIVM_PATH_SEP '/'
 #define AIVM_EXE_EXT ""
+#define aivm_chdir chdir
+#define aivm_getcwd getcwd
 #endif
 
 #include "aivm_c_api.h"
@@ -32,6 +39,32 @@
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int simple_add_string_const(AivmProgram* program, const char* value, size_t* out_idx);
+
+#define NATIVE_PROCESS_MAX 64
+#define NATIVE_PROCESS_STATUS_PENDING 0
+#define NATIVE_PROCESS_STATUS_OK 1
+#define NATIVE_PROCESS_STATUS_FAIL -1
+#define NATIVE_PROCESS_STATUS_CANCELED -2
+#define NATIVE_PROCESS_STATUS_UNKNOWN -3
+
+typedef struct NativeProcessRecord
+{
+    int used;
+    int status;
+    int exit_code;
+    int output_loaded;
+    char stdout_path[PATH_MAX];
+    char stderr_path[PATH_MAX];
+    char* stdout_text;
+    char* stderr_text;
+#ifdef _WIN32
+    HANDLE process_handle;
+#else
+    pid_t pid;
+#endif
+} NativeProcessRecord;
+
+static NativeProcessRecord g_native_process_records[NATIVE_PROCESS_MAX];
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -874,6 +907,15 @@ static int native_host_supports_syscall(const char* target)
         strcmp(target, "io.print") == 0 ||
         strcmp(target, "io.write") == 0 ||
         strcmp(target, "sys.process_argv") == 0 ||
+        strcmp(target, "sys.process_cwd") == 0 ||
+        strcmp(target, "sys.process_envGet") == 0 ||
+        strcmp(target, "sys.process_start") == 0 ||
+        strcmp(target, "sys.process_poll") == 0 ||
+        strcmp(target, "sys.process_wait") == 0 ||
+        strcmp(target, "sys.process_stdout") == 0 ||
+        strcmp(target, "sys.process_stderr") == 0 ||
+        strcmp(target, "sys.process_exitCode") == 0 ||
+        strcmp(target, "sys.process_kill") == 0 ||
         strcmp(target, "sys.http_get") == 0 ||
         strcmp(target, "sys.capability_has") == 0) {
         return 1;
@@ -897,6 +939,427 @@ static int native_syscall_stdout_write_line(
     }
     printf("%s\n", args[0].string_value);
     *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_process_decode_exit_status(int status)
+{
+#ifdef _WIN32
+    return status;
+#else
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+    if (WIFSIGNALED(status)) {
+        return 128 + WTERMSIG(status);
+    }
+    return 1;
+#endif
+}
+
+static void native_process_free_record(NativeProcessRecord* record)
+{
+    if (record == NULL) {
+        return;
+    }
+#ifdef _WIN32
+    if (record->process_handle != NULL) {
+        (void)CloseHandle(record->process_handle);
+        record->process_handle = NULL;
+    }
+#endif
+    if (record->stdout_text != NULL) {
+        free(record->stdout_text);
+        record->stdout_text = NULL;
+    }
+    if (record->stderr_text != NULL) {
+        free(record->stderr_text);
+        record->stderr_text = NULL;
+    }
+    if (record->stdout_path[0] != '\0') {
+        (void)remove(record->stdout_path);
+        record->stdout_path[0] = '\0';
+    }
+    if (record->stderr_path[0] != '\0') {
+        (void)remove(record->stderr_path);
+        record->stderr_path[0] = '\0';
+    }
+    record->output_loaded = 0;
+    record->used = 0;
+    record->status = NATIVE_PROCESS_STATUS_UNKNOWN;
+    record->exit_code = -1;
+#ifndef _WIN32
+    record->pid = (pid_t)0;
+#endif
+}
+
+static int native_process_alloc_handle(void)
+{
+    int i;
+    for (i = 0; i < NATIVE_PROCESS_MAX; i += 1) {
+        if (!g_native_process_records[i].used) {
+            g_native_process_records[i].used = 1;
+            g_native_process_records[i].status = NATIVE_PROCESS_STATUS_PENDING;
+            g_native_process_records[i].exit_code = -1;
+            g_native_process_records[i].output_loaded = 0;
+            g_native_process_records[i].stdout_path[0] = '\0';
+            g_native_process_records[i].stderr_path[0] = '\0';
+            g_native_process_records[i].stdout_text = NULL;
+            g_native_process_records[i].stderr_text = NULL;
+#ifdef _WIN32
+            g_native_process_records[i].process_handle = NULL;
+#else
+            g_native_process_records[i].pid = (pid_t)0;
+#endif
+            return i + 1;
+        }
+    }
+    return -1;
+}
+
+static NativeProcessRecord* native_process_lookup(int handle)
+{
+    int index = handle - 1;
+    if (index < 0 || index >= NATIVE_PROCESS_MAX) {
+        return NULL;
+    }
+    if (!g_native_process_records[index].used) {
+        return NULL;
+    }
+    return &g_native_process_records[index];
+}
+
+static int native_process_read_text_alloc(const char* path, char** out_text)
+{
+    FILE* f;
+    long length;
+    char* bytes;
+    size_t read_count;
+    if (path == NULL || out_text == NULL) {
+        return 0;
+    }
+    f = fopen(path, "rb");
+    if (f == NULL) {
+        *out_text = NULL;
+        return 1;
+    }
+    if (fseek(f, 0L, SEEK_END) != 0) {
+        fclose(f);
+        return 0;
+    }
+    length = ftell(f);
+    if (length < 0) {
+        fclose(f);
+        return 0;
+    }
+    if (fseek(f, 0L, SEEK_SET) != 0) {
+        fclose(f);
+        return 0;
+    }
+    bytes = (char*)malloc((size_t)length + 1U);
+    if (bytes == NULL) {
+        fclose(f);
+        return 0;
+    }
+    read_count = fread(bytes, 1U, (size_t)length, f);
+    fclose(f);
+    if (read_count != (size_t)length) {
+        free(bytes);
+        return 0;
+    }
+    bytes[length] = '\0';
+    *out_text = bytes;
+    return 1;
+}
+
+static int native_process_load_output(NativeProcessRecord* record)
+{
+    if (record == NULL) {
+        return 0;
+    }
+    if (record->output_loaded) {
+        return 1;
+    }
+    if (!native_process_read_text_alloc(record->stdout_path, &record->stdout_text)) {
+        return 0;
+    }
+    if (!native_process_read_text_alloc(record->stderr_path, &record->stderr_text)) {
+        return 0;
+    }
+    if (record->stdout_text == NULL) {
+        record->stdout_text = (char*)malloc(1U);
+        if (record->stdout_text == NULL) {
+            return 0;
+        }
+        record->stdout_text[0] = '\0';
+    }
+    if (record->stderr_text == NULL) {
+        record->stderr_text = (char*)malloc(1U);
+        if (record->stderr_text == NULL) {
+            return 0;
+        }
+        record->stderr_text[0] = '\0';
+    }
+    record->output_loaded = 1;
+    return 1;
+}
+
+static int native_process_make_capture_paths(int handle, char* stdout_path, size_t stdout_len, char* stderr_path, size_t stderr_len)
+{
+    int n;
+#ifdef _WIN32
+    const char* temp_dir = getenv("TEMP");
+    if (temp_dir == NULL || temp_dir[0] == '\0') {
+        temp_dir = ".";
+    }
+#else
+    const char* temp_dir = "/tmp";
+#endif
+    n = snprintf(stdout_path, stdout_len, "%s%cairun-proc-%d-out.log", temp_dir, AIVM_PATH_SEP, handle);
+    if (n < 0 || (size_t)n >= stdout_len) {
+        return 0;
+    }
+    n = snprintf(stderr_path, stderr_len, "%s%cairun-proc-%d-err.log", temp_dir, AIVM_PATH_SEP, handle);
+    if (n < 0 || (size_t)n >= stderr_len) {
+        return 0;
+    }
+    return 1;
+}
+
+static int native_process_is_shell_builtin(const char* command)
+{
+    static const char* builtins[] = {
+        "exit",
+        "echo",
+        "cd",
+        "set"
+    };
+    size_t i;
+    if (command == NULL || command[0] == '\0') {
+        return 0;
+    }
+    for (i = 0U; i < (sizeof(builtins) / sizeof(builtins[0])); i += 1U) {
+        if (strcmp(command, builtins[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int native_process_command_exists(const char* command)
+{
+    if (command == NULL || command[0] == '\0') {
+        return 0;
+    }
+    if (native_process_is_shell_builtin(command)) {
+        return 1;
+    }
+#ifdef _WIN32
+    {
+        DWORD attrs;
+        char full_path[PATH_MAX];
+        DWORD len;
+        if (strchr(command, '\\') != NULL || strchr(command, '/') != NULL || strchr(command, ':') != NULL) {
+            attrs = GetFileAttributesA(command);
+            return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0U;
+        }
+        len = SearchPathA(NULL, command, ".exe", (DWORD)sizeof(full_path), full_path, NULL);
+        if (len > 0U && len < (DWORD)sizeof(full_path)) {
+            return 1;
+        }
+        len = SearchPathA(NULL, command, NULL, (DWORD)sizeof(full_path), full_path, NULL);
+        return len > 0U && len < (DWORD)sizeof(full_path);
+    }
+#else
+    {
+        char resolved[PATH_MAX];
+        if (strchr(command, '/') != NULL || strchr(command, '\\') != NULL) {
+            return access(command, X_OK) == 0 ? 1 : 0;
+        }
+        return find_executable_on_path(command, resolved, sizeof(resolved));
+    }
+#endif
+}
+
+static int native_process_start_command(
+    NativeProcessRecord* record,
+    const char* command_text,
+    const char* cwd_text,
+    const char* env_text)
+{
+    if (record == NULL || command_text == NULL || command_text[0] == '\0') {
+        return 0;
+    }
+    if (env_text != NULL && env_text[0] != '\0') {
+        return 0;
+    }
+#ifdef _WIN32
+    {
+        STARTUPINFOA si;
+        PROCESS_INFORMATION pi;
+        char cmd_line[4096];
+        int n;
+        n = snprintf(cmd_line, sizeof(cmd_line), "cmd.exe /C \"%s 1> \\\"%s\\\" 2> \\\"%s\\\"\"",
+            command_text,
+            record->stdout_path,
+            record->stderr_path);
+        if (n < 0 || (size_t)n >= sizeof(cmd_line)) {
+            return 0;
+        }
+        ZeroMemory(&si, sizeof(si));
+        ZeroMemory(&pi, sizeof(pi));
+        si.cb = sizeof(si);
+        if (!CreateProcessA(
+                NULL,
+                cmd_line,
+                NULL,
+                NULL,
+                FALSE,
+                0U,
+                NULL,
+                (cwd_text != NULL && cwd_text[0] != '\0') ? cwd_text : NULL,
+                &si,
+                &pi)) {
+            return 0;
+        }
+        record->process_handle = pi.hProcess;
+        (void)CloseHandle(pi.hThread);
+        return 1;
+    }
+#else
+    {
+        pid_t pid = fork();
+        if (pid < 0) {
+            return 0;
+        }
+        if (pid == 0) {
+            int fd_out = open(record->stdout_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            int fd_err = open(record->stderr_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            if (cwd_text != NULL && cwd_text[0] != '\0') {
+                (void)chdir(cwd_text);
+            }
+            if (fd_out >= 0) {
+                (void)dup2(fd_out, STDOUT_FILENO);
+                (void)close(fd_out);
+            }
+            if (fd_err >= 0) {
+                (void)dup2(fd_err, STDERR_FILENO);
+                (void)close(fd_err);
+            }
+            (void)execl("/bin/sh", "sh", "-lc", command_text, (char*)NULL);
+            _exit(127);
+        }
+        record->pid = pid;
+        return 1;
+    }
+#endif
+}
+
+static void native_process_cleanup_all(void)
+{
+    int i;
+    for (i = 0; i < NATIVE_PROCESS_MAX; i += 1) {
+        if (g_native_process_records[i].used) {
+            native_process_free_record(&g_native_process_records[i]);
+        }
+    }
+}
+
+static int native_process_refresh_status(NativeProcessRecord* record, int wait_for_completion)
+{
+    if (record == NULL) {
+        return NATIVE_PROCESS_STATUS_UNKNOWN;
+    }
+    if (record->status != NATIVE_PROCESS_STATUS_PENDING) {
+        return record->status;
+    }
+#ifdef _WIN32
+    {
+        DWORD wait_result = WaitForSingleObject(record->process_handle, wait_for_completion ? INFINITE : 0U);
+        if (wait_result == WAIT_TIMEOUT) {
+            return NATIVE_PROCESS_STATUS_PENDING;
+        }
+        if (wait_result == WAIT_FAILED) {
+            record->status = NATIVE_PROCESS_STATUS_FAIL;
+            record->exit_code = 1;
+            return record->status;
+        }
+        {
+            DWORD exit_code = 1U;
+            if (!GetExitCodeProcess(record->process_handle, &exit_code)) {
+                exit_code = 1U;
+            }
+            record->exit_code = (int)exit_code;
+            if (record->status == NATIVE_PROCESS_STATUS_CANCELED) {
+                return record->status;
+            }
+            record->status = (exit_code == 0U) ? NATIVE_PROCESS_STATUS_OK : NATIVE_PROCESS_STATUS_FAIL;
+            return record->status;
+        }
+    }
+#else
+    {
+        int status = 0;
+        pid_t rc = waitpid(record->pid, &status, wait_for_completion ? 0 : WNOHANG);
+        if (rc == 0) {
+            return NATIVE_PROCESS_STATUS_PENDING;
+        }
+        if (rc < 0) {
+            record->status = NATIVE_PROCESS_STATUS_FAIL;
+            record->exit_code = 1;
+            return record->status;
+        }
+        record->exit_code = native_process_decode_exit_status(status);
+        if (record->status == NATIVE_PROCESS_STATUS_CANCELED) {
+            return record->status;
+        }
+        record->status = (record->exit_code == 0) ? NATIVE_PROCESS_STATUS_OK : NATIVE_PROCESS_STATUS_FAIL;
+        return record->status;
+    }
+#endif
+}
+
+static int native_syscall_process_cwd(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    char cwd[PATH_MAX];
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (aivm_getcwd(cwd, sizeof(cwd)) == NULL) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_string(cwd);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_env_get(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* value;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    value = getenv(args[0].string_value);
+    *result = aivm_value_string(value == NULL ? "" : value);
     return AIVM_SYSCALL_OK;
 }
 
@@ -1025,13 +1488,268 @@ static int native_syscall_capability_has(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_process_start(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    int handle;
+    char command_buffer[4096];
+    int n;
+    NativeProcessRecord* record;
+    const char* command;
+    const char* argv_text;
+    const char* cwd_text;
+    const char* env_text;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 4U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_STRING ||
+        args[3].type != AIVM_VAL_STRING ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL ||
+        args[2].string_value == NULL ||
+        args[3].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    command = args[0].string_value;
+    argv_text = args[1].string_value;
+    cwd_text = args[2].string_value;
+    env_text = args[3].string_value;
+    if (command[0] == '\0') {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (!native_process_command_exists(command)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (argv_text[0] == '\0') {
+        n = snprintf(command_buffer, sizeof(command_buffer), "%s", command);
+    } else {
+        n = snprintf(command_buffer, sizeof(command_buffer), "%s %s", command, argv_text);
+    }
+    if (n < 0 || (size_t)n >= sizeof(command_buffer)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_process_alloc_handle();
+    if (handle < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    record = native_process_lookup(handle);
+    if (record == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (!native_process_make_capture_paths(handle, record->stdout_path, sizeof(record->stdout_path), record->stderr_path, sizeof(record->stderr_path)) ||
+        !native_process_start_command(record, command_buffer, cwd_text, env_text)) {
+        record->exit_code = 1;
+        record->status = NATIVE_PROCESS_STATUS_FAIL;
+        native_process_free_record(record);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    record->status = NATIVE_PROCESS_STATUS_PENDING;
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_poll(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessRecord* record;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    record = native_process_lookup((int)args[0].int_value);
+    if (record == NULL) {
+        *result = aivm_value_int(NATIVE_PROCESS_STATUS_UNKNOWN);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(native_process_refresh_status(record, 0));
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_wait(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessRecord* record;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    record = native_process_lookup((int)args[0].int_value);
+    if (record == NULL) {
+        *result = aivm_value_int(NATIVE_PROCESS_STATUS_UNKNOWN);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(native_process_refresh_status(record, 1));
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_stdout(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (native_process_lookup((int)args[0].int_value) == NULL) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    {
+        NativeProcessRecord* record = native_process_lookup((int)args[0].int_value);
+        if (record == NULL) {
+            *result = aivm_value_string("");
+            return AIVM_SYSCALL_OK;
+        }
+        (void)native_process_refresh_status(record, 0);
+        if (!native_process_load_output(record)) {
+            *result = aivm_value_string("");
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_string(record->stdout_text == NULL ? "" : record->stdout_text);
+    }
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_stderr(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessRecord* record;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    record = native_process_lookup((int)args[0].int_value);
+    if (record == NULL) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    (void)native_process_refresh_status(record, 0);
+    if (!native_process_load_output(record)) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_string(record->stderr_text == NULL ? "" : record->stderr_text);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_exit_code(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessRecord* record;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    record = native_process_lookup((int)args[0].int_value);
+    if (record == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    (void)native_process_refresh_status(record, 0);
+    *result = aivm_value_int(record->exit_code);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_kill(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (native_process_lookup((int)args[0].int_value) == NULL) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+    {
+        NativeProcessRecord* record = native_process_lookup((int)args[0].int_value);
+        int ok = 0;
+        if (record == NULL) {
+            *result = aivm_value_bool(0);
+            return AIVM_SYSCALL_OK;
+        }
+        if (record->status != NATIVE_PROCESS_STATUS_PENDING) {
+            *result = aivm_value_bool(0);
+            return AIVM_SYSCALL_OK;
+        }
+#ifdef _WIN32
+        ok = TerminateProcess(record->process_handle, 1U) ? 1 : 0;
+#else
+        ok = kill(record->pid, SIGTERM) == 0 ? 1 : 0;
+#endif
+        if (ok) {
+            record->status = NATIVE_PROCESS_STATUS_CANCELED;
+            record->exit_code = 1;
+            (void)native_process_refresh_status(record, 1);
+        }
+        *result = aivm_value_bool(ok);
+    }
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[6];
+    AivmSyscallBinding bindings[15];
     AivmCResult result;
 
     if (program == NULL) {
@@ -1046,29 +1764,51 @@ static int run_native_compiled_program(
     bindings[2].handler = native_syscall_stdout_write_line;
     bindings[3].target = "sys.process_argv";
     bindings[3].handler = native_syscall_process_argv;
-    bindings[4].target = "sys.http_get";
-    bindings[4].handler = native_syscall_http_get;
-    bindings[5].target = "sys.capability_has";
-    bindings[5].handler = native_syscall_capability_has;
+    bindings[4].target = "sys.process_cwd";
+    bindings[4].handler = native_syscall_process_cwd;
+    bindings[5].target = "sys.process_envGet";
+    bindings[5].handler = native_syscall_process_env_get;
+    bindings[6].target = "sys.process_start";
+    bindings[6].handler = native_syscall_process_start;
+    bindings[7].target = "sys.process_poll";
+    bindings[7].handler = native_syscall_process_poll;
+    bindings[8].target = "sys.process_wait";
+    bindings[8].handler = native_syscall_process_wait;
+    bindings[9].target = "sys.process_stdout";
+    bindings[9].handler = native_syscall_process_stdout;
+    bindings[10].target = "sys.process_stderr";
+    bindings[10].handler = native_syscall_process_stderr;
+    bindings[11].target = "sys.process_exitCode";
+    bindings[11].handler = native_syscall_process_exit_code;
+    bindings[12].target = "sys.process_kill";
+    bindings[12].handler = native_syscall_process_kill;
+    bindings[13].target = "sys.http_get";
+    bindings[13].handler = native_syscall_http_get;
+    bindings[14].target = "sys.capability_has";
+    bindings[14].handler = native_syscall_capability_has;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        6U,
+        15U,
         process_argv,
         process_argv_count);
 
     if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
+        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
         return 2;
     }
     if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
+        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"%s\" nodeId=vm)\n", vm_error_message);
         return 3;
     }
     if (result.has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", result.exit_code);
+        native_process_cleanup_all();
         return result.exit_code;
     }
+    native_process_cleanup_all();
     return 0;
 }
 

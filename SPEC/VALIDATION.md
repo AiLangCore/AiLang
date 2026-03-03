@@ -70,6 +70,17 @@ This file is normative for semantic validation used by `aic check` (default path
 - `sys.worker_result(workerHandle)` and `sys.worker_error(workerHandle)` return strings.
 - `sys.worker_cancel(workerHandle)` returns bool.
 
+- `sys.process_start(command,argvText,cwd,envText)` contract:
+- args are `(string, string, string, string)` and return int process handle.
+- `sys.process_poll(processHandle)` and `sys.process_wait(processHandle)` contract:
+- args are `(int)` and return int status (`0,1,-1,-2,-3`).
+- `sys.process_stdout(processHandle)` and `sys.process_stderr(processHandle)` contract:
+- args are `(int)` and return string payloads.
+- `sys.process_exitCode(processHandle)` contract:
+- args are `(int)` and return int exit code.
+- `sys.process_kill(processHandle)` contract:
+- args are `(int)` and return bool.
+
 - `sys.debug_emit(channel,payload)` contract:
 - args are `(string, string)`.
 - `sys.debug_mode()` contract:
@@ -118,6 +129,8 @@ This file is normative for semantic validation used by `aic check` (default path
 - `sys.fs_stat`
 - `sys.console_readLine`
 - `sys.console_readAllStdin`
+- `sys.process_start`
+- `sys.process_wait`
 - `io.readLine`
 - `io.readAllStdin`
 - `io.readFile`

@@ -38,14 +38,18 @@ UNSUPPORTED_CASES=(
   "vm_c_execute_src_parse_error"
 )
 HTTP_CASE="${ROOT_DIR}/samples/cli-fetch/project.aiproj"
+PROCESS_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
 PUBLISH_FULLSTACK_DIR="${TMP_DIR}/publish-fullstack"
 PUBLISH_HTTP_CLI_DIR="${TMP_DIR}/publish-http-cli"
+PUBLISH_PROCESS_CLI_DIR="${TMP_DIR}/publish-process-cli"
 NATIVE_OUT="${TMP_DIR}/native.out"
 WASM_OUT="${TMP_DIR}/wasm.out"
 HTTP_OUT="${TMP_DIR}/http.out"
 HTTP_ERR="${TMP_DIR}/http.err"
+PROCESS_OUT="${TMP_DIR}/process.out"
+PROCESS_ERR="${TMP_DIR}/process.err"
 
 cd "${ROOT_DIR}"
 
@@ -65,6 +69,7 @@ mkdir -p "${PUBLISH_DIR}"
 mkdir -p "${PUBLISH_SPA_DIR}"
 mkdir -p "${PUBLISH_FULLSTACK_DIR}"
 mkdir -p "${PUBLISH_HTTP_CLI_DIR}"
+mkdir -p "${PUBLISH_PROCESS_CLI_DIR}"
 
 for CASE_NAME in "${CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
@@ -104,6 +109,7 @@ done
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${HTTP_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_HTTP_CLI_DIR}" >"${HTTP_OUT}" 2>"${HTTP_ERR}"
+./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm unsupported corpus: PASS (${#UNSUPPORTED_CASES[@]} cases)"
 
@@ -121,6 +127,10 @@ if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.http_get is not available on 
   echo "wasm warning contract mismatch: expected WASM001 warning for sys.http_get on wasm-profile=cli" >&2
   exit 1
 fi
+if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process_start is not available on wasm profile '\''cli'\''' "${PROCESS_ERR}"; then
+  echo "wasm warning contract mismatch: expected WASM001 warning for sys.process_start on wasm-profile=cli" >&2
+  exit 1
+fi
 
 set +e
 wasmtime run -C cache=n "${PUBLISH_HTTP_CLI_DIR}/cli-fetch.wasm" - < "${PUBLISH_HTTP_CLI_DIR}/app.aibc1" >"${HTTP_OUT}" 2>&1
@@ -136,6 +146,23 @@ if ! rg -q 'Err#err1\(code=RUN101 message="' "${HTTP_OUT}"; then
 fi
 if ! rg -q 'sys\.http_get is not available on this target\.' "${HTTP_OUT}"; then
   echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error" >&2
+  exit 1
+fi
+
+set +e
+wasmtime run -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
+process_rc=$?
+set -e
+if [[ ${process_rc} -ne 3 ]]; then
+  echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process_start, got ${process_rc}" >&2
+  exit 1
+fi
+if ! rg -q 'Err#err1\(code=RUN101 message="' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected RUN101 code for sys.process_start" >&2
+  exit 1
+fi
+if ! rg -q 'sys\.process_start is not available on this target\.' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error for sys.process_start" >&2
   exit 1
 fi
 

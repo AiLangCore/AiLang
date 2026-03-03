@@ -56,8 +56,8 @@ jobs:
             git push origin "${TAG}"
           fi
 
-  golden-gate:
-    name: golden-gate-${{ matrix.os }}
+  build-gate:
+    name: build-gate-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: prepare
     strategy:
@@ -65,176 +65,170 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            rid: linux-x64
-            frontend: aos_frontend
-            airun: airun
           - os: macos-14
-            rid: osx-arm64
-            frontend: aos_frontend
-            airun: airun
           - os: windows-latest
-            rid: win-x64
-            frontend: aos_frontend.exe
-            airun: airun.exe
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore ./src/AiCLI/AiCLI.csproj
-
-      - name: Build airun + frontend for gate (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          dotnet publish ./src/AiCLI/AiCLI.csproj \
-            -c Release \
-            -r "${{ matrix.rid }}" \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -o ./dist
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.airun }}" "./dist/${{ matrix.frontend }}"
-
-      - name: Stage compiler assets for gate (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ./dist/compiler
-          cp ./src/compiler/*.aos ./dist/compiler/
-
       - name: Setup MSVC tools
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build airun + frontend for gate (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          dotnet publish .\src\AiCLI\AiCLI.csproj `
-            -c Release `
-            -r ${{ matrix.rid }} `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:PublishTrimmed=false `
-            -o .\dist
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
-
-      - name: Stage compiler assets for gate (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
-          Copy-Item .\src\compiler\*.aos .\dist\compiler\
-
-      - name: Run full golden gate
+      - name: Build airun (Unix)
+        if: runner.os != 'Windows'
         shell: bash
-        env:
-          AIRUN_BIN: ./dist/${{ matrix.airun }}
-          AOS_FRONTEND: ./dist/${{ matrix.frontend }}
-        run: ./scripts/test.sh
+        run: |
+          set -euo pipefail
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+
+      - name: Build airun (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/build-airun.ps1
+          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+
+      - name: Runtime smoke (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./tools/airun run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+
+      - name: Runtime smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & .\tools\airun.exe run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
 
   package:
-    name: package-${{ matrix.os }}
+    name: package-${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
     needs:
       - prepare
-      - golden-gate
+      - build-gate
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             rid: linux-x64
+            platform: linux
+            arch: x64
             archive: tar.gz
+            artifact_dir: .artifacts/airun-linux-x64
             frontend: aos_frontend
             airun: airun
-          - os: macos-14
-            rid: osx-arm64
+          - os: ubuntu-latest
+            rid: linux-arm64
+            platform: linux
+            arch: arm64
             archive: tar.gz
+            artifact_dir: .artifacts/airun-linux-arm64
             frontend: aos_frontend
             airun: airun
           - os: macos-14
             rid: osx-x64
+            platform: osx
+            arch: x64
             archive: tar.gz
+            artifact_dir: .artifacts/airun-osx-x64
+            frontend: aos_frontend
+            airun: airun
+          - os: macos-14
+            rid: osx-arm64
+            platform: osx
+            arch: arm64
+            archive: tar.gz
+            artifact_dir: .artifacts/airun-osx-arm64
             frontend: aos_frontend
             airun: airun
           - os: windows-latest
-            rid: win-x64
+            rid: windows-x64
+            platform: windows
+            arch: x64
             archive: zip
+            artifact_dir: .artifacts/airun-windows-x64
             frontend: aos_frontend.exe
             airun: airun.exe
+            msvc_arch: amd64
+          - os: windows-latest
+            rid: windows-arm64
+            platform: windows
+            arch: arm64
+            archive: zip
+            artifact_dir: .artifacts/airun-windows-arm64
+            frontend: aos_frontend.exe
+            airun: airun.exe
+            msvc_arch: amd64_arm64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Setup MSVC tools
+        if: matrix.platform == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
         with:
-          dotnet-version: 10.0.x
+          arch: ${{ matrix.msvc_arch }}
 
-      - name: Restore
-        run: dotnet restore ./src/AiCLI/AiCLI.csproj
-
-      - name: Publish airun (non-Windows)
-        if: runner.os != 'Windows'
+      - name: Setup Linux ARM64 cross toolchain
+        if: matrix.platform == 'linux' && matrix.arch == 'arm64'
         shell: bash
         run: |
           set -euo pipefail
-          dotnet publish ./src/AiCLI/AiCLI.csproj \
-            -c Release \
-            -r "${{ matrix.rid }}" \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -p:Version="${{ needs.prepare.outputs.version }}" \
-            -o ./dist
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Publish airun (Windows)
-        if: runner.os == 'Windows'
+      - name: Build airun runtime (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
+          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
+          ./scripts/build-airun.sh
+
+      - name: Build airun runtime (Windows)
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          dotnet publish .\src\AiCLI\AiCLI.csproj `
-            -c Release `
-            -r ${{ matrix.rid }} `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:PublishTrimmed=false `
-            -p:Version=${{ needs.prepare.outputs.version }} `
-            -o .\dist
+          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
+          ./scripts/build-airun.ps1
 
-      - name: Build frontend parser (non-Windows)
-        if: runner.os != 'Windows'
+      - name: Build frontend parser (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          mkdir -p ./dist
+          if [[ "${{ matrix.platform }}" == "linux" && "${{ matrix.arch }}" == "arm64" ]]; then
+            aarch64-linux-gnu-gcc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          elif [[ "${{ matrix.platform }}" == "osx" ]]; then
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              clang -std=c11 -O2 -arch x86_64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+            else
+              clang -std=c11 -O2 -arch arm64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+            fi
+          else
+            cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          fi
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Setup MSVC tools
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Build frontend parser (Windows)
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
-      - name: Stage compiler assets (non-Windows)
-        if: runner.os != 'Windows'
+      - name: Stage compiler assets (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -242,38 +236,40 @@ jobs:
           cp ./src/compiler/*.aos ./dist/compiler/
 
       - name: Stage compiler assets (Windows)
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
-      - name: Pack release artifact (non-Windows)
-        if: runner.os != 'Windows'
+      - name: Pack release artifact (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
           PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
-          cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
       - name: Pack release artifact (Windows)
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $version = "${{ needs.prepare.outputs.version }}"
+          $version = '${{ needs.prepare.outputs.version }}'
           $packageDir = "airun-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
-          Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
-          Copy-Item ".\dist\${{ matrix.frontend }}" "$packageDir\${{ matrix.frontend }}"
-          Copy-Item ".\dist\compiler" "$packageDir\compiler" -Recurse
-          Copy-Item ".\LICENSE" "$packageDir\LICENSE"
-          Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip"
+          Copy-Item ".\\dist\\${{ matrix.frontend }}" $packageDir
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
+          Copy-Item .\LICENSE $packageDir
+          Copy-Item .\dist\compiler $packageDir -Recurse
+          Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
 
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v4
@@ -281,22 +277,88 @@ jobs:
           name: airun-${{ matrix.rid }}
           path: airun-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
 
+  package-wasm32:
+    name: package-wasm32
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - build-gate
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Build wasm runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/build-aivm-wasm.sh
+
+      - name: Pack wasm runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          PACKAGE_DIR="airun-${VERSION}-wasm32"
+          mkdir -p "${PACKAGE_DIR}"
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/"
+          cp ./LICENSE "${PACKAGE_DIR}/"
+          tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
+
+      - name: Upload wasm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airun-wasm32
+          path: airun-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
+
   release:
     name: github-release
     runs-on: ubuntu-latest
     needs:
       - prepare
       - package
+      - package-wasm32
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download packaged artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./release-assets
           merge-multiple: true
 
+      - name: Generate release notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ needs.prepare.outputs.tag }}';
+            const target = context.sha;
+            const { data } = await github.request('POST /repos/{owner}/{repo}/releases/generate-notes', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              target_commitish: target
+            });
+            const marker = [
+              '## Cutover Notice',
+              '- `v0.0.1-alpha.6` is the final release that may include C# dependencies.',
+              '- Releases after `v0.0.1-alpha.6` are C-runtime/tooling canonical in active paths.',
+              ''
+            ].join('\n');
+            const notes = `${marker}\n${data.body || ''}\n`;
+            require('fs').writeFileSync('RELEASE_NOTES.md', notes, { encoding: 'utf8' });
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
+          body_path: ./RELEASE_NOTES.md
           files: ./release-assets/*

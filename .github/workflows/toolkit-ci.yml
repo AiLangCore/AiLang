@@ -17,73 +17,67 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            rid: linux-x64
             frontend: aos_frontend
+            airun: airun
           - os: macos-14
-            rid: osx-arm64
             frontend: aos_frontend
-          - os: macos-14
-            rid: osx-x64
-            frontend: aos_frontend
+            airun: airun
           - os: windows-latest
-            rid: win-x64
             frontend: aos_frontend.exe
+            airun: airun.exe
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore ./src/AiCLI/AiCLI.csproj
-
-      - name: Publish airun (non-Windows)
+      - name: Build airun runtime (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          dotnet publish ./src/AiCLI/AiCLI.csproj \
-            -c Release \
-            -r "${{ matrix.rid }}" \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -o ./dist
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
 
-      - name: Publish airun (Windows)
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airun runtime (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          dotnet publish .\src\AiCLI\AiCLI.csproj `
-            -c Release `
-            -r ${{ matrix.rid }} `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:PublishTrimmed=false `
-            -o .\dist
+          ./scripts/build-airun.ps1
+          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
 
       - name: Build frontend parser (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p ./dist
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
-
-      - name: Setup MSVC tools
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build frontend parser (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Stage runtime binary (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp ./tools/airun "./dist/${{ matrix.airun }}"
+
+      - name: Stage runtime binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
 
       - name: Stage compiler assets (non-Windows)
         if: runner.os != 'Windows'
@@ -100,29 +94,8 @@ jobs:
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
-      - name: Verify toolkit files (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -x ./dist/airun
-          test -x "./dist/${{ matrix.frontend }}"
-          test -f ./dist/compiler/format.aos
-          test -f ./dist/compiler/validate.aos
-          test -f ./dist/compiler/route.aos
-          test -f ./dist/compiler/json.aos
-          test -f ./dist/compiler/http.aos
-          test -f ./dist/compiler/runtime.aos
-
-      - name: Verify toolkit files (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (!(Test-Path .\dist\airun.exe)) { throw "missing airun.exe" }
-          if (!(Test-Path .\dist\${{ matrix.frontend }})) { throw "missing frontend exe" }
-          if (!(Test-Path .\dist\compiler\format.aos)) { throw "missing format.aos" }
-          if (!(Test-Path .\dist\compiler\validate.aos)) { throw "missing validate.aos" }
-          if (!(Test-Path .\dist\compiler\route.aos)) { throw "missing route.aos" }
-          if (!(Test-Path .\dist\compiler\json.aos)) { throw "missing json.aos" }
-          if (!(Test-Path .\dist\compiler\http.aos)) { throw "missing http.aos" }
-          if (!(Test-Path .\dist\compiler\runtime.aos)) { throw "missing runtime.aos" }
+      - name: Upload toolkit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolkit-${{ matrix.os }}
+          path: ./dist

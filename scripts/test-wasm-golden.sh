@@ -138,6 +138,10 @@ if [[ ${http_rc} -ne 3 ]]; then
   echo "wasm cli unsupported-capability mismatch: expected exit 3, got ${http_rc}" >&2
   exit 1
 fi
+if ! rg -q 'Err#err1\(code=RUN101 message="' "${HTTP_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected RUN101 code" >&2
+  exit 1
+fi
 if ! rg -q 'sys\.http_get is not available on this target\.' "${HTTP_OUT}"; then
   echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error" >&2
   exit 1

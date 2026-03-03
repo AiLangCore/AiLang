@@ -2011,7 +2011,7 @@ static void emit_wasm_profile_capability_warnings(const char* aibc1_path, const 
             warned_targets[warned_count++] = target;
         }
         fprintf(stderr,
-            "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN001 if executed.\" nodeId=publish)\n",
+            "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",
             target,
             wasm_profile);
     }

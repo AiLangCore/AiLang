@@ -57,6 +57,10 @@ jobs:
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh
 
+      - name: Verify process host lifecycle test (Unix)
+        if: runner.os != 'Windows'
+        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_process_host --output-on-failure
+
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
         run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
@@ -72,6 +76,12 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/test-aivm-c.ps1
+
+      - name: Verify process host lifecycle test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_process_host --output-on-failure
 
       - name: Upload parity report
         if: always()

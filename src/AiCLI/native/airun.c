@@ -1063,6 +1063,61 @@ static int native_process_make_capture_paths(int handle, char* stdout_path, size
     return 1;
 }
 
+static int native_process_is_shell_builtin(const char* command)
+{
+    static const char* builtins[] = {
+        "exit",
+        "echo",
+        "cd",
+        "set"
+    };
+    size_t i;
+    if (command == NULL || command[0] == '\0') {
+        return 0;
+    }
+    for (i = 0U; i < (sizeof(builtins) / sizeof(builtins[0])); i += 1U) {
+        if (strcmp(command, builtins[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int native_process_command_exists(const char* command)
+{
+    if (command == NULL || command[0] == '\0') {
+        return 0;
+    }
+    if (native_process_is_shell_builtin(command)) {
+        return 1;
+    }
+#ifdef _WIN32
+    {
+        DWORD attrs;
+        char full_path[PATH_MAX];
+        DWORD len;
+        if (strchr(command, '\\') != NULL || strchr(command, '/') != NULL || strchr(command, ':') != NULL) {
+            attrs = GetFileAttributesA(command);
+            return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0U;
+        }
+        len = SearchPathA(NULL, command, ".exe", (DWORD)sizeof(full_path), full_path, NULL);
+        if (len > 0U && len < (DWORD)sizeof(full_path)) {
+            return 1;
+        }
+        len = SearchPathA(NULL, command, NULL, (DWORD)sizeof(full_path), full_path, NULL);
+        return len > 0U && len < (DWORD)sizeof(full_path);
+    }
+#else
+    {
+        char resolved[PATH_MAX];
+        if (strchr(command, '/') != NULL || strchr(command, '\\') != NULL) {
+            return access(command, X_OK) == 0 ? 1 : 0;
+        }
+        return find_executable_on_path(command, resolved, sizeof(resolved));
+    }
+#endif
+}
+
 static int native_process_start_command(
     NativeProcessRecord* record,
     const char* command_text,
@@ -1300,6 +1355,10 @@ static int native_syscall_process_start(
     cwd_text = args[2].string_value;
     env_text = args[3].string_value;
     if (command[0] == '\0') {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (!native_process_command_exists(command)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }

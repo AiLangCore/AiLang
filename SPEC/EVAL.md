@@ -239,3 +239,6 @@ This file is normative for `aic run` evaluation behavior.
 
 - Syscall-returned bytes and string payloads are materialized into VM-owned arenas before becoming observable runtime values.
 - `TO_STRING(bytes)` yields lowercase hex with `0x` prefix (`0x` for empty bytes).
+- `sys.bytes_at(data,index)` returns `-1` when `index` is out of range.
+- `sys.bytes_slice(data,start,length)` clamps start/length and never throws for range overflow.
+- `sys.bytes_fromBase64(text)` uses strict base64 validation; invalid input is syscall error.

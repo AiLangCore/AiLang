@@ -65,6 +65,12 @@ This file is normative for semantic validation used by `aic check` (default path
 
 - `sys.bytes_length(data)` contract:
 - args are `(bytes)` and returns int length.
+- `sys.bytes_at(data,index)` contract:
+- args are `(bytes, int)` and returns int (`0..255`, or `-1` when out of range).
+- `sys.bytes_slice(data,start,length)` contract:
+- args are `(bytes, int, int)` and returns bytes.
+- `sys.bytes_concat(left,right)` contract:
+- args are `(bytes, bytes)` and returns bytes.
 - `sys.bytes_fromBase64(text)` contract:
 - args are `(string)` and returns bytes.
 - `sys.bytes_toBase64(data)` contract:

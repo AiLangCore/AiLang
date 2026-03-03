@@ -90,6 +90,9 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 ## Bytes Syscall Value Contract
 
 - `sys.bytes_length(data)` returns byte length as int.
+- `sys.bytes_at(data,index)` returns byte value (`0..255`) or `-1` when index is out of range.
+- `sys.bytes_slice(data,start,length)` returns clamped bytes slice.
+- `sys.bytes_concat(left,right)` returns concatenated bytes.
 - `sys.bytes_fromBase64(text)` returns `bytes`.
 - `sys.bytes_toBase64(data)` returns base64 text as string.
 

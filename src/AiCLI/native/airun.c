@@ -865,13 +865,369 @@ static int native_syscall_process_argv(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_base64_decode_char(char ch)
+{
+    if (ch >= 'A' && ch <= 'Z') {
+        return (int)(ch - 'A');
+    }
+    if (ch >= 'a' && ch <= 'z') {
+        return (int)(ch - 'a') + 26;
+    }
+    if (ch >= '0' && ch <= '9') {
+        return (int)(ch - '0') + 52;
+    }
+    if (ch == '+') {
+        return 62;
+    }
+    if (ch == '/') {
+        return 63;
+    }
+    return -1;
+}
+
+#define NATIVE_BYTES_SCRATCH_CAPACITY 131072U
+static uint8_t g_native_bytes_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+static char g_native_base64_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+
+static int native_bytes_from_base64(
+    const char* input,
+    uint8_t* out_bytes,
+    size_t out_capacity,
+    size_t* out_length)
+{
+    size_t input_len;
+    size_t i;
+    size_t out_index = 0U;
+    if (out_length == NULL) {
+        return 0;
+    }
+    *out_length = 0U;
+    if (input == NULL) {
+        return 0;
+    }
+    input_len = strlen(input);
+    if (input_len == 0U) {
+        return 1;
+    }
+    if ((input_len % 4U) != 0U) {
+        return 0;
+    }
+
+    for (i = 0U; i < input_len; i += 4U) {
+        int c0 = native_base64_decode_char(input[i]);
+        int c1 = native_base64_decode_char(input[i + 1U]);
+        int c2;
+        int c3;
+        uint32_t chunk;
+        int pad = 0;
+        if (c0 < 0 || c1 < 0) {
+            return 0;
+        }
+        if (input[i + 2U] == '=') {
+            c2 = 0;
+            pad += 1;
+            if (input[i + 3U] != '=') {
+                return 0;
+            }
+            c3 = 0;
+            pad += 1;
+        } else {
+            c2 = native_base64_decode_char(input[i + 2U]);
+            if (c2 < 0) {
+                return 0;
+            }
+            if (input[i + 3U] == '=') {
+                c3 = 0;
+                pad += 1;
+            } else {
+                c3 = native_base64_decode_char(input[i + 3U]);
+                if (c3 < 0) {
+                    return 0;
+                }
+            }
+        }
+        if (pad > 0 && i + 4U != input_len) {
+            return 0;
+        }
+        chunk = ((uint32_t)c0 << 18U) |
+                ((uint32_t)c1 << 12U) |
+                ((uint32_t)c2 << 6U) |
+                (uint32_t)c3;
+
+        if (out_bytes != NULL && out_index < out_capacity) {
+            out_bytes[out_index] = (uint8_t)((chunk >> 16U) & 0xffU);
+        }
+        out_index += 1U;
+        if (pad < 2) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)((chunk >> 8U) & 0xffU);
+            }
+            out_index += 1U;
+        }
+        if (pad == 0) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)(chunk & 0xffU);
+            }
+            out_index += 1U;
+        }
+    }
+
+    if (out_bytes != NULL && out_index > out_capacity) {
+        return 0;
+    }
+    *out_length = out_index;
+    return 1;
+}
+
+static int native_bytes_to_base64(
+    const uint8_t* input,
+    size_t input_len,
+    char* out_text,
+    size_t out_capacity)
+{
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t i = 0U;
+    size_t out_index = 0U;
+
+    if (out_capacity == 0U) {
+        return 0;
+    }
+    if (input_len == 0U) {
+        if (out_capacity < 1U) {
+            return 0;
+        }
+        out_text[0] = '\0';
+        return 1;
+    }
+    if (input == NULL) {
+        return 0;
+    }
+
+    while (i < input_len) {
+        uint32_t chunk = 0U;
+        size_t remain = input_len - i;
+        size_t bytes_in_chunk = remain >= 3U ? 3U : remain;
+        chunk |= (uint32_t)input[i] << 16U;
+        if (bytes_in_chunk > 1U) {
+            chunk |= (uint32_t)input[i + 1U] << 8U;
+        }
+        if (bytes_in_chunk > 2U) {
+            chunk |= (uint32_t)input[i + 2U];
+        }
+        if (out_index + 4U >= out_capacity) {
+            return 0;
+        }
+        out_text[out_index++] = alphabet[(chunk >> 18U) & 0x3fU];
+        out_text[out_index++] = alphabet[(chunk >> 12U) & 0x3fU];
+        out_text[out_index++] = (bytes_in_chunk > 1U) ? alphabet[(chunk >> 6U) & 0x3fU] : '=';
+        out_text[out_index++] = (bytes_in_chunk > 2U) ? alphabet[chunk & 0x3fU] : '=';
+        i += bytes_in_chunk;
+    }
+    out_text[out_index] = '\0';
+    return 1;
+}
+
+static int native_syscall_bytes_length(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.length);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_at(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t index;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    index = (size_t)args[1].int_value;
+    if (index >= args[0].bytes_value.length || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.data[index]);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_slice(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t start;
+    size_t length;
+    size_t end;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value <= 0) {
+        start = 0U;
+    } else if ((uint64_t)args[1].int_value >= (uint64_t)args[0].bytes_value.length) {
+        start = args[0].bytes_value.length;
+    } else {
+        start = (size_t)args[1].int_value;
+    }
+    if (args[2].int_value <= 0) {
+        length = 0U;
+    } else {
+        length = (size_t)args[2].int_value;
+    }
+    end = start + length;
+    if (end < start || end > args[0].bytes_value.length) {
+        end = args[0].bytes_value.length;
+    }
+    if (start >= end || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bytes(&args[0].bytes_value.data[start], end - start);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_concat(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t left_len;
+    size_t right_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    left_len = args[0].bytes_value.length;
+    right_len = args[1].bytes_value.length;
+    if (left_len == 0U && right_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (left_len + right_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (left_len > 0U && args[0].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch, args[0].bytes_value.data, left_len);
+    } else if (left_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (right_len > 0U && args[1].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch + left_len, args[1].bytes_value.data, right_len);
+    } else if (right_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, left_len + right_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_from_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t out_len = 0U;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, NULL, 0U, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (out_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (out_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, g_native_bytes_scratch, out_len, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, out_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_to_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t in_len;
+    size_t out_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = args[0].bytes_value.length;
+    out_len = ((in_len + 2U) / 3U) * 4U;
+    if (out_len + 1U > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_to_base64(args[0].bytes_value.data, in_len, g_native_base64_scratch, out_len + 1U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string(g_native_base64_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[4];
+    AivmSyscallBinding bindings[10];
     AivmCResult result;
 
     if (program == NULL) {
@@ -886,10 +1242,22 @@ static int run_native_compiled_program(
     bindings[2].handler = native_syscall_stdout_write_line;
     bindings[3].target = "sys.process_argv";
     bindings[3].handler = native_syscall_process_argv;
+    bindings[4].target = "sys.bytes_length";
+    bindings[4].handler = native_syscall_bytes_length;
+    bindings[5].target = "sys.bytes_at";
+    bindings[5].handler = native_syscall_bytes_at;
+    bindings[6].target = "sys.bytes_slice";
+    bindings[6].handler = native_syscall_bytes_slice;
+    bindings[7].target = "sys.bytes_concat";
+    bindings[7].handler = native_syscall_bytes_concat;
+    bindings[8].target = "sys.bytes_fromBase64";
+    bindings[8].handler = native_syscall_bytes_from_base64;
+    bindings[9].target = "sys.bytes_toBase64";
+    bindings[9].handler = native_syscall_bytes_to_base64;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        4U,
+        10U,
         process_argv,
         process_argv_count);
 

@@ -1,3 +1,9 @@
+#ifndef _WIN32
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#endif
+
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
@@ -1236,7 +1242,9 @@ static int native_process_start_command(
             int fd_out = open(record->stdout_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
             int fd_err = open(record->stderr_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
             if (cwd_text != NULL && cwd_text[0] != '\0') {
-                (void)chdir(cwd_text);
+                if (chdir(cwd_text) != 0) {
+                    _exit(127);
+                }
             }
             if (fd_out >= 0) {
                 (void)dup2(fd_out, STDOUT_FILENO);

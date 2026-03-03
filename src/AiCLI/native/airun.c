@@ -8,6 +8,7 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <process.h>
+#include <psapi.h>
 #include <sys/stat.h>
 #include <windows.h>
 #ifndef PATH_MAX
@@ -16,8 +17,10 @@
 #define AIVM_PATH_SEP '\\'
 #define AIVM_EXE_EXT ".exe"
 #else
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #ifndef PATH_MAX
@@ -146,6 +149,81 @@ static int copy_runtime_file(const char* src, const char* dst)
     }
 #endif
     return 1;
+}
+
+static int sample_process_rss_kb(int64_t* out_rss_kb)
+{
+    if (out_rss_kb == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return 0;
+    }
+    *out_rss_kb = (int64_t)(pmc.PeakWorkingSetSize / 1024ULL);
+    return 1;
+#else
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) != 0) {
+        return 0;
+    }
+#ifdef __APPLE__
+    *out_rss_kb = (int64_t)(usage.ru_maxrss / 1024L);
+#else
+    *out_rss_kb = (int64_t)usage.ru_maxrss;
+#endif
+    return 1;
+#endif
+}
+
+static int monotonic_time_ns(int64_t* out_ns)
+{
+    if (out_ns == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    LARGE_INTEGER freq;
+    LARGE_INTEGER counter;
+    if (!QueryPerformanceFrequency(&freq) || !QueryPerformanceCounter(&counter) || freq.QuadPart <= 0) {
+        return 0;
+    }
+    *out_ns = (int64_t)((counter.QuadPart * 1000000000LL) / freq.QuadPart);
+    return 1;
+#else
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    *out_ns = ((int64_t)ts.tv_sec * 1000000000LL) + (int64_t)ts.tv_nsec;
+    return 1;
+#endif
+}
+
+static void write_toml_escaped(FILE* f, const char* value)
+{
+    const unsigned char* p = (const unsigned char*)value;
+    if (f == NULL) {
+        return;
+    }
+    if (value == NULL) {
+        return;
+    }
+    while (*p != '\0') {
+        if (*p == '\\' || *p == '"') {
+            (void)fputc('\\', f);
+            (void)fputc((int)*p, f);
+        } else if (*p == '\n') {
+            (void)fputs("\\n", f);
+        } else if (*p == '\r') {
+            (void)fputs("\\r", f);
+        } else if (*p == '\t') {
+            (void)fputs("\\t", f);
+        } else {
+            (void)fputc((int)*p, f);
+        }
+        p += 1;
+    }
 }
 
 static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
@@ -792,6 +870,8 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
+        "  debug mem <program> [--iterations <n>] [--max-growth-kb <n>] [--out <path>] [--vm=<selector>]\n"
+        "  debug profile <program> [--iterations <n>] [--max-growth-kb <n>] [--out <path>] [--vm=<selector>]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -1877,6 +1957,222 @@ static int run_via_resolved_input(const char* input, const char* const* process_
     return 2;
 }
 
+static int parse_positive_int_text(const char* text, int* out_value)
+{
+    char* end = NULL;
+    long value;
+    if (text == NULL || out_value == NULL) {
+        return 0;
+    }
+    value = strtol(text, &end, 10);
+    if (end == text || *end != '\0' || value <= 0L || value > 100000000L) {
+        return 0;
+    }
+    *out_value = (int)value;
+    return 1;
+}
+
+static int handle_debug_mem_or_profile(int argc, char** argv, int start_index, const char* mode_name)
+{
+    const char* target_path = ".";
+    const char* out_path = NULL;
+    int iterations = 20;
+    int max_growth_kb = 2048;
+    int i;
+    int run_failures = 0;
+    int unavailable = 0;
+    int64_t first_rss = 0;
+    int64_t last_rss = 0;
+    int64_t peak_rss = 0;
+    int64_t growth_kb = 0;
+    int64_t duration_total_ns = 0;
+    int64_t duration_peak_ns = 0;
+    int64_t rss_series[512];
+    int exit_codes[512];
+    int64_t duration_series_ns[512];
+    int recorded = 0;
+    FILE* out_file = NULL;
+    int close_file = 0;
+
+    if (mode_name == NULL) {
+        mode_name = "mem";
+    }
+
+    for (i = start_index; i < argc; i += 1) {
+        const char* arg = argv[i];
+        if (strcmp(arg, "--iterations") == 0) {
+            if (i + 1 >= argc || !parse_positive_int_text(argv[i + 1], &iterations)) {
+                fprintf(stderr, "Err#err1(code=RUN001 message=\"Invalid --iterations value.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (strcmp(arg, "--max-growth-kb") == 0) {
+            if (i + 1 >= argc || !parse_positive_int_text(argv[i + 1], &max_growth_kb)) {
+                fprintf(stderr, "Err#err1(code=RUN001 message=\"Invalid --max-growth-kb value.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (strcmp(arg, "--out") == 0) {
+            if (i + 1 >= argc || argv[i + 1][0] == '\0') {
+                fprintf(stderr, "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                return 2;
+            }
+            out_path = argv[i + 1];
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--vm=")) {
+            const char* vm_mode = arg + 5;
+            if (strcmp(vm_mode, "c") != 0 && !is_reserved_cv_selector(vm_mode)) {
+                return print_unsupported_vm_mode(vm_mode);
+            }
+            continue;
+        }
+        if (arg[0] == '-') {
+            fprintf(stderr, "Err#err1(code=RUN001 message=\"Unsupported debug flag.\" nodeId=argv)\n");
+            return 2;
+        }
+        target_path = arg;
+    }
+
+    if (iterations > (int)(sizeof(rss_series) / sizeof(rss_series[0]))) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"--iterations too large for debug audit.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    for (i = 0; i < iterations; i += 1) {
+        int rc;
+        int64_t t0_ns = 0;
+        int64_t t1_ns = 0;
+        int64_t rss_kb = 0;
+        int64_t elapsed_ns = 0;
+
+        if (!monotonic_time_ns(&t0_ns)) {
+            t0_ns = 0;
+        }
+        rc = run_via_resolved_input(target_path, NULL, 0U);
+        if (!monotonic_time_ns(&t1_ns)) {
+            t1_ns = t0_ns;
+        }
+        if (t1_ns > t0_ns) {
+            elapsed_ns = t1_ns - t0_ns;
+        }
+        if (!sample_process_rss_kb(&rss_kb) || rss_kb <= 0) {
+            unavailable = 1;
+            exit_codes[recorded] = rc;
+            duration_series_ns[recorded] = elapsed_ns;
+            rss_series[recorded] = 0;
+            recorded += 1;
+            break;
+        }
+
+        if (rc != 0) {
+            run_failures += 1;
+        }
+
+        if (recorded == 0) {
+            first_rss = rss_kb;
+            peak_rss = rss_kb;
+        }
+        last_rss = rss_kb;
+        if (rss_kb > peak_rss) {
+            peak_rss = rss_kb;
+        }
+        duration_total_ns += elapsed_ns;
+        if (elapsed_ns > duration_peak_ns) {
+            duration_peak_ns = elapsed_ns;
+        }
+
+        rss_series[recorded] = rss_kb;
+        exit_codes[recorded] = rc;
+        duration_series_ns[recorded] = elapsed_ns;
+        recorded += 1;
+    }
+
+    if (recorded > 0) {
+        growth_kb = last_rss - first_rss;
+    }
+
+    if (out_path != NULL) {
+        out_file = fopen(out_path, "wb");
+        if (out_file == NULL) {
+            fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to write debug audit output.\" nodeId=debug)\n");
+            return 2;
+        }
+        close_file = 1;
+    } else {
+        out_file = stdout;
+    }
+
+    (void)fprintf(out_file, "format = \"aivm_debug_mem_v1\"\n");
+    (void)fprintf(out_file, "mode = \"");
+    write_toml_escaped(out_file, mode_name);
+    (void)fprintf(out_file, "\"\n");
+    (void)fprintf(out_file, "target = \"");
+    write_toml_escaped(out_file, target_path);
+    (void)fprintf(out_file, "\"\n");
+    (void)fprintf(out_file, "iterations_requested = %d\n", iterations);
+    (void)fprintf(out_file, "iterations_recorded = %d\n", recorded);
+    (void)fprintf(out_file, "max_growth_kb = %d\n", max_growth_kb);
+    (void)fprintf(out_file, "first_rss_kb = %lld\n", (long long)first_rss);
+    (void)fprintf(out_file, "last_rss_kb = %lld\n", (long long)last_rss);
+    (void)fprintf(out_file, "peak_rss_kb = %lld\n", (long long)peak_rss);
+    (void)fprintf(out_file, "growth_kb = %lld\n", (long long)growth_kb);
+    (void)fprintf(out_file, "duration_total_ns = %lld\n", (long long)duration_total_ns);
+    (void)fprintf(out_file, "duration_peak_ns = %lld\n", (long long)duration_peak_ns);
+    if (unavailable) {
+        (void)fprintf(out_file, "status = \"unavailable\"\n");
+    } else if (run_failures > 0) {
+        (void)fprintf(out_file, "status = \"fail\"\n");
+    } else if (growth_kb > (int64_t)max_growth_kb) {
+        (void)fprintf(out_file, "status = \"fail\"\n");
+    } else {
+        (void)fprintf(out_file, "status = \"pass\"\n");
+    }
+    (void)fprintf(out_file, "run_failures = %d\n", run_failures);
+    (void)fprintf(out_file, "rss_series_kb = [");
+    for (i = 0; i < recorded; i += 1) {
+        if (i > 0) {
+            (void)fprintf(out_file, ", ");
+        }
+        (void)fprintf(out_file, "%lld", (long long)rss_series[i]);
+    }
+    (void)fprintf(out_file, "]\n");
+    (void)fprintf(out_file, "exit_codes = [");
+    for (i = 0; i < recorded; i += 1) {
+        if (i > 0) {
+            (void)fprintf(out_file, ", ");
+        }
+        (void)fprintf(out_file, "%d", exit_codes[i]);
+    }
+    (void)fprintf(out_file, "]\n");
+    (void)fprintf(out_file, "duration_series_ns = [");
+    for (i = 0; i < recorded; i += 1) {
+        if (i > 0) {
+            (void)fprintf(out_file, ", ");
+        }
+        (void)fprintf(out_file, "%lld", (long long)duration_series_ns[i]);
+    }
+    (void)fprintf(out_file, "]\n");
+
+    if (close_file) {
+        (void)fclose(out_file);
+        printf("Ok#ok1(type=string value=\"%s\")\n", out_path);
+    }
+
+    if (unavailable) {
+        return 3;
+    }
+    if (run_failures > 0 || growth_kb > (int64_t)max_growth_kb) {
+        return 1;
+    }
+    return 0;
+}
+
 static int handle_run(int argc, char** argv)
 {
     RunTarget target;
@@ -1913,8 +2209,14 @@ static int handle_debug(int argc, char** argv)
             (const char* const*)&argv[target.app_arg_start],
             (size_t)target.app_arg_count);
     }
+    if (argc >= 3 && strcmp(argv[2], "mem") == 0) {
+        return handle_debug_mem_or_profile(argc, argv, 3, "mem");
+    }
+    if (argc >= 3 && strcmp(argv[2], "profile") == 0) {
+        return handle_debug_mem_or_profile(argc, argv, 3, "profile");
+    }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports only: debug run <program>\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run|mem|profile\" nodeId=command)\n");
     return 2;
 }
 

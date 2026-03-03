@@ -298,6 +298,7 @@ static int dirname_of(const char* path, char* out, size_t out_len)
 static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
 {
 #ifdef _WIN32
+    (void)argv0;
     if (out == NULL || out_len == 0U) {
         return 0;
     }

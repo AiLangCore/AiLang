@@ -829,7 +829,7 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>] [--wasm-profile <web|cli>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>] [--wasm-profile <spa|cli|fullstack>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -2387,7 +2387,7 @@ static int handle_publish(int argc, char** argv)
     const char* program_input = NULL;
     const char* target = NULL;
     const char* out_dir = "dist";
-    const char* wasm_profile = "web";
+    const char* wasm_profile = "spa";
     int wasm_profile_set = 0;
     char built_aibc1[PATH_MAX];
     char artifact_dir[PATH_MAX];
@@ -2407,6 +2407,11 @@ static int handle_publish(int argc, char** argv)
     char wasm_web_wasm_dst[PATH_MAX];
     char wasm_web_module_name[160];
     char wasm_web_wasm_name[160];
+    char wasm_client_dir[PATH_MAX];
+    char wasm_server_dir[PATH_MAX];
+    char wasm_server_readme[PATH_MAX];
+    char wasm_runtime_out_dir[PATH_MAX];
+    char client_aibc1_dst[PATH_MAX];
     char manifest_target[64];
     int i;
 
@@ -2437,9 +2442,14 @@ static int handle_publish(int argc, char** argv)
             }
             wasm_profile = argv[++i];
             wasm_profile_set = 1;
-            if (strcmp(wasm_profile, "web") != 0 && strcmp(wasm_profile, "cli") != 0) {
+            if (strcmp(wasm_profile, "web") == 0) {
+                wasm_profile = "spa";
+            }
+            if (strcmp(wasm_profile, "spa") != 0 &&
+                strcmp(wasm_profile, "cli") != 0 &&
+                strcmp(wasm_profile, "fullstack") != 0) {
                 fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Unsupported --wasm-profile value. Use web or cli.\" nodeId=argv)\n");
+                    "Err#err1(code=RUN001 message=\"Unsupported --wasm-profile value. Use spa, cli, or fullstack.\" nodeId=argv)\n");
                 return 2;
             }
             continue;
@@ -2515,12 +2525,45 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
+    if (strcmp(target, "wasm32") == 0 && strcmp(wasm_profile, "fullstack") == 0) {
+        if (!join_path(out_dir, "client", wasm_client_dir, sizeof(wasm_client_dir)) ||
+            !join_path(out_dir, "server", wasm_server_dir, sizeof(wasm_server_dir)) ||
+            !ensure_directory(wasm_client_dir) ||
+            !ensure_directory(wasm_server_dir) ||
+            !join_path(wasm_client_dir, "app.aibc1", client_aibc1_dst, sizeof(client_aibc1_dst)) ||
+            !copy_file(built_aibc1, client_aibc1_dst)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to initialize wasm fullstack layout.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(wasm_server_dir, "README.md", wasm_server_readme, sizeof(wasm_server_readme)) ||
+            !write_text_file(
+                wasm_server_readme,
+                "# server (AiLang native)\n\nThis directory is intentionally non-wasm.\nPublish your server project with a native target (osx/linux/windows).\n",
+                0)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to write fullstack server guidance.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(wasm_runtime_out_dir, sizeof(wasm_runtime_out_dir), "%s", wasm_client_dir) >= (int)sizeof(wasm_runtime_out_dir)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime output path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+    } else {
+        if (snprintf(wasm_runtime_out_dir, sizeof(wasm_runtime_out_dir), "%s", out_dir) >= (int)sizeof(wasm_runtime_out_dir)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime output path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+    }
+
     if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
         return 2;
     }
-    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+    if (!join_path(wasm_runtime_out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
         return 2;
@@ -2536,10 +2579,11 @@ static int handle_publish(int argc, char** argv)
         if (snprintf(readme_content, sizeof(readme_content),
                 "# %s (wasm32)\n\n"
                 "Artifacts:\n"
-                "- `%s`\n"
+                "- `%s/%s`\n"
                 "- `app.aibc1`\n\n"
                 "Profile: %s\n",
                 publish_app_name,
+                (strcmp(wasm_profile, "fullstack") == 0) ? "client" : ".",
                 publish_runtime_name,
                 wasm_profile) >= (int)sizeof(readme_content)) {
             fprintf(stderr,
@@ -2566,15 +2610,15 @@ static int handle_publish(int argc, char** argv)
                     "Err#err1(code=RUN001 message=\"Wasm launcher content overflow.\" nodeId=publish)\n");
                 return 2;
             }
-            if (!join_path(out_dir, "run.sh", wasm_run_sh, sizeof(wasm_run_sh)) ||
-                !join_path(out_dir, "run.ps1", wasm_run_ps1, sizeof(wasm_run_ps1)) ||
+            if (!join_path(wasm_runtime_out_dir, "run.sh", wasm_run_sh, sizeof(wasm_run_sh)) ||
+                !join_path(wasm_runtime_out_dir, "run.ps1", wasm_run_ps1, sizeof(wasm_run_ps1)) ||
                 !write_text_file(wasm_run_sh, run_sh_content, 1) ||
                 !write_text_file(wasm_run_ps1, run_ps1_content, 0)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to write wasm CLI launcher files.\" nodeId=publish)\n");
                 return 2;
             }
-        } else {
+        } else if (strcmp(wasm_profile, "spa") == 0 || strcmp(wasm_profile, "fullstack") == 0) {
             if (snprintf(wasm_web_module_name, sizeof(wasm_web_module_name), "%s.mjs", publish_app_name) >= (int)sizeof(wasm_web_module_name) ||
                 snprintf(wasm_web_wasm_name, sizeof(wasm_web_wasm_name), "%s.web.wasm", publish_app_name) >= (int)sizeof(wasm_web_wasm_name)) {
                 fprintf(stderr,
@@ -2583,8 +2627,8 @@ static int handle_publish(int argc, char** argv)
             }
             if (!join_path(artifact_dir, "aivm-runtime-wasm32-web.mjs", wasm_web_module_src, sizeof(wasm_web_module_src)) ||
                 !join_path(artifact_dir, "aivm-runtime-wasm32-web.wasm", wasm_web_wasm_src, sizeof(wasm_web_wasm_src)) ||
-                !join_path(out_dir, wasm_web_module_name, wasm_web_module_dst, sizeof(wasm_web_module_dst)) ||
-                !join_path(out_dir, wasm_web_wasm_name, wasm_web_wasm_dst, sizeof(wasm_web_wasm_dst)) ||
+                !join_path(wasm_runtime_out_dir, wasm_web_module_name, wasm_web_module_dst, sizeof(wasm_web_module_dst)) ||
+                !join_path(wasm_runtime_out_dir, wasm_web_wasm_name, wasm_web_wasm_dst, sizeof(wasm_web_wasm_dst)) ||
                 !copy_runtime_file(wasm_web_module_src, wasm_web_module_dst) ||
                 !copy_runtime_file(wasm_web_wasm_src, wasm_web_wasm_dst)) {
                 fprintf(stderr,
@@ -2631,14 +2675,18 @@ static int handle_publish(int argc, char** argv)
                     "Err#err1(code=RUN001 message=\"Wasm web bootstrap content overflow.\" nodeId=publish)\n");
                 return 2;
             }
-            if (!join_path(out_dir, "index.html", wasm_index_html, sizeof(wasm_index_html)) ||
-                !join_path(out_dir, "main.js", wasm_main_js, sizeof(wasm_main_js)) ||
+            if (!join_path(wasm_runtime_out_dir, "index.html", wasm_index_html, sizeof(wasm_index_html)) ||
+                !join_path(wasm_runtime_out_dir, "main.js", wasm_main_js, sizeof(wasm_main_js)) ||
                 !write_text_file(wasm_index_html, index_html, 0) ||
                 !write_text_file(wasm_main_js, main_js, 0)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to write wasm web files.\" nodeId=publish)\n");
                 return 2;
             }
+        } else {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Unsupported wasm profile.\" nodeId=publish)\n");
+            return 2;
         }
     }
 

@@ -1975,6 +1975,7 @@ static int parse_positive_int_text(const char* text, int* out_value)
 static int handle_debug_mem_or_profile(int argc, char** argv, int start_index, const char* mode_name)
 {
     const char* target_path = ".";
+    int target_explicit = 0;
     const char* out_path = NULL;
     int iterations = 20;
     int max_growth_kb = 2048;
@@ -2036,7 +2037,12 @@ static int handle_debug_mem_or_profile(int argc, char** argv, int start_index, c
             fprintf(stderr, "Err#err1(code=RUN001 message=\"Unsupported debug flag.\" nodeId=argv)\n");
             return 2;
         }
+        if (target_explicit) {
+            fprintf(stderr, "Err#err1(code=RUN001 message=\"Too many positional arguments for debug audit.\" nodeId=argv)\n");
+            return 2;
+        }
         target_path = arg;
+        target_explicit = 1;
     }
 
     if (iterations > (int)(sizeof(rss_series) / sizeof(rss_series[0]))) {

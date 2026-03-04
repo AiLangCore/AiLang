@@ -1951,25 +1951,25 @@ static int run_native_compiled_program(
         return 2;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = native_syscall_stdout_write_line;
     bindings[1].target = "io.print";
     bindings[1].handler = native_syscall_stdout_write_line;
     bindings[2].target = "io.write";
     bindings[2].handler = native_syscall_stdout_write_line;
-    bindings[3].target = "sys.process_argv";
+    bindings[3].target = "sys.process.args";
     bindings[3].handler = native_syscall_process_argv;
-    bindings[4].target = "sys.bytes_length";
+    bindings[4].target = "sys.bytes.length";
     bindings[4].handler = native_syscall_bytes_length;
-    bindings[5].target = "sys.bytes_at";
+    bindings[5].target = "sys.bytes.at";
     bindings[5].handler = native_syscall_bytes_at;
-    bindings[6].target = "sys.bytes_slice";
+    bindings[6].target = "sys.bytes.slice";
     bindings[6].handler = native_syscall_bytes_slice;
-    bindings[7].target = "sys.bytes_concat";
+    bindings[7].target = "sys.bytes.concat";
     bindings[7].handler = native_syscall_bytes_concat;
-    bindings[8].target = "sys.bytes_fromBase64";
+    bindings[8].target = "sys.bytes.fromBase64";
     bindings[8].handler = native_syscall_bytes_from_base64;
-    bindings[9].target = "sys.bytes_toBase64";
+    bindings[9].target = "sys.bytes.toBase64";
     bindings[9].handler = native_syscall_bytes_to_base64;
     bindings[10].target = "sys.fs.file.delete";
     bindings[10].handler = native_syscall_fs_file_delete;
@@ -2683,8 +2683,8 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
             }
-            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout_writeLine") == 0) {
-                mapped = "sys.stdout_writeLine";
+            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout.writeLine") == 0) {
+                mapped = "sys.stdout.writeLine";
             } else {
                 return simple_fail("call unsupported target");
             }
@@ -3105,7 +3105,7 @@ static int bench_execute_program_iterations(const AivmProgram* program, int iter
         return 0;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = bench_syscall_sink;
     bindings[1].target = "io.print";
     bindings[1].handler = bench_syscall_sink;

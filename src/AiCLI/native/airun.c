@@ -46,8 +46,9 @@ static int dirname_of(const char* path, char* out, size_t out_len);
 static int simple_resolve_path(const char* base_file, const char* import_path, char* out_path, size_t out_path_len);
 static int simple_fail(const char* message);
 static int simple_failf(const char* fmt, ...);
+static const char* native_build_error(void);
 
-#define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v1"
+#define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-04-map-field-cachefix-v1"
 
 static int ends_with(const char* value, const char* suffix)
@@ -3476,14 +3477,6 @@ static void source_graph_hash_update_u64(uint64_t* state, const unsigned char* b
     }
 }
 
-static void source_graph_hash_update_text(uint64_t* state, const char* text)
-{
-    if (state == NULL || text == NULL) {
-        return;
-    }
-    source_graph_hash_update_u64(state, (const unsigned char*)text, strlen(text));
-}
-
 static int source_graph_set_contains(const SourceGraphSet* set, const char* path)
 {
     size_t i;
@@ -3517,7 +3510,29 @@ static int source_graph_set_add(SourceGraphSet* set, const char* path)
     return 1;
 }
 
-static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uint64_t* hash_state)
+static void source_graph_hash_update_pair(
+    uint64_t* state_a,
+    uint64_t* state_b,
+    const unsigned char* bytes,
+    size_t len)
+{
+    source_graph_hash_update_u64(state_a, bytes, len);
+    source_graph_hash_update_u64(state_b, bytes, len);
+}
+
+static void source_graph_hash_update_pair_text(uint64_t* state_a, uint64_t* state_b, const char* text)
+{
+    if (text == NULL) {
+        return;
+    }
+    source_graph_hash_update_pair(state_a, state_b, (const unsigned char*)text, strlen(text));
+}
+
+static int source_graph_hash_file(
+    const char* path,
+    SourceGraphSet* visited,
+    uint64_t* hash_state_a,
+    uint64_t* hash_state_b)
 {
     unsigned char* text_bytes = NULL;
     size_t text_len = 0U;
@@ -3526,7 +3541,7 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
     const char* open_brace;
     const char* close_brace;
     const char* cursor;
-    if (path == NULL || visited == NULL || hash_state == NULL) {
+    if (path == NULL || visited == NULL || hash_state_a == NULL || hash_state_b == NULL) {
         return 0;
     }
     if (source_graph_set_contains(visited, path)) {
@@ -3549,11 +3564,11 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
     text[text_len] = '\0';
     free(text_bytes);
 
-    source_graph_hash_update_text(hash_state, "file:");
-    source_graph_hash_update_text(hash_state, path);
-    source_graph_hash_update_text(hash_state, "\n");
-    source_graph_hash_update_u64(hash_state, (const unsigned char*)text, text_len);
-    source_graph_hash_update_text(hash_state, "\n");
+    source_graph_hash_update_pair_text(hash_state_a, hash_state_b, "file:");
+    source_graph_hash_update_pair_text(hash_state_a, hash_state_b, path);
+    source_graph_hash_update_pair_text(hash_state_a, hash_state_b, "\n");
+    source_graph_hash_update_pair(hash_state_a, hash_state_b, (const unsigned char*)text, text_len);
+    source_graph_hash_update_pair_text(hash_state_a, hash_state_b, "\n");
 
     program_pos = strstr(text, "Program#");
     if (program_pos == NULL) {
@@ -3585,7 +3600,7 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
                 free(text);
                 return 0;
             }
-            if (!source_graph_hash_file(resolved, visited, hash_state)) {
+            if (!source_graph_hash_file(resolved, visited, hash_state_a, hash_state_b)) {
                 free(text);
                 return 0;
             }
@@ -3598,23 +3613,29 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
 
 static int compute_source_graph_cache_key(const char* source_aos, char* out_hex, size_t out_hex_len)
 {
-    uint64_t hash_state = 1469598103934665603ULL;
+    uint64_t hash_state_a = 1469598103934665603ULL;
+    uint64_t hash_state_b = 1099511628211ULL;
     SourceGraphSet visited;
     char cap_text[64];
-    if (source_aos == NULL || out_hex == NULL || out_hex_len < 17U) {
+    if (source_aos == NULL || out_hex == NULL || out_hex_len < 33U) {
         return 0;
     }
     memset(&visited, 0, sizeof(visited));
-    source_graph_hash_update_text(&hash_state, AIRUN_NATIVE_CACHE_SCHEMA);
-    source_graph_hash_update_text(&hash_state, "|compiler=");
-    source_graph_hash_update_text(&hash_state, AIRUN_NATIVE_COMPILER_FINGERPRINT);
-    source_graph_hash_update_text(&hash_state, "|inst-cap=");
+    source_graph_hash_update_pair_text(&hash_state_a, &hash_state_b, AIRUN_NATIVE_CACHE_SCHEMA);
+    source_graph_hash_update_pair_text(&hash_state_a, &hash_state_b, "|compiler=");
+    source_graph_hash_update_pair_text(&hash_state_a, &hash_state_b, AIRUN_NATIVE_COMPILER_FINGERPRINT);
+    source_graph_hash_update_pair_text(&hash_state_a, &hash_state_b, "|inst-cap=");
     (void)snprintf(cap_text, sizeof(cap_text), "%u", (unsigned)AIVM_PROGRAM_MAX_INSTRUCTIONS);
-    source_graph_hash_update_text(&hash_state, cap_text);
-    if (!source_graph_hash_file(source_aos, &visited, &hash_state)) {
+    source_graph_hash_update_pair_text(&hash_state_a, &hash_state_b, cap_text);
+    if (!source_graph_hash_file(source_aos, &visited, &hash_state_a, &hash_state_b)) {
         return 0;
     }
-    (void)snprintf(out_hex, out_hex_len, "%016llx", (unsigned long long)hash_state);
+    (void)snprintf(
+        out_hex,
+        out_hex_len,
+        "%016llx%016llx",
+        (unsigned long long)hash_state_a,
+        (unsigned long long)hash_state_b);
     return 1;
 }
 
@@ -4722,20 +4743,27 @@ static int handle_run(int argc, char** argv)
     if (target.program_path != NULL &&
         !ends_with(target.program_path, ".aibc1") &&
         !ends_with(target.program_path, ".aibundle")) {
-        if (derive_build_out_dir(target.program_path, out_dir, sizeof(out_dir))) {
-            build_rc = build_input_to_aibc1(
-                target.program_path,
-                out_dir,
-                app_path,
-                sizeof(app_path),
-                target.use_cache);
-            if (build_rc == 1) {
-                return run_native_aibc1(
-                    app_path,
-                    (const char* const*)&argv[target.app_arg_start],
-                    (size_t)target.app_arg_count);
-            }
+        if (!derive_build_out_dir(target.program_path, out_dir, sizeof(out_dir))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native build failed: could not derive output directory.\" nodeId=build)\n");
+            return 2;
         }
+        build_rc = build_input_to_aibc1(
+            target.program_path,
+            out_dir,
+            app_path,
+            sizeof(app_path),
+            target.use_cache);
+        if (build_rc != 1) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native build failed: %s\" nodeId=build)\n",
+                native_build_error());
+            return 2;
+        }
+        return run_native_aibc1(
+            app_path,
+            (const char* const*)&argv[target.app_arg_start],
+            (size_t)target.app_arg_count);
     }
 
     return run_via_resolved_input(
@@ -5078,10 +5106,11 @@ static int build_input_to_aibc1(
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
     char cache_root[PATH_MAX];
-    char cache_key[32];
+    char cache_key[40];
     char cache_key_dir[PATH_MAX];
     char cache_app_path[PATH_MAX];
     AivmProgram program;
+    int explicit_aibc1_input;
 
     g_native_build_error[0] = '\0';
 
@@ -5098,7 +5127,12 @@ static int build_input_to_aibc1(
         return 0;
     }
 
-    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+    explicit_aibc1_input = ends_with(program_input, ".aibc1");
+    if (explicit_aibc1_input) {
+        if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+            set_native_build_error("could not resolve explicit .aibc1 input");
+            return 0;
+        }
         if (strcmp(resolved_program, out_app_path) == 0) {
             return 1;
         }

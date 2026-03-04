@@ -114,8 +114,13 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   exit 1
 fi
 
-if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" ]]; then
-  echo "wasm profile mismatch: fullstack publish did not emit client/server layout" >&2
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit AiLang server scaffold layout" >&2
+  exit 1
+fi
+
+if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.ps1" ]]; then
+  echo "wasm profile mismatch: fullstack publish should not emit C bridge run scripts" >&2
   exit 1
 fi
 

@@ -1172,7 +1172,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "# AiLang wasm fullstack package\n\n"
             "This folder contains an AiLang server scaffold.\n"
             "Client web assets are colocated in `www/` and also mirrored in `../client/`.\n"
-            "The web client calls websocket endpoint `ws://<host>:8765` by default.\n"
+            "The app launched by `../run` is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
             "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n"
             "Implement remote capability routing in `src/app.aos` using AiLang `sys.net.*` primitives and the channel contract in `SPEC/WASM_REMOTE_CHANNEL.md`.\n") >= (int)sizeof(server_readme)) {
         return 0;
@@ -1203,7 +1203,6 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n"
             "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-            "PORT=\"${PORT:-8080}\"\n"
             "AIRUN_BIN=\"${AIRUN_BIN:-}\"\n"
             "if [[ -z \"${AIRUN_BIN}\" ]]; then\n"
             "  if [[ -x \"${DIR}/server/runtime/%s\" ]]; then AIRUN_BIN=\"${DIR}/server/runtime/%s\";\n"
@@ -1215,42 +1214,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "  echo \"Err#err1(code=RUN001 message=\\\"airun not found; set AIRUN_BIN.\\\" nodeId=publish)\" >&2\n"
             "  exit 2\n"
             "fi\n"
-            "PYTHON_BIN=\"python3\"\n"
-            "if ! command -v \"${PYTHON_BIN}\" >/dev/null 2>&1; then PYTHON_BIN=\"python\"; fi\n"
-            "if ! command -v \"${PYTHON_BIN}\" >/dev/null 2>&1; then\n"
-            "  echo \"Err#err1(code=RUN001 message=\\\"python not found; install python3 to serve server/www.\\\" nodeId=publish)\" >&2\n"
-            "  exit 2\n"
-            "fi\n"
-            "port_in_use=0\n"
-            "if command -v lsof >/dev/null 2>&1; then\n"
-            "  if lsof -nP -iTCP:\"${PORT}\" -sTCP:LISTEN >/dev/null 2>&1; then port_in_use=1; fi\n"
-            "elif ! \"${PYTHON_BIN}\" -c \"import socket,sys\n"
-            "s=socket.socket()\n"
-            "s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n"
-            "try:\n"
-            "  s.bind(('127.0.0.1', int(sys.argv[1])))\n"
-            "except OSError:\n"
-            "  raise SystemExit(1)\n"
-            "finally:\n"
-            "  s.close()\n"
-            "raise SystemExit(0)\" \"${PORT}\"; then\n"
-            "  port_in_use=1\n"
-            "fi\n"
-            "if [[ \"${port_in_use}\" != \"0\" ]]; then\n"
-            "  echo \"Err#err1(code=RUN001 message=\\\"Port ${PORT} is already in use; stop prior fullstack server or choose another PORT.\\\" nodeId=publish)\" >&2\n"
-            "  exit 2\n"
-            "fi\n"
-            "echo \"[fullstack] serving static client from ${DIR}/server/www at http://localhost:${PORT}\" >&2\n"
             "echo \"[fullstack] starting AiLang server app: ${DIR}/server/project.aiproj\" >&2\n"
-            "echo \"[fullstack] press Ctrl+C to stop\" >&2\n"
-            "\"${PYTHON_BIN}\" -m http.server \"${PORT}\" --directory \"${DIR}/server/www\" >/dev/null 2>&1 &\n"
-            "STATIC_PID=$!\n"
-            "cleanup() { kill \"${STATIC_PID}\" >/dev/null 2>&1 || true; }\n"
-            "trap cleanup EXIT INT TERM\n"
-            "\"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n"
-            "APP_RC=$?\n"
-            "cleanup\n"
-            "exit ${APP_RC}\n",
+            "echo \"[fullstack] app must self-host client assets from ${DIR}/server/www\" >&2\n"
+            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n",
             server_runtime_bin,
             server_runtime_bin) >= (int)sizeof(root_run)) {
         return 0;
@@ -1260,23 +1226,10 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             sizeof(root_run_ps1),
             "$ErrorActionPreference = 'Stop'\n"
             "$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
-            "$port = if ($env:PORT) { $env:PORT } else { '8080' }\n"
             "$airun = if ($env:AIRUN_BIN) { $env:AIRUN_BIN } elseif (Test-Path (Join-Path $dir 'server/runtime/%s')) { Join-Path $dir 'server/runtime/%s' } elseif (Test-Path (Join-Path $dir '../../tools/airun.exe')) { Join-Path $dir '../../tools/airun.exe' } elseif (Test-Path (Join-Path $dir '../../tools/airun')) { Join-Path $dir '../../tools/airun' } else { 'airun' }\n"
-            "$python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } elseif (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { $null }\n"
-            "if (-not $python) { throw 'python not found; install python3 to serve server/www.' }\n"
-            "$portInUse = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() | Where-Object { $_.Port -eq [int]$port }\n"
-            "if ($portInUse) { throw \"Err#err1(code=RUN001 message=\\\"Port $port is already in use; stop prior fullstack server or choose another PORT.\\\" nodeId=publish)\" }\n"
-            "$serverWww = Join-Path $dir 'server/www'\n"
-            "Write-Host \"[fullstack] serving static client from $serverWww at http://localhost:$port\"\n"
             "Write-Host \"[fullstack] starting AiLang server app: $(Join-Path $dir 'server/project.aiproj')\"\n"
-            "Write-Host \"[fullstack] press Ctrl+C to stop\"\n"
-            "$httpArgs = @('-m','http.server',$port,'--directory',$serverWww)\n"
-            "$static = Start-Process -FilePath $python -ArgumentList $httpArgs -PassThru -WindowStyle Hidden\n"
-            "try {\n"
-            "  & $airun run (Join-Path $dir 'server/project.aiproj') @args\n"
-            "} finally {\n"
-            "  if ($static -and -not $static.HasExited) { Stop-Process -Id $static.Id -Force }\n"
-            "}\n",
+            "Write-Host \"[fullstack] app must self-host client assets from $(Join-Path $dir 'server/www')\"\n"
+            "& $airun run (Join-Path $dir 'server/project.aiproj') @args\n",
             server_runtime_bin,
             server_runtime_bin) >= (int)sizeof(root_run_ps1)) {
         return 0;

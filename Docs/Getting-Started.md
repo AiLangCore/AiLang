@@ -51,6 +51,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
   - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` AiLang scaffold (`project.aiproj`, `src/app.aos`, `README.md`) plus root launchers (`run`, `run.ps1`) and bundled host runtime in `server/runtime/`.
     - optional override: `--wasm-fullstack-host-target <rid>`
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`
+    - launchers run only `airun run server/project.aiproj`; the AiLang app is responsible for self-hosting `server/www`.
   - malformed bytecode/source inputs are rejected deterministically with `DEV008` at publish time.
 
 ## Failure Codes

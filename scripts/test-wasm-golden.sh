@@ -216,6 +216,10 @@ if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBL
   echo "wasm profile mismatch: fullstack publish should not emit C bridge run scripts" >&2
   exit 1
 fi
+if rg -q 'python|http\\.server' "${PUBLISH_FULLSTACK_DIR}/run" "${PUBLISH_FULLSTACK_DIR}/run.ps1"; then
+  echo "wasm profile mismatch: fullstack launchers must not depend on external python/http static server" >&2
+  exit 1
+fi
 
 mkdir -p "${MANIFEST_HOST_TARGET_DIR}/src"
 cp "${PUBLISH_FULLSTACK_DIR}/app.aibc1" "${MANIFEST_HOST_TARGET_DIR}/src/app.aibc1"

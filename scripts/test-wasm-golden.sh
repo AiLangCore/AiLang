@@ -45,6 +45,8 @@ WASM_STDIN_EOF_CASES=(
   "wasm_console_readallstdin_eof"
 )
 PROCESS_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
+FS_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_fs_file_read.aos"
+NET_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_net_tcp_connect.aos"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
 PUBLISH_FULLSTACK_DIR="${TMP_DIR}/publish-fullstack"
@@ -55,6 +57,10 @@ PROCESS_OUT="${TMP_DIR}/process.out"
 PROCESS_ERR="${TMP_DIR}/process.err"
 PROCESS_SPA_WARN="${TMP_DIR}/process-spa.warn"
 PROCESS_FULLSTACK_WARN="${TMP_DIR}/process-fullstack.warn"
+FS_SPA_WARN="${TMP_DIR}/fs-spa.warn"
+FS_FULLSTACK_WARN="${TMP_DIR}/fs-fullstack.warn"
+NET_SPA_WARN="${TMP_DIR}/net-spa.warn"
+NET_FULLSTACK_WARN="${TMP_DIR}/net-fullstack.warn"
 MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
 MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
 
@@ -219,6 +225,10 @@ done
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"
+./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/fs-spa" >/dev/null 2>"${FS_SPA_WARN}"
+./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/fs-fullstack" >/dev/null 2>"${FS_FULLSTACK_WARN}"
+./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/net-spa" >/dev/null 2>"${NET_SPA_WARN}"
+./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/net-fullstack" >/dev/null 2>"${NET_FULLSTACK_WARN}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
 echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
@@ -354,6 +364,22 @@ if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not availabl
 fi
 if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'fullstack'" "${PROCESS_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'spa'" "${FS_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'fullstack'" "${FS_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'spa'" "${NET_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'fullstack'" "${NET_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
   exit 1
 fi
 

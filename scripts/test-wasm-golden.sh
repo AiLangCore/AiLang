@@ -191,6 +191,26 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
   exit 1
 fi
+if ! rg -Fq 'AIVM_REMOTE_MODE' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit remote mode switch in main.js" >&2
+  exit 1
+fi
+if ! rg -Fq 'globalThis.AiLang' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit AiLang root bridge in main.js" >&2
+  exit 1
+fi
+if ! rg -Fq 'stdin = {' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdin queue API in main.js" >&2
+  exit 1
+fi
+if ! rg -Fq '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdin drain bridge in main.js" >&2
+  exit 1
+fi
+if ! rg -Fq 'console.log' "${PUBLISH_SPA_DIR}/main.js" || ! rg -Fq 'console.error' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdout/stderr console mirrors in main.js" >&2
+  exit 1
+fi
 if ! cmp -s "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
   echo "wasm profile mismatch: spa publish did not copy web runtime wasm artifact" >&2
   exit 1
@@ -198,6 +218,18 @@ fi
 
 if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.mjs" ]]; then
   echo "wasm profile mismatch: fullstack publish did not emit root app + www layout" >&2
+  exit 1
+fi
+if ! rg -Fq 'AIVM_REMOTE_MODE' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit remote mode switch in www/main.js" >&2
+  exit 1
+fi
+if ! rg -Fq '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit remote call bridge in www/main.js" >&2
+  exit 1
+fi
+if ! rg -Fq '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit stdin drain bridge in www/main.js" >&2
   exit 1
 fi
 if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then

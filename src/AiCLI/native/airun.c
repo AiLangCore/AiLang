@@ -43,8 +43,11 @@ static int join_path(const char* left, const char* right, char* out, size_t out_
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int resolve_executable_path(const char* argv0, char* out, size_t out_len);
 static int dirname_of(const char* path, char* out, size_t out_len);
+static int simple_resolve_path(const char* base_file, const char* import_path, char* out_path, size_t out_path_len);
 static int simple_fail(const char* message);
 static int simple_failf(const char* fmt, ...);
+
+#define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v1"
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -814,8 +817,9 @@ static void print_usage(void)
         "Usage: airun <command> [options]\n"
         "\n"
         "Commands:\n"
-        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>]\n"
+        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache]\n"
+        "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>] [--no-cache]\n"
+        "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
@@ -2431,8 +2435,20 @@ static int parse_attr_span(const char* attrs, const char* key, char* out, size_t
     }
     vstart = pos + strlen(needle);
     if (*vstart == '"') {
+        int escaped = 0;
         vstart += 1;
-        vend = strchr(vstart, '"');
+        vend = vstart;
+        while (*vend != '\0') {
+            if (!escaped && *vend == '"') {
+                break;
+            }
+            if (!escaped && *vend == '\\') {
+                escaped = 1;
+            } else {
+                escaped = 0;
+            }
+            vend += 1;
+        }
     } else {
         vend = vstart;
         while (*vend != '\0' && *vend != ' ' && *vend != '\t' && *vend != '\r' && *vend != '\n') {
@@ -2584,6 +2600,8 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
     MAP_OP(MAKE_LIT_STRING)
     MAP_OP(MAKE_LIT_INT)
     MAP_OP(MAKE_NODE)
+    MAP_OP(MAKE_FIELD_STRING)
+    MAP_OP(MAKE_MAP)
 #undef MAP_OP
     return 0;
 }
@@ -3021,7 +3039,7 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
     if (strcmp(node->kind, "Lit") == 0) {
         char value[256];
         if (!parse_attr_span(node->attrs, "value", value, sizeof(value))) {
-            return simple_emit_instruction(program, AIVM_OP_HALT, 0);
+            return simple_fail("lit missing value");
         }
         if (strcmp(value, "true") == 0 || strcmp(value, "false") == 0) {
             return simple_emit_instruction(program, AIVM_OP_PUSH_BOOL, (strcmp(value, "true") == 0) ? 1 : 0);
@@ -3037,7 +3055,7 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
             char unescaped[256];
             size_t idx = 0U;
             if (!unescape_string(value, unescaped, sizeof(unescaped))) {
-                return 0;
+                return simple_failf("string literal decode failed: raw=%s attrs=%s", value, node->attrs);
             }
             if (!simple_add_string_const(program, unescaped, &idx)) {
                 return 0;
@@ -3049,10 +3067,10 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
         char name[64];
         size_t idx = 0U;
         if (!parse_attr_span(node->attrs, "name", name, sizeof(name))) {
-            return 0;
+            return simple_fail("var missing name");
         }
         if (!simple_lookup_local(locals, local_count, name, &idx, 0)) {
-            return 0;
+            return simple_failf("unknown local variable: %s", name);
         }
         return simple_emit_instruction(program, AIVM_OP_LOAD_LOCAL, (int64_t)idx);
     }
@@ -3214,7 +3232,7 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
 #define SIMPLE_MAX_SOURCES 64
 #define SIMPLE_MAX_FUNCS 512
 #define SIMPLE_MAX_FIXUPS 2048
-#define SIMPLE_MAX_LOCALS 512
+#define SIMPLE_MAX_LOCALS 1024
 
 typedef struct {
     char path[PATH_MAX];
@@ -3440,6 +3458,186 @@ static int simple_resolve_path(const char* base_file, const char* import_path, c
     return 1;
 }
 
+typedef struct {
+    char paths[SIMPLE_MAX_SOURCES][PATH_MAX];
+    size_t count;
+} SourceGraphSet;
+
+static void source_graph_hash_update_u64(uint64_t* state, const unsigned char* bytes, size_t len)
+{
+    size_t i;
+    if (state == NULL || bytes == NULL) {
+        return;
+    }
+    for (i = 0U; i < len; i += 1U) {
+        *state ^= (uint64_t)bytes[i];
+        *state *= 1099511628211ULL;
+    }
+}
+
+static void source_graph_hash_update_text(uint64_t* state, const char* text)
+{
+    if (state == NULL || text == NULL) {
+        return;
+    }
+    source_graph_hash_update_u64(state, (const unsigned char*)text, strlen(text));
+}
+
+static int source_graph_set_contains(const SourceGraphSet* set, const char* path)
+{
+    size_t i;
+    if (set == NULL || path == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < set->count; i += 1U) {
+        if (strcmp(set->paths[i], path) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int source_graph_set_add(SourceGraphSet* set, const char* path)
+{
+    if (set == NULL || path == NULL) {
+        return 0;
+    }
+    if (source_graph_set_contains(set, path)) {
+        return 1;
+    }
+    if (set->count >= SIMPLE_MAX_SOURCES) {
+        return 0;
+    }
+    if (snprintf(set->paths[set->count], sizeof(set->paths[set->count]), "%s", path) >=
+        (int)sizeof(set->paths[set->count])) {
+        return 0;
+    }
+    set->count += 1U;
+    return 1;
+}
+
+static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uint64_t* hash_state)
+{
+    char text[262144];
+    const char* program_pos;
+    const char* open_brace;
+    const char* close_brace;
+    const char* cursor;
+    if (path == NULL || visited == NULL || hash_state == NULL) {
+        return 0;
+    }
+    if (source_graph_set_contains(visited, path)) {
+        return 1;
+    }
+    if (!source_graph_set_add(visited, path)) {
+        return 0;
+    }
+    if (!read_text_file(path, text, sizeof(text))) {
+        return 0;
+    }
+
+    source_graph_hash_update_text(hash_state, "file:");
+    source_graph_hash_update_text(hash_state, path);
+    source_graph_hash_update_text(hash_state, "\n");
+    source_graph_hash_update_text(hash_state, text);
+    source_graph_hash_update_text(hash_state, "\n");
+
+    program_pos = strstr(text, "Program#");
+    if (program_pos == NULL) {
+        program_pos = strstr(text, "Program");
+    }
+    if (program_pos == NULL) {
+        return 1;
+    }
+    open_brace = strchr(program_pos, '{');
+    if (open_brace == NULL || !simple_find_matching_brace(open_brace, text + strlen(text), &close_brace)) {
+        return 0;
+    }
+    cursor = open_brace + 1;
+    while (cursor < close_brace) {
+        SimpleNodeView node;
+        if (!simple_parse_next_node(cursor, close_brace, &node)) {
+            break;
+        }
+        if (strcmp(node.kind, "Import") == 0) {
+            char import_path[PATH_MAX];
+            char resolved[PATH_MAX];
+            if (!parse_attr_span(node.attrs, "path", import_path, sizeof(import_path))) {
+                return 0;
+            }
+            if (!simple_resolve_path(path, import_path, resolved, sizeof(resolved))) {
+                return 0;
+            }
+            if (!source_graph_hash_file(resolved, visited, hash_state)) {
+                return 0;
+            }
+        }
+        cursor = node.next;
+    }
+    return 1;
+}
+
+static int compute_source_graph_cache_key(const char* source_aos, char* out_hex, size_t out_hex_len)
+{
+    uint64_t hash_state = 1469598103934665603ULL;
+    SourceGraphSet visited;
+    char cap_text[64];
+    if (source_aos == NULL || out_hex == NULL || out_hex_len < 17U) {
+        return 0;
+    }
+    memset(&visited, 0, sizeof(visited));
+    source_graph_hash_update_text(&hash_state, AIRUN_NATIVE_CACHE_SCHEMA);
+    source_graph_hash_update_text(&hash_state, "|inst-cap=");
+    (void)snprintf(cap_text, sizeof(cap_text), "%u", (unsigned)AIVM_PROGRAM_MAX_INSTRUCTIONS);
+    source_graph_hash_update_text(&hash_state, cap_text);
+    if (!source_graph_hash_file(source_aos, &visited, &hash_state)) {
+        return 0;
+    }
+    (void)snprintf(out_hex, out_hex_len, "%016llx", (unsigned long long)hash_state);
+    return 1;
+}
+
+static int ensure_cache_root_for_source(const char* source_aos, char* out_root, size_t out_root_len)
+{
+    char source_dir[PATH_MAX];
+    char project_dir[PATH_MAX];
+    char manifest_path[PATH_MAX];
+    char parent_dir[PATH_MAX];
+    char toolchain_dir[PATH_MAX];
+    char cache_dir[PATH_MAX];
+    if (source_aos == NULL || out_root == NULL || out_root_len == 0U) {
+        return 0;
+    }
+    if (!dirname_of(source_aos, source_dir, sizeof(source_dir))) {
+        return 0;
+    }
+    if (join_path(source_dir, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+        file_exists(manifest_path)) {
+        if (snprintf(project_dir, sizeof(project_dir), "%s", source_dir) >= (int)sizeof(project_dir)) {
+            return 0;
+        }
+    } else if (dirname_of(source_dir, parent_dir, sizeof(parent_dir)) &&
+               join_path(parent_dir, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+               file_exists(manifest_path)) {
+        if (snprintf(project_dir, sizeof(project_dir), "%s", parent_dir) >= (int)sizeof(project_dir)) {
+            return 0;
+        }
+    } else {
+        if (snprintf(project_dir, sizeof(project_dir), "%s", source_dir) >= (int)sizeof(project_dir)) {
+            return 0;
+        }
+    }
+    if (!join_path(project_dir, ".toolchain", toolchain_dir, sizeof(toolchain_dir)) ||
+        !join_path(toolchain_dir, "cache", cache_dir, sizeof(cache_dir)) ||
+        !join_path(cache_dir, "airun", out_root, out_root_len)) {
+        return 0;
+    }
+    if (!ensure_directory(toolchain_dir) || !ensure_directory(cache_dir) || !ensure_directory(out_root)) {
+        return 0;
+    }
+    return 1;
+}
+
 static int simple_collect_from_file(SimpleCompileContext* ctx, const char* path, int allow_entry_export)
 {
     char text[131072];
@@ -3543,21 +3741,46 @@ static int simple_locals_lookup(SimpleLocals* locals, const char* name, size_t* 
             return 1;
         }
     }
-    if (!create_if_missing || locals->count >= SIMPLE_MAX_LOCALS || locals->ctx == NULL) {
+    if (!create_if_missing || locals->ctx == NULL) {
         return 0;
     }
+    if (locals->count >= SIMPLE_MAX_LOCALS) {
+        return simple_failf("local table capacity exceeded (name=%s max=%d)", name, SIMPLE_MAX_LOCALS);
+    }
     if (locals->ctx->next_local_slot >= AIVM_VM_LOCALS_CAPACITY) {
-        return 0;
+        return simple_failf(
+            "vm local slot capacity exceeded (name=%s max=%d)",
+            name,
+            AIVM_VM_LOCALS_CAPACITY);
     }
     if (snprintf(locals->names[locals->count], sizeof(locals->names[locals->count]), "%s", name) >=
         (int)sizeof(locals->names[locals->count])) {
-        return 0;
+        return simple_failf("local name too long: %s", name);
     }
     locals->slots[locals->count] = locals->ctx->next_local_slot;
     locals->ctx->next_local_slot += 1U;
     *out_slot = locals->slots[locals->count];
     locals->count += 1U;
     return 1;
+}
+
+static int simple_compile_var_expr(
+    const SimpleNodeView* node,
+    AivmProgram* program,
+    SimpleLocals* locals)
+{
+    char name[64];
+    size_t idx = 0U;
+    if (node == NULL || program == NULL || locals == NULL) {
+        return 0;
+    }
+    if (!parse_attr_span(node->attrs, "name", name, sizeof(name))) {
+        return simple_fail("var missing name");
+    }
+    if (!simple_locals_lookup(locals, name, &idx, 0)) {
+        return simple_failf("unknown local variable: %s", name);
+    }
+    return simple_emit_instruction(program, AIVM_OP_LOAD_LOCAL, (int64_t)idx);
 }
 
 static int simple_compile_call_ext(
@@ -3700,6 +3923,9 @@ static int simple_compile_expr_ext(
     if (strcmp(node->kind, "Call") == 0) {
         return simple_compile_call_ext(node, program, locals, ctx, 0);
     }
+    if (strcmp(node->kind, "Var") == 0) {
+        return simple_compile_var_expr(node, program, locals);
+    }
     if (strcmp(node->kind, "StrConcat") == 0) {
         const char* c = node->body_start;
         int first = 1;
@@ -3715,6 +3941,104 @@ static int simple_compile_expr_ext(
             c = child.next;
         }
         return !first;
+    }
+    if (starts_with(node->kind, "Field")) {
+        char key[256];
+        SimpleNodeView value_node;
+        size_t key_idx = 0U;
+        if (!parse_attr_span(node->attrs, "key", key, sizeof(key))) {
+            return simple_fail("field missing key");
+        }
+        if (!simple_parse_next_node(node->body_start, node->body_end, &value_node)) {
+            return simple_fail("field missing value");
+        }
+        if (!simple_add_string_const(program, key, &key_idx) ||
+            !simple_emit_instruction(program, AIVM_OP_CONST, (int64_t)key_idx) ||
+            !simple_compile_expr_ext(&value_node, program, locals, ctx) ||
+            !simple_emit_instruction(program, AIVM_OP_MAKE_FIELD_STRING, 0)) {
+            return 0;
+        }
+        return 1;
+    }
+    if (starts_with(node->kind, "Map")) {
+        const char* c = node->body_start;
+        SimpleNodeView field_node;
+        size_t field_count = 0U;
+        while (simple_parse_next_node(c, node->body_end, &field_node)) {
+            if (strcmp(field_node.kind, "Field") != 0) {
+                return simple_failf("map child must be Field, got %s", field_node.kind);
+            }
+            if (!simple_compile_expr_ext(&field_node, program, locals, ctx)) {
+                return 0;
+            }
+            field_count += 1U;
+            c = field_node.next;
+        }
+        if (!simple_emit_instruction(program, AIVM_OP_PUSH_INT, (int64_t)field_count) ||
+            !simple_emit_instruction(program, AIVM_OP_MAKE_MAP, 0)) {
+            return 0;
+        }
+        return 1;
+    }
+    if (starts_with(node->kind, "MakeBlock")) {
+        SimpleNodeView id_expr;
+        if (!simple_parse_next_node(node->body_start, node->body_end, &id_expr)) {
+            return simple_fail("MakeBlock missing id expression");
+        }
+        if (!simple_compile_expr_ext(&id_expr, program, locals, ctx) ||
+            !simple_emit_instruction(program, AIVM_OP_MAKE_BLOCK, 0)) {
+            return 0;
+        }
+        return 1;
+    }
+    if (starts_with(node->kind, "AppendChild")) {
+        SimpleNodeView base_node;
+        SimpleNodeView child_node;
+        if (!simple_parse_next_node(node->body_start, node->body_end, &base_node) ||
+            !simple_parse_next_node(base_node.next, node->body_end, &child_node)) {
+            return simple_fail("AppendChild requires (node,child)");
+        }
+        if (!simple_compile_expr_ext(&base_node, program, locals, ctx) ||
+            !simple_compile_expr_ext(&child_node, program, locals, ctx) ||
+            !simple_emit_instruction(program, AIVM_OP_APPEND_CHILD, 0)) {
+            return 0;
+        }
+        return 1;
+    }
+    if (starts_with(node->kind, "MakeLitString") || starts_with(node->kind, "MakeLitInt")) {
+        SimpleNodeView id_node;
+        SimpleNodeView value_node;
+        AivmOpcode make_opcode = starts_with(node->kind, "MakeLitString") ? AIVM_OP_MAKE_LIT_STRING : AIVM_OP_MAKE_LIT_INT;
+        if (!simple_parse_next_node(node->body_start, node->body_end, &id_node) ||
+            !simple_parse_next_node(id_node.next, node->body_end, &value_node)) {
+            return simple_failf("%s requires (id,value)", node->kind);
+        }
+        if (!simple_compile_expr_ext(&id_node, program, locals, ctx) ||
+            !simple_compile_expr_ext(&value_node, program, locals, ctx) ||
+            !simple_emit_instruction(program, make_opcode, 0)) {
+            return 0;
+        }
+        return 1;
+    }
+    if (starts_with(node->kind, "MakeErr")) {
+        SimpleNodeView id_node;
+        SimpleNodeView code_node;
+        SimpleNodeView message_node;
+        SimpleNodeView node_id_node;
+        if (!simple_parse_next_node(node->body_start, node->body_end, &id_node) ||
+            !simple_parse_next_node(id_node.next, node->body_end, &code_node) ||
+            !simple_parse_next_node(code_node.next, node->body_end, &message_node) ||
+            !simple_parse_next_node(message_node.next, node->body_end, &node_id_node)) {
+            return simple_fail("MakeErr requires (id,code,message,nodeId)");
+        }
+        if (!simple_compile_expr_ext(&id_node, program, locals, ctx) ||
+            !simple_compile_expr_ext(&code_node, program, locals, ctx) ||
+            !simple_compile_expr_ext(&message_node, program, locals, ctx) ||
+            !simple_compile_expr_ext(&node_id_node, program, locals, ctx) ||
+            !simple_emit_instruction(program, AIVM_OP_MAKE_ERR, 0)) {
+            return 0;
+        }
+        return 1;
     }
     if (strcmp(node->kind, "Add") == 0 || strcmp(node->kind, "Eq") == 0 || strcmp(node->kind, "ToString") == 0 ||
         strcmp(node->kind, "AttrCount") == 0 || strcmp(node->kind, "AttrKey") == 0 ||
@@ -3965,6 +4289,13 @@ static int simple_compile_fn_by_index(SimpleCompileContext* ctx, size_t fn_index
     fn->compiling = 1;
     before_count = ctx->program->instruction_count;
     fn->entry_ip = ctx->program->instruction_count;
+    if (trace != NULL && trace[0] != '\0') {
+        fprintf(
+            stderr,
+            "[airun-native-compile] fn-start=%s inst_before=%llu\n",
+            fn->name,
+            (unsigned long long)before_count);
+    }
 
     memset(&locals, 0, sizeof(locals));
     locals.ctx = ctx;
@@ -4252,16 +4583,23 @@ typedef struct {
     const char* program_path;
     int app_arg_start;
     int app_arg_count;
+    int use_cache;
 } RunTarget;
 
 static int derive_build_out_dir(const char* program_input, char* out_dir, size_t out_dir_len);
-static int build_input_to_aibc1(const char* program_input, const char* out_dir, char* out_app_path, size_t out_app_path_len);
+static int build_input_to_aibc1(
+    const char* program_input,
+    const char* out_dir,
+    char* out_app_path,
+    size_t out_app_path_len,
+    int use_cache);
 
 static int parse_run_target(int argc, char** argv, int start_index, RunTarget* out_target)
 {
     int i;
     const char* program_path = NULL;
     int app_arg_start = -1;
+    int use_cache = 1;
 
     if (out_target == NULL) {
         return 2;
@@ -4273,6 +4611,10 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
                 app_arg_start = i + 1;
             }
             break;
+        }
+        if (strcmp(arg, "--no-cache") == 0 && app_arg_start < 0) {
+            use_cache = 0;
+            continue;
         }
         if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
             const char* mode = arg + 5;
@@ -4305,6 +4647,7 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
         out_target->app_arg_start = argc;
         out_target->app_arg_count = 0;
     }
+    out_target->use_cache = use_cache;
     return 0;
 }
 
@@ -4359,7 +4702,12 @@ static int handle_run(int argc, char** argv)
         !ends_with(target.program_path, ".aibc1") &&
         !ends_with(target.program_path, ".aibundle")) {
         if (derive_build_out_dir(target.program_path, out_dir, sizeof(out_dir))) {
-            build_rc = build_input_to_aibc1(target.program_path, out_dir, app_path, sizeof(app_path));
+            build_rc = build_input_to_aibc1(
+                target.program_path,
+                out_dir,
+                app_path,
+                sizeof(app_path),
+                target.use_cache);
             if (build_rc == 1) {
                 return run_native_aibc1(
                     app_path,
@@ -4699,10 +5047,19 @@ static const char* native_build_error(void)
     return g_native_build_error;
 }
 
-static int build_input_to_aibc1(const char* program_input, const char* out_dir, char* out_app_path, size_t out_app_path_len)
+static int build_input_to_aibc1(
+    const char* program_input,
+    const char* out_dir,
+    char* out_app_path,
+    size_t out_app_path_len,
+    int use_cache)
 {
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
+    char cache_root[PATH_MAX];
+    char cache_key[32];
+    char cache_key_dir[PATH_MAX];
+    char cache_app_path[PATH_MAX];
     AivmProgram program;
 
     g_native_build_error[0] = '\0';
@@ -4736,6 +5093,18 @@ static int build_input_to_aibc1(const char* program_input, const char* out_dir, 
         return 0;
     }
 
+    if (use_cache &&
+        compute_source_graph_cache_key(source_aos, cache_key, sizeof(cache_key)) &&
+        ensure_cache_root_for_source(source_aos, cache_root, sizeof(cache_root)) &&
+        join_path(cache_root, cache_key, cache_key_dir, sizeof(cache_key_dir)) &&
+        ensure_directory(cache_key_dir) &&
+        join_path(cache_key_dir, "app.aibc1", cache_app_path, sizeof(cache_app_path)) &&
+        file_exists(cache_app_path)) {
+        if (strcmp(cache_app_path, out_app_path) == 0 || copy_file(cache_app_path, out_app_path)) {
+            return 1;
+        }
+    }
+
     if (parse_bytecode_aos_to_program_file(source_aos, &program) ||
         parse_simple_program_aos_to_program_file(source_aos, &program)) {
         if (!write_program_as_aibc1(&program, out_app_path)) {
@@ -4744,6 +5113,14 @@ static int build_input_to_aibc1(const char* program_input, const char* out_dir, 
                 (unsigned long long)program.instruction_count,
                 (unsigned long long)program.constant_count);
             return 0;
+        }
+        if (use_cache &&
+            compute_source_graph_cache_key(source_aos, cache_key, sizeof(cache_key)) &&
+            ensure_cache_root_for_source(source_aos, cache_root, sizeof(cache_root)) &&
+            join_path(cache_root, cache_key, cache_key_dir, sizeof(cache_key_dir)) &&
+            ensure_directory(cache_key_dir) &&
+            join_path(cache_key_dir, "app.aibc1", cache_app_path, sizeof(cache_app_path))) {
+            (void)copy_file(out_app_path, cache_app_path);
         }
         return 1;
     }
@@ -4759,12 +5136,121 @@ static int build_input_to_aibc1(const char* program_input, const char* out_dir, 
     return 0;
 }
 
+static int delete_directory_recursive_portable(const char* path)
+{
+    if (path == NULL) {
+        return 0;
+    }
+    if (!directory_exists(path)) {
+        return 1;
+    }
+#ifdef _WIN32
+    return native_delete_dir_recursive_windows(path);
+#else
+    return native_delete_dir_recursive_posix(path);
+#endif
+}
+
+static int resolve_project_dir_for_cache(const char* input, char* out_project_dir, size_t out_project_dir_len)
+{
+    char source_aos[PATH_MAX];
+    char manifest_path[PATH_MAX];
+    char source_dir[PATH_MAX];
+    char parent_dir[PATH_MAX];
+    if (input == NULL || out_project_dir == NULL || out_project_dir_len == 0U) {
+        return 0;
+    }
+    if (directory_exists(input)) {
+        if (join_path(input, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+            file_exists(manifest_path)) {
+            return snprintf(out_project_dir, out_project_dir_len, "%s", input) < (int)out_project_dir_len;
+        }
+        if (dirname_of(input, parent_dir, sizeof(parent_dir)) &&
+            join_path(parent_dir, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+            file_exists(manifest_path)) {
+            return snprintf(out_project_dir, out_project_dir_len, "%s", parent_dir) < (int)out_project_dir_len;
+        }
+        return snprintf(out_project_dir, out_project_dir_len, "%s", input) < (int)out_project_dir_len;
+    }
+    if (ends_with(input, "project.aiproj") ||
+        ends_with(input, ".aos") ||
+        ends_with(input, ".aibc1") ||
+        ends_with(input, ".aibundle")) {
+        return dirname_of(input, out_project_dir, out_project_dir_len);
+    }
+    if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
+        if (!dirname_of(source_aos, source_dir, sizeof(source_dir))) {
+            return 0;
+        }
+        if (join_path(source_dir, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+            file_exists(manifest_path)) {
+            return snprintf(out_project_dir, out_project_dir_len, "%s", source_dir) < (int)out_project_dir_len;
+        }
+        if (dirname_of(source_dir, parent_dir, sizeof(parent_dir)) &&
+            join_path(parent_dir, "project.aiproj", manifest_path, sizeof(manifest_path)) &&
+            file_exists(manifest_path)) {
+            return snprintf(out_project_dir, out_project_dir_len, "%s", parent_dir) < (int)out_project_dir_len;
+        }
+        return snprintf(out_project_dir, out_project_dir_len, "%s", source_dir) < (int)out_project_dir_len;
+    }
+    return snprintf(out_project_dir, out_project_dir_len, ".") < (int)out_project_dir_len;
+}
+
+static int handle_clean(int argc, char** argv)
+{
+    const char* target = ".";
+    int target_set = 0;
+    char project_dir[PATH_MAX];
+    char toolchain_dir[PATH_MAX];
+    char cache_dir[PATH_MAX];
+    char airun_cache_dir[PATH_MAX];
+    int i;
+
+    for (i = 2; i < argc; i += 1) {
+        if (argv[i][0] == '-') {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Unsupported clean argument.\" nodeId=argv)\n");
+            return 2;
+        }
+        if (!target_set) {
+            target = argv[i];
+            target_set = 1;
+            continue;
+        }
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported clean argument.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    if (!resolve_project_dir_for_cache(target, project_dir, sizeof(project_dir)) ||
+        !join_path(project_dir, ".toolchain", toolchain_dir, sizeof(toolchain_dir)) ||
+        !join_path(toolchain_dir, "cache", cache_dir, sizeof(cache_dir)) ||
+        !join_path(cache_dir, "airun", airun_cache_dir, sizeof(airun_cache_dir))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to resolve cache path.\" nodeId=clean)\n");
+        return 2;
+    }
+
+    if (!directory_exists(airun_cache_dir)) {
+        printf("Ok#ok1(type=bool value=true)\n");
+        return 0;
+    }
+    if (!delete_directory_recursive_portable(airun_cache_dir)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to delete airun cache directory.\" nodeId=clean)\n");
+        return 2;
+    }
+    printf("Ok#ok1(type=bool value=true)\n");
+    return 0;
+}
+
 static int handle_build(int argc, char** argv)
 {
     const char* program_input = NULL;
     const char* out_dir = NULL;
     char default_out[PATH_MAX];
     char app_path[PATH_MAX];
+    int use_cache = 1;
     int i;
     int build_rc;
 
@@ -4776,6 +5262,10 @@ static int handle_build(int argc, char** argv)
                 return 2;
             }
             out_dir = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--no-cache") == 0) {
+            use_cache = 0;
             continue;
         }
         if (program_input == NULL && argv[i][0] != '-') {
@@ -4799,7 +5289,7 @@ static int handle_build(int argc, char** argv)
         out_dir = default_out;
     }
 
-    build_rc = build_input_to_aibc1(program_input, out_dir, app_path, sizeof(app_path));
+    build_rc = build_input_to_aibc1(program_input, out_dir, app_path, sizeof(app_path), use_cache);
     if (build_rc == 1) {
         printf("Ok#ok1(type=string value=\"%s\")\n", app_path);
         return 0;
@@ -5047,6 +5537,9 @@ int main(int argc, char** argv)
     }
     if (strcmp(argv[1], "publish") == 0) {
         return handle_publish(argc, argv);
+    }
+    if (strcmp(argv[1], "clean") == 0) {
+        return handle_clean(argc, argv);
     }
 
     fprintf(stderr, "Unknown command: %s\n", argv[1]);

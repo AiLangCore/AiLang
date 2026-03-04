@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -2876,6 +2877,18 @@ static int simple_fail(const char* message)
     return 0;
 }
 
+static int simple_failf(const char* fmt, ...)
+{
+    va_list args;
+    if (fmt == NULL) {
+        return simple_fail("unknown");
+    }
+    va_start(args, fmt);
+    (void)vsnprintf(g_simple_last_error, sizeof(g_simple_last_error), fmt, args);
+    va_end(args);
+    return 0;
+}
+
 static const char* simple_last_error(void)
 {
     if (g_simple_last_error[0] == '\0') {
@@ -2982,7 +2995,7 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
             return simple_emit_instruction(program, AIVM_OP_CONST, (int64_t)idx);
         }
     }
-    if (strcmp(node->kind, "Var") == 0) {
+        if (strcmp(node->kind, "Var") == 0) {
         char name[64];
         size_t idx = 0U;
         if (!parse_attr_span(node->attrs, "name", name, sizeof(name))) {
@@ -3009,7 +3022,7 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
         }
         return !first;
     }
-    return simple_fail("unsupported expr kind");
+    return simple_failf("unsupported expr kind: %s", node->kind);
 }
 
 static int parse_simple_program_aos_to_program_text(const char* source, AivmProgram* out_program)
@@ -3074,7 +3087,7 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
                 return simple_fail("let missing expression");
             }
             if (!simple_compile_expr_node(&expr, out_program, locals, &local_count)) {
-                return simple_fail("let expression compile failed");
+                return simple_failf("let expression compile failed for '%s' (kind=%s)", name, expr.kind);
             }
             if (!simple_emit_instruction(out_program, AIVM_OP_STORE_LOCAL, (int64_t)local_idx)) {
                 return simple_fail("let STORE_LOCAL emit failed");
@@ -3107,7 +3120,7 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
                 return simple_fail("call missing argument");
             }
             if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
-                return simple_fail("call argument compile failed");
+                return simple_failf("call argument compile failed for target '%s'", target);
             }
             if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, 1) ||
                 !simple_emit_instruction(out_program, AIVM_OP_POP, 0)) {

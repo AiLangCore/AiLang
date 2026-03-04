@@ -290,6 +290,7 @@ fi
 WASM_GATE_STATUS="PENDING"
 WASM_SOURCE_CASES="0"
 WASM_BYTECODE_CASES="0"
+WASM_STDIN_CASES="0"
 WASM_MALFORMED_CASES="0"
 WASM_PROFILE_STATUS="unknown"
 WASM_RUN_STATUS="not-run"
@@ -310,6 +311,7 @@ if [[ "${RUN_WASM}" == "1" ]]; then
     fi
     WASM_SOURCE_CASES="$(grep -Eo 'wasm golden corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
     WASM_BYTECODE_CASES="$(grep -Eo 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_STDIN_CASES="$(grep -Eo 'wasm stdin EOF corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
     WASM_MALFORMED_CASES="$(grep -Eo 'wasm malformed corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
     if grep -q 'wasm golden profiles: PASS (cli/spa/fullstack)' "${TMP_DIR}/test-wasm-golden.log"; then
       WASM_PROFILE_STATUS="pass"
@@ -319,6 +321,7 @@ if [[ "${RUN_WASM}" == "1" ]]; then
     fi
     if [[ -z "${WASM_SOURCE_CASES}" ]]; then WASM_SOURCE_CASES="0"; fi
     if [[ -z "${WASM_BYTECODE_CASES}" ]]; then WASM_BYTECODE_CASES="0"; fi
+    if [[ -z "${WASM_STDIN_CASES}" ]]; then WASM_STDIN_CASES="0"; fi
     if [[ -z "${WASM_MALFORMED_CASES}" ]]; then WASM_MALFORMED_CASES="0"; fi
   else
     WASM_GATE_STATUS="FAIL"
@@ -355,7 +358,7 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS}, regressions=${BENCH_REGRESSION_COUNT}, missing=${BENCH_BASELINE_MISSING_COUNT}, max_pct=${BENCH_ALLOWED_REGRESSION_PCT} |"
   echo "| Samples completion | ${SAMPLE_GATE_STATUS} | complete=${sample_complete}/${sample_total} (manifest=${SAMPLE_MANIFEST##${ROOT_DIR}/}) |"
   echo "| Memory/GC | ${MEMORY_GATE_STATUS} | rc_test=${RC_TEST_PRESENT}, cycle_test=${CYCLE_TEST_PRESENT}, leak_script=${LEAK_SCRIPT_PRESENT}, profile_script=${PROFILE_SCRIPT_PRESENT} |"
-  echo "| WASM parity | ${WASM_GATE_STATUS} | run=${WASM_RUN_STATUS}, source=${WASM_SOURCE_CASES}, bytecode_only=${WASM_BYTECODE_CASES}, malformed=${WASM_MALFORMED_CASES}, profiles=${WASM_PROFILE_STATUS} |"
+  echo "| WASM parity | ${WASM_GATE_STATUS} | run=${WASM_RUN_STATUS}, source=${WASM_SOURCE_CASES}, bytecode_only=${WASM_BYTECODE_CASES}, stdin_eof=${WASM_STDIN_CASES}, malformed=${WASM_MALFORMED_CASES}, profiles=${WASM_PROFILE_STATUS} |"
   echo
   echo "## Behavioral Sub-Gates"
   echo
@@ -380,6 +383,7 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "|---|---|"
   echo "| source corpus | ${WASM_SOURCE_CASES} |"
   echo "| bytecode-only corpus | ${WASM_BYTECODE_CASES} |"
+  echo "| stdin EOF corpus | ${WASM_STDIN_CASES} |"
   echo "| malformed corpus | ${WASM_MALFORMED_CASES} |"
   echo "| profiles (cli/spa/fullstack) | ${WASM_PROFILE_STATUS} |"
 } > "${REPORT_PATH}"

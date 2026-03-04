@@ -112,7 +112,9 @@ Notes:
 
 - `start`/`length` are deterministic Unicode-scalar indexes (not bytes).
 - Out-of-range inputs are clamped; operations must not throw.
-- `sys.bytes.toUtf8String` must reject invalid UTF-8 and embedded NUL bytes deterministically.
+- `sys.bytes.toUtf8String` must be deterministic and non-throwing for malformed input.
+  - valid UTF-8 without embedded NUL: decoded string
+  - invalid UTF-8 or embedded NUL: empty string
 
 ### 7. crypto (minimal)
 

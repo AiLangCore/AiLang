@@ -2122,8 +2122,8 @@ static int native_syscall_bytes_to_utf8_string(
         return AIVM_SYSCALL_ERR_INVALID;
     }
     if (!native_is_valid_utf8_without_nul(args[0].bytes_value.data, in_len)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_INVALID;
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
     }
     for (i = 0U; i < in_len; i += 1U) {
         g_native_base64_scratch[i] = (char)args[0].bytes_value.data[i];

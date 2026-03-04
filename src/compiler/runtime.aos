@@ -167,9 +167,10 @@ Program#rt_p1 {
           Block#rt_b6 { Return#rt_r4 { Lit#rt_i6(value=0) } }
           Block#rt_b7 {
             Let#rt_l9(name=rawBytes) {
-              Call#rt_c8(target=sys.net.tcp.read) {
+              Call#rt_c8b(target=runtime_read_request_bytes) {
                 Var#rt_v11(name=conn)
-                Lit#rt_i9002(value=8192)
+                Call#rt_c8c(target=sys.bytes.fromBase64) { Lit#rt_i9005(value="") }
+                Lit#rt_i9004(value=16)
               }
             }
             Let#rt_l9002(name=raw) { Call#rt_c9002(target=sys.bytes.toUtf8String) { Var#rt_v9003(name=rawBytes) } }
@@ -187,6 +188,40 @@ Program#rt_p1 {
   Let#rt_l13(name=runtime.dispatch) {
     Fn#rt_f4(params=state,event) {
       Block#rt_b8 { Return#rt_r6 { Call#rt_c14(target=update) { Var#rt_v21(name=state) Var#rt_v22(name=event) } } }
+    }
+  }
+
+  Let#rt_l13b(name=runtime_read_request_bytes) {
+    Fn#rt_f4b(params=conn,acc,remainingReads) {
+      Block#rt_b8b {
+        If#rt_if2b {
+          Eq#rt_eq2b { Var#rt_v10b(name=remainingReads) Lit#rt_i6b(value=0) }
+          Block#rt_b6b { Return#rt_r4b { Var#rt_v20b(name=acc) } }
+          Block#rt_b7b {
+            Let#rt_l9b(name=chunk) {
+              Call#rt_c8d(target=sys.net.tcp.read) {
+                Var#rt_v11b(name=conn)
+                Lit#rt_i9006(value=8192)
+              }
+            }
+            Let#rt_l9c(name=combined) { Call#rt_c8e(target=sys.bytes.concat) { Var#rt_v11c(name=acc) Var#rt_v11d(name=chunk) } }
+            Let#rt_l9d(name=chunkLen) { Call#rt_c8f(target=sys.bytes.length) { Var#rt_v11e(name=chunk) } }
+            If#rt_if2c {
+              Eq#rt_eq2c { Var#rt_v10c(name=chunkLen) Lit#rt_i6c(value=8192) }
+              Block#rt_b6c {
+                Return#rt_r4c {
+                  Call#rt_c8g(target=runtime_read_request_bytes) {
+                    Var#rt_v20c(name=conn)
+                    Var#rt_v20d(name=combined)
+                    Add#rt_a9002 { Var#rt_v20e(name=remainingReads) Lit#rt_i9007(value=-1) }
+                  }
+                }
+              }
+              Block#rt_b7c { Return#rt_r4d { Var#rt_v20f(name=combined) } }
+            }
+          }
+        }
+      }
     }
   }
 

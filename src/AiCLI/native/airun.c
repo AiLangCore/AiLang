@@ -1110,6 +1110,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     char client_dir[PATH_MAX];
     char server_dir[PATH_MAX];
     char server_src_dir[PATH_MAX];
+    char server_www_dir[PATH_MAX];
     char server_readme_path[PATH_MAX];
     char server_project_path[PATH_MAX];
     char server_app_path[PATH_MAX];
@@ -1126,10 +1127,14 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     if (!join_path(server_dir, "src", server_src_dir, sizeof(server_src_dir))) {
         return 0;
     }
-    if (!ensure_directory(client_dir) || !ensure_directory(server_dir) || !ensure_directory(server_src_dir)) {
+    if (!join_path(server_dir, "www", server_www_dir, sizeof(server_www_dir))) {
         return 0;
     }
-    if (!emit_wasm_spa_files(client_dir, runtime_name)) {
+    if (!ensure_directory(client_dir) || !ensure_directory(server_dir) || !ensure_directory(server_src_dir) || !ensure_directory(server_www_dir)) {
+        return 0;
+    }
+    if (!emit_wasm_spa_files(client_dir, runtime_name) ||
+        !emit_wasm_spa_files(server_www_dir, runtime_name)) {
         return 0;
     }
     if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path)) ||
@@ -1142,7 +1147,8 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             sizeof(server_readme),
             "# AiLang wasm fullstack package\n\n"
             "This folder contains an AiLang server scaffold.\n"
-            "The client wasm package is in `../client/` and calls websocket endpoint `ws://<host>:8765` by default.\n"
+            "Client web assets are colocated in `www/` and also mirrored in `../client/`.\n"
+            "The web client calls websocket endpoint `ws://<host>:8765` by default.\n"
             "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n"
             "Implement remote capability routing in `src/app.aos` using AiLang `sys.net.*` primitives and the channel contract in `SPEC/WASM_REMOTE_CHANNEL.md`.\n") >= (int)sizeof(server_readme)) {
         return 0;
@@ -4211,6 +4217,7 @@ static int handle_publish(int argc, char** argv)
             }
         } else if (strcmp(wasm_profile, "fullstack") == 0) {
             char client_dir[PATH_MAX];
+            char server_www_dir[PATH_MAX];
             if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
                 !ensure_directory(client_dir)) {
                 fprintf(stderr,
@@ -4223,7 +4230,14 @@ static int handle_publish(int argc, char** argv)
                 !copy_runtime_file(runtime_src, runtime_dst) ||
                 !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name)) {
+                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name) ||
+                !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
+                !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
+                !copy_file(app_dst, wasm_app_dst) ||
+                !join_path(server_www_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
+                !copy_runtime_file(runtime_src, runtime_dst) ||
+                !join_path(server_www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
                 return 2;

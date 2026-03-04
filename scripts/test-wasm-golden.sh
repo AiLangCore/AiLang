@@ -11,17 +11,12 @@ CASES=(
   "vm_c_execute_src_missing_main"
   "vm_c_execute_src_remote_call_echo_int"
 )
-UNSUPPORTED_CASES=(
-  "sys_remove_bad_type"
-  "sys_substring_bad_arity"
-  "sys_utf8_bad_type"
+BYTECODE_ONLY_CASES=(
   "vm_c_execute_src_async_call_negative"
   "vm_c_execute_src_async_call_oob"
-  "vm_c_execute_src_async_callsys_bad_slot"
   "vm_c_execute_src_await_unsupported"
   "vm_c_execute_src_call_negative"
   "vm_c_execute_src_call_oob"
-  "vm_c_execute_src_callsys_bad_slot"
   "vm_c_execute_src_invalid_abi_whitespace"
   "vm_c_execute_src_invalid_abi_whitespace_only"
   "vm_c_execute_src_jump_if_false_negative"
@@ -34,6 +29,13 @@ UNSUPPORTED_CASES=(
   "vm_c_execute_src_par_cancel_unsupported"
   "vm_c_execute_src_par_fork_unsupported"
   "vm_c_execute_src_par_join_unsupported"
+)
+UNSUPPORTED_CASES=(
+  "sys_remove_bad_type"
+  "sys_substring_bad_arity"
+  "sys_utf8_bad_type"
+  "vm_c_execute_src_async_callsys_bad_slot"
+  "vm_c_execute_src_callsys_bad_slot"
   "vm_c_execute_src_node_constant_unsupported"
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
@@ -100,6 +102,35 @@ for CASE_NAME in "${CASES[@]}"; do
   fi
 done
 
+for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  mkdir -p "${CASE_OUT}"
+  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+
+  set +e
+  ./tools/airun run "${CASE_OUT}/app.aibc1" --vm=c >"${NATIVE_OUT}" 2>&1
+  native_rc=$?
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasm_rc=$?
+  set -e
+
+  if [[ ${native_rc} -ne ${wasm_rc} ]]; then
+    echo "wasm bytecode-only mismatch (${CASE_NAME}): status native=${native_rc} wasm=${wasm_rc}" >&2
+    exit 1
+  fi
+
+  if ! diff -u "${NATIVE_OUT}" "${WASM_OUT}" >/dev/null; then
+    echo "wasm bytecode-only mismatch (${CASE_NAME}): output differs from native bytecode baseline" >&2
+    diff -u "${NATIVE_OUT}" "${WASM_OUT}" || true
+    exit 1
+  fi
+done
+
 for CASE_NAME in "${UNSUPPORTED_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
@@ -114,6 +145,7 @@ done
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
+echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
 echo "wasm unsupported corpus: PASS (${#UNSUPPORTED_CASES[@]} cases)"
 
 if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" ]]; then

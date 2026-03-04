@@ -2672,8 +2672,14 @@ static int parse_attr_span(const char* attrs, const char* key, char* out, size_t
 
 static int has_attr_key(const char* attrs, const char* key)
 {
-    char tmp[8];
-    return parse_attr_span(attrs, key, tmp, sizeof(tmp));
+    char needle[64];
+    if (attrs == NULL || key == NULL) {
+        return 0;
+    }
+    if (snprintf(needle, sizeof(needle), "%s=", key) >= (int)sizeof(needle)) {
+        return 0;
+    }
+    return strstr(attrs, needle) != NULL;
 }
 
 static int parse_attr_int64(const char* attrs, const char* key, int64_t* out_value)
@@ -2807,7 +2813,10 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
     return 0;
 }
 
-static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* out_program)
+static int parse_bytecode_aos_to_program_text(
+    const char* source,
+    AivmProgram* out_program,
+    int allow_legacy_zero_b)
 {
     const char* p;
 
@@ -2914,8 +2923,14 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         if (!parse_attr_span(attrs, "op", op, sizeof(op)) || !opcode_from_text(op, &opcode)) {
             return 0;
         }
-        if (has_attr_key(attrs, "b") || has_attr_key(attrs, "s")) {
+        if (has_attr_key(attrs, "s")) {
             return 0;
+        }
+        if (has_attr_key(attrs, "b")) {
+            int64_t b = 0;
+            if (!allow_legacy_zero_b || !parse_attr_int64(attrs, "b", &b) || b != 0) {
+                return 0;
+            }
         }
         (void)parse_attr_int64(attrs, "a", &a);
 
@@ -2928,7 +2943,10 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
     return out_program->instruction_count > 0U;
 }
 
-static int parse_bytecode_aos_to_program_file(const char* aos_path, AivmProgram* out_program)
+static int parse_bytecode_aos_to_program_file(
+    const char* aos_path,
+    AivmProgram* out_program,
+    int allow_legacy_zero_b)
 {
     char source[131072];
     if (aos_path == NULL || out_program == NULL) {
@@ -2937,7 +2955,7 @@ static int parse_bytecode_aos_to_program_file(const char* aos_path, AivmProgram*
     if (!read_text_file(aos_path, source, sizeof(source))) {
         return 0;
     }
-    return parse_bytecode_aos_to_program_text(source, out_program);
+    return parse_bytecode_aos_to_program_text(source, out_program, allow_legacy_zero_b);
 }
 
 static int source_file_looks_like_bytecode_aos(const char* aos_path)
@@ -3358,7 +3376,7 @@ static int run_native_bytecode_aos(const char* aos_path, const char* const* proc
 {
     AivmProgram program;
 
-    if (!parse_bytecode_aos_to_program_file(aos_path, &program)) {
+    if (!parse_bytecode_aos_to_program_file(aos_path, &program, 0)) {
         return -1;
     }
     return run_native_compiled_program(
@@ -3826,7 +3844,7 @@ static int handle_bench(int argc, char** argv)
 
     for (i = 0; i < iterations; i += 1) {
         AivmProgram program;
-        if (!parse_bytecode_aos_to_program_text(bytecode_bench_source, &program)) {
+        if (!parse_bytecode_aos_to_program_text(bytecode_bench_source, &program, 0)) {
             compiler_bytecode_status = "fail";
             failures += 1;
             break;
@@ -3854,7 +3872,7 @@ static int handle_bench(int argc, char** argv)
 
     {
         AivmProgram bundle_program;
-        if (!parse_bytecode_aos_to_program_text(app_bundle_source, &bundle_program) ||
+        if (!parse_bytecode_aos_to_program_text(app_bundle_source, &bundle_program, 0) ||
             !bench_execute_program_iterations(&bundle_program, iterations, &app_bundle_ticks)) {
             app_bundle_status = "fail";
             failures += 1;
@@ -3951,7 +3969,7 @@ static int handle_publish(int argc, char** argv)
     if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
         if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
             AivmProgram program;
-            if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
+            if (parse_bytecode_aos_to_program_file(source_aos, &program, 1)) {
                 if (!ensure_directory(out_dir)) {
                     fprintf(stderr,
                         "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");

@@ -98,7 +98,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 ## Process Syscall Value Contract
 
-- `sys.process_start(command, argvText, cwd, envText)` returns an int process handle (`-1` when start fails).
+- `sys.process.spawn(command, argsNode, cwd, envNode)` returns an int process handle (`-1` when start fails).
 - `sys.process_poll(processHandle)` returns int status:
 - `0` pending
 - `1` completed-success
@@ -106,8 +106,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `-2` canceled
 - `-3` unknown-handle
 - `sys.process_wait(processHandle)` returns the same terminal status contract as `sys.process_poll`.
-- `sys.process_stdout(processHandle)` and `sys.process_stderr(processHandle)` return string output payloads (empty when unavailable).
-- `sys.process_exitCode(processHandle)` returns int process exit code (`-1` when unavailable/unknown).
+- `sys.process.stdout.read(processHandle)` and `sys.process.stderr.read(processHandle)` return bytes payloads (empty when unavailable).
 - `sys.process_kill(processHandle)` returns bool for kill transition success.
 
 ## Debug Syscall Value Contract

@@ -118,16 +118,14 @@ This file is normative for `aic run` evaluation behavior.
 ## Process Execution Contract (Phase 1)
 
 - Process APIs are host-executed effectful operations with owner-thread-visible completion:
-- `sys.process_start(command, argvText, cwd, envText) -> processHandle`
+- `sys.process.spawn(command, argsNode, cwd, envNode) -> processHandle`
 - `sys.process_poll(processHandle) -> status`
 - `sys.process_wait(processHandle) -> status`
-- `sys.process_stdout(processHandle) -> string`
-- `sys.process_stderr(processHandle) -> string`
-- `sys.process_exitCode(processHandle) -> int`
+- `sys.process.stdout.read(processHandle) -> bytes`
+- `sys.process.stderr.read(processHandle) -> bytes`
 - `sys.process_kill(processHandle) -> bool`
 - Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
-- In the current native baseline, non-empty `envText` may be rejected by host adapters; portable library code should pass empty `envText` until normalized env-map support lands.
-- Native baseline may complete work synchronously during `sys.process_start`; libraries should still consume state through `poll/wait/result` calls.
+- Native baseline may complete work synchronously during `sys.process.spawn`; libraries should still consume state through `poll/wait/result` calls.
 - Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
 
 ## Debug Instrumentation Contract

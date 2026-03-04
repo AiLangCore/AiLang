@@ -39,6 +39,11 @@ This operation is intentionally mechanical and exists to verify transport/capabi
 - Unsupported/missing capability or operation returns host target-unavailable semantics.
 - On wasm runtime this is surfaced as `RUN101` with deterministic text.
 
+## Security Baseline
+
+- See `SPEC/WASM_REMOTE_SECURITY.md`.
+- MVP enforces capability grants, session-token authorization, and deterministic size guards in host adapters.
+
 ## Non-goals (MVP)
 
 - No websocket framing yet.

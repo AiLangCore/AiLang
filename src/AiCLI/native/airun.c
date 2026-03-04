@@ -1827,6 +1827,26 @@ static int remote_cap_granted(const char* cap)
     return 0;
 }
 
+static int remote_token_authorized(void)
+{
+    const char* expected = getenv("AIVM_REMOTE_EXPECTED_TOKEN");
+    const char* provided = getenv("AIVM_REMOTE_SESSION_TOKEN");
+    size_t expected_len;
+    size_t provided_len;
+    if (expected == NULL || provided == NULL) {
+        return 0;
+    }
+    expected_len = strlen(expected);
+    provided_len = strlen(provided);
+    if (expected_len == 0U || provided_len == 0U) {
+        return 0;
+    }
+    if (expected_len > 256U || provided_len > 256U) {
+        return 0;
+    }
+    return strcmp(expected, provided) == 0;
+}
+
 static int native_syscall_remote_call(
     const char* target,
     const AivmValue* args,
@@ -1851,6 +1871,14 @@ static int native_syscall_remote_call(
     }
     cap = args[0].string_value;
     op = args[1].string_value;
+    if (strlen(cap) > 64U || strlen(op) > 64U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!remote_token_authorized()) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
     if (!remote_cap_granted(cap)) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_NOT_FOUND;

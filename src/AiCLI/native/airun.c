@@ -438,8 +438,31 @@ static int run_native_fullstack_server(const char* www_dir)
     printf("[fullstack] press Ctrl+C to stop\n");
     fflush(stdout);
 
+    g_fullstack_stop = 0;
     while (!g_fullstack_stop) {
-        NativeSocket client = accept(listener, NULL, NULL);
+        fd_set read_fds;
+        struct timeval timeout;
+        int ready;
+        NativeSocket client;
+        FD_ZERO(&read_fds);
+        FD_SET(listener, &read_fds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 250000;
+#ifdef _WIN32
+        ready = select(0, &read_fds, NULL, NULL, &timeout);
+#else
+        ready = select((int)listener + 1, &read_fds, NULL, NULL, &timeout);
+#endif
+        if (ready < 0) {
+            if (g_fullstack_stop) {
+                break;
+            }
+            continue;
+        }
+        if (ready == 0) {
+            continue;
+        }
+        client = accept(listener, NULL, NULL);
         if (client == NATIVE_INVALID_SOCKET) {
             continue;
         }

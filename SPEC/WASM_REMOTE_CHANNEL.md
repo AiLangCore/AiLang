@@ -56,4 +56,5 @@ Future protocol framing (HELLO/WELCOME/CALL/RESULT/ERROR, optional stream/notify
 
 - `aivm_remote_stdio_bridge` is provided as a process-boundary transport bridge using length-prefixed binary frames over stdio.
 - This bridge uses the same deterministic session engine and frame codec as `sys.remote.call` host routing.
-- WebSocket transport can be added as another transport backend without changing frame/session semantics.
+- `aivm_remote_ws_bridge` is provided as a minimal websocket transport bridge (binary frames only) using the same deterministic frame/session engine.
+- Transport backends are swappable without changing frame/session semantics.

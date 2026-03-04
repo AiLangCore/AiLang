@@ -1222,11 +1222,17 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "  echo \"Err#err1(code=RUN001 message=\\\"python not found; install python3 to serve server/www.\\\" nodeId=publish)\" >&2\n"
             "  exit 2\n"
             "fi\n"
+            "echo \"[fullstack] serving static client from ${DIR}/server/www at http://localhost:${PORT}\" >&2\n"
+            "echo \"[fullstack] starting AiLang server app: ${DIR}/server/project.aiproj\" >&2\n"
+            "echo \"[fullstack] press Ctrl+C to stop\" >&2\n"
             "\"${PYTHON_BIN}\" -m http.server \"${PORT}\" --directory \"${DIR}/server/www\" >/dev/null 2>&1 &\n"
             "STATIC_PID=$!\n"
             "cleanup() { kill \"${STATIC_PID}\" >/dev/null 2>&1 || true; }\n"
             "trap cleanup EXIT INT TERM\n"
-            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n",
+            "\"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n"
+            "APP_RC=$?\n"
+            "cleanup\n"
+            "exit ${APP_RC}\n",
             server_runtime_bin,
             server_runtime_bin) >= (int)sizeof(root_run)) {
         return 0;
@@ -1241,6 +1247,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "$python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } elseif (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { $null }\n"
             "if (-not $python) { throw 'python not found; install python3 to serve server/www.' }\n"
             "$serverWww = Join-Path $dir 'server/www'\n"
+            "Write-Host \"[fullstack] serving static client from $serverWww at http://localhost:$port\"\n"
+            "Write-Host \"[fullstack] starting AiLang server app: $(Join-Path $dir 'server/project.aiproj')\"\n"
+            "Write-Host \"[fullstack] press Ctrl+C to stop\"\n"
             "$httpArgs = @('-m','http.server',$port,'--directory',$serverWww)\n"
             "$static = Start-Process -FilePath $python -ArgumentList $httpArgs -PassThru -WindowStyle Hidden\n"
             "try {\n"
@@ -4059,12 +4068,14 @@ static int handle_publish(int argc, char** argv)
     char artifact_dir[PATH_MAX];
     char runtime_bin[64];
     char runtime_web_bin[64];
+    char runtime_web_wasm_bin[64];
     char publish_app_name[128];
     char publish_runtime_name[160];
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
     char runtime_web_src[PATH_MAX];
     char runtime_web_dst[PATH_MAX];
+    char runtime_web_wasm_dst[PATH_MAX];
     char wasm_app_dst[PATH_MAX];
     char app_dst[PATH_MAX];
     char manifest_target[64];
@@ -4279,6 +4290,11 @@ static int handle_publish(int argc, char** argv)
                 "Err#err1(code=RUN001 message=\"Wasm runtime metadata overflow.\" nodeId=publish)\n");
             return 2;
         }
+        if (snprintf(runtime_web_wasm_bin, sizeof(runtime_web_wasm_bin), "aivm-runtime-wasm32-web.wasm") >= (int)sizeof(runtime_web_wasm_bin)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime web binary metadata overflow.\" nodeId=publish)\n");
+            return 2;
+        }
         if (!join_path(artifact_dir, runtime_web_bin, runtime_web_src, sizeof(runtime_web_src))) {
             fprintf(stderr,
                 "Err#err1(code=RUN001 message=\"Wasm web runtime source path overflow.\" nodeId=publish)\n");
@@ -4317,7 +4333,9 @@ static int handle_publish(int argc, char** argv)
             }
         } else if (strcmp(wasm_profile, "spa") == 0) {
             if (!join_path(out_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !join_path(out_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !copy_runtime_file(runtime_src, runtime_web_wasm_dst) ||
                 !emit_wasm_spa_files(out_dir, publish_runtime_name)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm web package files.\" nodeId=publish)\n");
@@ -4389,7 +4407,9 @@ static int handle_publish(int argc, char** argv)
                 !join_path(client_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
                 !copy_runtime_file(runtime_src, runtime_dst) ||
                 !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !join_path(client_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !copy_runtime_file(runtime_src, runtime_web_wasm_dst) ||
                 !emit_wasm_fullstack_layout(out_dir, publish_runtime_name, fullstack_host_runtime_bin) ||
                 !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
                 !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
@@ -4397,7 +4417,9 @@ static int handle_publish(int argc, char** argv)
                 !join_path(server_www_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
                 !copy_runtime_file(runtime_src, runtime_dst) ||
                 !join_path(server_www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
-                !copy_runtime_file(runtime_web_src, runtime_web_dst)) {
+                !join_path(server_www_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !copy_runtime_file(runtime_src, runtime_web_wasm_dst)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
                 return 2;

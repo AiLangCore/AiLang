@@ -48,6 +48,7 @@ static int simple_fail(const char* message);
 static int simple_failf(const char* fmt, ...);
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v1"
+#define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-04-map-field-cachefix-v1"
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -3518,7 +3519,9 @@ static int source_graph_set_add(SourceGraphSet* set, const char* path)
 
 static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uint64_t* hash_state)
 {
-    char text[262144];
+    unsigned char* text_bytes = NULL;
+    size_t text_len = 0U;
+    char* text = NULL;
     const char* program_pos;
     const char* open_brace;
     const char* close_brace;
@@ -3532,14 +3535,24 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
     if (!source_graph_set_add(visited, path)) {
         return 0;
     }
-    if (!read_text_file(path, text, sizeof(text))) {
+    if (!read_binary_file(path, &text_bytes, &text_len)) {
         return 0;
     }
+    text = (char*)malloc(text_len + 1U);
+    if (text == NULL) {
+        free(text_bytes);
+        return 0;
+    }
+    if (text_len > 0U) {
+        memcpy(text, text_bytes, text_len);
+    }
+    text[text_len] = '\0';
+    free(text_bytes);
 
     source_graph_hash_update_text(hash_state, "file:");
     source_graph_hash_update_text(hash_state, path);
     source_graph_hash_update_text(hash_state, "\n");
-    source_graph_hash_update_text(hash_state, text);
+    source_graph_hash_update_u64(hash_state, (const unsigned char*)text, text_len);
     source_graph_hash_update_text(hash_state, "\n");
 
     program_pos = strstr(text, "Program#");
@@ -3547,10 +3560,12 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
         program_pos = strstr(text, "Program");
     }
     if (program_pos == NULL) {
+        free(text);
         return 1;
     }
     open_brace = strchr(program_pos, '{');
     if (open_brace == NULL || !simple_find_matching_brace(open_brace, text + strlen(text), &close_brace)) {
+        free(text);
         return 0;
     }
     cursor = open_brace + 1;
@@ -3563,17 +3578,21 @@ static int source_graph_hash_file(const char* path, SourceGraphSet* visited, uin
             char import_path[PATH_MAX];
             char resolved[PATH_MAX];
             if (!parse_attr_span(node.attrs, "path", import_path, sizeof(import_path))) {
+                free(text);
                 return 0;
             }
             if (!simple_resolve_path(path, import_path, resolved, sizeof(resolved))) {
+                free(text);
                 return 0;
             }
             if (!source_graph_hash_file(resolved, visited, hash_state)) {
+                free(text);
                 return 0;
             }
         }
         cursor = node.next;
     }
+    free(text);
     return 1;
 }
 
@@ -3587,6 +3606,8 @@ static int compute_source_graph_cache_key(const char* source_aos, char* out_hex,
     }
     memset(&visited, 0, sizeof(visited));
     source_graph_hash_update_text(&hash_state, AIRUN_NATIVE_CACHE_SCHEMA);
+    source_graph_hash_update_text(&hash_state, "|compiler=");
+    source_graph_hash_update_text(&hash_state, AIRUN_NATIVE_COMPILER_FINGERPRINT);
     source_graph_hash_update_text(&hash_state, "|inst-cap=");
     (void)snprintf(cap_text, sizeof(cap_text), "%u", (unsigned)AIVM_PROGRAM_MAX_INSTRUCTIONS);
     source_graph_hash_update_text(&hash_state, cap_text);

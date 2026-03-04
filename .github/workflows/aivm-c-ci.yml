@@ -14,6 +14,9 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
+      - 'scripts/aivm-parity-dashboard.sh'
+      - 'scripts/test-wasm-golden.sh'
+      - 'scripts/build-aivm-wasm.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -34,6 +37,9 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
+      - 'scripts/aivm-parity-dashboard.sh'
+      - 'scripts/test-wasm-golden.sh'
+      - 'scripts/build-aivm-wasm.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -71,6 +77,42 @@ jobs:
           ./scripts/build-airun.sh
           ./scripts/aivm-bench-gate.sh
 
+      - name: Setup Emscripten (Linux)
+        if: runner.os == 'Linux'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Setup wasmtime (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://wasmtime.dev/install.sh | bash
+          echo "${HOME}/.wasmtime/bin" >> "${GITHUB_PATH}"
+
+      - name: Dashboard summary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
+          {
+            echo "### AiLang DoD Dashboard (Linux)"
+            echo
+            awk '
+              /## Gates/ { print; in_gates=1; next }
+              in_gates && /^## / { in_gates=0 }
+              in_gates { print }
+            ' .tmp/aivm-parity-dashboard-ci.md
+            echo
+            awk '
+              /## WASM Coverage/ { print; in_wasm=1; next }
+              in_wasm && /^## / { in_wasm=0 }
+              in_wasm { print }
+            ' .tmp/aivm-parity-dashboard-ci.md
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -89,6 +131,7 @@ jobs:
         with:
           name: aivm-parity-artifacts-${{ matrix.os }}
           path: |
+            .tmp/aivm-parity-dashboard-ci.md
             .tmp/aivm-dualrun-manifest/report.txt
             .tmp/aivm-dualrun-manifest/*.left.out
             .tmp/aivm-dualrun-manifest/*.right.out

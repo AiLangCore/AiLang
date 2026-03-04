@@ -52,6 +52,7 @@ cd "${ROOT_DIR}"
 export AIVM_REMOTE_CAPS="cap.remote"
 export AIVM_REMOTE_EXPECTED_TOKEN="wasm-golden-token"
 export AIVM_REMOTE_SESSION_TOKEN="wasm-golden-token"
+export EM_CACHE="${EM_CACHE:-${TMP_DIR}/emcc-cache}"
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2

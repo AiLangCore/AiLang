@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_DIR="${ROOT_DIR}/.tmp/aivm-wasm-golden"
+TMP_ROOT="${ROOT_DIR}/.tmp/aivm-wasm-golden"
+TMP_DIR="${TMP_ROOT}/run-$$"
 CASES=(
   "vm_c_execute_program_source_gate"
   "vm_c_execute_src_invalid_abi"
@@ -128,6 +129,10 @@ mkdir -p "${PUBLISH_SPA_DIR}"
 mkdir -p "${PUBLISH_FULLSTACK_DIR}"
 mkdir -p "${PUBLISH_PROCESS_CLI_DIR}"
 mkdir -p "${MANIFEST_HOST_TARGET_DIR}"
+cleanup() {
+  rm -rf "${TMP_DIR}"
+}
+trap cleanup EXIT
 
 for CASE_NAME in "${CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"

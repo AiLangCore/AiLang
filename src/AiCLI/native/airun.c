@@ -27,6 +27,8 @@
 /* Some test translation units include this file directly without POSIX feature
    macros, which can hide realpath(3) declaration on glibc. */
 extern char* realpath(const char* path, char* resolved_path);
+extern int lstat(const char* path, struct stat* buffer);
+extern int kill(pid_t pid, int sig);
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -1280,7 +1282,9 @@ static int native_syscall_process_spawn(
         pid = fork();
         if (pid == 0) {
             if (args[2].string_value[0] != '\0') {
-                (void)chdir(args[2].string_value);
+                if (chdir(args[2].string_value) != 0) {
+                    _exit(126);
+                }
             }
             dup2(stdout_pipe[1], STDOUT_FILENO);
             dup2(stderr_pipe[1], STDERR_FILENO);

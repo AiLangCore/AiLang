@@ -2536,7 +2536,7 @@ static int run_native_compiled_program(
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[19];
+    AivmSyscallBinding bindings[21];
     AivmCResult result;
 
     if (program == NULL) {
@@ -2581,10 +2581,15 @@ static int run_native_compiled_program(
     bindings[17].handler = native_syscall_process_poll;
     bindings[18].target = "sys.remote.call";
     bindings[18].handler = native_syscall_remote_call;
+    /* Legacy aliases retained for pre-release AiBC1 samples still using underscore style names. */
+    bindings[19].target = "sys.stdout_writeLine";
+    bindings[19].handler = native_syscall_stdout_write_line;
+    bindings[20].target = "sys.process_argv";
+    bindings[20].handler = native_syscall_process_argv;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        19U,
+        21U,
         process_argv,
         process_argv_count);
 

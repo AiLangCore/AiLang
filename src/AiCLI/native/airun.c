@@ -1992,6 +1992,43 @@ static int native_syscall_bytes_to_base64(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_bytes_to_utf8_string(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t i;
+    size_t in_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = args[0].bytes_value.length;
+    if (in_len == 0U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (args[0].bytes_value.data == NULL || in_len + 1U > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    for (i = 0U; i < in_len; i += 1U) {
+        if (args[0].bytes_value.data[i] == 0U) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        g_native_base64_scratch[i] = (char)args[0].bytes_value.data[i];
+    }
+    g_native_base64_scratch[in_len] = '\0';
+    *result = aivm_value_string(g_native_base64_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_str_from_codepoint(
     const char* target,
     const AivmValue* args,
@@ -2157,7 +2194,7 @@ static int run_native_compiled_program(
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[21];
+    AivmSyscallBinding bindings[22];
     AivmCResult result;
 
     if (program == NULL) {
@@ -2206,10 +2243,12 @@ static int run_native_compiled_program(
     bindings[19].handler = native_syscall_str_decode_unicode_hex4;
     bindings[20].target = "sys.str.decodeUnicodeSurrogatePairHex4";
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
+    bindings[21].target = "sys.bytes.toUtf8String";
+    bindings[21].handler = native_syscall_bytes_to_utf8_string;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        21U,
+        22U,
         process_argv,
         process_argv_count);
 

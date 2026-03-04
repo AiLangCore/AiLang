@@ -166,7 +166,13 @@ Program#rt_p1 {
           Eq#rt_eq2 { Var#rt_v10(name=conn) Lit#rt_i5(value=-1) }
           Block#rt_b6 { Return#rt_r4 { Lit#rt_i6(value=0) } }
           Block#rt_b7 {
-            Let#rt_l9(name=raw) { Call#rt_c8(target=sys.net.readHeaders) { Var#rt_v11(name=conn) } }
+            Let#rt_l9(name=rawBytes) {
+              Call#rt_c8(target=sys.net.tcp.read) {
+                Var#rt_v11(name=conn)
+                Lit#rt_i9002(value=8192)
+              }
+            }
+            Let#rt_l9002(name=raw) { Call#rt_c9002(target=sys.bytes.toUtf8String) { Var#rt_v9003(name=rawBytes) } }
             Let#rt_l10(name=event) { Call#rt_c9(target=runtime_make_event) { Var#rt_v12(name=raw) } }
             Let#rt_l11(name=next) { Call#rt_c10(target=runtime.dispatch) { Var#rt_v13(name=state) Var#rt_v14(name=event) } }
             Let#rt_l12(name=nextState) { Call#rt_c11(target=runtime_handle_next) { Var#rt_v15(name=next) Var#rt_v16(name=conn) Var#rt_v17(name=state) } }

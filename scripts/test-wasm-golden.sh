@@ -236,6 +236,10 @@ if ! rg -Fq "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH
   echo "wasm profile mismatch: spa publish did not emit deterministic js-mode adapter diagnostic" >&2
   exit 1
 fi
+if ! rg -Fq "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic invalid remote-mode diagnostic" >&2
+  exit 1
+fi
 if ! rg -Fq 'globalThis.AiLang' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit AiLang root bridge in main.js" >&2
   exit 1
@@ -271,6 +275,10 @@ if ! rg -Fq "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; th
 fi
 if ! rg -Fq "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit deterministic js-mode adapter diagnostic" >&2
+  exit 1
+fi
+if ! rg -Fq "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic invalid remote-mode diagnostic" >&2
   exit 1
 fi
 if ! rg -Fq '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

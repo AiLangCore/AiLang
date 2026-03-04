@@ -40,6 +40,10 @@ MALFORMED_CASES=(
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
 )
+WASM_STDIN_EOF_CASES=(
+  "wasm_console_readline_eof"
+  "wasm_console_readallstdin_eof"
+)
 PROCESS_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
@@ -151,6 +155,34 @@ for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
   fi
 done
 
+STDIN_EXPECTED="${TMP_DIR}/stdin-eof-expected.out"
+printf '\n' > "${STDIN_EXPECTED}"
+for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  mkdir -p "${CASE_OUT}"
+  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+
+  set +e
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasm_rc=$?
+  set -e
+
+  if [[ ${wasm_rc} -ne 0 ]]; then
+    echo "wasm stdin EOF mismatch (${CASE_NAME}): expected exit 0, got ${wasm_rc}" >&2
+    exit 1
+  fi
+  if ! cmp -s "${STDIN_EXPECTED}" "${WASM_OUT}"; then
+    echo "wasm stdin EOF mismatch (${CASE_NAME}): expected deterministic empty-line output" >&2
+    diff -u "${STDIN_EXPECTED}" "${WASM_OUT}" || true
+    exit 1
+  fi
+done
+
 for CASE_NAME in "${MALFORMED_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
@@ -185,6 +217,7 @@ done
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
+echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
 echo "wasm malformed corpus: PASS (${#MALFORMED_CASES[@]} cases)"
 
 if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" || ! -f "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" ]]; then

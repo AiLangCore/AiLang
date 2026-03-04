@@ -2919,6 +2919,11 @@ static int parse_bytecode_aos_to_program_text(
             memcpy(&out_program->string_storage[base], unescaped, len + 1U);
             out_program->string_storage_used += (len + 1U);
             out_program->constant_storage[out_program->constant_count] = aivm_value_string(&out_program->string_storage[base]);
+        } else if (strcmp(kind, "node") == 0) {
+            /* Legacy bytecode AOS may carry opaque node constants (for example value="Node#n1").
+               The native publish path preserves the value family as a deterministic node handle. */
+            out_program->constant_storage[out_program->constant_count] =
+                aivm_value_node((int64_t)(out_program->constant_count + 1U));
         } else if (strcmp(kind, "void") == 0) {
             out_program->constant_storage[out_program->constant_count] = aivm_value_void();
         } else {

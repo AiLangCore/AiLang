@@ -1628,6 +1628,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "    win.svg.removeEventListener('blur', win.blurHandler);\n"
             "    win.blurHandler = null;\n"
             "  }\n"
+            "  win.frameParts = [];\n"
+            "  win.lastPolledEvent = { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false };\n"
             "  win.eventQueue.push({ type: 'closed', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false });\n"
             "  if (win.eventQueue.length > 64) win.eventQueue.shift();\n"
             "  win.host.remove();\n"

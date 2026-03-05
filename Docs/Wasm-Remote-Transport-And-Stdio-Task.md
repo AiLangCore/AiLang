@@ -185,6 +185,7 @@ Rationale:
   - Browser adapter now uses pointer-first click mapping (`PointerEvent` when available, otherwise click/touch fallback) to avoid duplicate synthesized click events.
   - Browser adapter now unregisters per-window `resize` listeners on `closeWindow` for deterministic lifecycle cleanup (no orphan handlers).
   - Browser adapter now unregisters per-window input listeners (`pointer/click/touch/keydown/blur`) on `closeWindow` for deterministic teardown hygiene.
+  - `closeWindow` also clears per-window frame/event scratch state before queuing the canonical `closed` event.
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
   - Browser adapter now syncs window size on browser `resize` so `sys.ui.getWindowSize` stays aligned with live viewport dimensions.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.

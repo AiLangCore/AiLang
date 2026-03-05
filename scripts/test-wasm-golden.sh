@@ -3188,6 +3188,10 @@ if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js"
   echo "wasm profile mismatch: spa publish did not emit full ui input listener cleanup hooks in main.js" >&2
   exit 1
 fi
+if ! contains_fixed 'win.frameParts = []' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not clear ui frame state on closeWindow" >&2
+  exit 1
+fi
 if ! contains_fixed 'clampToWindow' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui click coordinate clamp helper" >&2
   exit 1
@@ -3303,6 +3307,10 @@ if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www
 fi
 if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit full ui input listener cleanup hooks in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.frameParts = []' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not clear ui frame state on closeWindow" >&2
   exit 1
 fi
 if ! contains_fixed 'clampToWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

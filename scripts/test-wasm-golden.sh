@@ -3164,6 +3164,10 @@ if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_SPA_DIR}/main.js" || ! c
   echo "wasm profile mismatch: spa publish did not emit ui live window-size bridges in main.js" >&2
   exit 1
 fi
+if ! contains_fixed '__aivmUiPollEventType' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventX' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventY' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui event-poll bridges in main.js" >&2
+  exit 1
+fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
   exit 1
@@ -3223,6 +3227,10 @@ if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; 
 fi
 if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiGetWindowHeight' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit ui live window-size bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiPollEventType' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventX' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventY' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui event-poll bridges in www/main.js" >&2
   exit 1
 fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

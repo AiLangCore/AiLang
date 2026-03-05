@@ -45,7 +45,14 @@ if [[ "${TARGET_ARCH}" != "x64" && "${TARGET_ARCH}" != "arm64" ]]; then
 fi
 
 OUT_DIR="${ROOT_DIR}/.artifacts/airun-${TARGET_PLATFORM}-${TARGET_ARCH}"
-WRAPPER_PATH="${OUT_DIR}/airun"
+AIRUN_BIN_NAME="airun"
+RUNTIME_BIN_NAME="aivm-runtime"
+if [[ "${TARGET_PLATFORM}" == "windows" ]]; then
+  AIRUN_BIN_NAME="airun.exe"
+  RUNTIME_BIN_NAME="aivm-runtime.exe"
+fi
+WRAPPER_PATH="${OUT_DIR}/${AIRUN_BIN_NAME}"
+RUNTIME_PATH="${OUT_DIR}/${RUNTIME_BIN_NAME}"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
 
@@ -83,25 +90,38 @@ elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   fi
 fi
 
+COMMON_SOURCES=(
+  "${SOURCE_PATH}"
+  "${UI_HOST_SRC}"
+  "${NATIVE_SRC_DIR}/aivm_types.c"
+  "${NATIVE_SRC_DIR}/aivm_vm.c"
+  "${NATIVE_SRC_DIR}/aivm_program.c"
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall.c"
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c"
+  "${NATIVE_SRC_DIR}/aivm_parity.c"
+  "${NATIVE_SRC_DIR}/aivm_runtime.c"
+  "${NATIVE_SRC_DIR}/aivm_c_api.c"
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c"
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c"
+)
+
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
   -I "${NATIVE_INCLUDE}" \
-  "${SOURCE_PATH}" \
-  "${UI_HOST_SRC}" \
-  "${NATIVE_SRC_DIR}/aivm_types.c" \
-  "${NATIVE_SRC_DIR}/aivm_vm.c" \
-  "${NATIVE_SRC_DIR}/aivm_program.c" \
-  "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
-  "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
-  "${NATIVE_SRC_DIR}/aivm_parity.c" \
-  "${NATIVE_SRC_DIR}/aivm_runtime.c" \
-  "${NATIVE_SRC_DIR}/aivm_c_api.c" \
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
+  "${COMMON_SOURCES[@]}" \
   "${LD_EXTRA[@]}" \
   -o "${WRAPPER_PATH}"
 chmod +x "${WRAPPER_PATH}"
 
+"${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
+  -I "${NATIVE_INCLUDE}" \
+  "${COMMON_SOURCES[@]}" \
+  "${LD_EXTRA[@]}" \
+  -o "${RUNTIME_PATH}"
+chmod +x "${RUNTIME_PATH}"
+
 if [[ "${TARGET_PLATFORM}" == "${HOST_PLATFORM}" && "${TARGET_ARCH}" == "${HOST_ARCH}" ]]; then
   cp "${WRAPPER_PATH}" "${HOST_WRAPPER_PATH}"
   chmod +x "${HOST_WRAPPER_PATH}"
+  cp "${RUNTIME_PATH}" "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
+  chmod +x "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
 fi

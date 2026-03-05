@@ -129,6 +129,16 @@ int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_heig
 }
 #endif
 
+#if defined(AIRUN_MINIMAL_RUNTIME)
+#if defined(_MSC_VER)
+#define AIRUN_MAYBE_UNUSED
+#else
+#define AIRUN_MAYBE_UNUSED __attribute__((unused))
+#endif
+#else
+#define AIRUN_MAYBE_UNUSED
+#endif
+
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
@@ -1255,21 +1265,21 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
         if (strcmp(arch, "x64") != 0 && strcmp(arch, "arm64") != 0) {
             return 0;
         }
-        n = snprintf(out_bin, out_bin_len, "airun");
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime");
     } else if (starts_with(rid, "linux-")) {
         platform = "linux";
         arch = rid + 6;
         if (strcmp(arch, "x64") != 0 && strcmp(arch, "arm64") != 0) {
             return 0;
         }
-        n = snprintf(out_bin, out_bin_len, "airun");
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime");
     } else if (starts_with(rid, "windows-")) {
         platform = "windows";
         arch = rid + 8;
         if (strcmp(arch, "x64") != 0 && strcmp(arch, "arm64") != 0) {
             return 0;
         }
-        n = snprintf(out_bin, out_bin_len, "airun.exe");
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime.exe");
     } else if (strcmp(rid, "wasm32") == 0) {
         n = snprintf(out_bin, out_bin_len, "aivm-runtime-wasm32.wasm");
         if (n < 0 || (size_t)n >= out_bin_len) {
@@ -1291,6 +1301,18 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
 
 static void print_usage(void)
 {
+#ifdef AIRUN_MINIMAL_RUNTIME
+    fprintf(stderr,
+        "Usage: aivm-runtime <command> [options]\n"
+        "\n"
+        "Commands:\n"
+        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache]\n"
+        "  version | --version\n"
+        "\n"
+        "VM selectors:\n"
+        "  c      current stable C VM (default)\n"
+        "  cvN    reserved future C VM profile/version selector (currently maps to c)\n");
+#else
     fprintf(stderr,
         "Usage: airun <command> [options]\n"
         "\n"
@@ -1307,6 +1329,7 @@ static void print_usage(void)
         "VM selectors:\n"
         "  c      current stable C VM (default)\n"
         "  cvN    reserved future C VM profile/version selector (currently maps to c)\n");
+#endif
 }
 
 static int print_unsupported_vm_mode(const char* mode)
@@ -7301,7 +7324,7 @@ static int handle_run(int argc, char** argv)
         NULL);
 }
 
-static int handle_serve(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_serve(int argc, char** argv)
 {
     (void)argc;
     (void)argv;
@@ -7310,7 +7333,7 @@ static int handle_serve(int argc, char** argv)
     return 2;
 }
 
-static int handle_debug(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
         const char* program_path = NULL;
@@ -7416,7 +7439,7 @@ static int handle_debug(int argc, char** argv)
     return 2;
 }
 
-static int handle_repl(void)
+static AIRUN_MAYBE_UNUSED int handle_repl(void)
 {
     char line[1024];
 
@@ -7509,7 +7532,7 @@ static int bench_execute_program_iterations(const AivmProgram* program, int iter
     return 1;
 }
 
-static int handle_bench(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_bench(int argc, char** argv)
 {
     int iterations = 10000;
     int human = 0;
@@ -7867,7 +7890,7 @@ static int resolve_project_dir_for_cache(const char* input, char* out_project_di
     return snprintf(out_project_dir, out_project_dir_len, ".") < (int)out_project_dir_len;
 }
 
-static int handle_clean(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_clean(int argc, char** argv)
 {
     const char* target = ".";
     int target_set = 0;
@@ -7915,7 +7938,7 @@ static int handle_clean(int argc, char** argv)
     return 0;
 }
 
-static int handle_build(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_build(int argc, char** argv)
 {
     const char* program_input = NULL;
     const char* out_dir = NULL;
@@ -7971,7 +7994,7 @@ static int handle_build(int argc, char** argv)
     return 2;
 }
 
-static int handle_publish(int argc, char** argv)
+static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
 {
     const char* program_input = NULL;
     const char* target = NULL;
@@ -8419,7 +8442,11 @@ int main(int argc, char** argv)
     }
 
     if (strcmp(argv[1], "version") == 0 || strcmp(argv[1], "--version") == 0) {
+#ifdef AIRUN_MINIMAL_RUNTIME
+        printf("aivm-runtime-native-c abi=%u\n", aivm_c_abi_version());
+#else
         printf("airun-native-c abi=%u\n", aivm_c_abi_version());
+#endif
         return 0;
     }
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -8429,6 +8456,11 @@ int main(int argc, char** argv)
     if (strcmp(argv[1], "run") == 0) {
         return handle_run(argc, argv);
     }
+#ifdef AIRUN_MINIMAL_RUNTIME
+    fprintf(stderr,
+        "Err#err1(code=DEV008 message=\"Command is not part of minimal aivm-runtime surface.\" nodeId=command)\n");
+    return 2;
+#else
     if (strcmp(argv[1], "build") == 0) {
         return handle_build(argc, argv);
     }
@@ -8454,4 +8486,5 @@ int main(int argc, char** argv)
     fprintf(stderr, "Unknown command: %s\n", argv[1]);
     print_usage();
     return 2;
+#endif
 }

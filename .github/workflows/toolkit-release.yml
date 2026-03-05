@@ -143,6 +143,7 @@ jobs:
             artifact_dir: .artifacts/airun-linux-x64
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
@@ -151,6 +152,7 @@ jobs:
             artifact_dir: .artifacts/airun-linux-arm64
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: macos-14
             rid: osx-x64
             platform: osx
@@ -159,6 +161,7 @@ jobs:
             artifact_dir: .artifacts/airun-osx-x64
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: macos-14
             rid: osx-arm64
             platform: osx
@@ -167,6 +170,7 @@ jobs:
             artifact_dir: .artifacts/airun-osx-arm64
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: windows-latest
             rid: windows-x64
             platform: windows
@@ -175,6 +179,7 @@ jobs:
             artifact_dir: .artifacts/airun-windows-x64
             frontend: aos_frontend.exe
             airun: airun.exe
+            runtime: aivm-runtime.exe
             msvc_arch: amd64
           - os: windows-latest
             rid: windows-arm64
@@ -184,6 +189,7 @@ jobs:
             artifact_dir: .artifacts/airun-windows-arm64
             frontend: aos_frontend.exe
             airun: airun.exe
+            runtime: aivm-runtime.exe
             msvc_arch: amd64_arm64
 
     steps:
@@ -279,6 +285,8 @@ jobs:
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
@@ -297,6 +305,8 @@ jobs:
           Copy-Item ".\\dist\\${{ matrix.frontend }}" $packageDir
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
           New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null
@@ -457,12 +467,12 @@ jobs:
 
             for SRC_RID in "${UNIX_RIDS[@]}"; do
               mkdir -p "${TARGET_DIR}/.artifacts/airun-${SRC_RID}"
-              cp "./release-assets/airun-${VERSION}-${SRC_RID}/airun" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/airun"
-              chmod +x "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/airun"
+              cp "./release-assets/airun-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime"
+              chmod +x "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime"
             done
             for SRC_RID in "${WINDOWS_RIDS[@]}"; do
               mkdir -p "${TARGET_DIR}/.artifacts/airun-${SRC_RID}"
-              cp "./release-assets/airun-${VERSION}-${SRC_RID}/airun.exe" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/airun.exe"
+              cp "./release-assets/airun-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime.exe"
             done
 
             mkdir -p "${TARGET_DIR}/.artifacts/aivm-wasm32"

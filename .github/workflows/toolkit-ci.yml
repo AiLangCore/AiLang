@@ -48,12 +48,15 @@ jobs:
           - os: ubuntu-latest
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: macos-14
             frontend: aos_frontend
             airun: airun
+            runtime: aivm-runtime
           - os: windows-latest
             frontend: aos_frontend.exe
             airun: airun.exe
+            runtime: aivm-runtime.exe
 
     steps:
       - name: Checkout
@@ -107,12 +110,14 @@ jobs:
         run: |
           set -euo pipefail
           cp ./tools/airun "./dist/${{ matrix.airun }}"
+          cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
 
       - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
+          Copy-Item .\tools\aivm-runtime.exe .\dist\${{ matrix.runtime }}
 
       - name: Stage compiler assets (non-Windows)
         if: runner.os != 'Windows'

@@ -18,6 +18,8 @@ artifacts/
 .tmp-aot/
 tools/airun
 tools/airun-host
+tools/aivm-runtime
+tools/aivm-runtime.exe
 
 ############################################
 # Test results

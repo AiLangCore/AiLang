@@ -157,6 +157,8 @@ Rationale:
     - handshake DENY handling
     - CALL ERROR frame handling
     - socket error handling
+    - unexpected frame-type handling (handshake and call phases)
+    - pending-call rejection on socket close (no hung promises)
     - default endpoint fallback (`ws://${location.hostname}:8765`)
   - Deterministic invalid `AIVM_REMOTE_MODE` runtime diagnostics (`RUN101`) with executable checks.
   - Browser-side stdin queue (`AiLang.stdin.push/close`) FIFO+EOF behavior with executable checks.

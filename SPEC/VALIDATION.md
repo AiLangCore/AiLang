@@ -95,6 +95,8 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(string, string)` and returns bool.
 - `sys.debug_traceAsync(opId,phase,detail)` contract:
 - args are `(int, string, string)`.
+- `sys.debug_taskReclaimStats()` contract:
+- no args; returns node task-reclaim telemetry payload.
 
 ## Async Safety Rules
 

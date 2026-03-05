@@ -139,6 +139,7 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.debug_assert(cond, code, message)`
 - `sys.debug_artifactWrite(path, text)`
 - `sys.debug_traceAsync(opId, phase, detail)`
+- `sys.debug_taskReclaimStats()`
 - Host may store/write debug artifacts, but debug-visible state transitions remain deterministic for identical syscall sequences.
 - Replay consumption is pull-based (`debug_replayNext`) so evaluator order controls determinism.
 

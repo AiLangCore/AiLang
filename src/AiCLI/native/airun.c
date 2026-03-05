@@ -1474,6 +1474,21 @@ static int emit_wasm_spa_files(const char* out_dir)
             "    state.focusedTargetId = targetId;\n"
             "    pushEvent({ type: 'click', targetId, x: clamped.x, y: clamped.y, key: '', text: '', modifiers: uiEventModifiers(ev), repeat: false });\n"
             "  });\n"
+            "  svg.addEventListener('pointerdown', (ev) => {\n"
+            "    svg.focus();\n"
+            "    const targetId = uiEventTargetId(ev);\n"
+            "    const clamped = clampToWindow(ev?.offsetX ?? 0, ev?.offsetY ?? 0);\n"
+            "    state.focusedTargetId = targetId;\n"
+            "    pushEvent({ type: 'click', targetId, x: clamped.x, y: clamped.y, key: '', text: '', modifiers: uiEventModifiers(ev), repeat: false });\n"
+            "  });\n"
+            "  svg.addEventListener('touchstart', (ev) => {\n"
+            "    svg.focus();\n"
+            "    const targetId = uiEventTargetId(ev);\n"
+            "    const touch = (ev?.touches && ev.touches.length > 0) ? ev.touches[0] : null;\n"
+            "    const clamped = clampToWindow(touch?.clientX ?? 0, touch?.clientY ?? 0);\n"
+            "    state.focusedTargetId = targetId;\n"
+            "    pushEvent({ type: 'click', targetId, x: clamped.x, y: clamped.y, key: '', text: '', modifiers: uiEventModifiers(ev), repeat: false });\n"
+            "  });\n"
             "  svg.addEventListener('keydown', (ev) => {\n"
             "    pushEvent({ type: 'key', targetId: String(state.focusedTargetId ?? ''), x: -1, y: -1, key: uiEventKey(ev?.key), text: uiEventText(ev), modifiers: uiEventModifiers(ev), repeat: !!ev?.repeat });\n"
             "  });\n"
@@ -1483,7 +1498,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  }\n"
             "  uiState.windows.set(windowId, state);\n"
             "  return state;\n"
-            "}\n"
+            "}\n";
+        const char* main_js_head4 =
             "globalThis.__aivmUiCreateWindow = (windowId, title, width, height) => {\n"
             "  if (!Number.isInteger(windowId) || windowId <= 0 || !Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return -1;\n"
             "  return ensureUiWindow(windowId, title, width, height) ? 0 : -1;\n"
@@ -1670,7 +1686,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
             "if (output) output.textContent = logs.join('\\n');\n";
-        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_mid, main_js_tail, main_js_tail2) >= (int)sizeof(main_js)) {
+        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_head4, main_js_mid, main_js_tail, main_js_tail2) >= (int)sizeof(main_js)) {
             return 0;
         }
     }

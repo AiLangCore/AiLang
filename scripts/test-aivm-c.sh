@@ -113,6 +113,53 @@ EOF
     echo "native cache smoke failed: clean did not remove cache artifacts" >&2
     exit 1
   fi
+
+  TMP_NATIVE_DEBUG_MEM_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem"
+  TMP_NATIVE_DEBUG_MEM_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem-out"
+  TMP_NATIVE_DEBUG_MEM_APP="${TMP_NATIVE_DEBUG_MEM_DIR}/memory_pressure.aos"
+  rm -rf "${TMP_NATIVE_DEBUG_MEM_DIR}" "${TMP_NATIVE_DEBUG_MEM_OUT}"
+  mkdir -p "${TMP_NATIVE_DEBUG_MEM_DIR}"
+  {
+    echo 'Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {'
+    echo '  Const#k0(kind=string value="n")'
+    echo '  Func#f1(name=main params="argv" locals="") {'
+    n=1
+    inst_id=1
+    while [[ $n -le 300 ]]; do
+      echo "    Inst#c${inst_id}(op=CONST a=0)"
+      inst_id=$((inst_id + 1))
+      echo "    Inst#m${inst_id}(op=MAKE_BLOCK)"
+      inst_id=$((inst_id + 1))
+      n=$((n + 1))
+    done
+    echo "    Inst#h${inst_id}(op=HALT)"
+    echo '  }'
+    echo '}'
+  } > "${TMP_NATIVE_DEBUG_MEM_APP}"
+  if "${ROOT_DIR}/tools/airun" debug run "${TMP_NATIVE_DEBUG_MEM_APP}" --out "${TMP_NATIVE_DEBUG_MEM_OUT}" >/dev/null 2>&1; then
+    echo "native debug memory smoke failed: expected memory-pressure failure" >&2
+    exit 1
+  fi
+  if [[ ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml" || ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml" ]]; then
+    echo "native debug memory smoke failed: expected debug artifacts missing" >&2
+    exit 1
+  fi
+  if ! grep -q "vm_code=AIVM008" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected vm_code=AIVM008 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "detail=Node arena capacity exceeded\\." "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node arena capacity detail in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "stack_count" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: stack snapshot missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "locals_count" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: locals snapshot missing in state_snapshots.toml" >&2
+    exit 1
+  fi
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"

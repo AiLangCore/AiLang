@@ -144,6 +144,18 @@ EOF
     echo "native debug memory smoke failed: expected debug artifacts missing" >&2
     exit 1
   fi
+  if [[ ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml" ]]; then
+    echo "native debug memory smoke failed: expected config.toml missing" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations = 64" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected gc interval policy value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes = 192" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
   if ! grep -q "vm_code=AIVM011" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
     echo "native debug memory smoke failed: expected vm_code=AIVM011 in diagnostics.toml" >&2
     exit 1

@@ -2846,6 +2846,8 @@ static int write_native_debug_bundle(
     fprintf(f, "app_path = \"%s\"\n", (options->input_path == NULL) ? "" : options->input_path);
     fprintf(f, "status = \"%s\"\n", (vm != NULL && vm->status == AIVM_VM_STATUS_ERROR) ? "error" : "ok");
     fprintf(f, "exit_code = %d\n", has_exit_code ? exit_code : 0);
+    fprintf(f, "node_gc_interval_allocations = %d\n", AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS);
+    fprintf(f, "node_gc_pressure_threshold_nodes = %d\n", AIVM_VM_NODE_GC_PRESSURE_THRESHOLD);
     fclose(f);
 
     if (!join_path(options->out_dir, "vm_trace.toml", path, sizeof(path))) {

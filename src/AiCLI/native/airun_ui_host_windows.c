@@ -1,0 +1,497 @@
+#include "airun_ui_host.h"
+#include <string.h>
+
+#ifdef _WIN32
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+
+typedef struct {
+    int64_t handle;
+    HWND hwnd;
+    int close_pending;
+    int width;
+    int height;
+    NativeHostUiEvent pending_event;
+    int has_pending_event;
+} NativeUiWindowsSlot;
+
+static NativeUiWindowsSlot g_native_ui_windows[8];
+static int64_t g_native_ui_next_handle = 1;
+static int g_native_ui_class_registered = 0;
+static const wchar_t* g_native_ui_class_name = L"AiLangNativeUiWindow";
+
+static NativeUiWindowsSlot* native_ui_windows_find_slot(int64_t handle)
+{
+    size_t i;
+    if (handle <= 0) {
+        return NULL;
+    }
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].handle == handle && g_native_ui_windows[i].hwnd != NULL) {
+            return &g_native_ui_windows[i];
+        }
+    }
+    return NULL;
+}
+
+static NativeUiWindowsSlot* native_ui_windows_find_slot_by_hwnd(HWND hwnd)
+{
+    size_t i;
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].hwnd == hwnd && hwnd != NULL) {
+            return &g_native_ui_windows[i];
+        }
+    }
+    return NULL;
+}
+
+static NativeUiWindowsSlot* native_ui_windows_find_empty_slot(void)
+{
+    size_t i;
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].hwnd == NULL) {
+            return &g_native_ui_windows[i];
+        }
+    }
+    return NULL;
+}
+
+static void native_ui_windows_set_event_type(NativeHostUiEvent* event, const char* type)
+{
+    if (event == NULL) {
+        return;
+    }
+    memset(event, 0, sizeof(*event));
+    if (type == NULL) {
+        return;
+    }
+    (void)snprintf(event->type, sizeof(event->type), "%s", type);
+}
+
+static void native_ui_windows_set_pending_event(NativeUiWindowsSlot* slot, const NativeHostUiEvent* event)
+{
+    if (slot == NULL || event == NULL) {
+        return;
+    }
+    slot->pending_event = *event;
+    slot->has_pending_event = 1;
+}
+
+static COLORREF native_ui_windows_parse_color(const char* color, COLORREF fallback)
+{
+    unsigned int red;
+    unsigned int green;
+    unsigned int blue;
+    if (color == NULL || color[0] == '\0') {
+        return fallback;
+    }
+    if (color[0] == '#') {
+        if (sscanf(color + 1, "%02x%02x%02x", &red, &green, &blue) == 3) {
+            return RGB((BYTE)red, (BYTE)green, (BYTE)blue);
+        }
+        return fallback;
+    }
+    if (_stricmp(color, "white") == 0) {
+        return RGB(255, 255, 255);
+    }
+    if (_stricmp(color, "black") == 0) {
+        return RGB(0, 0, 0);
+    }
+    if (_stricmp(color, "red") == 0) {
+        return RGB(255, 0, 0);
+    }
+    if (_stricmp(color, "green") == 0) {
+        return RGB(0, 255, 0);
+    }
+    if (_stricmp(color, "blue") == 0) {
+        return RGB(0, 0, 255);
+    }
+    return fallback;
+}
+
+static void native_ui_windows_key_name(WPARAM wparam, char* out_key, size_t key_capacity)
+{
+    UINT vk = (UINT)wparam;
+    if (out_key == NULL || key_capacity == 0U) {
+        return;
+    }
+    out_key[0] = '\0';
+    switch (vk) {
+        case VK_RETURN: (void)snprintf(out_key, key_capacity, "enter"); return;
+        case VK_TAB: (void)snprintf(out_key, key_capacity, "tab"); return;
+        case VK_SPACE: (void)snprintf(out_key, key_capacity, "space"); return;
+        case VK_BACK: (void)snprintf(out_key, key_capacity, "backspace"); return;
+        case VK_ESCAPE: (void)snprintf(out_key, key_capacity, "escape"); return;
+        case VK_LEFT: (void)snprintf(out_key, key_capacity, "left"); return;
+        case VK_RIGHT: (void)snprintf(out_key, key_capacity, "right"); return;
+        case VK_UP: (void)snprintf(out_key, key_capacity, "up"); return;
+        case VK_DOWN: (void)snprintf(out_key, key_capacity, "down"); return;
+        case VK_DELETE: (void)snprintf(out_key, key_capacity, "delete"); return;
+        default:
+            break;
+    }
+    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) {
+        out_key[0] = (char)tolower((int)vk);
+        out_key[1] = '\0';
+        return;
+    }
+}
+
+static LRESULT CALLBACK native_ui_windows_wndproc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot_by_hwnd(hwnd);
+    if (slot != NULL) {
+        if (message == WM_CLOSE || message == WM_DESTROY) {
+            NativeHostUiEvent event;
+            slot->close_pending = 1;
+            native_ui_windows_set_event_type(&event, "closed");
+            native_ui_windows_set_pending_event(slot, &event);
+        } else if (message == WM_SIZE) {
+            slot->width = LOWORD(lparam);
+            slot->height = HIWORD(lparam);
+        } else if (message == WM_KEYDOWN) {
+            NativeHostUiEvent event;
+            native_ui_windows_set_event_type(&event, "key");
+            native_ui_windows_key_name(wparam, event.key, sizeof(event.key));
+            (void)snprintf(event.text, sizeof(event.text), "%s", event.key);
+            native_ui_windows_set_pending_event(slot, &event);
+        } else if (message == WM_LBUTTONDOWN) {
+            NativeHostUiEvent event;
+            native_ui_windows_set_event_type(&event, "click");
+            event.x = GET_X_LPARAM(lparam);
+            event.y = GET_Y_LPARAM(lparam);
+            native_ui_windows_set_pending_event(slot, &event);
+        }
+    }
+    return DefWindowProcW(hwnd, message, wparam, lparam);
+}
+
+static int native_ui_windows_register_class(void)
+{
+    WNDCLASSW window_class;
+    if (g_native_ui_class_registered != 0) {
+        return 1;
+    }
+    memset(&window_class, 0, sizeof(window_class));
+    window_class.style = CS_HREDRAW | CS_VREDRAW;
+    window_class.lpfnWndProc = native_ui_windows_wndproc;
+    window_class.hInstance = GetModuleHandleW(NULL);
+    window_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+    window_class.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    window_class.lpszClassName = g_native_ui_class_name;
+    if (RegisterClassW(&window_class) == 0) {
+        return 0;
+    }
+    g_native_ui_class_registered = 1;
+    return 1;
+}
+
+void native_host_ui_reset(void)
+{
+    size_t i;
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        memset(&g_native_ui_windows[i], 0, sizeof(g_native_ui_windows[i]));
+    }
+    g_native_ui_next_handle = 1;
+}
+
+void native_host_ui_shutdown(void)
+{
+    size_t i;
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].hwnd != NULL) {
+            DestroyWindow(g_native_ui_windows[i].hwnd);
+            g_native_ui_windows[i].hwnd = NULL;
+            g_native_ui_windows[i].handle = 0;
+        }
+    }
+}
+
+int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle)
+{
+    NativeUiWindowsSlot* slot;
+    HWND hwnd;
+    RECT rect;
+    DWORD style = WS_OVERLAPPEDWINDOW;
+    wchar_t title_w[128];
+    int title_len;
+    if (out_handle == NULL || width <= 0 || height <= 0) {
+        return 0;
+    }
+    *out_handle = 0;
+    if (!native_ui_windows_register_class()) {
+        return 0;
+    }
+    slot = native_ui_windows_find_empty_slot();
+    if (slot == NULL) {
+        return 0;
+    }
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = width;
+    rect.bottom = height;
+    if (!AdjustWindowRect(&rect, style, FALSE)) {
+        return 0;
+    }
+    if (title == NULL || title[0] == '\0') {
+        title = "AiLang";
+    }
+    title_len = MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w, (int)(sizeof(title_w) / sizeof(title_w[0])));
+    if (title_len <= 0) {
+        (void)MultiByteToWideChar(CP_ACP, 0, title, -1, title_w, (int)(sizeof(title_w) / sizeof(title_w[0])));
+    }
+    hwnd = CreateWindowExW(
+        0,
+        g_native_ui_class_name,
+        title_w,
+        style,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        rect.right - rect.left,
+        rect.bottom - rect.top,
+        NULL,
+        NULL,
+        GetModuleHandleW(NULL),
+        NULL);
+    if (hwnd == NULL) {
+        return 0;
+    }
+    ShowWindow(hwnd, SW_SHOW);
+    UpdateWindow(hwnd);
+    slot->handle = g_native_ui_next_handle++;
+    slot->hwnd = hwnd;
+    slot->close_pending = 0;
+    slot->width = width;
+    slot->height = height;
+    slot->has_pending_event = 0;
+    *out_handle = slot->handle;
+    return 1;
+}
+
+int native_host_ui_close_window(int64_t handle)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    if (slot == NULL || slot->hwnd == NULL) {
+        return 0;
+    }
+    DestroyWindow(slot->hwnd);
+    slot->hwnd = NULL;
+    slot->close_pending = 1;
+    slot->handle = 0;
+    return 1;
+}
+
+int native_host_ui_begin_frame(int64_t handle)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    RECT rect;
+    HBRUSH brush;
+    if (slot == NULL || slot->hwnd == NULL) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    if (GetClientRect(slot->hwnd, &rect)) {
+        brush = CreateSolidBrush(RGB(255, 255, 255));
+        if (brush != NULL) {
+            FillRect(dc, &rect, brush);
+            DeleteObject(brush);
+        }
+    }
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
+}
+
+int native_host_ui_end_frame(int64_t handle)
+{
+    (void)handle;
+    return 1;
+}
+
+int native_host_ui_present(int64_t handle)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    if (slot == NULL || slot->hwnd == NULL) {
+        return 0;
+    }
+    InvalidateRect(slot->hwnd, NULL, FALSE);
+    UpdateWindow(slot->hwnd);
+    return 1;
+}
+
+int native_host_ui_wait_frame(int64_t handle)
+{
+    (void)handle;
+    Sleep(16);
+    return 1;
+}
+
+int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    HBRUSH brush;
+    RECT rect;
+    if (slot == NULL || slot->hwnd == NULL || width <= 0 || height <= 0) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    brush = CreateSolidBrush(native_ui_windows_parse_color(color, RGB(0, 0, 0)));
+    if (brush != NULL) {
+        rect.left = x;
+        rect.top = y;
+        rect.right = x + width;
+        rect.bottom = y + height;
+        FillRect(dc, &rect, brush);
+        DeleteObject(brush);
+    }
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
+}
+
+int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    HFONT font = NULL;
+    HFONT prev_font = NULL;
+    COLORREF text_color;
+    if (slot == NULL || slot->hwnd == NULL || text == NULL) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    if (font_size > 0) {
+        font = CreateFontA(-font_size, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+            CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+        if (font != NULL) {
+            prev_font = (HFONT)SelectObject(dc, font);
+        }
+    }
+    text_color = native_ui_windows_parse_color(color, RGB(0, 0, 0));
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, text_color);
+    (void)TextOutA(dc, x, y, text, (int)strlen(text));
+    if (font != NULL) {
+        if (prev_font != NULL) {
+            SelectObject(dc, prev_font);
+        }
+        DeleteObject(font);
+    }
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
+}
+
+int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    HPEN pen;
+    HPEN prev_pen;
+    if (slot == NULL || slot->hwnd == NULL) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    pen = CreatePen(PS_SOLID, stroke_width > 0 ? stroke_width : 1, native_ui_windows_parse_color(color, RGB(0, 0, 0)));
+    if (pen == NULL) {
+        ReleaseDC(slot->hwnd, dc);
+        return 0;
+    }
+    prev_pen = (HPEN)SelectObject(dc, pen);
+    MoveToEx(dc, x1, y1, NULL);
+    (void)LineTo(dc, x2, y2);
+    SelectObject(dc, prev_pen);
+    DeleteObject(pen);
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
+}
+
+int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
+{
+    (void)handle;
+    (void)path;
+    (void)color;
+    (void)stroke_width;
+    return 0;
+}
+
+int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    MSG message;
+    if (slot == NULL || out_event == NULL) {
+        return 0;
+    }
+    while (PeekMessageW(&message, slot->hwnd, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&message);
+        DispatchMessageW(&message);
+    }
+    if (slot->has_pending_event != 0) {
+        *out_event = slot->pending_event;
+        slot->has_pending_event = 0;
+        return 1;
+    }
+    if (slot->close_pending != 0) {
+        native_ui_windows_set_event_type(out_event, "closed");
+        return 1;
+    }
+    native_ui_windows_set_event_type(out_event, "none");
+    return 1;
+}
+
+int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_height)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    RECT rect;
+    if (slot == NULL || slot->hwnd == NULL) {
+        return 0;
+    }
+    if (GetClientRect(slot->hwnd, &rect)) {
+        slot->width = rect.right - rect.left;
+        slot->height = rect.bottom - rect.top;
+    }
+    if (out_width != NULL) {
+        *out_width = slot->width;
+    }
+    if (out_height != NULL) {
+        *out_height = slot->height;
+    }
+    return 1;
+}
+
+#else
+
+void native_host_ui_reset(void) {}
+void native_host_ui_shutdown(void) {}
+int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle) { (void)title; (void)width; (void)height; if (out_handle != NULL) { *out_handle = 0; } return 0; }
+int native_host_ui_close_window(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_begin_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_end_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_present(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_wait_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color) { (void)handle; (void)x; (void)y; (void)width; (void)height; (void)color; return 0; }
+int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size) { (void)handle; (void)x; (void)y; (void)text; (void)color; (void)font_size; return 0; }
+int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width) { (void)handle; (void)x1; (void)y1; (void)x2; (void)y2; (void)color; (void)stroke_width; return 0; }
+int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width) { (void)handle; (void)path; (void)color; (void)stroke_width; return 0; }
+int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event) { (void)handle; if (out_event != NULL) { memset(out_event, 0, sizeof(*out_event)); } return 0; }
+int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_height) { (void)handle; if (out_width != NULL) { *out_width = 0; } if (out_height != NULL) { *out_height = 0; } return 0; }
+
+#endif

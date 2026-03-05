@@ -7,6 +7,7 @@ NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
 NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native/src"
 NATIVE_UI_HOST_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_macos.m"
 NATIVE_UI_HOST_LINUX_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_linux.c"
+NATIVE_UI_HOST_WINDOWS_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_windows.c"
 NATIVE_UI_HOST_UNAVAILABLE_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
 UNAME_M="$(uname -m)"
@@ -15,8 +16,9 @@ HOST_WRAPPER_PATH="${ROOT_DIR}/tools/airun"
 case "${UNAME_S}" in
   Darwin) HOST_PLATFORM="osx" ;;
   Linux) HOST_PLATFORM="linux" ;;
+  MINGW*|MSYS*|CYGWIN*) HOST_PLATFORM="windows" ;;
   *)
-    echo "build-airun.sh supports only macOS/Linux (got ${UNAME_S})" >&2
+    echo "build-airun.sh supports only macOS/Linux/Windows (got ${UNAME_S})" >&2
     exit 1
     ;;
 esac
@@ -33,7 +35,7 @@ esac
 TARGET_PLATFORM="${AIVM_AIRUN_PLATFORM:-${HOST_PLATFORM}}"
 TARGET_ARCH="${AIVM_AIRUN_ARCH:-${HOST_ARCH}}"
 
-if [[ "${TARGET_PLATFORM}" != "osx" && "${TARGET_PLATFORM}" != "linux" ]]; then
+if [[ "${TARGET_PLATFORM}" != "osx" && "${TARGET_PLATFORM}" != "linux" && "${TARGET_PLATFORM}" != "windows" ]]; then
   echo "unsupported AIVM_AIRUN_PLATFORM: ${TARGET_PLATFORM}" >&2
   exit 1
 fi
@@ -71,6 +73,14 @@ elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOS
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
   LD_EXTRA=(-lX11)
+elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
+  UI_HOST_SRC="${NATIVE_UI_HOST_WINDOWS_SRC}"
+  LD_EXTRA=(-lgdi32 -luser32)
+  if [[ "${TARGET_ARCH}" == "x64" && "${HOST_ARCH}" != "x64" ]] && command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+    CC_BIN="x86_64-w64-mingw32-gcc"
+  elif [[ "${TARGET_ARCH}" == "arm64" ]] && command -v aarch64-w64-mingw32-gcc >/dev/null 2>&1; then
+    CC_BIN="aarch64-w64-mingw32-gcc"
+  fi
 fi
 
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \

@@ -3707,6 +3707,122 @@ static int native_base64_decode_char(char ch)
 static uint8_t g_native_bytes_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
 static char g_native_base64_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
 static char g_native_utf8_scratch[8];
+static char* g_native_string_scratch = NULL;
+static size_t g_native_string_scratch_capacity = 0U;
+
+static int native_string_scratch_ensure_capacity(size_t required_capacity)
+{
+    char* grown;
+    size_t new_capacity;
+    if (required_capacity == 0U) {
+        required_capacity = 1U;
+    }
+    if (required_capacity <= g_native_string_scratch_capacity && g_native_string_scratch != NULL) {
+        return 1;
+    }
+    new_capacity = (g_native_string_scratch_capacity == 0U) ? 256U : g_native_string_scratch_capacity;
+    while (new_capacity < required_capacity) {
+        if (new_capacity > (SIZE_MAX / 2U)) {
+            new_capacity = required_capacity;
+            break;
+        }
+        new_capacity *= 2U;
+    }
+    grown = (char*)realloc(g_native_string_scratch, new_capacity);
+    if (grown == NULL) {
+        return 0;
+    }
+    g_native_string_scratch = grown;
+    g_native_string_scratch_capacity = new_capacity;
+    return 1;
+}
+
+static size_t native_utf8_next_index(const char* text, size_t index)
+{
+    unsigned char first;
+    if (text == NULL) {
+        return index;
+    }
+    first = (unsigned char)text[index];
+    if (first == '\0') {
+        return index;
+    }
+    if ((first & 0x80U) == 0U) {
+        return index + 1U;
+    }
+    if ((first & 0xE0U) == 0xC0U &&
+        text[index + 1U] != '\0' &&
+        (((unsigned char)text[index + 1U]) & 0xC0U) == 0x80U) {
+        return index + 2U;
+    }
+    if ((first & 0xF0U) == 0xE0U &&
+        text[index + 1U] != '\0' &&
+        text[index + 2U] != '\0' &&
+        (((unsigned char)text[index + 1U]) & 0xC0U) == 0x80U &&
+        (((unsigned char)text[index + 2U]) & 0xC0U) == 0x80U) {
+        return index + 3U;
+    }
+    if ((first & 0xF8U) == 0xF0U &&
+        text[index + 1U] != '\0' &&
+        text[index + 2U] != '\0' &&
+        text[index + 3U] != '\0' &&
+        (((unsigned char)text[index + 1U]) & 0xC0U) == 0x80U &&
+        (((unsigned char)text[index + 2U]) & 0xC0U) == 0x80U &&
+        (((unsigned char)text[index + 3U]) & 0xC0U) == 0x80U) {
+        return index + 4U;
+    }
+    return index + 1U;
+}
+
+static size_t native_utf8_rune_count(const char* text)
+{
+    size_t byte_index = 0U;
+    size_t count = 0U;
+    if (text == NULL) {
+        return 0U;
+    }
+    while (text[byte_index] != '\0') {
+        byte_index = native_utf8_next_index(text, byte_index);
+        count += 1U;
+    }
+    return count;
+}
+
+static size_t native_utf8_byte_offset_for_rune(const char* text, size_t rune_index)
+{
+    size_t byte_index = 0U;
+    size_t current_rune = 0U;
+    if (text == NULL) {
+        return 0U;
+    }
+    while (text[byte_index] != '\0' && current_rune < rune_index) {
+        byte_index = native_utf8_next_index(text, byte_index);
+        current_rune += 1U;
+    }
+    return byte_index;
+}
+
+static size_t native_clamp_rune_index(int64_t value, size_t max_value)
+{
+    if (value <= 0) {
+        return 0U;
+    }
+    if ((uint64_t)value >= (uint64_t)max_value) {
+        return max_value;
+    }
+    return (size_t)value;
+}
+
+static int64_t native_safe_add_i64(int64_t a, int64_t b)
+{
+    if (b > 0 && a > (INT64_MAX - b)) {
+        return INT64_MAX;
+    }
+    if (b < 0 && a < (INT64_MIN - b)) {
+        return INT64_MIN;
+    }
+    return a + b;
+}
 
 static int native_bytes_from_base64(
     const char* input,
@@ -4228,6 +4344,127 @@ static int native_syscall_str_from_codepoint(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_str_substring(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* text;
+    size_t rune_count;
+    size_t start_rune;
+    size_t end_rune;
+    size_t start_byte;
+    size_t end_byte;
+    size_t copy_length;
+    int64_t end_index;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_INT ||
+        args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    text = args[0].string_value;
+    if (args[2].int_value <= 0) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    rune_count = native_utf8_rune_count(text);
+    start_rune = native_clamp_rune_index(args[1].int_value, rune_count);
+    end_index = native_safe_add_i64(args[1].int_value, args[2].int_value);
+    end_rune = native_clamp_rune_index(end_index, rune_count);
+    if (end_rune < start_rune) {
+        end_rune = start_rune;
+    }
+    start_byte = native_utf8_byte_offset_for_rune(text, start_rune);
+    end_byte = native_utf8_byte_offset_for_rune(text, end_rune);
+    copy_length = end_byte - start_byte;
+    if (!native_string_scratch_ensure_capacity(copy_length + 1U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (copy_length > 0U) {
+        memcpy(g_native_string_scratch, text + start_byte, copy_length);
+    }
+    g_native_string_scratch[copy_length] = '\0';
+    *result = aivm_value_string(g_native_string_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_remove(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* text;
+    size_t input_length;
+    size_t rune_count;
+    size_t start_rune;
+    size_t end_rune;
+    size_t start_byte;
+    size_t end_byte;
+    size_t output_length;
+    int64_t end_index;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_INT ||
+        args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    text = args[0].string_value;
+    input_length = strlen(text);
+    if (args[2].int_value <= 0) {
+        if (!native_string_scratch_ensure_capacity(input_length + 1U)) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        if (input_length > 0U) {
+            memcpy(g_native_string_scratch, text, input_length);
+        }
+        g_native_string_scratch[input_length] = '\0';
+        *result = aivm_value_string(g_native_string_scratch);
+        return AIVM_SYSCALL_OK;
+    }
+    rune_count = native_utf8_rune_count(text);
+    start_rune = native_clamp_rune_index(args[1].int_value, rune_count);
+    end_index = native_safe_add_i64(args[1].int_value, args[2].int_value);
+    end_rune = native_clamp_rune_index(end_index, rune_count);
+    if (end_rune < start_rune) {
+        end_rune = start_rune;
+    }
+    start_byte = native_utf8_byte_offset_for_rune(text, start_rune);
+    end_byte = native_utf8_byte_offset_for_rune(text, end_rune);
+    output_length = input_length - (end_byte - start_byte);
+    if (!native_string_scratch_ensure_capacity(output_length + 1U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (start_byte > 0U) {
+        memcpy(g_native_string_scratch, text, start_byte);
+    }
+    if (end_byte < input_length) {
+        memcpy(g_native_string_scratch + start_byte, text + end_byte, input_length - end_byte);
+    }
+    g_native_string_scratch[output_length] = '\0';
+    *result = aivm_value_string(g_native_string_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_str_decode_unicode_hex4(
     const char* target,
     const AivmValue* args,
@@ -4694,7 +4931,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[44];
+    AivmSyscallBinding bindings[46];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -4756,55 +4993,59 @@ static int run_native_compiled_program(
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     bindings[21].target = "sys.bytes.toUtf8String";
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
-    bindings[22].target = "sys.ui.createWindow";
-    bindings[22].handler = native_syscall_ui_create_window;
-    bindings[23].target = "sys.ui.beginFrame";
-    bindings[23].handler = native_syscall_ui_void_1;
-    bindings[24].target = "sys.ui.drawRect";
-    bindings[24].handler = native_syscall_ui_draw_rect;
-    bindings[25].target = "sys.ui.drawText";
-    bindings[25].handler = native_syscall_ui_draw_text;
-    bindings[26].target = "sys.ui.endFrame";
-    bindings[26].handler = native_syscall_ui_void_1;
-    bindings[27].target = "sys.ui.pollEvent";
-    bindings[27].handler = native_syscall_ui_poll_event;
-    bindings[28].target = "sys.ui.present";
+    bindings[22].target = "sys.str.substring";
+    bindings[22].handler = native_syscall_str_substring;
+    bindings[23].target = "sys.str.remove";
+    bindings[23].handler = native_syscall_str_remove;
+    bindings[24].target = "sys.ui.createWindow";
+    bindings[24].handler = native_syscall_ui_create_window;
+    bindings[25].target = "sys.ui.beginFrame";
+    bindings[25].handler = native_syscall_ui_void_1;
+    bindings[26].target = "sys.ui.drawRect";
+    bindings[26].handler = native_syscall_ui_draw_rect;
+    bindings[27].target = "sys.ui.drawText";
+    bindings[27].handler = native_syscall_ui_draw_text;
+    bindings[28].target = "sys.ui.endFrame";
     bindings[28].handler = native_syscall_ui_void_1;
-    bindings[29].target = "sys.ui.closeWindow";
-    bindings[29].handler = native_syscall_ui_void_1;
-    bindings[30].target = "sys.ui.drawLine";
-    bindings[30].handler = native_syscall_ui_draw_line;
-    bindings[31].target = "sys.ui.drawEllipse";
-    bindings[31].handler = native_syscall_ui_draw_rect;
-    bindings[32].target = "sys.ui.drawPath";
-    bindings[32].handler = native_syscall_ui_draw_path;
-    bindings[33].target = "sys.ui.drawImage";
+    bindings[29].target = "sys.ui.pollEvent";
+    bindings[29].handler = native_syscall_ui_poll_event;
+    bindings[30].target = "sys.ui.present";
+    bindings[30].handler = native_syscall_ui_void_1;
+    bindings[31].target = "sys.ui.closeWindow";
+    bindings[31].handler = native_syscall_ui_void_1;
+    bindings[32].target = "sys.ui.drawLine";
+    bindings[32].handler = native_syscall_ui_draw_line;
+    bindings[33].target = "sys.ui.drawEllipse";
     bindings[33].handler = native_syscall_ui_draw_rect;
-    bindings[34].target = "sys.ui.getWindowSize";
-    bindings[34].handler = native_syscall_ui_get_window_size;
-    bindings[35].target = "sys.ui.waitFrame";
-    bindings[35].handler = native_syscall_ui_void_1;
-    bindings[36].target = "sys.worker.start";
-    bindings[36].handler = native_syscall_worker_start;
-    bindings[37].target = "sys.worker.poll";
-    bindings[37].handler = native_syscall_worker_poll;
-    bindings[38].target = "sys.worker.result";
-    bindings[38].handler = native_syscall_worker_result;
-    bindings[39].target = "sys.worker.error";
-    bindings[39].handler = native_syscall_worker_error;
-    bindings[40].target = "sys.worker.cancel";
-    bindings[40].handler = native_syscall_worker_cancel;
-    bindings[41].target = "sys.remote.call";
-    bindings[41].handler = native_syscall_remote_call;
+    bindings[34].target = "sys.ui.drawPath";
+    bindings[34].handler = native_syscall_ui_draw_path;
+    bindings[35].target = "sys.ui.drawImage";
+    bindings[35].handler = native_syscall_ui_draw_rect;
+    bindings[36].target = "sys.ui.getWindowSize";
+    bindings[36].handler = native_syscall_ui_get_window_size;
+    bindings[37].target = "sys.ui.waitFrame";
+    bindings[37].handler = native_syscall_ui_void_1;
+    bindings[38].target = "sys.worker.start";
+    bindings[38].handler = native_syscall_worker_start;
+    bindings[39].target = "sys.worker.poll";
+    bindings[39].handler = native_syscall_worker_poll;
+    bindings[40].target = "sys.worker.result";
+    bindings[40].handler = native_syscall_worker_result;
+    bindings[41].target = "sys.worker.error";
+    bindings[41].handler = native_syscall_worker_error;
+    bindings[42].target = "sys.worker.cancel";
+    bindings[42].handler = native_syscall_worker_cancel;
+    bindings[43].target = "sys.remote.call";
+    bindings[43].handler = native_syscall_remote_call;
     /* Legacy aliases retained for pre-release AiBC1 samples still using underscore style names. */
-    bindings[42].target = "sys.stdout_writeLine";
-    bindings[42].handler = native_syscall_stdout_write_line;
-    bindings[43].target = "sys.process_argv";
-    bindings[43].handler = native_syscall_process_argv;
+    bindings[44].target = "sys.stdout_writeLine";
+    bindings[44].handler = native_syscall_stdout_write_line;
+    bindings[45].target = "sys.process_argv";
+    bindings[45].handler = native_syscall_process_argv;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        44U,
+        46U,
         process_argv,
         process_argv_count,
         &vm);

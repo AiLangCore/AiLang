@@ -141,6 +141,8 @@ typedef struct {
     size_t node_attr_count;
     int64_t node_children[AIVM_VM_NODE_CHILD_CAPACITY];
     size_t node_child_count;
+    int64_t ui_default_window_size_node_handle;
+    int64_t ui_empty_event_node_handle;
     size_t string_arena_high_water;
     size_t bytes_arena_high_water;
     size_t node_high_water;

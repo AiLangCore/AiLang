@@ -1286,6 +1286,8 @@ void aivm_reset_state(AivmVm* vm)
     vm->bytes_arena_pressure_count = 0U;
     vm->node_arena_pressure_count = 0U;
     vm->process_argv_node_handle = 0;
+    vm->ui_default_window_size_node_handle = 0;
+    vm->ui_empty_event_node_handle = 0;
     (void)initialize_process_argv_node(vm);
     vm->node_allocations_since_gc = 0U;
 }

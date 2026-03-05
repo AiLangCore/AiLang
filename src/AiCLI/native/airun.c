@@ -10,6 +10,8 @@
 #include <direct.h>
 #include <io.h>
 #include <process.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <sys/stat.h>
 #include <windows.h>
 #ifndef PATH_MAX
@@ -18,10 +20,15 @@
 #define AIVM_PATH_SEP '\\'
 #define AIVM_EXE_EXT ".exe"
 #else
+#include <arpa/inet.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <signal.h>
+#include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -38,10 +45,25 @@ extern int kill(pid_t pid, int sig);
 #endif
 
 #include "aivm_c_api.h"
+#include "remote/aivm_remote_channel.h"
+#include "remote/aivm_remote_session.h"
 #include "aivm_runtime.h"
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
+static int write_text_file(const char* path, const char* text);
+static int remove_file_if_exists(const char* path);
+static int run_native_fullstack_server(const char* www_dir);
+
+#ifdef _WIN32
+typedef SOCKET NativeSocket;
+#define NATIVE_INVALID_SOCKET INVALID_SOCKET
+#define native_socket_close closesocket
+#else
+typedef int NativeSocket;
+#define NATIVE_INVALID_SOCKET (-1)
+#define native_socket_close close
+#endif
 static int resolve_executable_path(const char* argv0, char* out, size_t out_len);
 static int dirname_of(const char* path, char* out, size_t out_len);
 static int simple_resolve_path(const char* base_file, const char* import_path, char* out_path, size_t out_path_len);
@@ -195,6 +217,306 @@ static int copy_runtime_file(const char* src, const char* dst)
     return 1;
 }
 
+static int remove_file_if_exists(const char* path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    }
+    if (!file_exists(path)) {
+        return 1;
+    }
+    return remove(path) == 0;
+}
+
+static volatile int g_fullstack_stop = 0;
+
+#ifdef _WIN32
+static BOOL WINAPI fullstack_ctrl_handler(DWORD ctrl_type)
+{
+    if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_BREAK_EVENT || ctrl_type == CTRL_CLOSE_EVENT) {
+        g_fullstack_stop = 1;
+        return TRUE;
+    }
+    return FALSE;
+}
+#else
+static void fullstack_signal_handler(int signo)
+{
+    (void)signo;
+    g_fullstack_stop = 1;
+}
+#endif
+
+static int native_send_all(NativeSocket fd, const char* bytes, size_t length)
+{
+    size_t sent = 0U;
+    while (sent < length) {
+#ifdef _WIN32
+        int n = send(fd, bytes + sent, (int)(length - sent), 0);
+#else
+        ssize_t n = send(fd, bytes + sent, length - sent, 0);
+#endif
+        if (n <= 0) {
+            return 0;
+        }
+        sent += (size_t)n;
+    }
+    return 1;
+}
+
+static const char* fullstack_mime_type(const char* path)
+{
+    if (path == NULL) {
+        return "application/octet-stream";
+    }
+    if (ends_with(path, ".html")) {
+        return "text/html; charset=utf-8";
+    }
+    if (ends_with(path, ".js") || ends_with(path, ".mjs")) {
+        return "text/javascript; charset=utf-8";
+    }
+    if (ends_with(path, ".wasm")) {
+        return "application/wasm";
+    }
+    if (ends_with(path, ".aibc1")) {
+        return "application/octet-stream";
+    }
+    return "application/octet-stream";
+}
+
+static int fullstack_send_error(NativeSocket client, int code, const char* message)
+{
+    char body[256];
+    char header[512];
+    int body_len;
+    int header_len;
+    if (message == NULL) {
+        message = "error";
+    }
+    body_len = snprintf(body, sizeof(body), "%d %s\n", code, message);
+    if (body_len < 0 || (size_t)body_len >= sizeof(body)) {
+        return 0;
+    }
+    header_len = snprintf(
+        header,
+        sizeof(header),
+        "HTTP/1.1 %d %s\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Content-Length: %d\r\n"
+        "Connection: close\r\n\r\n",
+        code,
+        message,
+        body_len);
+    if (header_len < 0 || (size_t)header_len >= sizeof(header)) {
+        return 0;
+    }
+    return native_send_all(client, header, (size_t)header_len) &&
+           native_send_all(client, body, (size_t)body_len);
+}
+
+static int fullstack_serve_request(NativeSocket client, const char* www_dir)
+{
+    char request[4096];
+    char method[16];
+    char target[1024];
+    char file_path[PATH_MAX];
+    char relative[1024];
+    char header[512];
+    struct stat st;
+    FILE* file;
+    size_t n;
+    int request_len;
+    int i;
+    const char* mime;
+    int header_len;
+    char buffer[4096];
+
+    if (www_dir == NULL) {
+        return fullstack_send_error(client, 500, "server error");
+    }
+
+#ifdef _WIN32
+    request_len = recv(client, request, (int)(sizeof(request) - 1U), 0);
+#else
+    request_len = (int)recv(client, request, sizeof(request) - 1U, 0);
+#endif
+    if (request_len <= 0) {
+        return 0;
+    }
+    request[request_len] = '\0';
+
+    if (sscanf(request, "%15s %1023s", method, target) != 2) {
+        return fullstack_send_error(client, 400, "bad request");
+    }
+    if (strcmp(method, "GET") != 0) {
+        return fullstack_send_error(client, 405, "method not allowed");
+    }
+    for (i = 0; target[i] != '\0'; i += 1) {
+        if (target[i] == '?') {
+            target[i] = '\0';
+            break;
+        }
+    }
+    if (strstr(target, "..") != NULL) {
+        return fullstack_send_error(client, 403, "forbidden");
+    }
+    if (strcmp(target, "/") == 0) {
+        if (snprintf(relative, sizeof(relative), "index.html") >= (int)sizeof(relative)) {
+            return fullstack_send_error(client, 500, "path overflow");
+        }
+    } else {
+        const char* rel = target;
+        if (target[0] == '/') {
+            rel = target + 1;
+        }
+        if (snprintf(relative, sizeof(relative), "%s", rel) >= (int)sizeof(relative)) {
+            return fullstack_send_error(client, 500, "path overflow");
+        }
+    }
+    if (!join_path(www_dir, relative, file_path, sizeof(file_path))) {
+        return fullstack_send_error(client, 500, "path overflow");
+    }
+    if (stat(file_path, &st) != 0) {
+        return fullstack_send_error(client, 404, "not found");
+    }
+#ifdef _WIN32
+    if ((st.st_mode & _S_IFREG) == 0) {
+#else
+    if (!S_ISREG(st.st_mode)) {
+#endif
+        return fullstack_send_error(client, 404, "not found");
+    }
+
+    file = fopen(file_path, "rb");
+    if (file == NULL) {
+        return fullstack_send_error(client, 404, "not found");
+    }
+    mime = fullstack_mime_type(file_path);
+    header_len = snprintf(
+        header,
+        sizeof(header),
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %lld\r\n"
+        "Connection: close\r\n\r\n",
+        mime,
+        (long long)st.st_size);
+    if (header_len < 0 || (size_t)header_len >= sizeof(header)) {
+        fclose(file);
+        return fullstack_send_error(client, 500, "header overflow");
+    }
+    if (!native_send_all(client, header, (size_t)header_len)) {
+        fclose(file);
+        return 0;
+    }
+    while ((n = fread(buffer, 1U, sizeof(buffer), file)) > 0U) {
+        if (!native_send_all(client, buffer, n)) {
+            fclose(file);
+            return 0;
+        }
+    }
+    fclose(file);
+    return 1;
+}
+
+static int run_native_fullstack_server(const char* www_dir)
+{
+    NativeSocket listener = NATIVE_INVALID_SOCKET;
+    struct sockaddr_in addr;
+    const char* port_env;
+    int port = 8080;
+    int reuse = 1;
+
+    if (www_dir == NULL) {
+        return 2;
+    }
+    port_env = getenv("PORT");
+    if (port_env != NULL && port_env[0] != '\0') {
+        int parsed = atoi(port_env);
+        if (parsed > 0 && parsed <= 65535) {
+            port = parsed;
+        }
+    }
+
+#ifdef _WIN32
+    {
+        WSADATA wsa_data;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
+            fprintf(stderr, "Err#err1(code=RUN001 message=\"WSAStartup failed.\" nodeId=publish)\n");
+            return 2;
+        }
+    }
+    SetConsoleCtrlHandler(fullstack_ctrl_handler, TRUE);
+#else
+    signal(SIGINT, fullstack_signal_handler);
+    signal(SIGTERM, fullstack_signal_handler);
+#endif
+
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+    if (listener == NATIVE_INVALID_SOCKET) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to create fullstack listener socket.\" nodeId=publish)\n");
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        return 2;
+    }
+    (void)setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons((uint16_t)port);
+    if (bind(listener, (struct sockaddr*)&addr, sizeof(addr)) != 0 || listen(listener, 16) != 0) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to bind/listen fullstack server socket.\" nodeId=publish)\n");
+        native_socket_close(listener);
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        return 2;
+    }
+
+    printf("[fullstack] serving static client from %s at http://localhost:%d\n", www_dir, port);
+    printf("[fullstack] press Ctrl+C to stop\n");
+    fflush(stdout);
+
+    g_fullstack_stop = 0;
+    while (!g_fullstack_stop) {
+        fd_set read_fds;
+        struct timeval timeout;
+        int ready;
+        NativeSocket client;
+        FD_ZERO(&read_fds);
+        FD_SET(listener, &read_fds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 250000;
+#ifdef _WIN32
+        ready = select(0, &read_fds, NULL, NULL, &timeout);
+#else
+        ready = select((int)listener + 1, &read_fds, NULL, NULL, &timeout);
+#endif
+        if (ready < 0) {
+            if (g_fullstack_stop) {
+                break;
+            }
+            continue;
+        }
+        if (ready == 0) {
+            continue;
+        }
+        client = accept(listener, NULL, NULL);
+        if (client == NATIVE_INVALID_SOCKET) {
+            continue;
+        }
+        (void)fullstack_serve_request(client, www_dir);
+        native_socket_close(client);
+    }
+
+    native_socket_close(listener);
+#ifdef _WIN32
+    WSACleanup();
+#endif
+    return 0;
+}
+
 static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
 {
     FILE* f;
@@ -260,6 +582,26 @@ static int read_text_file(const char* path, char* out, size_t out_len)
     n = fread(out, 1U, out_len - 1U, f);
     fclose(f);
     out[n] = '\0';
+    return 1;
+}
+
+static int write_text_file(const char* path, const char* text)
+{
+    FILE* f;
+    size_t len;
+    if (path == NULL || text == NULL) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    len = strlen(text);
+    if (len > 0U && fwrite(text, 1U, len, f) != len) {
+        fclose(f);
+        return 0;
+    }
+    fclose(f);
     return 1;
 }
 
@@ -775,6 +1117,25 @@ static int resolve_publish_target_from_manifest(const char* program_input, char*
     return 0;
 }
 
+static int resolve_publish_wasm_fullstack_host_target_from_manifest(const char* program_input, char* out_target, size_t out_len)
+{
+    char manifest_path[PATH_MAX];
+    char manifest_text[8192];
+    if (program_input == NULL || out_target == NULL || out_len == 0U) {
+        return 0;
+    }
+    if (!resolve_manifest_path_for_input(program_input, manifest_path, sizeof(manifest_path))) {
+        return 0;
+    }
+    if (!read_text_file(manifest_path, manifest_text, sizeof(manifest_text))) {
+        return 0;
+    }
+    if (!extract_manifest_attr(manifest_text, "publishWasmFullstackHostTarget", out_target, out_len)) {
+        return 0;
+    }
+    return 1;
+}
+
 static const char* host_rid(void)
 {
 #ifdef _WIN32
@@ -829,6 +1190,13 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
             return 0;
         }
         n = snprintf(out_bin, out_bin_len, "airun.exe");
+    } else if (strcmp(rid, "wasm32") == 0) {
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime-wasm32.wasm");
+        if (n < 0 || (size_t)n >= out_bin_len) {
+            return 0;
+        }
+        n = snprintf(out_dir, out_dir_len, ".artifacts/aivm-wasm32");
+        return n >= 0 && (size_t)n < out_dir_len;
     } else {
         return 0;
     }
@@ -853,7 +1221,7 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -884,6 +1252,653 @@ static int is_reserved_cv_selector(const char* mode)
         if (!isdigit((unsigned char)mode[i])) {
             return 0;
         }
+    }
+    return 1;
+}
+
+static int wasm_profile_is_valid(const char* profile)
+{
+    if (profile == NULL) {
+        return 0;
+    }
+    return strcmp(profile, "cli") == 0 ||
+           strcmp(profile, "spa") == 0 ||
+           strcmp(profile, "web") == 0 ||
+           strcmp(profile, "fullstack") == 0;
+}
+
+static const char* wasm_profile_normalize(const char* profile)
+{
+    if (profile == NULL || strcmp(profile, "web") == 0) {
+        return "spa";
+    }
+    return profile;
+}
+
+static int wasm_syscall_unavailable_for_profile(const char* profile, const char* target)
+{
+    if (profile == NULL || target == NULL) {
+        return 0;
+    }
+    if (strcmp(profile, "cli") == 0) {
+        return strcmp(target, "sys.process.spawn") == 0 ||
+               strcmp(target, "sys.process.wait") == 0 ||
+               strcmp(target, "sys.process.kill") == 0 ||
+               strcmp(target, "sys.process.stdout.read") == 0 ||
+               strcmp(target, "sys.process.stderr.read") == 0 ||
+               strcmp(target, "sys.process.poll") == 0 ||
+               strncmp(target, "sys.ui.", 7U) == 0 ||
+               strncmp(target, "sys.ui_", 7U) == 0;
+    }
+    if (strcmp(profile, "spa") == 0 || strcmp(profile, "fullstack") == 0) {
+        return strcmp(target, "sys.process.spawn") == 0 ||
+               strcmp(target, "sys.process.wait") == 0 ||
+               strcmp(target, "sys.process.kill") == 0 ||
+               strcmp(target, "sys.process.stdout.read") == 0 ||
+               strcmp(target, "sys.process.stderr.read") == 0 ||
+               strcmp(target, "sys.process.poll") == 0 ||
+               strncmp(target, "sys.net.", 8U) == 0 ||
+               strncmp(target, "sys.fs.", 7U) == 0;
+    }
+    return 0;
+}
+
+static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* program)
+{
+    size_t i;
+    if (profile == NULL || program == NULL) {
+        return;
+    }
+    for (i = 0U; i < program->constant_count; i += 1U) {
+        const char* target = NULL;
+        size_t j;
+        int already_reported = 0;
+        if (program->constants[i].type != AIVM_VAL_STRING || program->constants[i].string_value == NULL) {
+            continue;
+        }
+        target = program->constants[i].string_value;
+        if (strncmp(target, "sys.", 4U) != 0) {
+            continue;
+        }
+        if (!wasm_syscall_unavailable_for_profile(profile, target)) {
+            continue;
+        }
+        for (j = 0U; j < i; j += 1U) {
+            const char* prior_target;
+            if (program->constants[j].type != AIVM_VAL_STRING || program->constants[j].string_value == NULL) {
+                continue;
+            }
+            prior_target = program->constants[j].string_value;
+            if (strncmp(prior_target, "sys.", 4U) != 0) {
+                continue;
+            }
+            if (strcmp(prior_target, target) == 0) {
+                already_reported = 1;
+                break;
+            }
+        }
+        if (!already_reported) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",
+                target,
+                profile);
+        }
+    }
+}
+
+static int emit_wasm_cli_launchers(const char* out_dir, const char* runtime_name, const char* app_name)
+{
+    char run_sh_path[PATH_MAX];
+    char run_ps1_path[PATH_MAX];
+    char run_sh[1024];
+    char run_ps1[1024];
+    if (out_dir == NULL || runtime_name == NULL || app_name == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "run.sh", run_sh_path, sizeof(run_sh_path)) ||
+        !join_path(out_dir, "run.ps1", run_ps1_path, sizeof(run_ps1_path))) {
+        return 0;
+    }
+    if (snprintf(
+            run_sh,
+            sizeof(run_sh),
+            "#!/usr/bin/env bash\nset -euo pipefail\nDIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\nexec wasmtime run -C cache=n \"${DIR}/%s\" - < \"${DIR}/app.aibc1\"\n",
+            runtime_name) >= (int)sizeof(run_sh)) {
+        return 0;
+    }
+    if (snprintf(
+            run_ps1,
+            sizeof(run_ps1),
+            "$ErrorActionPreference = 'Stop'\n$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\nwasmtime run -C cache=n \"$dir/%s\" - < \"$dir/app.aibc1\"\n",
+            runtime_name) >= (int)sizeof(run_ps1)) {
+        return 0;
+    }
+    if (!write_text_file(run_sh_path, run_sh) || !write_text_file(run_ps1_path, run_ps1)) {
+        return 0;
+    }
+#ifndef _WIN32
+    if (chmod(run_sh_path, 0755) != 0) {
+        return 0;
+    }
+#endif
+    (void)app_name;
+    return 1;
+}
+
+static int emit_wasm_spa_files(const char* out_dir)
+{
+    char index_path[PATH_MAX];
+    char main_path[PATH_MAX];
+    char remote_client_path[PATH_MAX];
+    char index_html[2048];
+    char main_js[32768];
+    char remote_client_js[8192];
+    if (out_dir == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "index.html", index_path, sizeof(index_path)) ||
+        !join_path(out_dir, "main.js", main_path, sizeof(main_path)) ||
+        !join_path(out_dir, "remote-client.js", remote_client_path, sizeof(remote_client_path))) {
+        return 0;
+    }
+    if (snprintf(
+            index_html,
+            sizeof(index_html),
+            "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><title>AiLang wasm app</title></head>\n<body>\n  <pre id=\"output\"></pre>\n  <script type=\"module\" src=\"./main.js\"></script>\n</body>\n</html>\n") >= (int)sizeof(index_html)) {
+        return 0;
+    }
+    {
+        const char* main_js_head =
+            "import createRuntime from './aivm-runtime-wasm32-web.mjs';\n"
+            "import { createAivmRemoteClient } from './remote-client.js';\n"
+            "const output = document.getElementById('output');\n"
+            "const endpoint = globalThis.AIVM_REMOTE_WS_ENDPOINT || (`ws://${location.hostname}:8765`);\n"
+            "const aiLangRoot = globalThis.AiLang || (globalThis.AiLang = {});\n"
+            "const remoteMode = globalThis.AIVM_REMOTE_MODE || 'ws';\n"
+            "if (remoteMode !== 'ws' && remoteMode !== 'js') {\n"
+            "  throw new Error(`RUN101: unsupported AIVM_REMOTE_MODE '${remoteMode}' (expected 'ws' or 'js')`);\n"
+            "}\n"
+            "const stdinQueue = [];\n"
+            "let stdinClosed = false;\n"
+            "const uiState = { windows: new Map() };\n"
+            "function xmlEscape(text) {\n"
+            "  return String(text ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\"', '&quot;').replaceAll(\"'\", '&apos;');\n"
+            "}\n";
+        const char* main_js_head2 =
+            "function uiEventModifiers(ev) {\n"
+            "  const mods = [];\n"
+            "  if (ev?.altKey) mods.push('alt');\n"
+            "  if (ev?.ctrlKey) mods.push('ctrl');\n"
+            "  if (ev?.metaKey) mods.push('meta');\n"
+            "  if (ev?.shiftKey) mods.push('shift');\n"
+            "  return mods.join(',');\n"
+            "}\n"
+            "function uiEventKey(key) {\n"
+            "  const raw = String(key ?? '');\n"
+            "  if (raw.length === 1) return raw;\n"
+            "  if (raw === 'Backspace') return 'backspace';\n"
+            "  if (raw === 'Delete') return 'delete';\n"
+            "  if (raw === 'Enter') return 'enter';\n"
+            "  if (raw === 'Escape') return 'escape';\n"
+            "  if (raw === 'Tab') return 'tab';\n"
+            "  if (raw === 'ArrowLeft') return 'left';\n"
+            "  if (raw === 'ArrowRight') return 'right';\n"
+            "  if (raw === 'ArrowUp') return 'up';\n"
+            "  if (raw === 'ArrowDown') return 'down';\n"
+            "  return raw.toLowerCase();\n"
+            "}\n"
+            "function uiEventText(ev) {\n"
+            "  const key = String(ev?.key ?? '');\n"
+            "  if (key.length === 1 && !ev?.ctrlKey && !ev?.metaKey) return key;\n"
+            "  return '';\n"
+            "}\n"
+            "function uiEventTargetId(ev) {\n"
+            "  const target = ev?.target;\n"
+            "  if (target && typeof target.getAttribute === 'function') {\n"
+            "    return String(target.getAttribute('data-aivm-id') ?? '');\n"
+            "  }\n"
+            "  return '';\n"
+            "}\n";
+        const char* main_js_head3 =
+            "function ensureUiWindow(windowId, title, width, height) {\n"
+            "  if (typeof document === 'undefined' || !document || !document.createElement) return null;\n"
+            "  const existing = uiState.windows.get(windowId);\n"
+            "  if (existing) return existing;\n"
+            "  const host = document.createElement('div');\n"
+            "  host.setAttribute('data-aivm-window-id', String(windowId));\n"
+            "  host.style.maxWidth = `${width}px`;\n"
+            "  const label = document.createElement('div');\n"
+            "  label.textContent = String(title ?? 'AiLang');\n"
+            "  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');\n"
+            "  svg.setAttribute('width', String(width));\n"
+            "  svg.setAttribute('height', String(height));\n"
+            "  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);\n"
+            "  svg.setAttribute('tabindex', '0');\n"
+            "  svg.style.border = '1px solid #999';\n"
+            "  svg.style.touchAction = 'none';\n"
+            "  host.appendChild(label);\n"
+            "  host.appendChild(svg);\n"
+            "  (document.body || document.documentElement).appendChild(host);\n"
+            "  const state = { host, svg, width, height, frameParts: [], nextElementId: 1, focusedTargetId: '', closed: false, closeConsumed: false, resizeHandler: null, pointerHandler: null, clickHandler: null, touchHandler: null, keyDownHandler: null, keyUpHandler: null, blurHandler: null, eventQueue: [], lastPolledEvent: { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false } };\n"
+            "  const pushEvent = (evt) => { state.eventQueue.push(evt); if (state.eventQueue.length > 64) state.eventQueue.shift(); };\n"
+            "  const clampToWindow = (x, y) => {\n"
+            "    const maxX = Math.max(0, (state.width | 0) - 1);\n"
+            "    const maxY = Math.max(0, (state.height | 0) - 1);\n"
+            "    const nx = Math.min(maxX, Math.max(0, x | 0));\n"
+            "    const ny = Math.min(maxY, Math.max(0, y | 0));\n"
+            "    return { x: nx, y: ny };\n"
+            "  };\n"
+            "  const eventToLocal = (ev) => {\n"
+            "    const ox = Number(ev?.offsetX);\n"
+            "    const oy = Number(ev?.offsetY);\n"
+            "    if (Number.isFinite(ox) && Number.isFinite(oy)) {\n"
+            "      return { x: ox, y: oy };\n"
+            "    }\n"
+            "    const rect = svg.getBoundingClientRect();\n"
+            "    const cx = Number(ev?.clientX);\n"
+            "    const cy = Number(ev?.clientY);\n"
+            "    return {\n"
+            "      x: Number.isFinite(cx) ? (cx - rect.left) : 0,\n"
+            "      y: Number.isFinite(cy) ? (cy - rect.top) : 0,\n"
+            "    };\n"
+            "  };\n"
+            "  const syncWindowSize = () => {\n"
+            "    const rect = svg.getBoundingClientRect();\n"
+            "    const nextW = Math.max(1, rect.width | 0);\n"
+            "    const nextH = Math.max(1, rect.height | 0);\n"
+            "    state.width = nextW; state.height = nextH;\n"
+            "    svg.setAttribute('width', String(nextW));\n"
+            "    svg.setAttribute('height', String(nextH));\n"
+            "    svg.setAttribute('viewBox', `0 0 ${nextW} ${nextH}`);\n"
+            "  };\n";
+        const char* main_js_head3b =
+            "  const emitClickEvent = (sourceEv, pointEv) => {\n"
+            "    svg.focus();\n"
+            "    const targetId = uiEventTargetId(sourceEv);\n"
+            "    const p = eventToLocal(pointEv ?? sourceEv);\n"
+            "    const clamped = clampToWindow(p.x, p.y);\n"
+            "    state.focusedTargetId = targetId;\n"
+            "    pushEvent({ type: 'click', targetId, x: clamped.x, y: clamped.y, key: '', text: '', modifiers: uiEventModifiers(sourceEv), repeat: false });\n"
+            "  };\n"
+            "  if (typeof window !== 'undefined' && 'PointerEvent' in window) {\n"
+            "    const onPointerDown = (ev) => { emitClickEvent(ev, ev); };\n"
+            "    state.pointerHandler = onPointerDown;\n"
+            "    svg.addEventListener('pointerdown', onPointerDown);\n"
+            "  } else {\n"
+            "    const onClick = (ev) => { emitClickEvent(ev, ev); };\n"
+            "    const onTouchStart = (ev) => {\n"
+            "      if (typeof ev?.preventDefault === 'function') ev.preventDefault();\n"
+            "      const touch = (ev?.touches && ev.touches.length > 0) ? ev.touches[0] : null;\n"
+            "      emitClickEvent(ev, touch);\n"
+            "    };\n"
+            "    state.clickHandler = onClick;\n"
+            "    state.touchHandler = onTouchStart;\n"
+            "    svg.addEventListener('click', onClick);\n"
+            "    svg.addEventListener('touchstart', onTouchStart, { passive: false });\n"
+            "  }\n"
+            "  const emitKeyEvent = (ev) => {\n"
+            "    pushEvent({ type: 'key', targetId: String(state.focusedTargetId ?? ''), x: -1, y: -1, key: uiEventKey(ev?.key), text: uiEventText(ev), modifiers: uiEventModifiers(ev), repeat: !!ev?.repeat });\n"
+            "  };\n"
+            "  const onKeyDown = (ev) => { emitKeyEvent(ev); };\n"
+            "  const onKeyUp = (ev) => { emitKeyEvent(ev); };\n"
+            "  state.keyDownHandler = onKeyDown;\n"
+            "  state.keyUpHandler = onKeyUp;\n"
+            "  svg.addEventListener('keydown', onKeyDown);\n"
+            "  svg.addEventListener('keyup', onKeyUp);\n"
+            "  const onBlur = () => { state.focusedTargetId = ''; };\n"
+            "  state.blurHandler = onBlur;\n"
+            "  svg.addEventListener('blur', onBlur);\n"
+            "  if (typeof window !== 'undefined' && window?.addEventListener) {\n"
+            "    const onResize = () => { if (!state.closed) syncWindowSize(); };\n"
+            "    state.resizeHandler = onResize;\n"
+            "    window.addEventListener('resize', onResize);\n"
+            "  }\n"
+            "  uiState.windows.set(windowId, state);\n"
+            "  return state;\n"
+            "}\n";
+        const char* main_js_head4 =
+            "globalThis.__aivmUiCreateWindow = (windowId, title, width, height) => {\n"
+            "  if (!Number.isInteger(windowId) || windowId <= 0 || !Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return -1;\n"
+            "  return ensureUiWindow(windowId, title, width, height) ? 0 : -1;\n"
+            "};\n"
+            "globalThis.__aivmUiBeginFrame = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  win.frameParts = [];\n"
+            "  win.nextElementId = 1;\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawRect = (windowId, x, y, w, h, color) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  win.frameParts.push(`<rect data-aivm-id=\"${id}\" x=\"${x|0}\" y=\"${y|0}\" width=\"${w|0}\" height=\"${h|0}\" fill=\"${xmlEscape(color)}\"/>`);\n"
+            "  return 0;\n"
+            "};\n";
+        const char* main_js_mid =
+            "globalThis.__aivmUiDrawText = (windowId, x, y, text, color, size) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  const textEscaped = xmlEscape(text);\n"
+            "  win.frameParts.push(`<text data-aivm-id=\"${id}\" x=\"${x|0}\" y=\"${y|0}\" fill=\"${xmlEscape(color)}\" font-size=\"${size|0}\">${textEscaped}</text>`);\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawLine = (windowId, x1, y1, x2, y2, color, width) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  win.frameParts.push(`<line data-aivm-id=\"${id}\" x1=\"${x1|0}\" y1=\"${y1|0}\" x2=\"${x2|0}\" y2=\"${y2|0}\" stroke=\"${xmlEscape(color)}\" stroke-width=\"${width|0}\"/>`);\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawEllipse = (windowId, x, y, w, h, color) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  const rx = (w|0) / 2;\n"
+            "  const ry = (h|0) / 2;\n"
+            "  const cx = (x|0) + rx;\n"
+            "  const cy = (y|0) + ry;\n"
+            "  win.frameParts.push(`<ellipse data-aivm-id=\"${id}\" cx=\"${cx}\" cy=\"${cy}\" rx=\"${rx}\" ry=\"${ry}\" fill=\"${xmlEscape(color)}\"/>`);\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawPath = (windowId, path, color, strokeWidth) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  const sw = strokeWidth|0;\n"
+            "  const safePath = xmlEscape(path);\n"
+            "  if (sw > 0) {\n"
+            "    win.frameParts.push(`<path data-aivm-id=\"${id}\" d=\"${safePath}\" fill=\"none\" stroke=\"${xmlEscape(color)}\" stroke-width=\"${sw}\"/>`);\n"
+            "  } else {\n"
+            "    win.frameParts.push(`<path data-aivm-id=\"${id}\" d=\"${safePath}\" fill=\"${xmlEscape(color)}\"/>`);\n"
+            "  }\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawImage = (windowId, x, y, w, h, src) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  const id = `n${win.nextElementId++}`;\n"
+            "  win.frameParts.push(`<image data-aivm-id=\"${id}\" x=\"${x|0}\" y=\"${y|0}\" width=\"${w|0}\" height=\"${h|0}\" href=\"${xmlEscape(src)}\"/>`);\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiEndFrame = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  return (win && !win.closed) ? 0 : -1;\n"
+            "};\n";
+        const char* main_js_tail =
+            "globalThis.__aivmUiPresent = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  win.svg.innerHTML = win.frameParts.join('');\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiCloseWindow = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  if (win.closed) return 0;\n"
+            "  win.closed = true;\n"
+            "  win.focusedTargetId = '';\n"
+            "  if (typeof window !== 'undefined' && window?.removeEventListener && typeof win.resizeHandler === 'function') {\n"
+            "    window.removeEventListener('resize', win.resizeHandler);\n"
+            "    win.resizeHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.pointerHandler === 'function') {\n"
+            "    win.svg.removeEventListener('pointerdown', win.pointerHandler);\n"
+            "    win.pointerHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.clickHandler === 'function') {\n"
+            "    win.svg.removeEventListener('click', win.clickHandler);\n"
+            "    win.clickHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.touchHandler === 'function') {\n"
+            "    win.svg.removeEventListener('touchstart', win.touchHandler, { passive: false });\n"
+            "    win.touchHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.keyDownHandler === 'function') {\n"
+            "    win.svg.removeEventListener('keydown', win.keyDownHandler);\n"
+            "    win.keyDownHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.keyUpHandler === 'function') {\n"
+            "    win.svg.removeEventListener('keyup', win.keyUpHandler);\n"
+            "    win.keyUpHandler = null;\n"
+            "  }\n"
+            "  if (typeof win.blurHandler === 'function') {\n"
+            "    win.svg.removeEventListener('blur', win.blurHandler);\n"
+            "    win.blurHandler = null;\n"
+            "  }\n"
+            "  win.frameParts = [];\n"
+            "  win.lastPolledEvent = { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false };\n"
+            "  win.eventQueue.push({ type: 'closed', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false });\n"
+            "  if (win.eventQueue.length > 64) win.eventQueue.shift();\n"
+            "  win.host.remove();\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiWaitFrame = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  return 0;\n"
+            "};\n";
+        const char* main_js_tailb =
+            "globalThis.__aivmUiGetWindowWidth = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  return (win.width | 0) || (win.svg?.viewBox?.baseVal?.width | 0) || -1;\n"
+            "};\n"
+            "globalThis.__aivmUiGetWindowHeight = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win || win.closed) return -1;\n"
+            "  return (win.height | 0) || (win.svg?.viewBox?.baseVal?.height | 0) || -1;\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventType = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  const evt = win.eventQueue.length > 0 ? win.eventQueue.shift() : { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false };\n"
+            "  win.lastPolledEvent = evt;\n"
+            "  win.closeConsumed = (evt.type === 'closed');\n"
+            "  if (evt.type === 'closed') return 1;\n"
+            "  if (evt.type === 'click') return 2;\n"
+            "  if (evt.type === 'key') return 3;\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventX = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  return (win.lastPolledEvent?.x | 0);\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventY = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  return (win.lastPolledEvent?.y | 0);\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventTargetId = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return '';\n"
+            "  return String(win.lastPolledEvent?.targetId ?? '');\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventKey = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return '';\n"
+            "  return String(win.lastPolledEvent?.key ?? '');\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventText = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return '';\n"
+            "  return String(win.lastPolledEvent?.text ?? '');\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventModifiers = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return '';\n"
+            "  return String(win.lastPolledEvent?.modifiers ?? '');\n"
+            "};\n"
+            "globalThis.__aivmUiPollEventRepeat = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  const repeatValue = win.lastPolledEvent?.repeat ? 1 : 0;\n"
+            "  if (win.closeConsumed) {\n"
+            "    uiState.windows.delete(windowId);\n"
+            "  }\n"
+            "  return repeatValue;\n"
+            "};\n"
+            "function readHostStdin() {\n"
+            "  if (typeof globalThis.AIVM_HOST_STDIN_READ !== 'function') return undefined;\n"
+            "  return globalThis.AIVM_HOST_STDIN_READ();\n"
+            "}\n";
+        const char* main_js_tail2 =
+            "aiLangRoot.stdin = {\n"
+            "  push(text) { stdinQueue.push(String(text ?? '')); },\n"
+            "  close() { stdinClosed = true; },\n"
+            "  _drain() {\n"
+            "    if (stdinQueue.length > 0) return stdinQueue.shift();\n"
+            "    const hostValue = readHostStdin();\n"
+            "    if (hostValue === null) return null;\n"
+            "    if (hostValue !== undefined) return String(hostValue ?? '');\n"
+            "    return stdinClosed ? null : '';\n"
+            "  }\n"
+            "};\n"
+            "aiLangRoot.remote = aiLangRoot.remote || {};\n"
+            "let remoteCallImpl = null;\n"
+            "if (remoteMode === 'js' && typeof aiLangRoot.remote.call === 'function') {\n"
+            "  remoteCallImpl = (cap, op, value) => aiLangRoot.remote.call(cap, op, value);\n"
+            "} else if (remoteMode === 'js') {\n"
+            "  remoteCallImpl = () => Promise.reject(new Error('AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter'));\n"
+            "} else {\n"
+            "  const remoteClient = createAivmRemoteClient({ endpoint });\n"
+            "  remoteCallImpl = (cap, op, value) => remoteClient.call(cap, op, value);\n"
+            "}\n"
+            "if (remoteMode !== 'js' || typeof aiLangRoot.remote.call !== 'function') {\n"
+            "  aiLangRoot.remote.call = remoteCallImpl;\n"
+            "}\n"
+            "globalThis.__aivmRemoteCall = (cap, op, value) => remoteCallImpl(cap, op, value);\n"
+            "globalThis.__aivmStdinRead = () => aiLangRoot.stdin._drain();\n"
+            "const runtime = await createRuntime();\n"
+            "const bytes = await (await fetch('./app.aibc1')).arrayBuffer();\n"
+            "runtime.FS.writeFile('/app.aibc1', new Uint8Array(bytes));\n"
+            "const logs = [];\n"
+            "runtime.print = (line) => { const s = String(line); logs.push(s); console.log(s); };\n"
+            "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
+            "runtime.callMain(['/app.aibc1']);\n"
+            "if (output) output.textContent = logs.join('\\n');\n";
+        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_head3b, main_js_head4, main_js_mid, main_js_tail, main_js_tailb, main_js_tail2) >= (int)sizeof(main_js)) {
+            return 0;
+        }
+    }
+    {
+        const char* remote_client_js_head =
+            "function encodeText(text) { return new TextEncoder().encode(text); }\n"
+            "function decodeText(bytes) { return new TextDecoder().decode(bytes); }\n"
+            "function writeU16LE(arr, off, v) { arr[off]=v&255; arr[off+1]=(v>>8)&255; }\n"
+            "function writeU32LE(arr, off, v) { arr[off]=v&255; arr[off+1]=(v>>8)&255; arr[off+2]=(v>>16)&255; arr[off+3]=(v>>24)&255; }\n"
+            "function readU16LE(arr, off) { return arr[off] | (arr[off+1] << 8); }\n"
+            "function readU32LE(arr, off) { return (arr[off] | (arr[off+1] << 8) | (arr[off+2] << 16) | (arr[off+3] << 24)) >>> 0; }\n"
+            "function encodeStr(s) { const b = encodeText(s); const out = new Uint8Array(2 + b.length); writeU16LE(out, 0, b.length); out.set(b, 2); return out; }\n"
+            "function decodeStr(arr, off) { if (off + 2 > arr.length) throw new Error('bad string header'); const n = readU16LE(arr, off); const start = off + 2; if (start + n > arr.length) throw new Error('bad string length'); return { value: decodeText(arr.slice(start, start + n)), next: start + n }; }\n"
+            "function join(parts) { const len = parts.reduce((a,b)=>a+b.length,0); const out = new Uint8Array(len); let i=0; for (const p of parts) { out.set(p, i); i += p.length; } return out; }\n"
+            "function encodeCall(id, cap, op, value) {\n"
+            "  const capB = encodeStr(cap); const opB = encodeStr(op);\n"
+            "  const payload = new Uint8Array(capB.length + opB.length + 8);\n"
+            "  payload.set(capB, 0); payload.set(opB, capB.length);\n"
+            "  const dv = new DataView(payload.buffer); dv.setBigInt64(capB.length + opB.length, BigInt(value), true);\n"
+            "  const frame = new Uint8Array(9 + payload.length); frame[0] = 0x10; writeU32LE(frame, 1, id); writeU32LE(frame, 5, payload.length); frame.set(payload, 9); return frame;\n"
+            "}\n"
+            "function decodeFrame(arr) {\n"
+            "  if (!(arr instanceof Uint8Array) || arr.length < 9) throw new Error('short frame');\n"
+            "  const payloadLen = readU32LE(arr, 5);\n"
+            "  if (arr.length < 9 + payloadLen) throw new Error('truncated frame');\n"
+            "  return { type: arr[0], id: readU32LE(arr,1), payload: arr.slice(9, 9 + payloadLen) };\n"
+            "}\n"
+            "function decodeResult(payload) { if (!(payload instanceof Uint8Array) || payload.length < 8) throw new Error('bad result payload'); const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength); return Number(dv.getBigInt64(0, true)); }\n"
+            "function decodeError(payload) { if (!(payload instanceof Uint8Array) || payload.length < 6) throw new Error('bad error payload'); const code = readU32LE(payload, 0); const msg = decodeStr(payload, 4).value; return { code, message: msg }; }\n"
+            "function encodeHello(id, caps) {\n"
+            "  const clientName = encodeStr('aivm-web-client');\n"
+            "  const capParts = caps.map((c)=>encodeStr(c));\n"
+            "  const header = new Uint8Array(2 + 4); writeU16LE(header, 0, 1); writeU32LE(header, 2, caps.length);\n"
+            "  const payload = join([clientName, header, ...capParts]);\n"
+            "  const frame = new Uint8Array(9 + payload.length); frame[0]=0x01; writeU32LE(frame,1,id); writeU32LE(frame,5,payload.length); frame.set(payload,9); return frame;\n"
+            "}\n";
+        const char* remote_client_js_tail =
+            "export function createAivmRemoteClient({ endpoint }) {\n"
+            "  let ws = null; let nextId = 2; const pending = new Map(); let ready = null;\n"
+            "  function failPending(reason) {\n"
+            "    for (const [, p] of pending) { p.reject(new Error(reason)); }\n"
+            "    pending.clear();\n"
+            "  }\n"
+            "  function ensureSocket() {\n"
+            "    if (ws && ws.readyState === WebSocket.OPEN) return Promise.resolve();\n"
+            "    if (ready) return ready;\n"
+            "    ready = new Promise((resolve, reject) => {\n"
+            "      let settled = false;\n"
+            "      const resolveReady = () => { if (settled) return; settled = true; resolve(); };\n"
+            "      const rejectReady = (message) => { if (settled) return; settled = true; reject(new Error(message)); };\n"
+            "      ws = new WebSocket(endpoint); ws.binaryType = 'arraybuffer';\n"
+            "      ws.onopen = () => { ws.send(encodeHello(1, ['cap.remote'])); };\n"
+            "      ws.onmessage = (ev) => {\n"
+            "        let frame = null;\n"
+            "        if (!(ev.data instanceof ArrayBuffer)) { rejectReady('remote invalid websocket frame payload'); ready = null; ws = null; failPending('remote invalid websocket frame payload'); return; }\n"
+            "        try { const arr = new Uint8Array(ev.data); frame = decodeFrame(arr); } catch (_) { rejectReady('remote invalid websocket frame payload'); ready = null; ws = null; failPending('remote invalid websocket frame payload'); return; }\n"
+            "        if (!settled && frame.id !== 1) { rejectReady(`remote unexpected handshake frame id ${frame.id}`); ready = null; ws = null; return; }\n"
+            "        if (frame.type === 0x02 && frame.id === 1) { resolveReady(); return; }\n"
+            "        if (frame.type === 0x03 && frame.id === 1) { let err = null; try { err = decodeError(frame.payload); } catch (_) { rejectReady('remote invalid websocket frame payload'); ready = null; ws = null; failPending('remote invalid websocket frame payload'); return; } rejectReady(`remote handshake denied ${err.code}: ${err.message}`); ready = null; ws = null; return; }\n"
+            "        if (frame.id === 1) { rejectReady(`remote unexpected handshake frame type ${frame.type}`); ready = null; ws = null; return; }\n"
+            "        const p = pending.get(frame.id); if (!p) return;\n"
+            "        if (frame.type === 0x11) { let resultValue = 0; try { resultValue = decodeResult(frame.payload); } catch (_) { pending.delete(frame.id); p.reject(new Error('remote invalid websocket frame payload')); ready = null; ws = null; failPending('remote invalid websocket frame payload'); return; } pending.delete(frame.id); p.resolve(resultValue); return; }\n"
+            "        if (frame.type === 0x12) { let err = null; try { err = decodeError(frame.payload); } catch (_) { pending.delete(frame.id); p.reject(new Error('remote invalid websocket frame payload')); ready = null; ws = null; failPending('remote invalid websocket frame payload'); return; } pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); return; }\n"
+            "        pending.delete(frame.id); p.reject(new Error(`remote unexpected frame type ${frame.type}`));\n"
+            "      };\n"
+            "      ws.onerror = () => { rejectReady('remote websocket error'); ready = null; ws = null; failPending('remote websocket error'); };\n"
+            "      ws.onclose = () => { rejectReady('remote websocket closed'); ready = null; ws = null; failPending('remote websocket closed'); };\n"
+            "    });\n"
+            "    return ready;\n"
+            "  }\n"
+            "  return {\n"
+            "    async call(cap, op, value) {\n"
+            "      await ensureSocket();\n"
+            "      const id = nextId++;\n"
+            "      return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); ws.send(encodeCall(id, cap, op, value)); });\n"
+            "    }\n"
+            "  };\n"
+            "}\n";
+        if (snprintf(remote_client_js, sizeof(remote_client_js), "%s%s", remote_client_js_head, remote_client_js_tail) >= (int)sizeof(remote_client_js)) {
+            return 0;
+        }
+    }
+    return write_text_file(index_path, index_html) &&
+           write_text_file(main_path, main_js) &&
+           write_text_file(remote_client_path, remote_client_js);
+}
+
+static int emit_wasm_fullstack_layout(const char* out_dir)
+{
+    char www_dir[PATH_MAX];
+    char readme_path[PATH_MAX];
+    char readme[1024];
+    if (out_dir == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "www", www_dir, sizeof(www_dir))) {
+        return 0;
+    }
+    if (!ensure_directory(www_dir)) {
+        return 0;
+    }
+    if (!emit_wasm_spa_files(www_dir)) {
+        return 0;
+    }
+    if (snprintf(
+            readme,
+            sizeof(readme),
+            "# AiLang wasm fullstack package\n\n"
+            "This package contains a self-contained app binary and `www/` client assets.\n"
+            "The app binary is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
+            "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n") >= (int)sizeof(readme)) {
+        return 0;
+    }
+    if (!join_path(out_dir, "README.md", readme_path, sizeof(readme_path))) {
+        return 0;
+    }
+    if (!write_text_file(readme_path, readme)) {
+        return 0;
     }
     return 1;
 }
@@ -1753,6 +2768,260 @@ static int native_syscall_process_stream_read(
         return AIVM_SYSCALL_OK;
     }
 #endif
+}
+
+static AivmRemoteServerConfig g_remote_server_config;
+static AivmRemoteServerSession g_remote_server_session;
+static uint32_t g_remote_next_request_id = 1U;
+static int g_remote_session_ready = 0;
+
+static int remote_parse_caps_csv(
+    const char* csv,
+    char out_caps[AIVM_REMOTE_MAX_CAPS][AIVM_REMOTE_MAX_TEXT + 1],
+    uint32_t* out_count)
+{
+    const char* cursor;
+    uint32_t count = 0U;
+    if (out_caps == NULL || out_count == NULL) {
+        return 0;
+    }
+    if (csv == NULL || *csv == '\0') {
+        *out_count = 0U;
+        return 1;
+    }
+    cursor = csv;
+    while (*cursor != '\0') {
+        const char* end = cursor;
+        size_t len;
+        if (count >= AIVM_REMOTE_MAX_CAPS) {
+            return 0;
+        }
+        while (*end != '\0' && *end != ',') {
+            end += 1;
+        }
+        len = (size_t)(end - cursor);
+        if (len > AIVM_REMOTE_MAX_TEXT) {
+            return 0;
+        }
+        if (len > 0U) {
+            memcpy(out_caps[count], cursor, len);
+            out_caps[count][len] = '\0';
+            count += 1U;
+        }
+        cursor = (*end == ',') ? (end + 1) : end;
+    }
+    *out_count = count;
+    return 1;
+}
+
+static int remote_token_authorized(void)
+{
+    const char* expected = getenv("AIVM_REMOTE_EXPECTED_TOKEN");
+    const char* provided = getenv("AIVM_REMOTE_SESSION_TOKEN");
+    size_t expected_len;
+    size_t provided_len;
+    if (expected == NULL || provided == NULL) {
+        return 0;
+    }
+    expected_len = strlen(expected);
+    provided_len = strlen(provided);
+    if (expected_len == 0U || provided_len == 0U) {
+        return 0;
+    }
+    if (expected_len > 256U || provided_len > 256U) {
+        return 0;
+    }
+    return strcmp(expected, provided) == 0;
+}
+
+static int remote_session_ensure_ready(void)
+{
+    uint8_t request_bytes[1024];
+    uint8_t response_bytes[1024];
+    size_t request_len = 0U;
+    size_t response_len = 0U;
+    AivmRemoteHello hello;
+    AivmRemoteWelcome welcome;
+    uint32_t response_id = 0U;
+    AivmRemoteCodecStatus codec_status;
+    AivmRemoteSessionStatus session_status;
+    uint32_t i;
+    const char* caps_env;
+
+    if (g_remote_session_ready) {
+        return 1;
+    }
+
+    memset(&g_remote_server_config, 0, sizeof(g_remote_server_config));
+    g_remote_server_config.proto_version = 1U;
+    caps_env = getenv("AIVM_REMOTE_CAPS");
+    if (!remote_parse_caps_csv(
+            caps_env,
+            g_remote_server_config.allowed_caps,
+            &g_remote_server_config.allowed_caps_count)) {
+        return 0;
+    }
+
+    aivm_remote_server_session_init(&g_remote_server_session);
+    memset(&hello, 0, sizeof(hello));
+    hello.proto_version = 1U;
+    (void)snprintf(hello.client_name, sizeof(hello.client_name), "%s", "airun-native");
+    hello.requested_caps_count = g_remote_server_config.allowed_caps_count;
+    for (i = 0U; i < hello.requested_caps_count; i += 1U) {
+        (void)snprintf(
+            hello.requested_caps[i],
+            sizeof(hello.requested_caps[i]),
+            "%s",
+            g_remote_server_config.allowed_caps[i]);
+    }
+
+    codec_status = aivm_remote_encode_hello(
+        1U,
+        &hello,
+        request_bytes,
+        sizeof(request_bytes),
+        &request_len);
+    if (codec_status != AIVM_REMOTE_CODEC_OK) {
+        return 0;
+    }
+    session_status = aivm_remote_server_process_frame(
+        &g_remote_server_config,
+        &g_remote_server_session,
+        request_bytes,
+        request_len,
+        response_bytes,
+        sizeof(response_bytes),
+        &response_len);
+    if (session_status != AIVM_REMOTE_SESSION_OK) {
+        return 0;
+    }
+    memset(&welcome, 0, sizeof(welcome));
+    codec_status = aivm_remote_decode_welcome(
+        response_bytes,
+        response_len,
+        &response_id,
+        &welcome);
+    if (codec_status != AIVM_REMOTE_CODEC_OK || response_id != 1U) {
+        return 0;
+    }
+    g_remote_session_ready = 1;
+    return 1;
+}
+
+static int remote_session_invoke_call(
+    const char* cap,
+    const char* op,
+    int64_t value,
+    AivmValue* result)
+{
+    uint8_t request_bytes[1024];
+    uint8_t response_bytes[1024];
+    size_t request_len = 0U;
+    size_t response_len = 0U;
+    uint32_t request_id;
+    uint32_t response_id = 0U;
+    AivmRemoteCall call;
+    AivmRemoteResult call_result;
+    AivmRemoteError call_error;
+    AivmRemoteCodecStatus codec_status;
+    AivmRemoteSessionStatus session_status;
+
+    if (cap == NULL || op == NULL || result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (!remote_session_ensure_ready()) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    memset(&call, 0, sizeof(call));
+    (void)snprintf(call.cap, sizeof(call.cap), "%s", cap);
+    (void)snprintf(call.op, sizeof(call.op), "%s", op);
+    call.value = value;
+    request_id = g_remote_next_request_id++;
+    if (g_remote_next_request_id == 0U) {
+        g_remote_next_request_id = 1U;
+    }
+
+    codec_status = aivm_remote_encode_call(
+        request_id,
+        &call,
+        request_bytes,
+        sizeof(request_bytes),
+        &request_len);
+    if (codec_status != AIVM_REMOTE_CODEC_OK) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    session_status = aivm_remote_server_process_frame(
+        &g_remote_server_config,
+        &g_remote_server_session,
+        request_bytes,
+        request_len,
+        response_bytes,
+        sizeof(response_bytes),
+        &response_len);
+    if (session_status != AIVM_REMOTE_SESSION_OK) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    codec_status = aivm_remote_decode_result(
+        response_bytes,
+        response_len,
+        &response_id,
+        &call_result);
+    if (codec_status == AIVM_REMOTE_CODEC_OK && response_id == request_id) {
+        *result = aivm_value_int(call_result.value);
+        return AIVM_SYSCALL_OK;
+    }
+    codec_status = aivm_remote_decode_error(
+        response_bytes,
+        response_len,
+        &response_id,
+        &call_error);
+    if (codec_status == AIVM_REMOTE_CODEC_OK && response_id == request_id) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int native_syscall_remote_call(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* cap;
+    const char* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_INT ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    cap = args[0].string_value;
+    op = args[1].string_value;
+    if (strlen(cap) > 64U || strlen(op) > 64U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!remote_token_authorized()) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    return remote_session_invoke_call(cap, op, args[2].int_value, result);
 }
 
 static int native_syscall_process_stdout_read(
@@ -3078,7 +4347,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[41];
+    AivmSyscallBinding bindings[44];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -3172,10 +4441,17 @@ static int run_native_compiled_program(
     bindings[39].handler = native_syscall_worker_error;
     bindings[40].target = "sys.worker.cancel";
     bindings[40].handler = native_syscall_worker_cancel;
+    bindings[41].target = "sys.remote.call";
+    bindings[41].handler = native_syscall_remote_call;
+    /* Legacy aliases retained for pre-release AiBC1 samples still using underscore style names. */
+    bindings[42].target = "sys.stdout_writeLine";
+    bindings[42].handler = native_syscall_stdout_write_line;
+    bindings[43].target = "sys.process_argv";
+    bindings[43].handler = native_syscall_process_argv;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        41U,
+        44U,
         process_argv,
         process_argv_count,
         &vm);
@@ -3301,8 +4577,14 @@ static int parse_attr_span(const char* attrs, const char* key, char* out, size_t
 
 static int has_attr_key(const char* attrs, const char* key)
 {
-    char tmp[8];
-    return parse_attr_span(attrs, key, tmp, sizeof(tmp));
+    char needle[64];
+    if (attrs == NULL || key == NULL) {
+        return 0;
+    }
+    if (snprintf(needle, sizeof(needle), "%s=", key) >= (int)sizeof(needle)) {
+        return 0;
+    }
+    return strstr(attrs, needle) != NULL;
 }
 
 static int parse_attr_int64(const char* attrs, const char* key, int64_t* out_value)
@@ -3438,7 +4720,42 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
     return 0;
 }
 
-static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* out_program)
+static int bytecode_add_string_const(AivmProgram* program, const char* value, int64_t* out_idx)
+{
+    size_t i;
+    size_t len;
+    size_t base;
+    if (program == NULL || value == NULL || out_idx == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < program->constant_count; i += 1U) {
+        if (program->constant_storage[i].type == AIVM_VAL_STRING &&
+            program->constant_storage[i].string_value != NULL &&
+            strcmp(program->constant_storage[i].string_value, value) == 0) {
+            *out_idx = (int64_t)i;
+            return 1;
+        }
+    }
+    if (program->constant_count >= AIVM_PROGRAM_MAX_CONSTANTS) {
+        return 0;
+    }
+    len = strlen(value);
+    base = program->string_storage_used;
+    if (base + len + 1U > AIVM_PROGRAM_MAX_STRING_BYTES) {
+        return 0;
+    }
+    memcpy(&program->string_storage[base], value, len + 1U);
+    program->string_storage_used += (len + 1U);
+    program->constant_storage[program->constant_count] = aivm_value_string(&program->string_storage[base]);
+    *out_idx = (int64_t)program->constant_count;
+    program->constant_count += 1U;
+    return 1;
+}
+
+static int parse_bytecode_aos_to_program_text(
+    const char* source,
+    AivmProgram* out_program,
+    int allow_legacy_zero_b)
 {
     const char* p;
 
@@ -3509,6 +4826,11 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
             memcpy(&out_program->string_storage[base], unescaped, len + 1U);
             out_program->string_storage_used += (len + 1U);
             out_program->constant_storage[out_program->constant_count] = aivm_value_string(&out_program->string_storage[base]);
+        } else if (strcmp(kind, "node") == 0) {
+            /* Legacy bytecode AOS may carry opaque node constants (for example value="Node#n1").
+               The native publish path preserves the value family as a deterministic node handle. */
+            out_program->constant_storage[out_program->constant_count] =
+                aivm_value_node((int64_t)(out_program->constant_count + 1U));
         } else if (strcmp(kind, "void") == 0) {
             out_program->constant_storage[out_program->constant_count] = aivm_value_void();
         } else {
@@ -3524,6 +4846,7 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         const char* rparen;
         char attrs[512];
         char op[64];
+        char syscall_target[512];
         int64_t a = 0;
         AivmOpcode opcode;
         size_t n;
@@ -3545,8 +4868,23 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         if (!parse_attr_span(attrs, "op", op, sizeof(op)) || !opcode_from_text(op, &opcode)) {
             return 0;
         }
-        if (has_attr_key(attrs, "b") || has_attr_key(attrs, "s")) {
-            return 0;
+        if (parse_attr_span(attrs, "s", syscall_target, sizeof(syscall_target))) {
+            int64_t target_const_idx = 0;
+            if (!allow_legacy_zero_b ||
+                (opcode != AIVM_OP_CALL_SYS && opcode != AIVM_OP_ASYNC_CALL_SYS) ||
+                !bytecode_add_string_const(out_program, syscall_target, &target_const_idx) ||
+                out_program->instruction_count >= AIVM_PROGRAM_MAX_INSTRUCTIONS) {
+                return 0;
+            }
+            out_program->instruction_storage[out_program->instruction_count].opcode = AIVM_OP_CONST;
+            out_program->instruction_storage[out_program->instruction_count].operand_int = target_const_idx;
+            out_program->instruction_count += 1U;
+        }
+        if (has_attr_key(attrs, "b")) {
+            int64_t b = 0;
+            if (!allow_legacy_zero_b || !parse_attr_int64(attrs, "b", &b) || b != 0) {
+                return 0;
+            }
         }
         (void)parse_attr_int64(attrs, "a", &a);
 
@@ -3559,7 +4897,10 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
     return out_program->instruction_count > 0U;
 }
 
-static int parse_bytecode_aos_to_program_file(const char* aos_path, AivmProgram* out_program)
+static int parse_bytecode_aos_to_program_file(
+    const char* aos_path,
+    AivmProgram* out_program,
+    int allow_legacy_zero_b)
 {
     char source[131072];
     if (aos_path == NULL || out_program == NULL) {
@@ -3568,7 +4909,7 @@ static int parse_bytecode_aos_to_program_file(const char* aos_path, AivmProgram*
     if (!read_text_file(aos_path, source, sizeof(source))) {
         return 0;
     }
-    return parse_bytecode_aos_to_program_text(source, out_program);
+    return parse_bytecode_aos_to_program_text(source, out_program, allow_legacy_zero_b);
 }
 
 static int source_file_looks_like_bytecode_aos(const char* aos_path)
@@ -3999,6 +5340,8 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             char target[128];
             const char* mapped = NULL;
             size_t target_idx = 0U;
+            const char* c = NULL;
+            size_t arg_count = 0U;
             SimpleNodeView arg;
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
@@ -4016,13 +5359,18 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             if (!simple_emit_instruction(out_program, AIVM_OP_CONST, (int64_t)target_idx)) {
                 return simple_fail("call target const emit failed");
             }
-            if (!simple_parse_next_node(node.body_start, node.body_end, &arg)) {
-                return simple_fail("call missing argument");
+            c = node.body_start;
+            while (simple_parse_next_node(c, node.body_end, &arg)) {
+                if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
+                    return simple_fail("call argument compile failed");
+                }
+                arg_count += 1U;
+                c = arg.next;
             }
-            if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
-                return simple_failf("call argument compile failed for target '%s'", target);
+            if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
+                return simple_fail("call has too many arguments");
             }
-            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, 1) ||
+            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, (int64_t)arg_count) ||
                 !simple_emit_instruction(out_program, AIVM_OP_POP, 0)) {
                 return simple_fail("call emit failed");
             }
@@ -5322,7 +6670,7 @@ static int run_native_bytecode_aos(
 {
     AivmProgram program;
 
-    if (!parse_bytecode_aos_to_program_file(aos_path, &program)) {
+    if (!parse_bytecode_aos_to_program_file(aos_path, &program, 0)) {
         return -1;
     }
     return run_native_compiled_program(
@@ -5683,6 +7031,29 @@ static int handle_debug(int argc, char** argv)
                     "Err#err1(code=RUN001 message=\"Unsupported flag for native C runtime.\" nodeId=argv)\n");
                 return 2;
             }
+            if (program_path != NULL && app_arg_start < 0) {
+                if (strcmp(arg, "--out") == 0) {
+                    if ((i + 1) >= argc) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                        return 2;
+                    }
+                    out_dir = argv[i + 1];
+                    i += 1;
+                    continue;
+                }
+                if (starts_with(arg, "--out=")) {
+                    out_dir = arg + 6;
+                    continue;
+                }
+                if (starts_with(arg, "--vm=")) {
+                    const char* mode = arg + 5;
+                    if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
+                        return print_unsupported_vm_mode(mode);
+                    }
+                    continue;
+                }
+            }
             if (app_arg_start < 0) {
                 app_arg_start = i;
             }
@@ -5912,7 +7283,7 @@ static int handle_bench(int argc, char** argv)
 
     for (i = 0; i < iterations; i += 1) {
         AivmProgram program;
-        if (!parse_bytecode_aos_to_program_text(bytecode_bench_source, &program)) {
+        if (!parse_bytecode_aos_to_program_text(bytecode_bench_source, &program, 0)) {
             compiler_bytecode_status = "fail";
             failures += 1;
             break;
@@ -5940,7 +7311,7 @@ static int handle_bench(int argc, char** argv)
 
     {
         AivmProgram bundle_program;
-        if (!parse_bytecode_aos_to_program_text(app_bundle_source, &bundle_program) ||
+        if (!parse_bytecode_aos_to_program_text(app_bundle_source, &bundle_program, 0) ||
             !bench_execute_program_iterations(&bundle_program, iterations, &app_bundle_ticks)) {
             app_bundle_status = "fail";
             failures += 1;
@@ -6076,7 +7447,7 @@ static int build_input_to_aibc1(
         }
     }
 
-    if (parse_bytecode_aos_to_program_file(source_aos, &program) ||
+    if (parse_bytecode_aos_to_program_file(source_aos, &program, 0) ||
         parse_simple_program_aos_to_program_file(source_aos, &program)) {
         if (!write_program_as_aibc1(&program, out_app_path)) {
             set_native_build_errorf(
@@ -6276,16 +7647,29 @@ static int handle_publish(int argc, char** argv)
     const char* program_input = NULL;
     const char* target = NULL;
     const char* out_dir = "dist";
+    const char* wasm_profile = "spa";
+    const char* wasm_fullstack_host_target_arg = NULL;
+    int wasm_profile_explicit = 0;
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
     char artifact_dir[PATH_MAX];
     char runtime_bin[64];
+    char runtime_web_bin[64];
+    char runtime_web_wasm_bin[64];
     char publish_app_name[128];
     char publish_runtime_name[160];
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
+    char runtime_web_src[PATH_MAX];
+    char runtime_web_wasm_src[PATH_MAX];
+    char runtime_web_dst[PATH_MAX];
+    char runtime_web_wasm_dst[PATH_MAX];
+    char wasm_app_dst[PATH_MAX];
     char app_dst[PATH_MAX];
     char manifest_target[64];
+    char manifest_wasm_fullstack_host_target[64];
+    char wasm_fullstack_host_target[64];
+    AivmProgram publish_program;
     int i;
 
     for (i = 2; i < argc; i++) {
@@ -6307,6 +7691,25 @@ static int handle_publish(int argc, char** argv)
             out_dir = argv[++i];
             continue;
         }
+        if (strcmp(argv[i], "--wasm-profile") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --wasm-profile value.\" nodeId=argv)\n");
+                return 2;
+            }
+            wasm_profile = argv[++i];
+            wasm_profile_explicit = 1;
+            continue;
+        }
+        if (strcmp(argv[i], "--wasm-fullstack-host-target") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --wasm-fullstack-host-target value.\" nodeId=argv)\n");
+                return 2;
+            }
+            wasm_fullstack_host_target_arg = argv[++i];
+            continue;
+        }
         if (program_input == NULL && argv[i][0] != '-') {
             program_input = argv[i];
             continue;
@@ -6325,7 +7728,7 @@ static int handle_publish(int argc, char** argv)
     if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
         if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
             AivmProgram program;
-            if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
+            if (parse_bytecode_aos_to_program_file(source_aos, &program, 1)) {
                 if (!ensure_directory(out_dir)) {
                     fprintf(stderr,
                         "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");
@@ -6392,6 +7795,28 @@ static int handle_publish(int argc, char** argv)
         }
     }
 
+    wasm_profile = wasm_profile_normalize(wasm_profile);
+    if (!wasm_profile_is_valid(wasm_profile)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported wasm profile.\" nodeId=wasmProfile)\n");
+        return 2;
+    }
+    if (wasm_profile_explicit && strcmp(target, "wasm32") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-profile requires --target wasm32.\" nodeId=wasmProfile)\n");
+        return 2;
+    }
+    if (wasm_fullstack_host_target_arg != NULL && strcmp(target, "wasm32") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-fullstack-host-target requires --target wasm32.\" nodeId=wasmFullstackHostTarget)\n");
+        return 2;
+    }
+    if (wasm_fullstack_host_target_arg != NULL && strcmp(wasm_profile, "fullstack") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-fullstack-host-target requires --wasm-profile fullstack.\" nodeId=wasmFullstackHostTarget)\n");
+        return 2;
+    }
+
     if (!parse_target_to_artifact(target, artifact_dir, sizeof(artifact_dir), runtime_bin, sizeof(runtime_bin))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Unsupported publish target RID.\" nodeId=target)\n");
@@ -6422,16 +7847,6 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
-        return 2;
-    }
-    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
-        return 2;
-    }
     if (resolved_program[0] != '\0') {
         if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
             fprintf(stderr,
@@ -6443,6 +7858,193 @@ static int handle_publish(int argc, char** argv)
                 "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for publish.\" nodeId=publish)\n");
             return 2;
         }
+    }
+
+    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
+        return 2;
+    }
+
+    if (strcmp(target, "wasm32") == 0) {
+        unsigned char* app_bytes = NULL;
+        size_t app_size = 0U;
+        if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(runtime_web_bin, sizeof(runtime_web_bin), "aivm-runtime-wasm32-web.mjs") >= (int)sizeof(runtime_web_bin)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime metadata overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(runtime_web_wasm_bin, sizeof(runtime_web_wasm_bin), "aivm-runtime-wasm32-web.wasm") >= (int)sizeof(runtime_web_wasm_bin)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime web binary metadata overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(artifact_dir, runtime_web_bin, runtime_web_src, sizeof(runtime_web_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm web runtime source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(artifact_dir, runtime_web_wasm_bin, runtime_web_wasm_src, sizeof(runtime_web_wasm_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm web runtime binary source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s.wasm", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Publish wasm runtime name overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!copy_runtime_file(runtime_src, runtime_dst)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!read_binary_file(app_dst, &app_bytes, &app_size) ||
+            aivm_program_load_aibc1(app_bytes, app_size, &publish_program).status != AIVM_PROGRAM_OK) {
+            free(app_bytes);
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to inspect published wasm app bytecode.\" nodeId=publish)\n");
+            return 2;
+        }
+        free(app_bytes);
+        emit_wasm_profile_warnings(wasm_profile, &publish_program);
+
+        if (strcmp(wasm_profile, "cli") == 0) {
+            if (!emit_wasm_cli_launchers(out_dir, publish_runtime_name, publish_app_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm cli launchers.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else if (strcmp(wasm_profile, "spa") == 0) {
+            if (!join_path(out_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !join_path(out_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
+                !emit_wasm_spa_files(out_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm web package files.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else if (strcmp(wasm_profile, "fullstack") == 0) {
+            char www_dir[PATH_MAX];
+            char fullstack_host_artifact_dir[PATH_MAX];
+            char fullstack_host_runtime_bin[64];
+            char fullstack_host_runtime_name[160];
+            char fullstack_host_runtime_src[PATH_MAX];
+            char fullstack_host_runtime_root_dst[PATH_MAX];
+            char legacy_run_dst[PATH_MAX];
+            char legacy_run_ps1_dst[PATH_MAX];
+            char legacy_client_dir[PATH_MAX];
+            char legacy_server_dir[PATH_MAX];
+            wasm_fullstack_host_target[0] = '\0';
+            if (wasm_fullstack_host_target_arg != NULL) {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", wasm_fullstack_host_target_arg) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack host target RID overflow.\" nodeId=wasmFullstackHostTarget)\n");
+                    return 2;
+                }
+            } else if (resolve_publish_wasm_fullstack_host_target_from_manifest(program_input, manifest_wasm_fullstack_host_target, sizeof(manifest_wasm_fullstack_host_target))) {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", manifest_wasm_fullstack_host_target) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Project wasm fullstack host target RID overflow.\" nodeId=project)\n");
+                    return 2;
+                }
+            } else {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", host_rid()) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Host RID overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            }
+            if (strcmp(wasm_fullstack_host_target, "wasm32") == 0 ||
+                !parse_target_to_artifact(
+                    wasm_fullstack_host_target,
+                    fullstack_host_artifact_dir,
+                    sizeof(fullstack_host_artifact_dir),
+                    fullstack_host_runtime_bin,
+                    sizeof(fullstack_host_runtime_bin))) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Unsupported wasm fullstack host target RID.\" nodeId=wasmFullstackHostTarget)\n");
+                return 2;
+            }
+            if (strstr(fullstack_host_runtime_bin, ".exe") != NULL) {
+                if (snprintf(fullstack_host_runtime_name, sizeof(fullstack_host_runtime_name), "%s.exe", publish_app_name) >= (int)sizeof(fullstack_host_runtime_name)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack runtime name overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            } else {
+                if (snprintf(fullstack_host_runtime_name, sizeof(fullstack_host_runtime_name), "%s", publish_app_name) >= (int)sizeof(fullstack_host_runtime_name)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack runtime name overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            }
+            if (!join_path(out_dir, "www", www_dir, sizeof(www_dir)) ||
+                !ensure_directory(www_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack www directory.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(fullstack_host_artifact_dir, fullstack_host_runtime_bin, fullstack_host_runtime_src, sizeof(fullstack_host_runtime_src)) ||
+                !join_path(out_dir, fullstack_host_runtime_name, fullstack_host_runtime_root_dst, sizeof(fullstack_host_runtime_root_dst)) ||
+                !join_path(out_dir, "run", legacy_run_dst, sizeof(legacy_run_dst)) ||
+                !join_path(out_dir, "run.ps1", legacy_run_ps1_dst, sizeof(legacy_run_ps1_dst)) ||
+                !join_path(out_dir, "client", legacy_client_dir, sizeof(legacy_client_dir)) ||
+                !join_path(out_dir, "server", legacy_server_dir, sizeof(legacy_server_dir)) ||
+                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_root_dst) ||
+                !remove_file_if_exists(legacy_run_dst) ||
+                !remove_file_if_exists(legacy_run_ps1_dst)
+#ifdef _WIN32
+                || (directory_exists(legacy_client_dir) && !native_delete_dir_recursive_windows(legacy_client_dir))
+                || (directory_exists(legacy_server_dir) && !native_delete_dir_recursive_windows(legacy_server_dir))
+#else
+                || (directory_exists(legacy_client_dir) && !native_delete_dir_recursive_posix(legacy_client_dir))
+                || (directory_exists(legacy_server_dir) && !native_delete_dir_recursive_posix(legacy_server_dir))
+#endif
+                ) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to prepare wasm fullstack package layout.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
+                !copy_file(app_dst, wasm_app_dst) ||
+                !join_path(www_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
+                !copy_runtime_file(runtime_src, runtime_dst) ||
+                !join_path(www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !join_path(www_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
+                !emit_wasm_fullstack_layout(out_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
+                return 2;
+            }
+        }
+
+        printf("Ok#ok1(type=string value=\"publish-complete\")\n");
+        return 0;
+    }
+
+    if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
+        return 2;
+    }
+    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
+        return 2;
     }
 
     if (!copy_runtime_file(runtime_src, runtime_dst)) {
@@ -6460,6 +8062,8 @@ int main(int argc, char** argv)
     char exe_path[PATH_MAX];
     char exe_dir[PATH_MAX];
     char bundled_aibc1[PATH_MAX];
+    char bundled_www_dir[PATH_MAX];
+    char bundled_www_index[PATH_MAX];
     const char* exe_base;
 
     if (argv != NULL &&
@@ -6469,6 +8073,11 @@ int main(int argc, char** argv)
         file_exists(bundled_aibc1)) {
         exe_base = path_basename_ptr(exe_path);
         if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
+            if (join_path(exe_dir, "www", bundled_www_dir, sizeof(bundled_www_dir)) &&
+                join_path(bundled_www_dir, "index.html", bundled_www_index, sizeof(bundled_www_index)) &&
+                file_exists(bundled_www_index)) {
+                return run_native_fullstack_server(bundled_www_dir);
+            }
             const char* const* app_argv = (argc > 1) ? (const char* const*)&argv[1] : NULL;
             size_t app_argc = (argc > 1) ? (size_t)(argc - 1) : 0U;
             return run_native_aibc1(bundled_aibc1, app_argv, app_argc, NULL);

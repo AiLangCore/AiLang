@@ -120,6 +120,9 @@ Publish wasm artifacts (web profile default):
 ```bash
 ./scripts/build-aivm-wasm.sh
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./dist-wasm
+
+# wasm fullstack + explicit host runtime target for self-contained app binary
+./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --wasm-profile fullstack --wasm-fullstack-host-target linux-x64 --out ./dist-wasm-fullstack-linux
 ```
 
 Publish wasm CLI profile:
@@ -189,6 +192,16 @@ Rebuild `tools/airun` (native C, host platform):
 - `wasm32` publish supports profiles:
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
+  - `fullstack`: emits root app binary + `www/` web package (`index.html`, `main.js`, `remote-client.js`, `app.aibc1`, wasm runtime artifacts).
+    - bundles host runtime as root app binary (default host RID, override with `--wasm-fullstack-host-target <rid>`).
+    - running `./<appname>` starts native static hosting for `www/` on `http://localhost:8080` (set `PORT` to override).
+    - emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
+    - project manifest override: `publishWasmFullstackHostTarget="<rid>"`.
+    - AiLang app must self-host `www/` assets.
+  - malformed bytecode/source fixtures are deterministically rejected at publish-time with `DEV008` (contract guard, not runtime drift).
+- wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
+  - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.
+  - Runtime requires `AIVM_REMOTE_EXPECTED_TOKEN` and `AIVM_REMOTE_SESSION_TOKEN` for `sys.remote.call`.
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
 - HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
 

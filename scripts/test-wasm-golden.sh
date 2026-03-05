@@ -2,12 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_DIR="${ROOT_DIR}/.tmp/aivm-wasm-golden"
+TMP_ROOT="${ROOT_DIR}/.tmp/aivm-wasm-golden"
+TMP_DIR="${TMP_ROOT}/run-$$"
 CASES=(
-  "sys_remove_bad_type"
-  "sys_substring_bad_arity"
-  "sys_utf8_bad_type"
-  "vm_c_execute_program_source_gate"
+  "vm_c_execute_src_invalid_abi"
+  "vm_c_execute_src_main_params"
+  "vm_c_execute_src_missing_lib"
+  "vm_c_execute_src_missing_main"
+  "vm_c_execute_src_remote_call_echo_int"
+)
+BYTECODE_ONLY_CASES=(
+  "vm_c_execute_src_node_constant_unsupported"
   "vm_c_execute_src_async_call_negative"
   "vm_c_execute_src_async_call_oob"
   "vm_c_execute_src_async_callsys_bad_slot"
@@ -15,29 +20,37 @@ CASES=(
   "vm_c_execute_src_call_negative"
   "vm_c_execute_src_call_oob"
   "vm_c_execute_src_callsys_bad_slot"
-  "vm_c_execute_src_invalid_abi"
   "vm_c_execute_src_invalid_abi_whitespace"
   "vm_c_execute_src_invalid_abi_whitespace_only"
   "vm_c_execute_src_jump_if_false_negative"
   "vm_c_execute_src_jump_if_false_oob"
   "vm_c_execute_src_jump_negative"
   "vm_c_execute_src_jump_oob"
-  "vm_c_execute_src_main_params"
   "vm_c_execute_src_make_node_unsupported"
-  "vm_c_execute_src_missing_lib"
-  "vm_c_execute_src_missing_main"
   "vm_c_execute_src_nonmain_params"
   "vm_c_execute_src_par_begin_unsupported"
   "vm_c_execute_src_par_cancel_unsupported"
   "vm_c_execute_src_par_fork_unsupported"
   "vm_c_execute_src_par_join_unsupported"
 )
-UNSUPPORTED_CASES=(
-  "vm_c_execute_src_node_constant_unsupported"
+MALFORMED_CASES=(
+  "sys_remove_bad_type"
+  "sys_substring_bad_arity"
+  "sys_utf8_bad_type"
+  "vm_c_execute_program_source_gate"
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
 )
+WASM_STDIN_EOF_CASES=(
+  "wasm_console_readline_eof"
+  "wasm_console_readallstdin_eof"
+)
 PROCESS_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
+FS_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_fs_file_read.aos"
+NET_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_net_tcp_connect.aos"
+UI_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_draw_rect.aos"
+UI_POLL_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_poll_event.aos"
+UI_SIZE_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_get_window_size.aos"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
 PUBLISH_FULLSTACK_DIR="${TMP_DIR}/publish-fullstack"
@@ -46,8 +59,3407 @@ NATIVE_OUT="${TMP_DIR}/native.out"
 WASM_OUT="${TMP_DIR}/wasm.out"
 PROCESS_OUT="${TMP_DIR}/process.out"
 PROCESS_ERR="${TMP_DIR}/process.err"
+PROCESS_SPA_WARN="${TMP_DIR}/process-spa.warn"
+PROCESS_FULLSTACK_WARN="${TMP_DIR}/process-fullstack.warn"
+FS_SPA_WARN="${TMP_DIR}/fs-spa.warn"
+FS_FULLSTACK_WARN="${TMP_DIR}/fs-fullstack.warn"
+NET_SPA_WARN="${TMP_DIR}/net-spa.warn"
+NET_FULLSTACK_WARN="${TMP_DIR}/net-fullstack.warn"
+UI_SPA_WARN="${TMP_DIR}/ui-spa.warn"
+UI_FULLSTACK_WARN="${TMP_DIR}/ui-fullstack.warn"
+UI_CLI_WARN="${TMP_DIR}/ui-cli.warn"
+UI_POLL_SPA_WARN="${TMP_DIR}/ui-poll-spa.warn"
+UI_POLL_FULLSTACK_WARN="${TMP_DIR}/ui-poll-fullstack.warn"
+UI_SIZE_SPA_WARN="${TMP_DIR}/ui-size-spa.warn"
+UI_SIZE_FULLSTACK_WARN="${TMP_DIR}/ui-size-fullstack.warn"
+UI_POLL_RUNTIME_OUT="${TMP_DIR}/ui-poll-runtime.out"
+UI_SIZE_RUNTIME_OUT="${TMP_DIR}/ui-size-runtime.out"
+MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
+MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
+FULLSTACK_HOST_STDOUT="${TMP_DIR}/fullstack-host.stdout"
+FULLSTACK_HOST_STDERR="${TMP_DIR}/fullstack-host.stderr"
+
+case "$(uname -s)" in
+  Darwin)
+    EXPECTED_HOST_RUNTIME_EXT=""
+    ;;
+  Linux)
+    EXPECTED_HOST_RUNTIME_EXT=""
+    ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT)
+    EXPECTED_HOST_RUNTIME_EXT=".exe"
+    ;;
+  *)
+    echo "unsupported host OS for wasm golden host runtime assertion" >&2
+    exit 1
+    ;;
+esac
+EXPECTED_FULLSTACK_APP_BIN="vm_c_execute_src_main_params${EXPECTED_HOST_RUNTIME_EXT}"
 
 cd "${ROOT_DIR}"
+export AIVM_REMOTE_CAPS="cap.remote"
+export AIVM_REMOTE_EXPECTED_TOKEN="wasm-golden-token"
+export AIVM_REMOTE_SESSION_TOKEN="wasm-golden-token"
+export EM_CACHE="${EM_CACHE:-${TMP_ROOT}/emcc-cache}"
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
+
+contains_regex() {
+  local pattern="$1"
+  local path="$2"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -q -- "${pattern}" "${path}"
+  else
+    grep -Eq -- "${pattern}" "${path}"
+  fi
+}
+
+contains_fixed() {
+  local text="$1"
+  local path="$2"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -Fq -- "${text}" "${path}"
+  else
+    grep -Fq -- "${text}" "${path}"
+  fi
+}
+
+run_web_runtime_js_mode_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ "${label}" == "fullstack" ]]; then
+    app_fetch_path="./app.aibc1"
+  fi
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for runtime execution check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for runtime execution check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: {
+      writeFile(path, bytes) {
+        globalThis.__aivmWriteFile = { path, size: bytes.length };
+      }
+    },
+    print: null,
+    printErr: null,
+    callMain(argv) {
+      globalThis.__aivmCallMainArgv = argv.slice();
+      if (typeof this.print === "function") {
+        this.print("main-ok");
+      }
+      if (typeof this.printErr === "function") {
+        this.printErr("main-err");
+      }
+    }
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm check missing required environment values');
+}
+
+const logs = [];
+const errs = [];
+const remoteCalls = [];
+
+globalThis.location = { hostname: 'localhost' };
+const outputNode = { textContent: '' };
+globalThis.document = {
+  getElementById(id) {
+    if (id === 'output') {
+      return outputNode;
+    }
+    return null;
+  }
+};
+globalThis.console = {
+  log(value) { logs.push(String(value)); },
+  error(value) { errs.push(String(value)); }
+};
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return {
+    async arrayBuffer() {
+      return new Uint8Array([0x41, 0x69, 0x42, 0x43, 0x31]).buffer;
+    }
+  };
+};
+globalThis.AIVM_REMOTE_MODE = 'js';
+globalThis.AiLang = {
+  remote: {
+    async call(cap, op, value) {
+      remoteCalls.push({ cap, op, value });
+      return 1337;
+    }
+  }
+};
+
+await import(pathToFileURL(mainJsPath).href);
+
+if (!globalThis.AiLang || !globalThis.AiLang.stdin) {
+  throw new Error('AiLang stdin bridge missing after web bootstrap');
+}
+globalThis.AiLang.stdin.push('first');
+globalThis.AiLang.stdin.push('second');
+if (globalThis.__aivmStdinRead() !== 'first') {
+  throw new Error('stdin FIFO mismatch at first value');
+}
+if (globalThis.__aivmStdinRead() !== 'second') {
+  throw new Error('stdin FIFO mismatch at second value');
+}
+if (globalThis.__aivmStdinRead() !== '') {
+  throw new Error('stdin open-empty must yield empty string');
+}
+const hostReads = ['host-only', undefined];
+globalThis.AIVM_HOST_STDIN_READ = () => {
+  if (hostReads.length === 0) {
+    return undefined;
+  }
+  return hostReads.shift();
+};
+globalThis.AiLang.stdin.push('queue-wins');
+if (globalThis.__aivmStdinRead() !== 'queue-wins') {
+  throw new Error('stdin queue must take precedence over host callback');
+}
+if (globalThis.__aivmStdinRead() !== 'host-only') {
+  throw new Error('stdin host callback fallback mismatch');
+}
+if (globalThis.__aivmStdinRead() !== '') {
+  throw new Error('stdin host callback undefined must preserve open-empty semantics');
+}
+globalThis.AiLang.stdin.close();
+if (globalThis.__aivmStdinRead() !== null) {
+  throw new Error('stdin closed-empty must yield null');
+}
+
+const remoteResult = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 42);
+if (remoteResult !== 1337) {
+  throw new Error(`remote call result mismatch: ${String(remoteResult)}`);
+}
+if (remoteCalls.length !== 1 ||
+    remoteCalls[0].cap !== 'cap.remote' ||
+    remoteCalls[0].op !== 'echo' ||
+    remoteCalls[0].value !== 42) {
+  throw new Error('remote call wiring mismatch in js mode');
+}
+
+if (!globalThis.__aivmWriteFile ||
+    globalThis.__aivmWriteFile.path !== '/app.aibc1' ||
+    globalThis.__aivmWriteFile.size <= 0) {
+  throw new Error('runtime writeFile wiring mismatch');
+}
+if (!globalThis.__aivmCallMainArgv ||
+    globalThis.__aivmCallMainArgv.length !== 1 ||
+    globalThis.__aivmCallMainArgv[0] !== '/app.aibc1') {
+  throw new Error('runtime callMain argv mismatch');
+}
+if (!logs.includes('main-ok')) {
+  throw new Error('runtime print mirror mismatch');
+}
+if (!errs.includes('main-err')) {
+  throw new Error('runtime printErr mirror mismatch');
+}
+if (!outputNode.textContent.includes('main-ok') ||
+    !outputNode.textContent.includes('main-err')) {
+  throw new Error('browser output textContent mirror mismatch');
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ui_close_lifecycle_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ui-close.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ui-close check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ui-close check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ui-close check missing required environment values');
+}
+
+function makeNode(tag) {
+  const listeners = new Map();
+  const children = [];
+  const attrs = new Map();
+  let rect = { left: 0, top: 0, width: 100, height: 50 };
+  return {
+    tag,
+    style: {},
+    children,
+    textContent: '',
+    attrs,
+    parent: null,
+    appendChild(child) {
+      child.parent = this;
+      children.push(child);
+      return child;
+    },
+    remove() {
+      if (!this.parent) return;
+      const idx = this.parent.children.indexOf(this);
+      if (idx >= 0) this.parent.children.splice(idx, 1);
+      this.parent = null;
+    },
+    setAttribute(k, v) {
+      attrs.set(String(k), String(v));
+    },
+    getAttribute(k) {
+      return attrs.has(String(k)) ? attrs.get(String(k)) : null;
+    },
+    addEventListener(type, fn) {
+      const key = String(type);
+      if (!listeners.has(key)) listeners.set(key, []);
+      listeners.get(key).push(fn);
+    },
+    removeEventListener(type, fn) {
+      const key = String(type);
+      const list = listeners.get(key);
+      if (!list) return;
+      const idx = list.indexOf(fn);
+      if (idx >= 0) list.splice(idx, 1);
+    },
+    listenerCount(type) {
+      const list = listeners.get(String(type));
+      return list ? list.length : 0;
+    },
+    emit(type, ev) {
+      const list = listeners.get(String(type));
+      if (!list) return 0;
+      const snapshot = list.slice();
+      for (const fn of snapshot) {
+        fn(ev);
+      }
+      return snapshot.length;
+    },
+    setBoundingRect(next) {
+      rect = {
+        left: Number(next?.left ?? 0),
+        top: Number(next?.top ?? 0),
+        width: Number(next?.width ?? 100),
+        height: Number(next?.height ?? 50)
+      };
+    },
+    focus() {},
+    getBoundingClientRect() {
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    },
+    viewBox: { baseVal: { width: 100, height: 50 } }
+  };
+}
+
+const outputNode = { textContent: '' };
+const body = makeNode('body');
+
+globalThis.window = {
+  _listeners: new Map(),
+  PointerEvent: function PointerEvent() {},
+  addEventListener(type, fn) {
+    const key = String(type);
+    if (!this._listeners.has(key)) this._listeners.set(key, []);
+    this._listeners.get(key).push(fn);
+  },
+  removeEventListener(type, fn) {
+    const key = String(type);
+    const list = this._listeners.get(key);
+    if (!list) return;
+    const idx = list.indexOf(fn);
+    if (idx >= 0) list.splice(idx, 1);
+  },
+  listenerCount(type) {
+    const list = this._listeners.get(String(type));
+    return list ? list.length : 0;
+  },
+  emit(type, ev) {
+    const list = this._listeners.get(String(type));
+    if (!list) return 0;
+    const snapshot = list.slice();
+    for (const fn of snapshot) {
+      fn(ev);
+    }
+    return snapshot.length;
+  }
+};
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = {
+  body,
+  documentElement: body,
+  getElementById(id) {
+    return id === 'output' ? outputNode : null;
+  },
+  createElement(tag) {
+    return makeNode(tag);
+  },
+  createElementNS(_ns, tag) {
+    return makeNode(tag);
+  }
+};
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'js';
+globalThis.AiLang = {
+  remote: {
+    async call() { return 0; }
+  }
+};
+
+await import(pathToFileURL(mainJsPath).href);
+
+if (globalThis.__aivmUiCloseWindow(999) !== -1) {
+  throw new Error('ui closeWindow should reject unknown window id');
+}
+if (globalThis.__aivmUiPollEventType(999) !== -1) {
+  throw new Error('ui pollEventType should reject unknown window id');
+}
+if (globalThis.__aivmUiGetWindowWidth(999) !== -1 || globalThis.__aivmUiGetWindowHeight(999) !== -1) {
+  throw new Error('ui getWindowSize should reject unknown window id');
+}
+if (globalThis.__aivmUiBeginFrame(999) !== -1 ||
+    globalThis.__aivmUiDrawRect(999, 0, 0, 1, 1, '#000') !== -1 ||
+    globalThis.__aivmUiDrawText(999, 0, 0, 'x', '#000', 12) !== -1 ||
+    globalThis.__aivmUiDrawLine(999, 0, 0, 1, 1, '#000', 1) !== -1 ||
+    globalThis.__aivmUiDrawEllipse(999, 0, 0, 2, 2, '#000') !== -1 ||
+    globalThis.__aivmUiDrawPath(999, 'M0 0 L1 1', '#000', 1) !== -1 ||
+    globalThis.__aivmUiDrawImage(999, 0, 0, 1, 1, 'x') !== -1 ||
+    globalThis.__aivmUiEndFrame(999) !== -1 ||
+    globalThis.__aivmUiPresent(999) !== -1 ||
+    globalThis.__aivmUiWaitFrame(999) !== -1) {
+  throw new Error('ui frame/draw bridges should reject unknown window id');
+}
+if (globalThis.__aivmUiPollEventX(999) !== -1 ||
+    globalThis.__aivmUiPollEventY(999) !== -1 ||
+    globalThis.__aivmUiPollEventRepeat(999) !== -1 ||
+    globalThis.__aivmUiPollEventTargetId(999) !== '' ||
+    globalThis.__aivmUiPollEventKey(999) !== '' ||
+    globalThis.__aivmUiPollEventText(999) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(999) !== '') {
+  throw new Error('ui poll-event accessors should reject unknown window id deterministically');
+}
+if (globalThis.__aivmUiCreateWindow(0, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(-1, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(3.14, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 0, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 100, 0) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', -1, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 100, -1) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 10.5, 20) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 10, 20.5) !== -1) {
+  throw new Error('ui createWindow should reject invalid window id/size deterministically');
+}
+
+if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
+  throw new Error('ui createWindow failed');
+}
+if (globalThis.__aivmUiCreateWindow(1, 'T-duplicate', 200, 120) !== 0) {
+  throw new Error('ui duplicate createWindow should be deterministic success');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== 100 || globalThis.__aivmUiGetWindowHeight(1) !== 50) {
+  throw new Error('ui duplicate createWindow should not mutate existing window dimensions');
+}
+if (body.children.length < 1 || body.children[0].children.length < 2) {
+  throw new Error('ui createWindow did not create expected host/svg structure');
+}
+const svg = body.children[0].children[1];
+if (typeof svg.listenerCount !== 'function' || typeof svg.emit !== 'function') {
+  throw new Error('ui test harness node is missing listener inspection hooks');
+}
+if (typeof globalThis.window.listenerCount !== 'function' || typeof globalThis.window.emit !== 'function') {
+  throw new Error('ui test harness window listener hooks are missing');
+}
+if (globalThis.window.listenerCount('resize') !== 1) {
+  throw new Error('ui resize listener registration mismatch');
+}
+if (body.children.length !== 1) {
+  throw new Error('ui duplicate createWindow should not duplicate host node');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 0) {
+  throw new Error('ui default event type should be none');
+}
+if (globalThis.__aivmUiPollEventX(1) !== -1 ||
+    globalThis.__aivmUiPollEventY(1) !== -1 ||
+    globalThis.__aivmUiPollEventTargetId(1) !== '' ||
+    globalThis.__aivmUiPollEventKey(1) !== '' ||
+    globalThis.__aivmUiPollEventText(1) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(1) !== '' ||
+    globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui default none-event payload mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 0 ||
+    globalThis.__aivmUiPollEventX(1) !== -1 ||
+    globalThis.__aivmUiPollEventY(1) !== -1 ||
+    globalThis.__aivmUiPollEventTargetId(1) !== '' ||
+    globalThis.__aivmUiPollEventKey(1) !== '' ||
+    globalThis.__aivmUiPollEventText(1) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(1) !== '' ||
+    globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui repeated none-event polling should remain deterministic');
+}
+svg.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui resize listener dispatch mismatch');
+}
+const resizedW = globalThis.__aivmUiGetWindowWidth(1);
+const resizedH = globalThis.__aivmUiGetWindowHeight(1);
+if (resizedW !== 121 || resizedH !== 76) {
+  throw new Error(`ui resize sync payload mismatch (${String(resizedW)}x${String(resizedH)})`);
+}
+if (svg.listenerCount('pointerdown') !== 1 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
+  throw new Error('ui pointer-first listener registration mismatch');
+}
+if (svg.listenerCount('keydown') !== 1 || svg.listenerCount('keyup') !== 1) {
+  throw new Error('ui key listener registration mismatch');
+}
+if (svg.emit('pointerdown', { offsetX: 7, offsetY: 9, target: { getAttribute: () => 'p0' } }) !== 1) {
+  throw new Error('ui pointerdown listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 2) {
+  throw new Error('ui pointer event type mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0' ||
+    globalThis.__aivmUiPollEventX(1) !== 7 ||
+    globalThis.__aivmUiPollEventY(1) !== 9) {
+  throw new Error('ui pointer event payload mismatch');
+}
+delete globalThis.window.PointerEvent;
+if (globalThis.__aivmUiCreateWindow(2, 'T2', 80, 40) !== 0) {
+  throw new Error('ui touch-fallback createWindow failed');
+}
+if (body.children.length < 2 || body.children[1].children.length < 2) {
+  throw new Error('ui touch-fallback host/svg structure mismatch');
+}
+const svg2 = body.children[1].children[1];
+if (svg2.listenerCount('pointerdown') !== 0 || svg2.listenerCount('click') !== 1 || svg2.listenerCount('touchstart') !== 1) {
+  throw new Error('ui touch-fallback listener registration mismatch');
+}
+if (globalThis.window.listenerCount('resize') !== 2) {
+  throw new Error('ui multi-window resize listener registration mismatch');
+}
+svg2.setBoundingRect({ left: 10, top: 20, width: 80, height: 40 });
+svg.setBoundingRect({ left: 0, top: 0, width: 133, height: 88 });
+if (globalThis.window.emit('resize', {}) !== 2) {
+  throw new Error('ui multi-window resize listener dispatch mismatch');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== 133 || globalThis.__aivmUiGetWindowHeight(1) !== 88) {
+  throw new Error('ui multi-window resize sync mismatch for window 1');
+}
+if (globalThis.__aivmUiGetWindowWidth(2) !== 80 || globalThis.__aivmUiGetWindowHeight(2) !== 40) {
+  throw new Error('ui multi-window resize sync mismatch for window 2');
+}
+let touchPrevented = false;
+if (svg2.emit('touchstart', {
+  target: { getAttribute: () => 't0' },
+  touches: [{ clientX: 17, clientY: 29 }],
+  preventDefault() { touchPrevented = true; }
+}) !== 1) {
+  throw new Error('ui touchstart listener dispatch mismatch');
+}
+if (!touchPrevented) {
+  throw new Error('ui touchstart did not invoke preventDefault in fallback path');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 't0' ||
+    globalThis.__aivmUiPollEventX(2) !== 7 ||
+    globalThis.__aivmUiPollEventY(2) !== 9) {
+  throw new Error('ui touch-fallback canonical click payload mismatch');
+}
+if (svg2.emit('touchstart', {
+  target: { getAttribute: () => 't1' },
+  touches: [{ clientX: 1000, clientY: 1000 }],
+  preventDefault() {}
+}) !== 1) {
+  throw new Error('ui touchstart clamp dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 't1' ||
+    globalThis.__aivmUiPollEventX(2) !== 79 ||
+    globalThis.__aivmUiPollEventY(2) !== 39) {
+  throw new Error('ui touch-fallback clamp payload mismatch');
+}
+if (svg2.emit('click', {
+  clientX: 31,
+  clientY: 45,
+  target: { getAttribute: () => 'c1' }
+}) !== 1) {
+  throw new Error('ui click-fallback client-coord dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c1' ||
+    globalThis.__aivmUiPollEventX(2) !== 21 ||
+    globalThis.__aivmUiPollEventY(2) !== 25) {
+  throw new Error('ui click-fallback client-coord payload mismatch');
+}
+if (svg2.emit('click', {
+  offsetX: 21,
+  offsetY: 22,
+  target: { getAttribute: () => 'c2' }
+}) !== 1) {
+  throw new Error('ui click-fallback listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c2' ||
+    globalThis.__aivmUiPollEventX(2) !== 21 ||
+    globalThis.__aivmUiPollEventY(2) !== 22) {
+  throw new Error('ui click-fallback canonical click payload mismatch');
+}
+if (svg2.emit('click', {
+  clientX: -100,
+  clientY: -100,
+  target: { getAttribute: () => 'c3' }
+}) !== 1) {
+  throw new Error('ui click-fallback negative clamp dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c3' ||
+    globalThis.__aivmUiPollEventX(2) !== 0 ||
+    globalThis.__aivmUiPollEventY(2) !== 0) {
+  throw new Error('ui click-fallback negative clamp payload mismatch');
+}
+if (svg2.emit('keydown', { key: 'x', repeat: false }) !== 1) {
+  throw new Error('ui click-fallback keydown dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 3 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c3' ||
+    globalThis.__aivmUiPollEventKey(2) !== 'x' ||
+    globalThis.__aivmUiPollEventText(2) !== 'x') {
+  throw new Error('ui click-fallback focus/key routing mismatch');
+}
+if (globalThis.__aivmUiCloseWindow(2) !== 0) {
+  throw new Error('ui touch-fallback closeWindow failed');
+}
+if (globalThis.__aivmUiCloseWindow(2) !== 0) {
+  throw new Error('ui repeated closeWindow should be idempotent before close-event cleanup');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 1) {
+  throw new Error('ui secondary window close event type mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(2) !== 0) {
+  throw new Error('ui secondary window close event repeat mismatch');
+}
+if (globalThis.__aivmUiCloseWindow(2) !== -1) {
+  throw new Error('ui secondary window should be removed after close-event cleanup');
+}
+if (globalThis.__aivmUiPollEventType(2) !== -1) {
+  throw new Error('ui secondary window should not emit duplicate close events');
+}
+if (globalThis.window.listenerCount('resize') !== 1) {
+  throw new Error('ui resize listener was not decremented after closing second window');
+}
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui single-window resize dispatch mismatch after closing second window');
+}
+svg.setBoundingRect({ left: 0, top: 0, width: 141, height: 91 });
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui single-window resize update dispatch mismatch');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== 141 || globalThis.__aivmUiGetWindowHeight(1) !== 91) {
+  throw new Error('ui remaining-window resize update mismatch after closing second window');
+}
+if (globalThis.__aivmUiGetWindowWidth(2) !== -1 || globalThis.__aivmUiGetWindowHeight(2) !== -1) {
+  throw new Error('ui closed-window size should remain unavailable');
+}
+if (svg2.listenerCount('click') !== 0 || svg2.listenerCount('touchstart') !== 0) {
+  throw new Error('ui touch-fallback listeners were not removed on close');
+}
+if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 1) {
+  throw new Error('ui keyup listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 3) {
+  throw new Error('ui keyup event type mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== 'enter') {
+  throw new Error('ui keyup event key mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0') {
+  throw new Error('ui keyup focus target routing mismatch');
+}
+if (globalThis.__aivmUiPollEventModifiers(1) !== 'ctrl') {
+  throw new Error('ui keyup event modifiers mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui keyup event repeat mismatch');
+}
+if (svg.emit('blur', {}) !== 1) {
+  throw new Error('ui blur listener dispatch mismatch');
+}
+if (svg.emit('keydown', { key: 'a', repeat: false }) !== 1) {
+  throw new Error('ui keydown listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 3) {
+  throw new Error('ui keydown event type mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== '') {
+  throw new Error('ui blur focus-clear routing mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== 'a' || globalThis.__aivmUiPollEventText(1) !== 'a') {
+  throw new Error('ui keydown canonical payload mismatch');
+}
+if (globalThis.__aivmUiCloseWindow(1) !== 0) {
+  throw new Error('ui closeWindow failed');
+}
+if (globalThis.window.listenerCount('resize') !== 0) {
+  throw new Error('ui resize listener was not removed on close');
+}
+if (globalThis.__aivmUiBeginFrame(1) !== -1 ||
+    globalThis.__aivmUiDrawRect(1, 0, 0, 1, 1, '#000') !== -1 ||
+    globalThis.__aivmUiEndFrame(1) !== -1 ||
+    globalThis.__aivmUiPresent(1) !== -1 ||
+    globalThis.__aivmUiWaitFrame(1) !== -1 ||
+    globalThis.__aivmUiGetWindowWidth(1) !== -1 ||
+    globalThis.__aivmUiGetWindowHeight(1) !== -1) {
+  throw new Error('ui closed window should block frame/draw/present/wait/size bridges');
+}
+if (svg.listenerCount('pointerdown') !== 0 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
+  throw new Error('ui pointer listeners were not removed on close');
+}
+if (svg.listenerCount('keydown') !== 0 || svg.listenerCount('keyup') !== 0) {
+  throw new Error('ui key listeners were not removed on close');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 1) {
+  throw new Error('ui close event type mismatch');
+}
+if (globalThis.__aivmUiPollEventX(1) !== -1 || globalThis.__aivmUiPollEventY(1) !== -1) {
+  throw new Error('ui close event coordinate mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== '') {
+  throw new Error('ui close event targetId mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== '' ||
+    globalThis.__aivmUiPollEventText(1) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(1) !== '') {
+  throw new Error('ui close event text payload mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui close event repeat mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== -1) {
+  throw new Error('ui window record was not deleted after closed event readout');
+}
+if (globalThis.__aivmUiCloseWindow(1) !== -1) {
+  throw new Error('ui repeated closeWindow should report missing-window state after cleanup');
+}
+if (globalThis.__aivmUiPollEventType(1) !== -1) {
+  throw new Error('ui repeated closeWindow must not enqueue duplicate closed event');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== -1 ||
+    globalThis.__aivmUiGetWindowHeight(1) !== -1) {
+  throw new Error('ui window size should be unavailable after close cleanup');
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_js_mode_missing_adapter_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-missing-adapter.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for missing-adapter check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for missing-adapter check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm missing-adapter check missing required environment values');
+}
+
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async () => ({ async arrayBuffer() { return new Uint8Array([1]).buffer; } });
+globalThis.AIVM_REMOTE_MODE = 'js';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 7);
+  throw new Error('expected remote call to reject in js mode without adapter');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter')) {
+  throw new Error(`unexpected missing-adapter message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_invalid_mode_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-invalid-mode.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for invalid-mode check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for invalid-mode check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+if (!mainJsPath) {
+  throw new Error('node wasm invalid-mode check missing main path');
+}
+
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async () => ({ async arrayBuffer() { return new Uint8Array([1]).buffer; } });
+globalThis.AIVM_REMOTE_MODE = 'invalid-mode';
+globalThis.AiLang = { remote: {} };
+
+let message = '';
+try {
+  await import(pathToFileURL(mainJsPath).href);
+  throw new Error('expected invalid mode import to throw');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes("RUN101: unsupported AIVM_REMOTE_MODE 'invalid-mode'")) {
+  throw new Error(`unexpected invalid mode message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_mode_call_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-mode.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-mode check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-mode check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-mode check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+}
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function encodeStr(s) {
+  const b = new TextEncoder().encode(s);
+  const out = new Uint8Array(2 + b.length);
+  writeU16LE(out, 0, b.length);
+  out.set(b, 2);
+  return out;
+}
+function decodeStr(arr, off) {
+  const n = arr[off] | (arr[off + 1] << 8);
+  const start = off + 2;
+  const txt = new TextDecoder().decode(arr.slice(start, start + n));
+  return { value: txt, next: start + n };
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+
+let openedUrl = '';
+let callCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor(url) {
+    openedUrl = String(url);
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') {
+        this.onopen();
+      }
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    const payloadLen = readU32LE(bytes, 5);
+    const payload = bytes.slice(9, 9 + payloadLen);
+    if (type === 0x01) {
+      const payloadOutParts = [];
+      const caps = ['cap.remote'];
+      const header = new Uint8Array(6);
+      writeU16LE(header, 0, 1);
+      writeU32LE(header, 2, caps.length);
+      payloadOutParts.push(header);
+      for (const c of caps) {
+        payloadOutParts.push(encodeStr(c));
+      }
+      const total = payloadOutParts.reduce((a, b) => a + b.length, 0);
+      const payloadOut = new Uint8Array(total);
+      let off = 0;
+      for (const part of payloadOutParts) {
+        payloadOut.set(part, off);
+        off += part.length;
+      }
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x02, id, payloadOut) });
+      }
+      return;
+    }
+    if (type === 0x10) {
+      callCount += 1;
+      const capDecoded = decodeStr(payload, 0);
+      const opDecoded = decodeStr(payload, capDecoded.next);
+      if (capDecoded.value !== 'cap.remote' || opDecoded.value !== 'echo') {
+        throw new Error(`unexpected ws call target ${capDecoded.value}/${opDecoded.value}`);
+      }
+      const payloadOut = new Uint8Array(8);
+      const dv = new DataView(payloadOut.buffer);
+      dv.setBigInt64(0, 4242n, true);
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x11, id, payloadOut) });
+      }
+      return;
+    }
+    throw new Error(`unexpected ws frame type ${type}`);
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AIVM_REMOTE_WS_ENDPOINT = 'ws://127.0.0.1:8765';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+const value = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 21);
+if (value !== 4242) {
+  throw new Error(`unexpected ws call result ${String(value)}`);
+}
+if (callCount !== 1) {
+  throw new Error(`unexpected ws call count ${callCount}`);
+}
+if (openedUrl !== 'ws://127.0.0.1:8765') {
+  throw new Error(`unexpected ws endpoint ${openedUrl}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_mode_deny_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-deny.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-deny check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-deny check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-deny check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+}
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeErrorPayload(code, msg) {
+  const msgB = new TextEncoder().encode(msg);
+  const out = new Uint8Array(4 + 2 + msgB.length);
+  writeU32LE(out, 0, code >>> 0);
+  writeU16LE(out, 4, msgB.length);
+  out.set(msgB, 6);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor(url) {
+    this.url = String(url);
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') {
+        this.onopen();
+      }
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      const deny = encodeErrorPayload(7, 'missing capability');
+      this.onmessage({ data: frame(0x03, 1, deny) });
+      return;
+    }
+    throw new Error(`unexpected frame after deny: ${type}`);
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AIVM_REMOTE_WS_ENDPOINT = 'ws://127.0.0.1:8765';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 99);
+  throw new Error('expected ws call to fail on handshake deny');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote handshake denied 7: missing capability')) {
+  throw new Error(`unexpected ws deny message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_mode_call_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-call-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-call-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-call-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-call-error check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeErrorPayload(code, msg) {
+  const b = new TextEncoder().encode(msg);
+  const out = new Uint8Array(4 + 2 + b.length);
+  writeU32LE(out, 0, code >>> 0);
+  writeU16LE(out, 4, b.length);
+  out.set(b, 6);
+  return out;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') {
+        this.onopen();
+      }
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10) {
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x12, id, encodeErrorPayload(55, 'call denied')) });
+      }
+      return;
+    }
+    throw new Error(`unexpected frame type ${type}`);
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 1);
+  throw new Error('expected ws call to fail on ERROR frame');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote 55: call denied')) {
+  throw new Error(`unexpected ws call ERROR message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_mode_socket_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-socket-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-socket-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-socket-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-socket-error check missing required environment values');
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      if (typeof this.onerror === 'function') {
+        this.onerror(new Error('boom'));
+      }
+    });
+  }
+  send() {}
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 1);
+  throw new Error('expected ws call to fail on socket error');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket error')) {
+  throw new Error(`unexpected ws socket error message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_default_endpoint_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-default-endpoint.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-default-endpoint check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-default-endpoint check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-default-endpoint check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+let openedUrl = '';
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor(url) {
+    openedUrl = String(url);
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') {
+        this.onopen();
+      }
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x12, id, encodeErrorPayload(0, 'ok')) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'example-host' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+await globalThis.__aivmRemoteCall('cap.remote', 'echo', 1).catch(() => {});
+if (openedUrl !== 'ws://example-host:8765') {
+  throw new Error(`unexpected default ws endpoint ${openedUrl}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_unexpected_call_frame_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-unexpected-call-frame.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws unexpected-call-frame check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws unexpected-call-frame check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws unexpected-call-frame check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage === 'function') this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10) {
+      if (typeof this.onmessage === 'function') this.onmessage({ data: frame(0x30, id, new Uint8Array(0)) });
+      return;
+    }
+  }
+  close() {}
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 3);
+  throw new Error('expected ws call to fail on unexpected call frame');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote unexpected frame type 48')) {
+  throw new Error(`unexpected call frame message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_unexpected_handshake_frame_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-unexpected-handshake-frame.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws unexpected-handshake-frame check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws unexpected-handshake-frame check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws unexpected-handshake-frame check missing required environment values');
+}
+
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    if (bytes[0] === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x41, 1, new Uint8Array(0)) });
+    }
+  }
+  close() {}
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 3);
+  throw new Error('expected ws call to fail on unexpected handshake frame');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote unexpected handshake frame type 65')) {
+  throw new Error(`unexpected handshake frame message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_pending_close_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-pending-close.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws pending-close check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws pending-close check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws pending-close check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onclose === 'function') {
+      this.readyState = FakeWebSocket.CLOSED;
+      this.onclose();
+      return;
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 9);
+  throw new Error('expected ws call to fail when socket closes with pending call');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket closed')) {
+  throw new Error(`unexpected pending-close message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_pending_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-pending-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws pending-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws pending-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws pending-error check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onerror === 'function') {
+      this.onerror(new Error('boom'));
+      return;
+    }
+  }
+  close() {}
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 11);
+  throw new Error('expected ws call to fail when socket errors with pending call');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket error')) {
+  throw new Error(`unexpected pending-error message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_unknown_id_ignored_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-unknown-id-ignored.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws unknown-id check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws unknown-id check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws unknown-id check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let sawUnknown = false;
+let sawExpected = false;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      // Unknown response id should be ignored.
+      this.onmessage({ data: frame(0x11, id + 1000, encodeResult(7)) });
+      sawUnknown = true;
+      // Correct id should resolve the pending call.
+      this.onmessage({ data: frame(0x11, id, encodeResult(5150)) });
+      sawExpected = true;
+      return;
+    }
+  }
+  close() {}
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+const value = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 13);
+if (value !== 5150) {
+  throw new Error(`unexpected ws value after unknown-id frame: ${String(value)}`);
+}
+if (!sawUnknown || !sawExpected) {
+  throw new Error('ws unknown-id test did not exercise both unknown and expected frame paths');
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_handshake_close_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-handshake-close.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws handshake-close check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws handshake-close check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws handshake-close check missing required environment values');
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.CLOSED;
+      if (typeof this.onclose === 'function') this.onclose();
+    });
+  }
+  send() {}
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 17);
+  throw new Error('expected ws call to fail on close before handshake');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket closed')) {
+  throw new Error(`unexpected handshake-close message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-error check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+let callFramesSeen = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10) {
+      callFramesSeen += 1;
+      if (this.instanceId === 1) {
+        if (typeof this.onerror === 'function') this.onerror(new Error('first-socket-error'));
+      } else if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x11, id, encodeResult(9090)) });
+      }
+      return;
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 21);
+  throw new Error('expected first ws call to fail');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote websocket error')) {
+  throw new Error(`unexpected first error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 22);
+if (secondValue !== 9090) {
+  throw new Error(`unexpected second ws value: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect to create a second websocket, saw ${constructorCount}`);
+}
+if (callFramesSeen < 2) {
+  throw new Error(`expected two call frames (before/after reconnect), saw ${callFramesSeen}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_deny_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-deny.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-deny check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-deny check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-deny check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+function encodeErrorPayload(code, msg) {
+  const b = new TextEncoder().encode(msg);
+  const out = new Uint8Array(4 + 2 + b.length);
+  writeU32LE(out, 0, code >>> 0);
+  writeU16LE(out, 4, b.length);
+  out.set(b, 6);
+  return out;
+}
+
+let constructorCount = 0;
+let callFramesSeen = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: frame(0x03, 1, encodeErrorPayload(401, 'deny-first')) });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      callFramesSeen += 1;
+      this.onmessage({ data: frame(0x11, id, encodeResult(7777)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 31);
+  throw new Error('expected first ws call to fail with handshake deny');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote handshake denied 401: deny-first')) {
+  throw new Error(`unexpected first deny error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 32);
+if (secondValue !== 7777) {
+  throw new Error(`unexpected second ws value after deny: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after deny; websocket instances=${constructorCount}`);
+}
+if (callFramesSeen !== 1) {
+  throw new Error(`expected one successful post-reconnect call frame, saw ${callFramesSeen}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_handshake_bad_id_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-handshake-bad-id.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws handshake-bad-id check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws handshake-bad-id check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws handshake-bad-id check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: frame(0x02, 2, encodeWelcome()) });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x11, id, encodeResult(3131)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 41);
+  throw new Error('expected first ws call to fail with handshake bad id');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote unexpected handshake frame id 2')) {
+  throw new Error(`unexpected first bad-id error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 42);
+if (secondValue !== 3131) {
+  throw new Error(`unexpected second ws value after bad-id reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after bad-id handshake; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-bad-handshake-type.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-bad-handshake-type check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-bad-handshake-type check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-bad-handshake-type check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: frame(0x41, 1, new Uint8Array(0)) });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x11, id, encodeResult(42424)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 51);
+  throw new Error('expected first ws call to fail with bad handshake type');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote unexpected handshake frame type 65')) {
+  throw new Error(`unexpected first bad-type error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 52);
+if (secondValue !== 42424) {
+  throw new Error(`unexpected second ws value after bad-type reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after bad-type handshake; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_invalid_payload_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-invalid-payload.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-invalid-payload check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-invalid-payload check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-invalid-payload check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: 'not-binary' });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x11, id, encodeResult(6161)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 61);
+  throw new Error('expected first ws call to fail with invalid payload');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote invalid websocket frame payload')) {
+  throw new Error(`unexpected first invalid-payload error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 62);
+if (secondValue !== 6161) {
+  throw new Error(`unexpected second ws value after invalid-payload reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after invalid payload; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_short_frame_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-short-frame.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-short-frame check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-short-frame check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-short-frame check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: new Uint8Array([0x02, 0x01]).buffer });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x11, id, encodeResult(7373)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 71);
+  throw new Error('expected first ws call to fail with short frame');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote invalid websocket frame payload')) {
+  throw new Error(`unexpected first short-frame error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 72);
+if (secondValue !== 7373) {
+  throw new Error(`unexpected second ws value after short-frame reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after short frame; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_bad_result_payload_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-bad-result-payload.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-bad-result-payload check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-bad-result-payload check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-bad-result-payload check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage === 'function') this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      if (this.instanceId === 1) {
+        // Invalid result payload (too short for int64 decode)
+        this.onmessage({ data: frame(0x11, id, new Uint8Array([0x01, 0x02, 0x03])) });
+      } else {
+        this.onmessage({ data: frame(0x11, id, encodeResult(8181)) });
+      }
+      return;
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 81);
+  throw new Error('expected first ws call to fail with bad result payload');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote invalid websocket frame payload')) {
+  throw new Error(`unexpected first bad-result-payload error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 82);
+if (secondValue !== 8181) {
+  throw new Error(`unexpected second ws value after bad-result-payload reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after bad result payload; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_reconnect_after_bad_error_payload_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-bad-error-payload.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-bad-error-payload check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-bad-error-payload check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-bad-error-payload check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage === 'function') this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      if (this.instanceId === 1) {
+        // Invalid error payload (too short for code + string decode)
+        this.onmessage({ data: frame(0x12, id, new Uint8Array([0x01, 0x02, 0x03])) });
+      } else {
+        this.onmessage({ data: frame(0x11, id, encodeResult(9191)) });
+      }
+      return;
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 91);
+  throw new Error('expected first ws call to fail with bad error payload');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote invalid websocket frame payload')) {
+  throw new Error(`unexpected first bad-error-payload error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 92);
+if (secondValue !== 9191) {
+  throw new Error(`unexpected second ws value after bad-error-payload reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after bad error payload; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
@@ -55,6 +3467,10 @@ if ! command -v wasmtime >/dev/null 2>&1; then
 fi
 if ! command -v emcc >/dev/null 2>&1; then
   echo "emcc is required to build wasm runtime artifact for golden tests" >&2
+  exit 1
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "node is required to run web runtime wasm profile checks" >&2
   exit 1
 fi
 
@@ -65,6 +3481,11 @@ mkdir -p "${PUBLISH_DIR}"
 mkdir -p "${PUBLISH_SPA_DIR}"
 mkdir -p "${PUBLISH_FULLSTACK_DIR}"
 mkdir -p "${PUBLISH_PROCESS_CLI_DIR}"
+mkdir -p "${MANIFEST_HOST_TARGET_DIR}"
+cleanup() {
+  rm -rf "${TMP_DIR}"
+}
+trap cleanup EXIT
 
 for CASE_NAME in "${CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
@@ -75,7 +3496,11 @@ for CASE_NAME in "${CASES[@]}"; do
   set +e
   ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
   native_rc=$?
-  wasmtime run -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -91,52 +3516,659 @@ for CASE_NAME in "${CASES[@]}"; do
   fi
 done
 
-for CASE_NAME in "${UNSUPPORTED_CASES[@]}"; do
+for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
-  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>&1; then
-    echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic unsupported publish failure" >&2
+  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+
+  set +e
+  ./tools/airun run "${CASE_OUT}/app.aibc1" --vm=c >"${NATIVE_OUT}" 2>&1
+  native_rc=$?
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasm_rc=$?
+  set -e
+
+  if [[ ${native_rc} -ne ${wasm_rc} ]]; then
+    echo "wasm bytecode-only mismatch (${CASE_NAME}): status native=${native_rc} wasm=${wasm_rc}" >&2
     exit 1
   fi
+
+  if ! diff -u "${NATIVE_OUT}" "${WASM_OUT}" >/dev/null; then
+    echo "wasm bytecode-only mismatch (${CASE_NAME}): output differs from native bytecode baseline" >&2
+    diff -u "${NATIVE_OUT}" "${WASM_OUT}" || true
+    exit 1
+  fi
+done
+
+STDIN_EXPECTED="${TMP_DIR}/stdin-eof-expected.out"
+printf '\n' > "${STDIN_EXPECTED}"
+for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  mkdir -p "${CASE_OUT}"
+  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+
+  set +e
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasm_rc=$?
+  set -e
+
+  if [[ ${wasm_rc} -ne 0 ]]; then
+    echo "wasm stdin EOF mismatch (${CASE_NAME}): expected exit 0, got ${wasm_rc}" >&2
+    exit 1
+  fi
+  if ! cmp -s "${STDIN_EXPECTED}" "${WASM_OUT}"; then
+    echo "wasm stdin EOF mismatch (${CASE_NAME}): expected deterministic empty-line output" >&2
+    diff -u "${STDIN_EXPECTED}" "${WASM_OUT}" || true
+    exit 1
+  fi
+done
+
+for CASE_NAME in "${MALFORMED_CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  CASE_ERR="${CASE_OUT}/publish.err"
+  mkdir -p "${CASE_OUT}"
+  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>"${CASE_ERR}"; then
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic malformed-input publish failure" >&2
+    exit 1
+  fi
+  if ! contains_regex 'Err#err1\(code=DEV008 message="' "${CASE_ERR}"; then
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected DEV008 deterministic malformed-input error" >&2
+    exit 1
+  fi
+  case "${CASE_NAME}" in
+    vm_c_execute_src_opcode_unmapped)
+      if ! contains_regex 'cannot encode this bytecode AOS shape yet' "${CASE_ERR}"; then
+        echo "wasm publish contract mismatch (${CASE_NAME}): expected unsupported-opcode-shape reason" >&2
+        exit 1
+      fi
+      ;;
+    vm_c_execute_src_parse_error)
+      if ! contains_regex 'Publish needs prebuilt \.aibc1 unless source is bytecode-style AOS' "${CASE_ERR}"; then
+        echo "wasm publish contract mismatch (${CASE_NAME}): expected non-bytecode-source gate reason" >&2
+        exit 1
+      fi
+      ;;
+  esac
 done
 
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
+./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
+./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"
+./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/fs-spa" >/dev/null 2>"${FS_SPA_WARN}"
+./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/fs-fullstack" >/dev/null 2>"${FS_FULLSTACK_WARN}"
+./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/net-spa" >/dev/null 2>"${NET_SPA_WARN}"
+./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/net-fullstack" >/dev/null 2>"${NET_FULLSTACK_WARN}"
+./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-cli" >/dev/null 2>"${UI_CLI_WARN}"
+./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-spa" >/dev/null 2>"${UI_SPA_WARN}"
+./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-fullstack" >/dev/null 2>"${UI_FULLSTACK_WARN}"
+./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-poll-spa" >/dev/null 2>"${UI_POLL_SPA_WARN}"
+./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-poll-fullstack" >/dev/null 2>"${UI_POLL_FULLSTACK_WARN}"
+./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-size-spa" >/dev/null 2>"${UI_SIZE_SPA_WARN}"
+./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-size-fullstack" >/dev/null 2>"${UI_SIZE_FULLSTACK_WARN}"
+./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-poll-cli" >/dev/null
+./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-size-cli" >/dev/null
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
-echo "wasm unsupported corpus: PASS (${#UNSUPPORTED_CASES[@]} cases)"
+echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
+echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
+echo "wasm malformed corpus: PASS (${#MALFORMED_CASES[@]} cases)"
 
-if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" ]]; then
+if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" || ! -f "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" ]]; then
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
   exit 1
 fi
-
-if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" ]]; then
-  echo "wasm profile mismatch: fullstack publish did not emit client/server layout" >&2
+if ! contains_fixed 'AIVM_REMOTE_MODE' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit remote mode switch in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit websocket endpoint hook in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic js-mode adapter diagnostic" >&2
+  exit 1
+fi
+if ! contains_fixed "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic invalid remote-mode diagnostic" >&2
+  exit 1
+fi
+if ! contains_fixed 'globalThis.AiLang' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit AiLang root bridge in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'stdin = {' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdin queue API in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdin drain bridge in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui createWindow bridge in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'const existing = uiState.windows.get(windowId);' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'if (existing) return existing;' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic createWindow reuse guard" >&2
+  exit 1
+fi
+if ! contains_fixed "const host = document.createElement('div');" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit host container allocation in ensureUiWindow" >&2
+  exit 1
+fi
+if ! contains_fixed '!Number.isInteger(windowId) || windowId <= 0' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit strict createWindow argument validation guard" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiDrawLine' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiDrawEllipse' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui line/ellipse bridges in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiDrawPath' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiDrawImage' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui path/image bridges in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'data-aivm-id' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic ui target-id tagging" >&2
+  exit 1
+fi
+if ! contains_fixed 'focusedTargetId' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic ui focus routing state" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui keyup listener mapping" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui focus-clear hook on blur" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui waitFrame bridge in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiGetWindowHeight' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui live window-size bridges in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'return (win.width | 0) ||' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'return (win.height | 0) ||' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not prioritize live window size state over stale viewBox fallback" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('resize'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui resize sync hook in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui resize cleanup hook in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit full ui input listener cleanup hooks in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.frameParts = []' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not clear ui frame state on closeWindow" >&2
+  exit 1
+fi
+if ! contains_fixed 'uiState.windows.delete(windowId);' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit closed-window record cleanup" >&2
+  exit 1
+fi
+if ! contains_fixed 'clampToWindow' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui click coordinate clamp helper" >&2
+  exit 1
+fi
+if ! contains_fixed 'eventToLocal' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui local-coordinate mapping helper" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "addEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit pointer/touch ui click mappings" >&2
+  exit 1
+fi
+if ! contains_fixed 'preventDefault' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit touch fallback preventDefault guard" >&2
+  exit 1
+fi
+if ! contains_fixed "{ passive: false }" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit non-passive touch listener registration" >&2
+  exit 1
+fi
+if ! contains_fixed "touchAction = 'none'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not disable default touch gestures on svg surface" >&2
+  exit 1
+fi
+if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit pointer-first click mapping gate" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiPollEventType' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventX' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventY' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui event-poll bridges in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "if (!win) return -1;" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'none'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic unknown-window/none-event pollEventType semantics" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventKey' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventText' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventModifiers' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiPollEventRepeat' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit canonical ui event payload bridges in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.closeConsumed' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'if (win.closeConsumed)' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic close-consume cleanup gate for pollEventRepeat" >&2
+  exit 1
+fi
+if ! contains_fixed "if (!win) return '';" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic unknown-window string accessor semantics" >&2
+  exit 1
+fi
+if ! contains_fixed "type: 'key'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'closed'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit canonical ui event type payloads" >&2
+  exit 1
+fi
+if contains_fixed "type: 'keydown'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'keyup'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'move'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish still emits non-canonical ui event type payloads" >&2
+  exit 1
+fi
+if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'console.log' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'console.error' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit stdout/stderr console mirrors in main.js" >&2
+  exit 1
+fi
+if ! cmp -s "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
+  echo "wasm profile mismatch: spa publish did not copy web runtime wasm artifact" >&2
   exit 1
 fi
 
-if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process\.spawn is not available on wasm profile '\''cli'\''' "${PROCESS_ERR}"; then
-  echo "wasm warning contract mismatch: expected WASM001 warning for sys.process.spawn on wasm-profile=cli" >&2
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.mjs" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit root app + www layout" >&2
+  exit 1
+fi
+if ! contains_fixed 'AIVM_REMOTE_MODE' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit remote mode switch in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit websocket endpoint hook in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic js-mode adapter diagnostic" >&2
+  exit 1
+fi
+if ! contains_fixed "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic invalid remote-mode diagnostic" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit remote call bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit stdin drain bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui createWindow bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'const existing = uiState.windows.get(windowId);' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'if (existing) return existing;' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic createWindow reuse guard" >&2
+  exit 1
+fi
+if ! contains_fixed "const host = document.createElement('div');" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit host container allocation in ensureUiWindow" >&2
+  exit 1
+fi
+if ! contains_fixed '!Number.isInteger(windowId) || windowId <= 0' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit strict createWindow argument validation guard" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiDrawLine' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiDrawEllipse' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui line/ellipse bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiDrawPath' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiDrawImage' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui path/image bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'data-aivm-id' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic ui target-id tagging" >&2
+  exit 1
+fi
+if ! contains_fixed 'focusedTargetId' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic ui focus routing state" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui keyup listener mapping" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui focus-clear hook on blur" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui waitFrame bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiGetWindowHeight' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui live window-size bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'return (win.width | 0) ||' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'return (win.height | 0) ||' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not prioritize live window size state over stale viewBox fallback" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui resize sync hook in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui resize cleanup hook in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit full ui input listener cleanup hooks in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.frameParts = []' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not clear ui frame state on closeWindow" >&2
+  exit 1
+fi
+if ! contains_fixed 'uiState.windows.delete(windowId);' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit closed-window record cleanup" >&2
+  exit 1
+fi
+if ! contains_fixed 'clampToWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui click coordinate clamp helper" >&2
+  exit 1
+fi
+if ! contains_fixed 'eventToLocal' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui local-coordinate mapping helper" >&2
+  exit 1
+fi
+if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "addEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit pointer/touch ui click mappings" >&2
+  exit 1
+fi
+if ! contains_fixed 'preventDefault' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit touch fallback preventDefault guard" >&2
+  exit 1
+fi
+if ! contains_fixed "{ passive: false }" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit non-passive touch listener registration" >&2
+  exit 1
+fi
+if ! contains_fixed "touchAction = 'none'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not disable default touch gestures on svg surface" >&2
+  exit 1
+fi
+if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit pointer-first click mapping gate" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiPollEventType' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventX' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventY' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui event-poll bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "if (!win) return -1;" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'none'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic unknown-window/none-event pollEventType semantics" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventKey' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventText' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventModifiers' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventRepeat' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit canonical ui event payload bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.closeConsumed' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'if (win.closeConsumed)' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic close-consume cleanup gate for pollEventRepeat" >&2
+  exit 1
+fi
+if ! contains_fixed "if (!win) return '';" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic unknown-window string accessor semantics" >&2
+  exit 1
+fi
+if ! contains_fixed "type: 'key'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'closed'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit canonical ui event type payloads" >&2
+  exit 1
+fi
+if contains_fixed "type: 'keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'move'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish still emits non-canonical ui event type payloads" >&2
+  exit 1
+fi
+if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit optional host-stdin callback hook in www/main.js" >&2
+  exit 1
+fi
+if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
+  echo "wasm profile mismatch: fullstack www did not copy web runtime wasm artifact" >&2
+  exit 1
+fi
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/${EXPECTED_FULLSTACK_APP_BIN}" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit root app binary ${EXPECTED_FULLSTACK_APP_BIN}" >&2
+  exit 1
+fi
+
+if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.ps1" || -d "${PUBLISH_FULLSTACK_DIR}/client" || -d "${PUBLISH_FULLSTACK_DIR}/server" ]]; then
+  echo "wasm profile mismatch: fullstack publish should not emit C bridge run scripts" >&2
+  exit 1
+fi
+if [[ -f "${PUBLISH_FULLSTACK_DIR}/run" || -f "${PUBLISH_FULLSTACK_DIR}/run.ps1" ]]; then
+  echo "wasm profile mismatch: fullstack publish must not emit legacy root run launchers" >&2
+  exit 1
+fi
+
+run_web_runtime_js_mode_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_js_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ui_close_lifecycle_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ui_close_lifecycle_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_js_mode_missing_adapter_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_js_mode_missing_adapter_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_invalid_mode_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_invalid_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_call_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_call_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_deny_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_deny_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_call_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_call_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_socket_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_socket_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_default_endpoint_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_default_endpoint_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_unexpected_call_frame_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_unexpected_call_frame_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_unexpected_handshake_frame_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_unexpected_handshake_frame_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_pending_close_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_pending_close_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_pending_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_pending_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_unknown_id_ignored_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_unknown_id_ignored_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_handshake_close_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_handshake_close_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_deny_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_deny_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_handshake_bad_id_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_handshake_bad_id_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_invalid_payload_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_invalid_payload_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_short_frame_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_short_frame_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_bad_result_payload_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_bad_result_payload_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_bad_error_payload_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_bad_error_payload_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+
+FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
+(
+  cd "${PUBLISH_FULLSTACK_DIR}"
+  PORT="${FULLSTACK_HOST_PORT}" "./${EXPECTED_FULLSTACK_APP_BIN}" >"${FULLSTACK_HOST_STDOUT}" 2>"${FULLSTACK_HOST_STDERR}"
+) &
+fullstack_host_pid=$!
+host_exit_observed=0
+for _ in {1..20}; do
+  if ! kill -0 "${fullstack_host_pid}" >/dev/null 2>&1; then
+    host_exit_observed=1
+    break
+  fi
+  sleep 0.1
+done
+if [[ "${host_exit_observed}" == "1" ]]; then
+  set +e
+  wait "${fullstack_host_pid}"
+  fullstack_host_rc=$?
+  set -e
+  if [[ ${fullstack_host_rc} -ne 2 ]]; then
+    echo "wasm fullstack host mismatch: expected launcher bind/listen failure exit 2, got ${fullstack_host_rc}" >&2
+    exit 1
+  fi
+  if ! contains_fixed 'Err#err1(code=RUN001 message="Failed to bind/listen fullstack server socket." nodeId=publish)' "${FULLSTACK_HOST_STDERR}"; then
+    echo "wasm fullstack host mismatch: expected deterministic bind/listen stderr diagnostic" >&2
+    exit 1
+  fi
+else
+  if ! contains_fixed '[fullstack] serving static client from' "${FULLSTACK_HOST_STDOUT}"; then
+    echo "wasm fullstack host mismatch: expected stdout serving banner when launcher stays alive" >&2
+    exit 1
+  fi
+  kill "${fullstack_host_pid}" >/dev/null 2>&1 || true
+  wait "${fullstack_host_pid}" 2>/dev/null || true
+fi
+
+mkdir -p "${MANIFEST_HOST_TARGET_DIR}/src"
+cp "${PUBLISH_FULLSTACK_DIR}/app.aibc1" "${MANIFEST_HOST_TARGET_DIR}/src/app.aibc1"
+cat > "${MANIFEST_HOST_TARGET_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Let#l1(name=dummy) { Lit#v1(value=1) }
+}
+EOF
+cat > "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="manifest_host_target" entryFile="src/app.aos" publishWasmFullstackHostTarget="invalid-rid")
+}
+EOF
+if ./tools/airun publish "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" --target wasm32 --wasm-profile fullstack --out "${MANIFEST_HOST_TARGET_DIR}/out" > /dev/null 2>"${MANIFEST_HOST_TARGET_ERR}"; then
+  echo "wasm manifest host-target mismatch: expected publish failure for invalid publishWasmFullstackHostTarget" >&2
+  exit 1
+fi
+if ! contains_regex 'Unsupported wasm fullstack host target RID' "${MANIFEST_HOST_TARGET_ERR}"; then
+  echo "wasm manifest host-target mismatch: expected deterministic invalid host target error" >&2
   exit 1
 fi
 
 set +e
-wasmtime run -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
+wasmtime run \
+  --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+  --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+  --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+  -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
 process_rc=$?
 set -e
 if [[ ${process_rc} -ne 3 ]]; then
   echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process.spawn, got ${process_rc}" >&2
   exit 1
 fi
-if ! rg -q 'Err#err1\(code=RUN101 message="' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected RUN101 code for sys.process.spawn" >&2
+if ! contains_regex 'Err#err1\(code=AIVMS004 message="phase=syscall .*callTarget=sys.process.spawn .*vmCode=AIVM010' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected typed syscall diagnostic for sys.process.spawn failure" >&2
   exit 1
 fi
-if ! rg -q 'sys\.process\.spawn is not available on this target\.' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error for sys.process.spawn" >&2
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'spa'" "${PROCESS_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'fullstack'" "${PROCESS_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'spa'" "${FS_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'fullstack'" "${FS_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'spa'" "${NET_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'fullstack'" "${NET_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'cli'" "${UI_CLI_WARN}"; then
+  echo "wasm cli warning mismatch: expected WASM001 warning for sys.ui.drawRect" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'spa'" "${UI_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.drawRect" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'fullstack'" "${UI_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.drawRect" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'spa'" "${UI_POLL_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.pollEvent" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'fullstack'" "${UI_POLL_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.pollEvent" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'spa'" "${UI_SIZE_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.getWindowSize" >&2
+  exit 1
+fi
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'fullstack'" "${UI_SIZE_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.getWindowSize" >&2
+  exit 1
+fi
+set +e
+wasmtime run -C cache=n "${TMP_DIR}/ui-poll-cli/wasm_profile_warn_ui_poll_event.wasm" - < "${TMP_DIR}/ui-poll-cli/app.aibc1" >"${UI_POLL_RUNTIME_OUT}" 2>&1
+ui_poll_runtime_rc=$?
+wasmtime run -C cache=n "${TMP_DIR}/ui-size-cli/wasm_profile_warn_ui_get_window_size.wasm" - < "${TMP_DIR}/ui-size-cli/app.aibc1" >"${UI_SIZE_RUNTIME_OUT}" 2>&1
+ui_size_runtime_rc=$?
+set -e
+if [[ ${ui_poll_runtime_rc} -ne 3 ]]; then
+  echo "wasm ui runtime mismatch: expected exit 3 for sys.ui.pollEvent unsupported runtime, got ${ui_poll_runtime_rc}" >&2
+  exit 1
+fi
+if [[ ${ui_size_runtime_rc} -ne 3 ]]; then
+  echo "wasm ui runtime mismatch: expected exit 3 for sys.ui.getWindowSize unsupported runtime, got ${ui_size_runtime_rc}" >&2
+  exit 1
+fi
+if ! contains_fixed 'Err#err1(code=RUN101 message="ui bridge is not available on this target." nodeId=vm)' "${UI_POLL_RUNTIME_OUT}"; then
+  echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.pollEvent unsupported runtime" >&2
+  exit 1
+fi
+if ! contains_fixed 'Err#err1(code=RUN101 message="ui bridge is not available on this target." nodeId=vm)' "${UI_SIZE_RUNTIME_OUT}"; then
+  echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.getWindowSize unsupported runtime" >&2
   exit 1
 fi
 
-echo "wasm golden profiles: PASS (cli/spa/fullstack + warnings)"
+echo "wasm golden profiles: PASS (cli/spa/fullstack)"

@@ -14,6 +14,11 @@ PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 MODE_USED="native"
 RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
 RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
+RUN_WASM="${AIVM_DOD_RUN_WASM:-1}"
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
 REQUIRE_SAMPLES="${AIVM_DOD_REQUIRE_SAMPLES:-0}"
 REQUIRE_MEMORY="${AIVM_DOD_REQUIRE_MEMORY:-0}"
 REQUIRE_ZERO_CSHARP="${AIVM_DOD_REQUIRE_ZERO_CSHARP:-0}"
@@ -141,7 +146,11 @@ fi
 
 # Zero-C# gate (informational unless explicitly required).
 TRACKED_CS_COUNT="$(git ls-files '*.cs' '*.csproj' '*.sln' '*.slnx' | wc -l | tr -d ' ')"
-DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+if [[ "${HAS_RG}" == "1" ]]; then
+  DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+else
+  DOTNET_REF_COUNT="$( (grep -RInE '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+fi
 ZERO_CSHARP_STATUS="FAIL"
 if [[ "${TRACKED_CS_COUNT}" == "0" && "${DOTNET_REF_COUNT}" == "0" ]]; then
   ZERO_CSHARP_STATUS="PASS"
@@ -175,10 +184,17 @@ fi
 TASK_TOOLING_CASES_STATUS="FAIL"
 TASK_TOOLING_CASES_COUNT=0
 if [[ -f "${TASK_TOOLING_MANIFEST}" ]]; then
-  TASK_TOOLING_CASES_COUNT="$(
-    (rg -n 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
-      | wc -l | tr -d ' '
-  )"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    TASK_TOOLING_CASES_COUNT="$(
+      (rg -n 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
+        | wc -l | tr -d ' '
+    )"
+  else
+    TASK_TOOLING_CASES_COUNT="$(
+      (grep -nE 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
+        | wc -l | tr -d ' '
+    )"
+  fi
   if [[ "${TASK_TOOLING_CASES_COUNT}" -ge 3 ]]; then
     TASK_TOOLING_CASES_STATUS="PASS"
   fi
@@ -227,7 +243,14 @@ if [[ "${RUN_BENCH}" == "1" ]]; then
     invalid_baseline_count="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {if ($2 <= 0) c++} END{print c}' "${BENCH_BASELINE_FILE}")"
     if [[ "${invalid_baseline_count}" == "0" && "${BENCH_RUN_STATUS}" == "pass" ]]; then
       awk 'NR>1 && $2 == "ok" {print $1 "\t" $4}' "${TMP_DIR}/bench.out" > "${TMP_DIR}/bench-current.tsv"
-      BENCH_BASELINE_MISSING_COUNT="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BENCH_BASELINE_FILE}" | while read -r name; do if ! rg -q "^${name}[[:space:]]" "${TMP_DIR}/bench-current.tsv"; then echo 1; fi; done | wc -l | tr -d ' ')"
+      BENCH_BASELINE_MISSING_COUNT="$(
+        awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BENCH_BASELINE_FILE}" |
+          while read -r name; do
+            if ! grep -qE "^${name}[[:space:]]" "${TMP_DIR}/bench-current.tsv"; then
+              echo 1
+            fi
+          done | wc -l | tr -d ' '
+      )"
       BENCH_REGRESSION_COUNT="$(
         awk -v max_pct="${BENCH_ALLOWED_REGRESSION_PCT}" '
           BEGIN {
@@ -275,7 +298,26 @@ SAMPLE_MANIFEST="${ROOT_DIR}/Docs/Sample-Completion-Manifest.md"
 sample_total="$(find "${ROOT_DIR}/samples" -mindepth 1 -maxdepth 2 -name project.aiproj | wc -l | tr -d ' ')"
 sample_complete=0
 if [[ -f "${SAMPLE_MANIFEST}" ]]; then
-  sample_complete="$( (rg -n '\|\s*`samples/.*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*COMPLETE\s*\|' "${SAMPLE_MANIFEST}" || true) | wc -l | tr -d ' ')"
+  sample_complete="$(
+    awk '
+      {
+        if ($0 ~ /\|/ &&
+            $0 ~ /`samples\// &&
+            $0 ~ /COMPLETE/) {
+          line = $0;
+          pass_count = 0;
+          while (match(line, /pass/)) {
+            pass_count += 1;
+            line = substr(line, RSTART + RLENGTH);
+          }
+          if (pass_count >= 4) {
+            count += 1;
+          }
+        }
+      }
+      END { print count + 0 }
+    ' "${SAMPLE_MANIFEST}"
+  )"
 fi
 if [[ "${sample_total}" != "0" && "${sample_complete}" == "${sample_total}" ]]; then
   SAMPLE_GATE_STATUS="PASS"
@@ -296,6 +338,49 @@ if [[ "${RC_TEST_PRESENT}" == "yes" &&
       "${LEAK_SCRIPT_PRESENT}" == "yes" &&
       "${PROFILE_SCRIPT_PRESENT}" == "yes" ]]; then
   MEMORY_GATE_STATUS="PASS"
+fi
+
+# WASM parity gate.
+WASM_GATE_STATUS="PENDING"
+WASM_SOURCE_CASES="0"
+WASM_BYTECODE_CASES="0"
+WASM_STDIN_CASES="0"
+WASM_MALFORMED_CASES="0"
+WASM_PROFILE_STATUS="unknown"
+WASM_RUN_STATUS="not-run"
+if [[ "${RUN_WASM}" == "1" ]]; then
+  if [[ -x "${ROOT_DIR}/scripts/test-wasm-golden.sh" ]] &&
+     command -v wasmtime >/dev/null 2>&1 &&
+     command -v emcc >/dev/null 2>&1; then
+    set +e
+    ./scripts/test-wasm-golden.sh > "${TMP_DIR}/test-wasm-golden.log" 2>&1
+    wasm_rc=$?
+    set -e
+    if [[ ${wasm_rc} -eq 0 ]]; then
+      WASM_RUN_STATUS="pass"
+      WASM_GATE_STATUS="PASS"
+    else
+      WASM_RUN_STATUS="fail"
+      WASM_GATE_STATUS="FAIL"
+    fi
+    WASM_SOURCE_CASES="$(grep -Eo 'wasm golden corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_BYTECODE_CASES="$(grep -Eo 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_STDIN_CASES="$(grep -Eo 'wasm stdin EOF corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_MALFORMED_CASES="$(grep -Eo 'wasm malformed corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    if grep -q 'wasm golden profiles: PASS (cli/spa/fullstack)' "${TMP_DIR}/test-wasm-golden.log"; then
+      WASM_PROFILE_STATUS="pass"
+    else
+      WASM_PROFILE_STATUS="fail"
+      WASM_GATE_STATUS="FAIL"
+    fi
+    if [[ -z "${WASM_SOURCE_CASES}" ]]; then WASM_SOURCE_CASES="0"; fi
+    if [[ -z "${WASM_BYTECODE_CASES}" ]]; then WASM_BYTECODE_CASES="0"; fi
+    if [[ -z "${WASM_STDIN_CASES}" ]]; then WASM_STDIN_CASES="0"; fi
+    if [[ -z "${WASM_MALFORMED_CASES}" ]]; then WASM_MALFORMED_CASES="0"; fi
+  else
+    WASM_GATE_STATUS="FAIL"
+    WASM_RUN_STATUS="missing-tools"
+  fi
 fi
 
 OVERALL_STATUS="PASS"
@@ -361,6 +446,15 @@ else
   OVERALL_OPTIONAL_DESC+=("zero-csharp=${ZERO_CSHARP_STATUS}")
 fi
 
+if [[ "${RUN_WASM}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("wasm=${WASM_GATE_STATUS}")
+  if [[ "${WASM_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("wasm=skipped")
+fi
+
 if [[ ${OVERALL_FAILURES} -ne 0 ]]; then
   OVERALL_STATUS="FAIL"
 fi
@@ -388,6 +482,7 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS}, regressions=${BENCH_REGRESSION_COUNT}, missing=${BENCH_BASELINE_MISSING_COUNT}, max_pct=${BENCH_ALLOWED_REGRESSION_PCT} |"
   echo "| Samples completion | ${SAMPLE_GATE_STATUS} | complete=${sample_complete}/${sample_total} (manifest=${SAMPLE_MANIFEST##${ROOT_DIR}/}) |"
   echo "| Memory/GC | ${MEMORY_GATE_STATUS} | rc_test=${RC_TEST_PRESENT}, cycle_test=${CYCLE_TEST_PRESENT}, leak_script=${LEAK_SCRIPT_PRESENT}, profile_script=${PROFILE_SCRIPT_PRESENT} |"
+  echo "| WASM parity | ${WASM_GATE_STATUS} | run=${WASM_RUN_STATUS}, source=${WASM_SOURCE_CASES}, bytecode_only=${WASM_BYTECODE_CASES}, stdin_eof=${WASM_STDIN_CASES}, malformed=${WASM_MALFORMED_CASES}, profiles=${WASM_PROFILE_STATUS} |"
   echo
   echo "## Behavioral Sub-Gates"
   echo
@@ -405,6 +500,16 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   while IFS=$'\t' read -r result name left_status right_status; do
     echo "| ${result} | ${name} | ${left_status} | ${right_status} |"
   done < "${DETAILS_FILE}"
+  echo
+  echo "## WASM Coverage"
+  echo
+  echo "| Metric | Value |"
+  echo "|---|---|"
+  echo "| source corpus | ${WASM_SOURCE_CASES} |"
+  echo "| bytecode-only corpus | ${WASM_BYTECODE_CASES} |"
+  echo "| stdin EOF corpus | ${WASM_STDIN_CASES} |"
+  echo "| malformed corpus | ${WASM_MALFORMED_CASES} |"
+  echo "| profiles (cli/spa/fullstack) | ${WASM_PROFILE_STATUS} |"
 } > "${REPORT_PATH}"
 
 echo "parity dashboard: ${PASSED}/${TOTAL} passing (${PARITY_PERCENT}%)"

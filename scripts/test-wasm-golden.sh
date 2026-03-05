@@ -504,6 +504,9 @@ if (globalThis.__aivmUiCreateWindow(0, 'bad', 100, 50) !== -1 ||
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');
 }
+if (globalThis.__aivmUiCreateWindow(1, 'T-duplicate', 200, 120) !== 0) {
+  throw new Error('ui duplicate createWindow should be deterministic success');
+}
 if (body.children.length < 1 || body.children[0].children.length < 2) {
   throw new Error('ui createWindow did not create expected host/svg structure');
 }
@@ -516,6 +519,9 @@ if (typeof globalThis.window.listenerCount !== 'function' || typeof globalThis.w
 }
 if (globalThis.window.listenerCount('resize') !== 1) {
   throw new Error('ui resize listener registration mismatch');
+}
+if (body.children.length !== 1) {
+  throw new Error('ui duplicate createWindow should not duplicate host node');
 }
 svg.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
 if (globalThis.window.emit('resize', {}) !== 1) {

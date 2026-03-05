@@ -1432,7 +1432,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  win.frameParts.push(`<rect x=\"${x|0}\" y=\"${y|0}\" width=\"${w|0}\" height=\"${h|0}\" fill=\"${xmlEscape(color)}\"/>`);\n"
             "  return 0;\n"
             "};\n";
-        const char* main_js_tail =
+        const char* main_js_mid =
             "globalThis.__aivmUiDrawText = (windowId, x, y, text, color, size) => {\n"
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win) return -1;\n"
@@ -1477,7 +1477,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "globalThis.__aivmUiEndFrame = (windowId) => {\n"
             "  const win = uiState.windows.get(windowId);\n"
             "  return win ? 0 : -1;\n"
-            "};\n"
+            "};\n";
+        const char* main_js_tail =
             "globalThis.__aivmUiPresent = (windowId) => {\n"
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win) return -1;\n"
@@ -1495,6 +1496,16 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win) return -1;\n"
             "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiGetWindowWidth = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  return (win.svg?.viewBox?.baseVal?.width | 0) || (win.width | 0) || -1;\n"
+            "};\n"
+            "globalThis.__aivmUiGetWindowHeight = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  return (win.svg?.viewBox?.baseVal?.height | 0) || (win.height | 0) || -1;\n"
             "};\n"
             "function readHostStdin() {\n"
             "  if (typeof globalThis.AIVM_HOST_STDIN_READ !== 'function') return undefined;\n"
@@ -1534,7 +1545,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
             "if (output) output.textContent = logs.join('\\n');\n";
-        if (snprintf(main_js, sizeof(main_js), "%s%s", main_js_head, main_js_tail) >= (int)sizeof(main_js)) {
+        if (snprintf(main_js, sizeof(main_js), "%s%s%s", main_js_head, main_js_mid, main_js_tail) >= (int)sizeof(main_js)) {
             return 0;
         }
     }

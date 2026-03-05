@@ -177,7 +177,7 @@ Rationale:
   - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
   - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.drawPath`, `sys.ui.drawImage`, `sys.ui.endFrame`, `sys.ui.present`, `sys.ui.waitFrame`, and `sys.ui.closeWindow`.
   - `sys.ui.pollEvent` now returns deterministic empty-event node on wasm web profiles.
-  - `sys.ui.getWindowSize` now returns deterministic node (updated from `createWindow` dimensions) on wasm web profiles.
+  - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
 
 - Remaining:
   - Replace deterministic placeholder event/size node behavior with full browser event queue + live resize parity while keeping deterministic contracts.

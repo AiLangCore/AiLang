@@ -512,7 +512,20 @@ const svg2 = body.children[1].children[1];
 if (svg2.listenerCount('pointerdown') !== 0 || svg2.listenerCount('click') !== 1 || svg2.listenerCount('touchstart') !== 1) {
   throw new Error('ui touch-fallback listener registration mismatch');
 }
+if (globalThis.window.listenerCount('resize') !== 2) {
+  throw new Error('ui multi-window resize listener registration mismatch');
+}
 svg2.setBoundingRect({ left: 10, top: 20, width: 80, height: 40 });
+svg.setBoundingRect({ left: 0, top: 0, width: 133, height: 88 });
+if (globalThis.window.emit('resize', {}) !== 2) {
+  throw new Error('ui multi-window resize listener dispatch mismatch');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== 133 || globalThis.__aivmUiGetWindowHeight(1) !== 88) {
+  throw new Error('ui multi-window resize sync mismatch for window 1');
+}
+if (globalThis.__aivmUiGetWindowWidth(2) !== 80 || globalThis.__aivmUiGetWindowHeight(2) !== 40) {
+  throw new Error('ui multi-window resize sync mismatch for window 2');
+}
 let touchPrevented = false;
 if (svg2.emit('touchstart', {
   target: { getAttribute: () => 't0' },
@@ -593,6 +606,9 @@ if (globalThis.__aivmUiPollEventType(2) !== 3 ||
 }
 if (globalThis.__aivmUiCloseWindow(2) !== 0) {
   throw new Error('ui touch-fallback closeWindow failed');
+}
+if (globalThis.window.listenerCount('resize') !== 1) {
+  throw new Error('ui resize listener was not decremented after closing second window');
 }
 if (svg2.listenerCount('click') !== 0 || svg2.listenerCount('touchstart') !== 0) {
   throw new Error('ui touch-fallback listeners were not removed on close');

@@ -14,6 +14,28 @@ static void set_vm_error(AivmVm* vm, AivmVmError error, const char* detail)
 static const char* syscall_failure_detail(AivmSyscallStatus status, AivmContractStatus contract_status);
 static const char* syscall_contract_failure_detail(AivmContractStatus status);
 
+static void increment_counter_saturating(size_t* counter)
+{
+    if (counter == NULL) {
+        return;
+    }
+    if (*counter < (size_t)-1) {
+        *counter += 1U;
+    }
+}
+
+static void add_counter_saturating(size_t* counter, size_t delta)
+{
+    if (counter == NULL) {
+        return;
+    }
+    if (delta > ((size_t)-1 - *counter)) {
+        *counter = (size_t)-1;
+        return;
+    }
+    *counter += delta;
+}
+
 static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
 {
     if (vm == NULL || out_index == NULL) {
@@ -36,12 +58,16 @@ static char* arena_alloc(AivmVm* vm, size_t size)
         return NULL;
     }
     if (vm->string_arena_used + size > AIVM_VM_STRING_ARENA_CAPACITY) {
-        set_vm_error(vm, AIVM_VM_ERR_STRING_OVERFLOW, "VM string arena overflow.");
+        increment_counter_saturating(&vm->string_arena_pressure_count);
+        set_vm_error(vm, AIVM_VM_ERR_MEMORY_PRESSURE, "AIVMM001: string arena capacity exceeded.");
         return NULL;
     }
 
     start = &vm->string_arena[vm->string_arena_used];
     vm->string_arena_used += size;
+    if (vm->string_arena_used > vm->string_arena_high_water) {
+        vm->string_arena_high_water = vm->string_arena_used;
+    }
     return start;
 }
 
@@ -52,11 +78,15 @@ static uint8_t* bytes_arena_alloc(AivmVm* vm, size_t size)
         return NULL;
     }
     if (vm->bytes_arena_used + size > AIVM_VM_BYTES_ARENA_CAPACITY) {
-        set_vm_error(vm, AIVM_VM_ERR_STRING_OVERFLOW, "VM bytes arena overflow.");
+        increment_counter_saturating(&vm->bytes_arena_pressure_count);
+        set_vm_error(vm, AIVM_VM_ERR_MEMORY_PRESSURE, "AIVMM002: bytes arena capacity exceeded.");
         return NULL;
     }
     start = &vm->bytes_arena[vm->bytes_arena_used];
     vm->bytes_arena_used += size;
+    if (vm->bytes_arena_used > vm->bytes_arena_high_water) {
+        vm->bytes_arena_high_water = vm->bytes_arena_used;
+    }
     return start;
 }
 
@@ -551,6 +581,229 @@ static int lookup_node(const AivmVm* vm, int64_t handle, const AivmNodeRecord** 
     return 1;
 }
 
+static int remap_value_node_handle(AivmValue* value, const int64_t* handle_map)
+{
+    int64_t old_handle;
+    if (value == NULL || handle_map == NULL) {
+        return 0;
+    }
+    if (value->type != AIVM_VAL_NODE) {
+        return 1;
+    }
+    old_handle = value->node_handle;
+    if (old_handle <= 0 || old_handle > (int64_t)AIVM_VM_NODE_CAPACITY) {
+        return 0;
+    }
+    if (handle_map[old_handle] <= 0) {
+        return 0;
+    }
+    value->node_handle = handle_map[old_handle];
+    return 1;
+}
+
+static int mark_live_node_handles(AivmVm* vm, uint8_t* live)
+{
+    int64_t queue[AIVM_VM_NODE_CAPACITY];
+    size_t queue_read = 0U;
+    size_t queue_write = 0U;
+    size_t i;
+
+    if (vm == NULL || live == NULL) {
+        return 0;
+    }
+
+    #define ENQUEUE_HANDLE(handle_value) \
+        do { \
+            int64_t __h = (handle_value); \
+            if (__h > 0 && __h <= (int64_t)vm->node_count) { \
+                size_t __idx = (size_t)(__h - 1); \
+                if (live[__idx] == 0U) { \
+                    if (queue_write >= AIVM_VM_NODE_CAPACITY) { \
+                        set_vm_error(vm, AIVM_VM_ERR_MEMORY_PRESSURE, "AIVMM003: node mark queue capacity exceeded."); \
+                        return 0; \
+                    } \
+                    live[__idx] = 1U; \
+                    queue[queue_write] = __h; \
+                    queue_write += 1U; \
+                } \
+            } \
+        } while (0)
+
+    ENQUEUE_HANDLE(vm->process_argv_node_handle);
+    for (i = 0U; i < vm->stack_count; i += 1U) {
+        if (vm->stack[i].type == AIVM_VAL_NODE) {
+            ENQUEUE_HANDLE(vm->stack[i].node_handle);
+        }
+    }
+    for (i = 0U; i < vm->locals_count; i += 1U) {
+        if (vm->locals[i].type == AIVM_VAL_NODE) {
+            ENQUEUE_HANDLE(vm->locals[i].node_handle);
+        }
+    }
+    for (i = 0U; i < vm->completed_task_count; i += 1U) {
+        if (vm->completed_tasks[i].result.type == AIVM_VAL_NODE) {
+            ENQUEUE_HANDLE(vm->completed_tasks[i].result.node_handle);
+        }
+    }
+    for (i = 0U; i < vm->par_value_count; i += 1U) {
+        if (vm->par_values[i].type == AIVM_VAL_NODE) {
+            ENQUEUE_HANDLE(vm->par_values[i].node_handle);
+        }
+    }
+
+    while (queue_read < queue_write) {
+        const AivmNodeRecord* node;
+        int64_t handle = queue[queue_read];
+        size_t child_index;
+        queue_read += 1U;
+        if (!lookup_node(vm, handle, &node)) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid node handle during GC mark.");
+            return 0;
+        }
+        for (child_index = 0U; child_index < node->child_count; child_index += 1U) {
+            ENQUEUE_HANDLE(vm->node_children[node->child_start + child_index]);
+        }
+    }
+
+    #undef ENQUEUE_HANDLE
+    return 1;
+}
+
+static int compact_node_arenas(AivmVm* vm)
+{
+    uint8_t live[AIVM_VM_NODE_CAPACITY];
+    int64_t handle_map[AIVM_VM_NODE_CAPACITY + 1U];
+    AivmNodeRecord new_nodes[AIVM_VM_NODE_CAPACITY];
+    AivmNodeAttr new_attrs[AIVM_VM_NODE_ATTR_CAPACITY];
+    int64_t new_children[AIVM_VM_NODE_CHILD_CAPACITY];
+    size_t new_node_count = 0U;
+    size_t new_attr_count = 0U;
+    size_t new_child_count = 0U;
+    size_t old_node_count;
+    size_t old_attr_count;
+    size_t old_child_count;
+    size_t i;
+
+    if (vm == NULL) {
+        return 0;
+    }
+    increment_counter_saturating(&vm->node_gc_attempt_count);
+    if (vm->node_count == 0U) {
+        return 1;
+    }
+    old_node_count = vm->node_count;
+    old_attr_count = vm->node_attr_count;
+    old_child_count = vm->node_child_count;
+
+    memset(live, 0, sizeof(live));
+    memset(handle_map, 0, sizeof(handle_map));
+    if (!mark_live_node_handles(vm, live)) {
+        return 0;
+    }
+
+    for (i = 0U; i < vm->node_count; i += 1U) {
+        if (live[i] != 0U) {
+            handle_map[i + 1U] = (int64_t)(new_node_count + 1U);
+            new_node_count += 1U;
+        }
+    }
+
+    for (i = 0U; i < vm->node_count; i += 1U) {
+        const AivmNodeRecord* old_node;
+        AivmNodeRecord* out_node;
+        size_t attr_i;
+        size_t child_i;
+
+        if (live[i] == 0U) {
+            continue;
+        }
+        old_node = &vm->nodes[i];
+        out_node = &new_nodes[handle_map[i + 1U] - 1U];
+        *out_node = *old_node;
+        out_node->attr_start = new_attr_count;
+        out_node->child_start = new_child_count;
+
+        if (new_attr_count + old_node->attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
+            new_child_count + old_node->child_count > AIVM_VM_NODE_CHILD_CAPACITY) {
+            set_vm_error(vm, AIVM_VM_ERR_MEMORY_PRESSURE, "AIVMM004: node compaction capacity exceeded.");
+            return 0;
+        }
+
+        for (attr_i = 0U; attr_i < old_node->attr_count; attr_i += 1U) {
+            new_attrs[new_attr_count + attr_i] = vm->node_attrs[old_node->attr_start + attr_i];
+        }
+        for (child_i = 0U; child_i < old_node->child_count; child_i += 1U) {
+            int64_t old_child = vm->node_children[old_node->child_start + child_i];
+            if (old_child <= 0 || old_child > (int64_t)AIVM_VM_NODE_CAPACITY || handle_map[old_child] <= 0) {
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Dangling child handle during node GC.");
+                return 0;
+            }
+            new_children[new_child_count + child_i] = handle_map[old_child];
+        }
+        new_attr_count += old_node->attr_count;
+        new_child_count += old_node->child_count;
+    }
+
+    memcpy(vm->nodes, new_nodes, sizeof(new_nodes));
+    memcpy(vm->node_attrs, new_attrs, sizeof(new_attrs));
+    memcpy(vm->node_children, new_children, sizeof(new_children));
+    vm->node_count = new_node_count;
+    vm->node_attr_count = new_attr_count;
+    vm->node_child_count = new_child_count;
+    increment_counter_saturating(&vm->node_gc_compaction_count);
+    add_counter_saturating(&vm->node_gc_reclaimed_nodes, old_node_count - new_node_count);
+    add_counter_saturating(&vm->node_gc_reclaimed_attrs, old_attr_count - new_attr_count);
+    add_counter_saturating(&vm->node_gc_reclaimed_children, old_child_count - new_child_count);
+
+    for (i = 0U; i < vm->stack_count; i += 1U) {
+        if (!remap_value_node_handle(&vm->stack[i], handle_map)) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid stack node handle during node GC.");
+            return 0;
+        }
+    }
+    for (i = 0U; i < vm->locals_count; i += 1U) {
+        if (!remap_value_node_handle(&vm->locals[i], handle_map)) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid local node handle during node GC.");
+            return 0;
+        }
+    }
+    for (i = 0U; i < vm->completed_task_count; i += 1U) {
+        if (!remap_value_node_handle(&vm->completed_tasks[i].result, handle_map)) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid completed-task node handle during node GC.");
+            return 0;
+        }
+    }
+    for (i = 0U; i < vm->par_value_count; i += 1U) {
+        if (!remap_value_node_handle(&vm->par_values[i], handle_map)) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid parallel-value node handle during node GC.");
+            return 0;
+        }
+    }
+    if (vm->process_argv_node_handle > 0) {
+        if (vm->process_argv_node_handle > (int64_t)AIVM_VM_NODE_CAPACITY ||
+            handle_map[vm->process_argv_node_handle] <= 0) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid process argv node handle during node GC.");
+            return 0;
+        }
+        vm->process_argv_node_handle = handle_map[vm->process_argv_node_handle];
+    }
+    return 1;
+}
+
+static int should_attempt_proactive_node_gc(const AivmVm* vm)
+{
+    if (vm == NULL) {
+        return 0;
+    }
+    if (vm->node_count < AIVM_VM_NODE_GC_PRESSURE_THRESHOLD) {
+        return 0;
+    }
+    if (vm->node_allocations_since_gc < AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS) {
+        return 0;
+    }
+    return 1;
+}
+
 static int create_node_record(
     AivmVm* vm,
     const char* kind,
@@ -566,11 +819,26 @@ static int create_node_record(
     if (vm == NULL || kind == NULL || id == NULL || out_handle == NULL) {
         return 0;
     }
+    if (should_attempt_proactive_node_gc(vm)) {
+        if (!compact_node_arenas(vm)) {
+            return 0;
+        }
+        vm->node_allocations_since_gc = 0U;
+    }
     if (vm->node_count >= AIVM_VM_NODE_CAPACITY ||
         vm->node_attr_count + attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
         vm->node_child_count + child_count > AIVM_VM_NODE_CHILD_CAPACITY) {
-        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Node arena capacity exceeded.");
-        return 0;
+        if (!compact_node_arenas(vm)) {
+            return 0;
+        }
+        vm->node_allocations_since_gc = 0U;
+        if (vm->node_count >= AIVM_VM_NODE_CAPACITY ||
+            vm->node_attr_count + attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
+            vm->node_child_count + child_count > AIVM_VM_NODE_CHILD_CAPACITY) {
+            increment_counter_saturating(&vm->node_arena_pressure_count);
+            set_vm_error(vm, AIVM_VM_ERR_MEMORY_PRESSURE, "AIVMM005: node arena capacity exceeded.");
+            return 0;
+        }
     }
 
     node = &vm->nodes[vm->node_count];
@@ -611,6 +879,18 @@ static int create_node_record(
     vm->node_attr_count += attr_count;
     vm->node_child_count += child_count;
     vm->node_count += 1U;
+    if (vm->node_count > vm->node_high_water) {
+        vm->node_high_water = vm->node_count;
+    }
+    if (vm->node_attr_count > vm->node_attr_high_water) {
+        vm->node_attr_high_water = vm->node_attr_count;
+    }
+    if (vm->node_child_count > vm->node_child_high_water) {
+        vm->node_child_high_water = vm->node_child_count;
+    }
+    if (vm->node_allocations_since_gc < (size_t)-1) {
+        vm->node_allocations_since_gc += 1U;
+    }
     *out_handle = (int64_t)vm->node_count;
     return 1;
 }
@@ -806,8 +1086,23 @@ void aivm_reset_state(AivmVm* vm)
     vm->node_count = 0U;
     vm->node_attr_count = 0U;
     vm->node_child_count = 0U;
+    vm->string_arena_high_water = 0U;
+    vm->bytes_arena_high_water = 0U;
+    vm->node_high_water = 0U;
+    vm->node_attr_high_water = 0U;
+    vm->node_child_high_water = 0U;
+    vm->node_gc_compaction_count = 0U;
+    vm->node_gc_attempt_count = 0U;
+    vm->node_gc_reclaimed_nodes = 0U;
+    vm->node_gc_reclaimed_attrs = 0U;
+    vm->node_gc_reclaimed_children = 0U;
+    vm->node_allocations_since_gc = 0U;
+    vm->string_arena_pressure_count = 0U;
+    vm->bytes_arena_pressure_count = 0U;
+    vm->node_arena_pressure_count = 0U;
     vm->process_argv_node_handle = 0;
     (void)initialize_process_argv_node(vm);
+    vm->node_allocations_since_gc = 0U;
 }
 
 void aivm_init(AivmVm* vm, const AivmProgram* program)
@@ -2291,6 +2586,8 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM009";
         case AIVM_VM_ERR_SYSCALL:
             return "AIVM010";
+        case AIVM_VM_ERR_MEMORY_PRESSURE:
+            return "AIVM011";
         default:
             return "AIVM999";
     }
@@ -2321,6 +2618,8 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "VM string arena overflow.";
         case AIVM_VM_ERR_SYSCALL:
             return "Syscall dispatch failed.";
+        case AIVM_VM_ERR_MEMORY_PRESSURE:
+            return "VM memory pressure limit exceeded.";
         default:
             return "Unknown VM error.";
     }

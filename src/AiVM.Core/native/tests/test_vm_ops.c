@@ -91,6 +91,25 @@ static int host_str_utf8_byte_count(
     return AIVM_SYSCALL_OK;
 }
 
+static int host_bytes_large(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    static uint8_t large_bytes[AIVM_VM_BYTES_ARENA_CAPACITY + 1U];
+    (void)target;
+    (void)args;
+    if (arg_count != 1U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[0].type != AIVM_VAL_STRING) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(large_bytes, sizeof(large_bytes));
+    return AIVM_SYSCALL_OK;
+}
+
 static int test_push_store_load_pop(void)
 {
     AivmVm vm;
@@ -1208,7 +1227,19 @@ static int test_string_arena_overflow_sets_error(void)
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
-    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+    if (expect(vm.error == AIVM_VM_ERR_MEMORY_PRESSURE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMM001: string arena capacity exceeded.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(vm.string_arena_pressure_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_arena_pressure_count == 0U) != 0) {
         return 1;
     }
 
@@ -1218,7 +1249,19 @@ static int test_string_arena_overflow_sets_error(void)
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
-    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+    if (expect(vm.error == AIVM_VM_ERR_MEMORY_PRESSURE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMM001: string arena capacity exceeded.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(vm.string_arena_pressure_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_arena_pressure_count == 0U) != 0) {
         return 1;
     }
 
@@ -1228,10 +1271,79 @@ static int test_string_arena_overflow_sets_error(void)
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
-    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+    if (expect(vm.error == AIVM_VM_ERR_MEMORY_PRESSURE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMM001: string arena capacity exceeded.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(vm.string_arena_pressure_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_arena_pressure_count == 0U) != 0) {
         return 1;
     }
 
+    return 0;
+}
+
+static int test_bytes_arena_overflow_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 1 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.bytes.fromBase64" },
+        { .type = AIVM_VAL_STRING, .string_value = "ignored" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 3U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.bytes.fromBase64", host_bytes_large }
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 1U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_MEMORY_PRESSURE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMM002: bytes arena capacity exceeded.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(vm.string_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_pressure_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_used == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_high_water == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 0U) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -2256,6 +2368,275 @@ static int test_make_node_converts_scalar_children_to_runtime_nodes(void)
     return 0;
 }
 
+static int test_node_compaction_reclaims_unreachable_nodes(void)
+{
+    AivmVm vm;
+    AivmInstruction instructions[1024];
+    AivmValue constants[1];
+    AivmProgram program;
+    size_t ip = 0U;
+    size_t i;
+    size_t transient_nodes = AIVM_VM_NODE_CAPACITY + 32U;
+
+    constants[0] = aivm_value_string("tmp");
+    for (i = 0U; i < transient_nodes; i += 1U) {
+        instructions[ip].opcode = AIVM_OP_CONST;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_POP;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+    }
+    instructions[ip].opcode = AIVM_OP_CONST;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_HALT;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+
+    memset(&program, 0, sizeof(program));
+    program.instructions = instructions;
+    program.instruction_count = ip;
+    program.constants = constants;
+    program.constant_count = 1U;
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_count <= AIVM_VM_NODE_CAPACITY) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_compaction_count > 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_attempt_count >= vm.node_gc_compaction_count) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_reclaimed_nodes > 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_high_water >= vm.node_count) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_node_compaction_runs_before_capacity_when_pressure_is_high(void)
+{
+    AivmVm vm;
+    AivmInstruction instructions[1024];
+    AivmValue constants[1];
+    AivmProgram program;
+    size_t ip = 0U;
+    size_t i;
+    size_t transient_nodes = AIVM_VM_NODE_CAPACITY - 8U;
+    size_t expected_alloc_counter_after_compaction =
+        transient_nodes - (size_t)AIVM_VM_NODE_GC_PRESSURE_THRESHOLD + 2U;
+
+    constants[0] = aivm_value_string("tmp");
+    for (i = 0U; i < transient_nodes; i += 1U) {
+        instructions[ip].opcode = AIVM_OP_CONST;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_POP;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+    }
+    instructions[ip].opcode = AIVM_OP_CONST;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_HALT;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+
+    memset(&program, 0, sizeof(program));
+    program.instructions = instructions;
+    program.instruction_count = ip;
+    program.constants = constants;
+    program.constant_count = 1U;
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_compaction_count > 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_attempt_count >= vm.node_gc_compaction_count) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_compaction_count >= 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_reclaimed_nodes > 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_allocations_since_gc > 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_allocations_since_gc == expected_alloc_counter_after_compaction) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_high_water < AIVM_VM_NODE_CAPACITY) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_node_compaction_does_not_run_below_pressure_threshold(void)
+{
+    AivmVm vm;
+    AivmInstruction instructions[1024];
+    AivmValue constants[1];
+    AivmProgram program;
+    size_t ip = 0U;
+    size_t i;
+    size_t transient_nodes = (size_t)AIVM_VM_NODE_GC_PRESSURE_THRESHOLD - 2U;
+    size_t expected_node_count = (size_t)AIVM_VM_NODE_GC_PRESSURE_THRESHOLD;
+    size_t expected_alloc_counter = (size_t)AIVM_VM_NODE_GC_PRESSURE_THRESHOLD - 1U;
+
+    constants[0] = aivm_value_string("tmp");
+    for (i = 0U; i < transient_nodes; i += 1U) {
+        instructions[ip].opcode = AIVM_OP_CONST;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_POP;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+    }
+    instructions[ip].opcode = AIVM_OP_CONST;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+    instructions[ip].opcode = AIVM_OP_HALT;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+
+    memset(&program, 0, sizeof(program));
+    program.instructions = instructions;
+    program.instruction_count = ip;
+    program.constants = constants;
+    program.constant_count = 1U;
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_compaction_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_attempt_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_count == expected_node_count) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_allocations_since_gc == expected_alloc_counter) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_node_capacity_failure_resets_gc_allocation_counter(void)
+{
+    AivmVm vm;
+    AivmInstruction instructions[(AIVM_VM_NODE_CAPACITY + 1U) * 2U + 1U];
+    AivmValue constants[1];
+    AivmProgram program;
+    size_t ip = 0U;
+    size_t i;
+
+    constants[0] = aivm_value_string("tmp");
+    for (i = 0U; i < (size_t)(AIVM_VM_NODE_CAPACITY + 1U); i += 1U) {
+        instructions[ip].opcode = AIVM_OP_CONST;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+        instructions[ip].opcode = AIVM_OP_MAKE_BLOCK;
+        instructions[ip].operand_int = 0;
+        ip += 1U;
+    }
+    instructions[ip].opcode = AIVM_OP_HALT;
+    instructions[ip].operand_int = 0;
+    ip += 1U;
+
+    memset(&program, 0, sizeof(program));
+    program.instructions = instructions;
+    program.instruction_count = ip;
+    program.constants = constants;
+    program.constant_count = 1U;
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_MEMORY_PRESSURE) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMM005: node arena capacity exceeded.") == 0) != 0) {
+        return 1;
+    }
+    if (expect(vm.string_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.bytes_arena_pressure_count == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_arena_pressure_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_compaction_count >= 1U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_attempt_count >= vm.node_gc_compaction_count) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_gc_reclaimed_nodes == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_allocations_since_gc == 0U) != 0) {
+        return 1;
+    }
+    if (expect(vm.node_count <= AIVM_VM_NODE_CAPACITY) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_make_node_requires_node_args(void)
 {
     AivmVm vm;
@@ -2748,6 +3129,9 @@ int main(void)
     if (test_string_arena_overflow_sets_error() != 0) {
         return 1;
     }
+    if (test_bytes_arena_overflow_sets_error() != 0) {
+        return 1;
+    }
     if (test_str_substring_and_remove_rune_clamp_semantics() != 0) {
         return 1;
     }
@@ -2812,6 +3196,18 @@ int main(void)
         return 1;
     }
     if (test_make_node_converts_scalar_children_to_runtime_nodes() != 0) {
+        return 1;
+    }
+    if (test_node_compaction_reclaims_unreachable_nodes() != 0) {
+        return 1;
+    }
+    if (test_node_compaction_runs_before_capacity_when_pressure_is_high() != 0) {
+        return 1;
+    }
+    if (test_node_compaction_does_not_run_below_pressure_threshold() != 0) {
+        return 1;
+    }
+    if (test_node_capacity_failure_resets_gc_allocation_counter() != 0) {
         return 1;
     }
     if (test_make_node_requires_node_args() != 0) {

@@ -9,11 +9,28 @@ This document is an execution checklist, not a roadmap narrative.
 ## Current Baseline
 
 - VM memory is deterministic and bounded by explicit capacities in `src/AiVM.Core/native/include/aivm_vm.h`.
+- Node graph memory uses deterministic tracing compaction with fixed policy:
+  - `node_gc_interval_allocations = 64`
+  - `node_gc_pressure_threshold_nodes = 192`
+  - hard-cap path compacts before emitting `AIVMM005`.
+- Memory pressure telemetry is emitted in debug artifacts:
+  - `string_arena_pressure_count`
+  - `bytes_arena_pressure_count`
+  - `node_arena_pressure_count`
+  - `node_gc_attempts`
 - Stability checks exist (`test_memory_rc.c`, `test_memory_cycle.c`).
 - Leak/profile scripts exist:
   - `scripts/aivm-mem-leak-check.sh`
   - `scripts/aivm-mem-profile.sh`
 - Dashboard currently reports Memory/GC pass in `Docs/AiVM-C-Parity-Status.md`.
+
+## Production Strategy (Recommended)
+
+1. Keep deterministic arena ownership inside AiVM as the default runtime model.
+2. Use deterministic tracing compaction for graph/node values (already in VM policy).
+3. Use explicit capability-bound handles for host resources (file/process/network), with deterministic release points.
+4. If RC is introduced for host-side resources, treat it as a host-boundary mechanism only; language-visible semantics remain deterministic and VM-owned.
+5. Keep all pressure/error paths typed (`AIVMM*`) and observable via debug telemetry.
 
 ## Exit Criteria (Production-Grade)
 
@@ -55,6 +72,6 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Immediate Next Tasks
 
-1. Wire `scripts/aivm-mem-leak-check.sh` into CI with threshold env vars.
-2. Add one deterministic async/process cleanup stress test.
-3. Add memory gate status rows to release-gate docs and workflow summaries.
+1. Wire `scripts/aivm-mem-leak-check.sh` into CI with threshold env vars and artifact retention.
+2. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
+3. Add release-gate assertions that debug bundle memory telemetry fields remain present and stable.

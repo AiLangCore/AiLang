@@ -186,8 +186,9 @@ Rationale:
   - Touch fallback path now calls `preventDefault()` before emitting canonical click to reduce synthetic duplicate click emissions.
   - Touch fallback listener is registered with `{ passive: false }` so `preventDefault()` behavior is enforced consistently across browsers.
   - SVG surface now sets `touch-action: none` to avoid browser gesture interference and keep pointer/touch event delivery deterministic.
+  - Browser adapter now maps both `keydown` and `keyup` into canonical `UiEvent` `key` payloads (same deterministic shape/normalization).
   - Browser adapter now unregisters per-window `resize` listeners on `closeWindow` for deterministic lifecycle cleanup (no orphan handlers).
-  - Browser adapter now unregisters per-window input listeners (`pointer/click/touch/keydown/blur`) on `closeWindow` for deterministic teardown hygiene.
+  - Browser adapter now unregisters per-window input listeners (`pointer/click/touch/keydown/keyup/blur`) on `closeWindow` for deterministic teardown hygiene.
   - `closeWindow` also clears per-window frame/event scratch state before queuing the canonical `closed` event.
   - Closed window records are removed deterministically after `closed` event payload readout completes (post-`repeat` field read), preventing stale state retention.
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
@@ -195,7 +196,7 @@ Rationale:
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
 
 - Remaining:
-  - Extend browser event source coverage (beyond click/keydown baseline) while preserving canonical deterministic payload shape.
+  - None for this task scope.
 
 ## Out of Scope
 

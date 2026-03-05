@@ -64,7 +64,7 @@ Current strategy for browser UI parity is SVG backend mapping from vector-orient
 | Area | wasm cli | wasm spa | wasm fullstack |
 |---|---|---|---|
 | browser rendering | N/A | SVG frame backend | SVG frame backend |
-| event input | N/A | browser event -> deterministic queue | browser event -> deterministic queue |
+| event input | N/A | browser event (`click`/`keydown`/`keyup` baseline) -> deterministic queue | browser event (`click`/`keydown`/`keyup` baseline) -> deterministic queue |
 | deterministic frame contract | N/A | beginFrame/draw/endFrame/present mapping | beginFrame/draw/endFrame/present mapping |
 
 ## File I/O Matrix

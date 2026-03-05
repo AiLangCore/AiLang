@@ -3,6 +3,7 @@
 #ifdef __APPLE__
 
 #import <AppKit/AppKit.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +18,184 @@ typedef struct {
 static NativeUiWindowSlot g_native_ui_windows[8];
 static int64_t g_native_ui_next_handle = 1;
 static int g_native_ui_app_initialized = 0;
+
+static NSColor* native_ui_parse_color(const char* color, NSColor* fallback)
+{
+    unsigned int r;
+    unsigned int g;
+    unsigned int b;
+    if (color == NULL || color[0] == '\0') {
+        return fallback;
+    }
+    if (color[0] == '#') {
+        if (sscanf(color + 1, "%02x%02x%02x", &r, &g, &b) == 3) {
+            return [NSColor colorWithCalibratedRed:(CGFloat)r / 255.0
+                                             green:(CGFloat)g / 255.0
+                                              blue:(CGFloat)b / 255.0
+                                             alpha:1.0];
+        }
+        return fallback;
+    }
+    if (strcasecmp(color, "white") == 0) {
+        return [NSColor whiteColor];
+    }
+    if (strcasecmp(color, "black") == 0) {
+        return [NSColor blackColor];
+    }
+    if (strcasecmp(color, "red") == 0) {
+        return [NSColor redColor];
+    }
+    if (strcasecmp(color, "green") == 0) {
+        return [NSColor greenColor];
+    }
+    if (strcasecmp(color, "blue") == 0) {
+        return [NSColor blueColor];
+    }
+    return fallback;
+}
+
+static int native_ui_lock_focus(NativeUiWindowSlot* slot, NSRect* out_bounds)
+{
+    NSView* content_view;
+    if (slot == NULL || slot->window == nil) {
+        return 0;
+    }
+    content_view = [slot->window contentView];
+    if (content_view == nil) {
+        return 0;
+    }
+    if (![content_view lockFocusIfCanDraw]) {
+        return 0;
+    }
+    if (out_bounds != NULL) {
+        *out_bounds = [content_view bounds];
+    }
+    return 1;
+}
+
+static void native_ui_unlock_focus(NativeUiWindowSlot* slot)
+{
+    NSView* content_view;
+    if (slot == NULL || slot->window == nil) {
+        return;
+    }
+    content_view = [slot->window contentView];
+    if (content_view != nil) {
+        [content_view unlockFocus];
+    }
+}
+
+static CGFloat native_ui_y_to_cocoa(NSRect bounds, int y_top)
+{
+    return NSMaxY(bounds) - (CGFloat)y_top;
+}
+
+static const char* native_ui_path_skip_separators(const char* cursor)
+{
+    while (cursor != NULL && *cursor != '\0') {
+        if (!isspace((unsigned char)*cursor) && *cursor != ',') {
+            break;
+        }
+        cursor += 1;
+    }
+    return cursor;
+}
+
+static int native_ui_path_parse_number(const char** io_cursor, double* out_number)
+{
+    char* end_ptr = NULL;
+    const char* cursor;
+    if (io_cursor == NULL || *io_cursor == NULL || out_number == NULL) {
+        return 0;
+    }
+    cursor = native_ui_path_skip_separators(*io_cursor);
+    if (cursor == NULL || *cursor == '\0') {
+        return 0;
+    }
+    *out_number = strtod(cursor, &end_ptr);
+    if (end_ptr == cursor) {
+        return 0;
+    }
+    *io_cursor = end_ptr;
+    return 1;
+}
+
+static int native_ui_draw_svg_path(NSRect bounds, const char* path_text, const char* color, int stroke_width)
+{
+    const char* cursor;
+    char cmd = '\0';
+    double x = 0.0;
+    double y = 0.0;
+    NSBezierPath* bezier;
+    NSColor* stroke_color;
+    if (path_text == NULL) {
+        return 0;
+    }
+    bezier = [NSBezierPath bezierPath];
+    cursor = path_text;
+    while (cursor != NULL && *cursor != '\0') {
+        double a = 0.0;
+        double b = 0.0;
+        cursor = native_ui_path_skip_separators(cursor);
+        if (*cursor == '\0') {
+            break;
+        }
+        if (isalpha((unsigned char)*cursor)) {
+            cmd = *cursor;
+            cursor += 1;
+            continue;
+        }
+        if (cmd == '\0') {
+            return 0;
+        }
+        if (cmd == 'M' || cmd == 'm' || cmd == 'L' || cmd == 'l') {
+            if (!native_ui_path_parse_number(&cursor, &a) || !native_ui_path_parse_number(&cursor, &b)) {
+                return 0;
+            }
+            if (cmd == 'm' || cmd == 'l') {
+                x += a;
+                y += b;
+            } else {
+                x = a;
+                y = b;
+            }
+            if (cmd == 'M' || cmd == 'm') {
+                [bezier moveToPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, (int)lround(y)))];
+                cmd = (cmd == 'm') ? 'l' : 'L';
+            } else {
+                [bezier lineToPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, (int)lround(y)))];
+            }
+            continue;
+        }
+        if (cmd == 'H' || cmd == 'h') {
+            if (!native_ui_path_parse_number(&cursor, &a)) {
+                return 0;
+            }
+            x = (cmd == 'h') ? (x + a) : a;
+            [bezier lineToPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, (int)lround(y)))];
+            continue;
+        }
+        if (cmd == 'V' || cmd == 'v') {
+            if (!native_ui_path_parse_number(&cursor, &a)) {
+                return 0;
+            }
+            y = (cmd == 'v') ? (y + a) : a;
+            [bezier lineToPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, (int)lround(y)))];
+            continue;
+        }
+        if (cmd == 'Z' || cmd == 'z') {
+            [bezier closePath];
+            cmd = '\0';
+            continue;
+        }
+        return 0;
+    }
+    stroke_color = native_ui_parse_color(color, [NSColor blackColor]);
+    [stroke_color setStroke];
+    [bezier setLineWidth:(stroke_width > 0) ? (CGFloat)stroke_width : 1.0];
+    [bezier stroke];
+    return 1;
+}
 
 static NativeUiWindowSlot* native_ui_find_slot(int64_t handle)
 {
@@ -222,7 +401,18 @@ int native_host_ui_close_window(int64_t handle)
 
 int native_host_ui_begin_frame(int64_t handle)
 {
-    return native_ui_find_slot(handle) != NULL ? 1 : 0;
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    if (slot == NULL) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    [[NSColor whiteColor] setFill];
+    NSRectFill(bounds);
+    native_ui_unlock_focus(slot);
+    return 1;
 }
 
 int native_host_ui_end_frame(int64_t handle)
@@ -251,41 +441,86 @@ int native_host_ui_wait_frame(int64_t handle)
 
 int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color)
 {
-    (void)x;
-    (void)y;
-    (void)width;
-    (void)height;
-    (void)color;
-    return native_ui_find_slot(handle) != NULL ? 1 : 0;
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    NSRect rect;
+    if (slot == NULL || width <= 0 || height <= 0) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    rect = NSMakeRect((CGFloat)x, native_ui_y_to_cocoa(bounds, y + height), (CGFloat)width, (CGFloat)height);
+    [native_ui_parse_color(color, [NSColor blackColor]) setFill];
+    NSRectFill(rect);
+    native_ui_unlock_focus(slot);
+    return 1;
 }
 
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
-    (void)x;
-    (void)y;
-    (void)text;
-    (void)color;
-    (void)font_size;
-    return native_ui_find_slot(handle) != NULL ? 1 : 0;
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    NSString* ns_text;
+    NSDictionary* attrs;
+    NSFont* font;
+    if (slot == NULL || text == NULL) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    ns_text = [NSString stringWithUTF8String:text];
+    if (ns_text == nil) {
+        native_ui_unlock_focus(slot);
+        return 0;
+    }
+    font = [NSFont systemFontOfSize:(font_size > 0) ? (CGFloat)font_size : 12.0];
+    attrs = @{
+        NSForegroundColorAttributeName: native_ui_parse_color(color, [NSColor blackColor]),
+        NSFontAttributeName: font
+    };
+    [ns_text drawAtPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, y + ((font_size > 0) ? font_size : 12)))
+          withAttributes:attrs];
+    native_ui_unlock_focus(slot);
+    return 1;
 }
 
 int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width)
 {
-    (void)x1;
-    (void)y1;
-    (void)x2;
-    (void)y2;
-    (void)color;
-    (void)stroke_width;
-    return native_ui_find_slot(handle) != NULL ? 1 : 0;
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    NSBezierPath* path;
+    if (slot == NULL) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    path = [NSBezierPath bezierPath];
+    [path moveToPoint:NSMakePoint((CGFloat)x1, native_ui_y_to_cocoa(bounds, y1))];
+    [path lineToPoint:NSMakePoint((CGFloat)x2, native_ui_y_to_cocoa(bounds, y2))];
+    [path setLineWidth:(stroke_width > 0) ? (CGFloat)stroke_width : 1.0];
+    [native_ui_parse_color(color, [NSColor blackColor]) setStroke];
+    [path stroke];
+    native_ui_unlock_focus(slot);
+    return 1;
 }
 
 int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
 {
-    (void)path;
-    (void)color;
-    (void)stroke_width;
-    return native_ui_find_slot(handle) != NULL ? 1 : 0;
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    int ok;
+    if (slot == NULL) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    ok = native_ui_draw_svg_path(bounds, path, color, stroke_width);
+    native_ui_unlock_focus(slot);
+    return ok;
 }
 
 int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)

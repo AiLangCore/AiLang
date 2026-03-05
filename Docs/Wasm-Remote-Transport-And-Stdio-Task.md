@@ -178,6 +178,7 @@ Rationale:
   - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.drawPath`, `sys.ui.drawImage`, `sys.ui.endFrame`, `sys.ui.present`, `sys.ui.waitFrame`, and `sys.ui.closeWindow`.
   - `sys.ui.pollEvent` now returns deterministic canonical event node sourced from browser queue (`none`/`closed`/`click`/`key`) with canonical attrs (`type,targetId,x,y,key,text,modifiers,repeat`) on wasm web profiles.
   - Browser SVG draw primitives now emit deterministic `data-aivm-id` tags so click events can populate stable `targetId` values.
+  - Browser adapter now tracks deterministic focused target (`focusedTargetId`) so `key` events route through canonical `targetId` based on last click.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
 
 - Remaining:

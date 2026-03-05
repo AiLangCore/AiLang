@@ -1256,7 +1256,9 @@ static int wasm_syscall_unavailable_for_profile(const char* profile, const char*
                strcmp(target, "sys.process.kill") == 0 ||
                strcmp(target, "sys.process.stdout.read") == 0 ||
                strcmp(target, "sys.process.stderr.read") == 0 ||
-               strcmp(target, "sys.process.poll") == 0;
+               strcmp(target, "sys.process.poll") == 0 ||
+               strncmp(target, "sys.ui.", 7U) == 0 ||
+               strncmp(target, "sys.ui_", 7U) == 0;
     }
     if (strcmp(profile, "spa") == 0 || strcmp(profile, "fullstack") == 0) {
         return strcmp(target, "sys.process.spawn") == 0 ||

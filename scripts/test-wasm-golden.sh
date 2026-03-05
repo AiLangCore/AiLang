@@ -65,6 +65,7 @@ NET_SPA_WARN="${TMP_DIR}/net-spa.warn"
 NET_FULLSTACK_WARN="${TMP_DIR}/net-fullstack.warn"
 UI_SPA_WARN="${TMP_DIR}/ui-spa.warn"
 UI_FULLSTACK_WARN="${TMP_DIR}/ui-fullstack.warn"
+UI_CLI_WARN="${TMP_DIR}/ui-cli.warn"
 MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
 MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
 FULLSTACK_HOST_STDOUT="${TMP_DIR}/fullstack-host.stdout"
@@ -475,6 +476,7 @@ done
 ./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/fs-fullstack" >/dev/null 2>"${FS_FULLSTACK_WARN}"
 ./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/net-spa" >/dev/null 2>"${NET_SPA_WARN}"
 ./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/net-fullstack" >/dev/null 2>"${NET_FULLSTACK_WARN}"
+./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-cli" >/dev/null 2>"${UI_CLI_WARN}"
 ./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-spa" >/dev/null 2>"${UI_SPA_WARN}"
 ./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-fullstack" >/dev/null 2>"${UI_FULLSTACK_WARN}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
@@ -669,6 +671,10 @@ if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is no
 fi
 if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'fullstack'" "${NET_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
+  exit 1
+fi
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'cli'" "${UI_CLI_WARN}"; then
+  echo "wasm cli warning mismatch: expected WASM001 warning for sys.ui.drawRect" >&2
   exit 1
 fi
 if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'spa'" "${UI_SPA_WARN}"; then

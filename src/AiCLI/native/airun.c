@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -2437,6 +2438,203 @@ static int native_syscall_stdout_write_line(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_identity_0(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* value = "";
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (strcmp(target, "sys.platform") == 0) {
+#ifdef _WIN32
+        value = "windows";
+#elif defined(__APPLE__)
+        value = "osx";
+#else
+        value = "linux";
+#endif
+    } else if (strcmp(target, "sys.arch") == 0) {
+#if defined(_M_ARM64) || defined(__aarch64__) || defined(__arm64__)
+        value = "arm64";
+#else
+        value = "x64";
+#endif
+    } else if (strcmp(target, "sys.runtime") == 0) {
+        value = "airun-native-c";
+    } else if (strcmp(target, "sys.os.version") == 0) {
+#ifdef _WIN32
+        value = "windows";
+#elif defined(__APPLE__)
+        value = "macos";
+#else
+        value = "linux";
+#endif
+    } else {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    *result = aivm_value_string(value);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_time_now_unix_ms(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+#ifdef _WIN32
+    {
+        FILETIME file_time;
+        ULARGE_INTEGER ticks;
+        GetSystemTimeAsFileTime(&file_time);
+        ticks.LowPart = file_time.dwLowDateTime;
+        ticks.HighPart = file_time.dwHighDateTime;
+        *result = aivm_value_int((int64_t)((ticks.QuadPart - 116444736000000000ULL) / 10000ULL));
+    }
+#else
+    {
+        struct timeval tv;
+        if (gettimeofday(&tv, NULL) != 0) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        *result = aivm_value_int((int64_t)tv.tv_sec * 1000LL + (int64_t)(tv.tv_usec / 1000));
+    }
+#endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_time_monotonic_ms(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+#ifdef _WIN32
+    *result = aivm_value_int((int64_t)GetTickCount64());
+#else
+    {
+        struct timespec ts;
+        if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        *result = aivm_value_int((int64_t)ts.tv_sec * 1000LL + (int64_t)(ts.tv_nsec / 1000000L));
+    }
+#endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_time_sleep_ms(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    int64_t ms;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    ms = args[0].int_value;
+    if (ms < 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+#ifdef _WIN32
+    Sleep((DWORD)ms);
+#else
+    {
+        struct timespec ts;
+        ts.tv_sec = (time_t)(ms / 1000);
+        ts.tv_nsec = (long)((ms % 1000) * 1000000L);
+        while (nanosleep(&ts, &ts) != 0 && errno == EINTR) {
+        }
+    }
+#endif
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_cwd(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    static char cwd[PATH_MAX];
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+#ifdef _WIN32
+    if (_getcwd(cwd, (int)sizeof(cwd)) == NULL) {
+#else
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+#endif
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string(cwd);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_env_get(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* value;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    value = getenv(args[0].string_value);
+    *result = aivm_value_string((value == NULL) ? "" : value);
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_process_argv(
     const char* target,
     const AivmValue* args,
@@ -2453,6 +2651,158 @@ static int native_syscall_process_argv(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     *result = aivm_value_node(1);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_fs_file_exists(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_bool(file_exists(args[0].string_value) ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_fs_path_exists(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    struct stat st;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_bool(stat(args[0].string_value, &st) == 0 ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_fs_dir_create(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!ensure_directory_recursive(args[0].string_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static unsigned char* g_native_file_bytes_scratch = NULL;
+static size_t g_native_file_bytes_scratch_capacity = 0U;
+
+static int native_ensure_file_bytes_scratch(size_t needed)
+{
+    unsigned char* grown;
+    size_t new_capacity;
+    if (needed <= g_native_file_bytes_scratch_capacity) {
+        return 1;
+    }
+    new_capacity = g_native_file_bytes_scratch_capacity == 0U ? 4096U : g_native_file_bytes_scratch_capacity;
+    while (new_capacity < needed) {
+        if (new_capacity > (SIZE_MAX / 2U)) {
+            return 0;
+        }
+        new_capacity *= 2U;
+    }
+    grown = (unsigned char*)realloc(g_native_file_bytes_scratch, new_capacity);
+    if (grown == NULL) {
+        return 0;
+    }
+    g_native_file_bytes_scratch = grown;
+    g_native_file_bytes_scratch_capacity = new_capacity;
+    return 1;
+}
+
+static int native_syscall_fs_file_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    unsigned char* bytes = NULL;
+    size_t byte_count = 0U;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!read_binary_file(args[0].string_value, &bytes, &byte_count)) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (!native_ensure_file_bytes_scratch(byte_count)) {
+        free(bytes);
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (byte_count > 0U) {
+        memcpy(g_native_file_bytes_scratch, bytes, byte_count);
+    }
+    free(bytes);
+    *result = aivm_value_bytes(g_native_file_bytes_scratch, byte_count);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_fs_file_write(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    FILE* fp;
+    size_t wrote = 0U;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    fp = fopen(args[0].string_value, "wb");
+    if (fp == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[1].bytes_value.length > 0U && args[1].bytes_value.data != NULL) {
+        wrote = fwrite(args[1].bytes_value.data, 1U, args[1].bytes_value.length, fp);
+    }
+    if (fclose(fp) != 0 || wrote != args[1].bytes_value.length) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
 
@@ -4560,6 +4910,24 @@ static int native_syscall_str_from_codepoint(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_str_utf8_byte_count(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int((int64_t)strlen(args[0].string_value));
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_str_substring(
     const char* target,
     const AivmValue* args,
@@ -5147,7 +5515,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[46];
+    AivmSyscallBinding bindings[61];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -5259,10 +5627,40 @@ static int run_native_compiled_program(
     bindings[44].handler = native_syscall_stdout_write_line;
     bindings[45].target = "sys.process_argv";
     bindings[45].handler = native_syscall_process_argv;
+    bindings[46].target = "sys.process.cwd";
+    bindings[46].handler = native_syscall_process_cwd;
+    bindings[47].target = "sys.process.env.get";
+    bindings[47].handler = native_syscall_process_env_get;
+    bindings[48].target = "sys.platform";
+    bindings[48].handler = native_syscall_identity_0;
+    bindings[49].target = "sys.arch";
+    bindings[49].handler = native_syscall_identity_0;
+    bindings[50].target = "sys.os.version";
+    bindings[50].handler = native_syscall_identity_0;
+    bindings[51].target = "sys.runtime";
+    bindings[51].handler = native_syscall_identity_0;
+    bindings[52].target = "sys.time.nowUnixMs";
+    bindings[52].handler = native_syscall_time_now_unix_ms;
+    bindings[53].target = "sys.time.monotonicMs";
+    bindings[53].handler = native_syscall_time_monotonic_ms;
+    bindings[54].target = "sys.time.sleepMs";
+    bindings[54].handler = native_syscall_time_sleep_ms;
+    bindings[55].target = "sys.fs.file.read";
+    bindings[55].handler = native_syscall_fs_file_read;
+    bindings[56].target = "sys.fs.file.exists";
+    bindings[56].handler = native_syscall_fs_file_exists;
+    bindings[57].target = "sys.fs.path.exists";
+    bindings[57].handler = native_syscall_fs_path_exists;
+    bindings[58].target = "sys.fs.file.write";
+    bindings[58].handler = native_syscall_fs_file_write;
+    bindings[59].target = "sys.fs.dir.create";
+    bindings[59].handler = native_syscall_fs_dir_create;
+    bindings[60].target = "sys.str.utf8ByteCount";
+    bindings[60].handler = native_syscall_str_utf8_byte_count;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        46U,
+        61U,
         process_argv,
         process_argv_count,
         &vm);

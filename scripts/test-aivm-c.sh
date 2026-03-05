@@ -148,6 +148,10 @@ EOF
     echo "native debug memory smoke failed: expected config.toml missing" >&2
     exit 1
   fi
+  if ! grep -q "status = \"error\"" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: expected status=error in config.toml" >&2
+    exit 1
+  fi
   if ! grep -q "node_gc_interval_allocations = 64" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
     echo "native debug memory smoke failed: unexpected gc interval policy value in config.toml" >&2
     exit 1

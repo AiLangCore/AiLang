@@ -3665,6 +3665,10 @@ if ! contains_fixed 'const existing = uiState.windows.get(windowId);' "${PUBLISH
   echo "wasm profile mismatch: spa publish did not emit deterministic createWindow reuse guard" >&2
   exit 1
 fi
+if ! contains_fixed "const host = document.createElement('div');" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit host container allocation in ensureUiWindow" >&2
+  exit 1
+fi
 if ! contains_fixed '!Number.isInteger(windowId) || windowId <= 0' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit strict createWindow argument validation guard" >&2
   exit 1
@@ -3828,6 +3832,10 @@ if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js
 fi
 if ! contains_fixed 'const existing = uiState.windows.get(windowId);' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'if (existing) return existing;' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit deterministic createWindow reuse guard" >&2
+  exit 1
+fi
+if ! contains_fixed "const host = document.createElement('div');" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit host container allocation in ensureUiWindow" >&2
   exit 1
 fi
 if ! contains_fixed '!Number.isInteger(windowId) || windowId <= 0' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

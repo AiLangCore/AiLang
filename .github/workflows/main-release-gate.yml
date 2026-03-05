@@ -177,9 +177,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AIVM_LEAK_CHECK_ITERATIONS=20 \
-          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          mkdir -p .tmp/leak-reports
+          AIVM_LEAK_CHECK_ITERATIONS=50 \
+          AIVM_LEAK_MAX_GROWTH_KB=2048 \
+          AIVM_LEAK_REPORT=.tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt \
           ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && matrix.platform != 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-release-leak-report-${{ matrix.rid }}
+          path: .tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt
+          if-no-files-found: ignore
 
       - name: Runtime smoke (Windows)
         if: matrix.platform == 'windows'

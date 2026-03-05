@@ -58,9 +58,11 @@ jobs:
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
         run: |
+          mkdir -p .tmp/leak-reports
           AIVM_MEM_LEAK_GATE=1 \
-          AIVM_LEAK_CHECK_ITERATIONS=20 \
-          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          AIVM_LEAK_CHECK_ITERATIONS=50 \
+          AIVM_LEAK_MAX_GROWTH_KB=2048 \
+          AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
           ./scripts/test-aivm-c.sh
 
       - name: Verify bytes host syscall test (Unix)
@@ -98,4 +100,12 @@ jobs:
             .tmp/aivm-dualrun-manifest/report.txt
             .tmp/aivm-dualrun-manifest/*.left.out
             .tmp/aivm-dualrun-manifest/*.right.out
+          if-no-files-found: ignore
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aivm-leak-report-${{ matrix.os }}
+          path: .tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt
           if-no-files-found: ignore

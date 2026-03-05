@@ -691,6 +691,12 @@ if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
 if (globalThis.__aivmUiPollEventType(1) !== -1) {
   throw new Error('ui window record was not deleted after closed event readout');
 }
+if (globalThis.__aivmUiCloseWindow(1) !== -1) {
+  throw new Error('ui repeated closeWindow should report missing-window state after cleanup');
+}
+if (globalThis.__aivmUiPollEventType(1) !== -1) {
+  throw new Error('ui repeated closeWindow must not enqueue duplicate closed event');
+}
 if (globalThis.__aivmUiGetWindowWidth(1) !== -1 ||
     globalThis.__aivmUiGetWindowHeight(1) !== -1) {
   throw new Error('ui window size should be unavailable after close cleanup');

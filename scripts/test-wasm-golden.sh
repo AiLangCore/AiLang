@@ -290,6 +290,179 @@ EOF
   AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
 }
 
+run_web_runtime_ui_close_lifecycle_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ui-close.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ui-close check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ui-close check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ui-close check missing required environment values');
+}
+
+function makeNode(tag) {
+  const listeners = new Map();
+  const children = [];
+  const attrs = new Map();
+  return {
+    tag,
+    style: {},
+    children,
+    textContent: '',
+    attrs,
+    parent: null,
+    appendChild(child) {
+      child.parent = this;
+      children.push(child);
+      return child;
+    },
+    remove() {
+      if (!this.parent) return;
+      const idx = this.parent.children.indexOf(this);
+      if (idx >= 0) this.parent.children.splice(idx, 1);
+      this.parent = null;
+    },
+    setAttribute(k, v) {
+      attrs.set(String(k), String(v));
+    },
+    getAttribute(k) {
+      return attrs.has(String(k)) ? attrs.get(String(k)) : null;
+    },
+    addEventListener(type, fn) {
+      const key = String(type);
+      if (!listeners.has(key)) listeners.set(key, []);
+      listeners.get(key).push(fn);
+    },
+    removeEventListener(type, fn) {
+      const key = String(type);
+      const list = listeners.get(key);
+      if (!list) return;
+      const idx = list.indexOf(fn);
+      if (idx >= 0) list.splice(idx, 1);
+    },
+    listenerCount(type) {
+      const list = listeners.get(String(type));
+      return list ? list.length : 0;
+    },
+    focus() {},
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 100, height: 50 };
+    },
+    viewBox: { baseVal: { width: 100, height: 50 } }
+  };
+}
+
+const outputNode = { textContent: '' };
+const body = makeNode('body');
+
+globalThis.window = {
+  _listeners: new Map(),
+  PointerEvent: function PointerEvent() {},
+  addEventListener(type, fn) {
+    const key = String(type);
+    if (!this._listeners.has(key)) this._listeners.set(key, []);
+    this._listeners.get(key).push(fn);
+  },
+  removeEventListener(type, fn) {
+    const key = String(type);
+    const list = this._listeners.get(key);
+    if (!list) return;
+    const idx = list.indexOf(fn);
+    if (idx >= 0) list.splice(idx, 1);
+  }
+};
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = {
+  body,
+  documentElement: body,
+  getElementById(id) {
+    return id === 'output' ? outputNode : null;
+  },
+  createElement(tag) {
+    return makeNode(tag);
+  },
+  createElementNS(_ns, tag) {
+    return makeNode(tag);
+  }
+};
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'js';
+globalThis.AiLang = {
+  remote: {
+    async call() { return 0; }
+  }
+};
+
+await import(pathToFileURL(mainJsPath).href);
+
+if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
+  throw new Error('ui createWindow failed');
+}
+if (globalThis.__aivmUiCloseWindow(1) !== 0) {
+  throw new Error('ui closeWindow failed');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 1) {
+  throw new Error('ui close event type mismatch');
+}
+if (globalThis.__aivmUiPollEventX(1) !== -1 || globalThis.__aivmUiPollEventY(1) !== -1) {
+  throw new Error('ui close event coordinate mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== '') {
+  throw new Error('ui close event targetId mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== '' ||
+    globalThis.__aivmUiPollEventText(1) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(1) !== '') {
+  throw new Error('ui close event text payload mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui close event repeat mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== -1) {
+  throw new Error('ui window record was not deleted after closed event readout');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== -1 ||
+    globalThis.__aivmUiGetWindowHeight(1) !== -1) {
+  throw new Error('ui window size should be unavailable after close cleanup');
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 run_web_runtime_js_mode_missing_adapter_check() {
   local label="$1"
   local web_root="$2"
@@ -3401,6 +3574,8 @@ fi
 
 run_web_runtime_js_mode_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_js_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ui_close_lifecycle_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ui_close_lifecycle_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_js_mode_missing_adapter_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_js_mode_missing_adapter_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_invalid_mode_check "spa" "${PUBLISH_SPA_DIR}"

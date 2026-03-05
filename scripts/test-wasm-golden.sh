@@ -3180,6 +3180,14 @@ if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_SPA_DIR}/main.js" || 
   echo "wasm profile mismatch: spa publish did not emit canonical ui event payload bridges in main.js" >&2
   exit 1
 fi
+if ! contains_fixed "type: 'key'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit canonical ui event type payloads" >&2
+  exit 1
+fi
+if contains_fixed "type: 'keydown'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'move'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish still emits non-canonical ui event type payloads" >&2
+  exit 1
+fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
   exit 1
@@ -3255,6 +3263,14 @@ if ! contains_fixed '__aivmUiPollEventType' "${PUBLISH_FULLSTACK_DIR}/www/main.j
 fi
 if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventKey' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventText' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventModifiers' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventRepeat' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit canonical ui event payload bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed "type: 'key'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit canonical ui event type payloads" >&2
+  exit 1
+fi
+if contains_fixed "type: 'keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'move'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish still emits non-canonical ui event type payloads" >&2
   exit 1
 fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

@@ -159,6 +159,44 @@ EOF
     exit 1
   fi
 
+  TMP_NATIVE_TAILCALL_REPRO="${ROOT_DIR}/.tmp/aivm-c-native-tailcall-repro.aos"
+  cat > "${TMP_NATIVE_TAILCALL_REPRO}" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Return#r1 { Call#c1(target=loop) { Lit#i1(value=0) Lit#i2(value=6) Lit#i3(value=0) } }
+      }
+    }
+  }
+  Let#l2(name=loop) {
+    Fn#f2(params=i,limit,acc) {
+      Block#b2 {
+        If#i4 {
+          Eq#e2 { Var#v1(name=i) Var#v2(name=limit) }
+          Block#b3 { Return#r2 { Var#v3(name=acc) } }
+          Block#b4 { }
+        }
+        Return#r3 {
+          Call#c2(target=loop) {
+            Add#a1 { Var#v4(name=i) Lit#i5(value=1) }
+            Var#v5(name=limit)
+            Add#a2 { Var#v6(name=acc) Lit#i6(value=1) }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+  TMP_NATIVE_TAILCALL_OUT="$("${ROOT_DIR}/tools/airun" run "${TMP_NATIVE_TAILCALL_REPRO}" 2>&1 || true)"
+  if [[ "${TMP_NATIVE_TAILCALL_OUT}" != *"Ok#ok1(type=int value=6)"* ]]; then
+    echo "native tail-call smoke failed: expected value=6 from recursive loop" >&2
+    printf '%s\n' "${TMP_NATIVE_TAILCALL_OUT}" >&2
+    exit 1
+  fi
+
   TMP_NATIVE_DEBUG_MEM_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem"
   TMP_NATIVE_DEBUG_MEM_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem-out"
   TMP_NATIVE_DEBUG_MEM_APP="${TMP_NATIVE_DEBUG_MEM_DIR}/memory_pressure.aos"

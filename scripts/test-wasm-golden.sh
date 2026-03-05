@@ -3208,6 +3208,10 @@ if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js
   echo "wasm profile mismatch: spa publish did not emit pointer/touch ui click mappings" >&2
   exit 1
 fi
+if ! contains_fixed 'preventDefault' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit touch fallback preventDefault guard" >&2
+  exit 1
+fi
 if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit pointer-first click mapping gate" >&2
   exit 1
@@ -3331,6 +3335,10 @@ if ! contains_fixed 'eventToLocal' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
 fi
 if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "addEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit pointer/touch ui click mappings" >&2
+  exit 1
+fi
+if ! contains_fixed 'preventDefault' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit touch fallback preventDefault guard" >&2
   exit 1
 fi
 if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

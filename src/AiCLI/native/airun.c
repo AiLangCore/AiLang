@@ -1497,6 +1497,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  } else {\n"
             "    const onClick = (ev) => { emitClickEvent(ev, ev); };\n"
             "    const onTouchStart = (ev) => {\n"
+            "      if (typeof ev?.preventDefault === 'function') ev.preventDefault();\n"
             "      const touch = (ev?.touches && ev.touches.length > 0) ? ev.touches[0] : null;\n"
             "      emitClickEvent(ev, touch);\n"
             "    };\n"

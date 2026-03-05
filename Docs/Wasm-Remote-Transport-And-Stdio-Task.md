@@ -183,6 +183,7 @@ Rationale:
   - Browser adapter maps `pointerdown`/`touchstart` to canonical `click` events for deterministic mobile/touch parity.
   - Browser pointer/touch coordinate mapping is normalized to SVG-local space before clamp so `UiEvent.x/y` remain stable under page offset/scroll.
   - Browser adapter now uses pointer-first click mapping (`PointerEvent` when available, otherwise click/touch fallback) to avoid duplicate synthesized click events.
+  - Touch fallback path now calls `preventDefault()` before emitting canonical click to reduce synthetic duplicate click emissions.
   - Browser adapter now unregisters per-window `resize` listeners on `closeWindow` for deterministic lifecycle cleanup (no orphan handlers).
   - Browser adapter now unregisters per-window input listeners (`pointer/click/touch/keydown/blur`) on `closeWindow` for deterministic teardown hygiene.
   - `closeWindow` also clears per-window frame/event scratch state before queuing the canonical `closed` event.

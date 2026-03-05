@@ -610,6 +610,19 @@ if (globalThis.__aivmUiCloseWindow(2) !== 0) {
 if (globalThis.window.listenerCount('resize') !== 1) {
   throw new Error('ui resize listener was not decremented after closing second window');
 }
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui single-window resize dispatch mismatch after closing second window');
+}
+svg.setBoundingRect({ left: 0, top: 0, width: 141, height: 91 });
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui single-window resize update dispatch mismatch');
+}
+if (globalThis.__aivmUiGetWindowWidth(1) !== 141 || globalThis.__aivmUiGetWindowHeight(1) !== 91) {
+  throw new Error('ui remaining-window resize update mismatch after closing second window');
+}
+if (globalThis.__aivmUiGetWindowWidth(2) !== -1 || globalThis.__aivmUiGetWindowHeight(2) !== -1) {
+  throw new Error('ui closed-window size should remain unavailable');
+}
 if (svg2.listenerCount('click') !== 0 || svg2.listenerCount('touchstart') !== 0) {
   throw new Error('ui touch-fallback listeners were not removed on close');
 }

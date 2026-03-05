@@ -3754,6 +3754,10 @@ if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_SPA_DIR}/main.js" || 
   echo "wasm profile mismatch: spa publish did not emit canonical ui event payload bridges in main.js" >&2
   exit 1
 fi
+if ! contains_fixed 'win.closeConsumed' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'if (win.closeConsumed)' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic close-consume cleanup gate for pollEventRepeat" >&2
+  exit 1
+fi
 if ! contains_fixed "if (!win) return '';" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit deterministic unknown-window string accessor semantics" >&2
   exit 1
@@ -3905,6 +3909,10 @@ if ! contains_fixed "if (!win) return -1;" "${PUBLISH_FULLSTACK_DIR}/www/main.js
 fi
 if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventKey' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventText' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventModifiers' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiPollEventRepeat' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit canonical ui event payload bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'win.closeConsumed' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'if (win.closeConsumed)' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic close-consume cleanup gate for pollEventRepeat" >&2
   exit 1
 fi
 if ! contains_fixed "if (!win) return '';" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

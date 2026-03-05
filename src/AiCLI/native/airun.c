@@ -6011,6 +6011,8 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
 #define SIMPLE_MAX_FUNCS 512
 #define SIMPLE_MAX_FIXUPS 2048
 #define SIMPLE_MAX_LOCALS 1024
+#define SIMPLE_MAX_LOOP_DEPTH 128
+#define SIMPLE_MAX_LOOP_FIXUPS 1024
 
 typedef struct {
     char path[PATH_MAX];
@@ -6034,6 +6036,14 @@ typedef struct {
 } SimpleCallFixup;
 
 typedef struct {
+    size_t start_ip;
+    size_t break_sites[SIMPLE_MAX_LOOP_FIXUPS];
+    size_t break_count;
+    size_t continue_sites[SIMPLE_MAX_LOOP_FIXUPS];
+    size_t continue_count;
+} SimpleLoopFrame;
+
+typedef struct {
     AivmProgram* program;
     SimpleSource sources[SIMPLE_MAX_SOURCES];
     size_t source_count;
@@ -6041,6 +6051,8 @@ typedef struct {
     size_t func_count;
     SimpleCallFixup fixups[SIMPLE_MAX_FIXUPS];
     size_t fixup_count;
+    SimpleLoopFrame loop_frames[SIMPLE_MAX_LOOP_DEPTH];
+    size_t loop_depth;
     size_t next_local_slot;
     char entry_export[64];
 } SimpleCompileContext;
@@ -6977,46 +6989,54 @@ static int simple_compile_if_stmt_ext(
     return 1;
 }
 
-static int simple_compile_while_stmt_ext(
+static int simple_compile_loop_stmt_ext(
     const SimpleNodeView* node,
     AivmProgram* program,
     SimpleLocals* locals,
     SimpleCompileContext* ctx,
     int* out_did_return)
 {
-    SimpleNodeView cond_node;
     SimpleNodeView body_node;
+    SimpleLoopFrame* loop_frame;
     size_t loop_start_ip;
-    size_t jump_exit_ip;
+    size_t i;
     int body_return = 0;
     if (out_did_return != NULL) {
         *out_did_return = 0;
     }
-    if (!simple_parse_next_node(node->body_start, node->body_end, &cond_node) ||
-        !simple_parse_next_node(cond_node.next, node->body_end, &body_node)) {
-        return simple_fail("while stmt shape invalid");
+    if (!simple_parse_next_node(node->body_start, node->body_end, &body_node)) {
+        return simple_fail("loop stmt shape invalid");
+    }
+    if (ctx->loop_depth >= SIMPLE_MAX_LOOP_DEPTH) {
+        return simple_fail("loop nesting depth exceeded");
     }
 
     loop_start_ip = program->instruction_count;
-    if (!simple_compile_expr_ext(&cond_node, program, locals, ctx)) {
-        return 0;
-    }
-    jump_exit_ip = program->instruction_count;
-    if (!simple_emit_instruction(program, AIVM_OP_JUMP_IF_FALSE, 0)) {
-        return 0;
-    }
+    loop_frame = &ctx->loop_frames[ctx->loop_depth];
+    memset(loop_frame, 0, sizeof(*loop_frame));
+    loop_frame->start_ip = loop_start_ip;
+    ctx->loop_depth += 1U;
     if (strcmp(body_node.kind, "Block") == 0) {
         if (!simple_compile_block_ext(&body_node, program, locals, ctx, &body_return)) {
+            ctx->loop_depth -= 1U;
             return 0;
         }
     } else if (!simple_compile_expr_ext(&body_node, program, locals, ctx) ||
                !simple_emit_instruction(program, AIVM_OP_POP, 0)) {
+        ctx->loop_depth -= 1U;
         return 0;
     }
     if (!simple_emit_instruction(program, AIVM_OP_JUMP, (int64_t)loop_start_ip)) {
+        ctx->loop_depth -= 1U;
         return 0;
     }
-    program->instruction_storage[jump_exit_ip].operand_int = (int64_t)program->instruction_count;
+    for (i = 0U; i < loop_frame->break_count; i += 1U) {
+        program->instruction_storage[loop_frame->break_sites[i]].operand_int = (int64_t)program->instruction_count;
+    }
+    for (i = 0U; i < loop_frame->continue_count; i += 1U) {
+        program->instruction_storage[loop_frame->continue_sites[i]].operand_int = (int64_t)loop_start_ip;
+    }
+    ctx->loop_depth -= 1U;
     if (out_did_return != NULL) {
         (void)body_return;
         *out_did_return = 0;
@@ -7061,6 +7081,42 @@ static int simple_compile_stmt_ext(
     if (strcmp(node->kind, "Call") == 0) {
         return simple_compile_call_ext(node, program, locals, ctx, 1);
     }
+    if (strcmp(node->kind, "Break") == 0) {
+        SimpleLoopFrame* loop_frame;
+        size_t jump_ip;
+        if (ctx->loop_depth == 0U) {
+            return simple_fail("break used outside loop");
+        }
+        loop_frame = &ctx->loop_frames[ctx->loop_depth - 1U];
+        if (loop_frame->break_count >= SIMPLE_MAX_LOOP_FIXUPS) {
+            return simple_fail("too many break statements in loop");
+        }
+        jump_ip = program->instruction_count;
+        if (!simple_emit_instruction(program, AIVM_OP_JUMP, 0)) {
+            return 0;
+        }
+        loop_frame->break_sites[loop_frame->break_count] = jump_ip;
+        loop_frame->break_count += 1U;
+        return 1;
+    }
+    if (strcmp(node->kind, "Continue") == 0) {
+        SimpleLoopFrame* loop_frame;
+        size_t jump_ip;
+        if (ctx->loop_depth == 0U) {
+            return simple_fail("continue used outside loop");
+        }
+        loop_frame = &ctx->loop_frames[ctx->loop_depth - 1U];
+        if (loop_frame->continue_count >= SIMPLE_MAX_LOOP_FIXUPS) {
+            return simple_fail("too many continue statements in loop");
+        }
+        jump_ip = program->instruction_count;
+        if (!simple_emit_instruction(program, AIVM_OP_JUMP, 0)) {
+            return 0;
+        }
+        loop_frame->continue_sites[loop_frame->continue_count] = jump_ip;
+        loop_frame->continue_count += 1U;
+        return 1;
+    }
     if (strcmp(node->kind, "Return") == 0) {
         SimpleNodeView expr;
         if (!simple_parse_next_node(node->body_start, node->body_end, &expr)) {
@@ -7080,8 +7136,8 @@ static int simple_compile_stmt_ext(
     if (strcmp(node->kind, "If") == 0) {
         return simple_compile_if_stmt_ext(node, program, locals, ctx, out_did_return);
     }
-    if (strcmp(node->kind, "While") == 0) {
-        return simple_compile_while_stmt_ext(node, program, locals, ctx, out_did_return);
+    if (strcmp(node->kind, "Loop") == 0) {
+        return simple_compile_loop_stmt_ext(node, program, locals, ctx, out_did_return);
     }
     if (strcmp(node->kind, "Block") == 0) {
         return simple_compile_block_ext(node, program, locals, ctx, out_did_return);

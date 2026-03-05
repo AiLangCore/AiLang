@@ -1424,9 +1424,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "if (output) output.textContent = logs.join('\\n');\n") >= (int)sizeof(main_js)) {
         return 0;
     }
-    if (snprintf(
-            remote_client_js,
-            sizeof(remote_client_js),
+    {
+        const char* remote_client_js_head =
             "function encodeText(text) { return new TextEncoder().encode(text); }\n"
             "function decodeText(bytes) { return new TextDecoder().decode(bytes); }\n"
             "function writeU16LE(arr, off, v) { arr[off]=v&255; arr[off+1]=(v>>8)&255; }\n"
@@ -1452,7 +1451,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  const header = new Uint8Array(2 + 4); writeU16LE(header, 0, 1); writeU32LE(header, 2, caps.length);\n"
             "  const payload = join([clientName, header, ...capParts]);\n"
             "  const frame = new Uint8Array(9 + payload.length); frame[0]=0x01; writeU32LE(frame,1,id); writeU32LE(frame,5,payload.length); frame.set(payload,9); return frame;\n"
-            "}\n"
+            "}\n";
+        const char* remote_client_js_tail =
             "export function createAivmRemoteClient({ endpoint }) {\n"
             "  let ws = null; let nextId = 2; const pending = new Map(); let ready = null;\n"
             "  function ensureSocket() {\n"
@@ -1465,9 +1465,11 @@ static int emit_wasm_spa_files(const char* out_dir)
             "        const arr = new Uint8Array(ev.data); const frame = decodeFrame(arr);\n"
             "        if (frame.type === 0x02 && frame.id === 1) { resolve(); return; }\n"
             "        if (frame.type === 0x03 && frame.id === 1) { const err = decodeError(frame.payload); reject(new Error(`remote handshake denied ${err.code}: ${err.message}`)); return; }\n"
+            "        if (frame.id === 1) { reject(new Error(`remote unexpected handshake frame type ${frame.type}`)); return; }\n"
             "        const p = pending.get(frame.id); if (!p) return;\n"
             "        if (frame.type === 0x11) { pending.delete(frame.id); p.resolve(decodeResult(frame.payload)); return; }\n"
-            "        if (frame.type === 0x12) { const err = decodeError(frame.payload); pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); }\n"
+            "        if (frame.type === 0x12) { const err = decodeError(frame.payload); pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); return; }\n"
+            "        pending.delete(frame.id); p.reject(new Error(`remote unexpected frame type ${frame.type}`));\n"
             "      };\n"
             "      ws.onerror = () => reject(new Error('remote websocket error'));\n"
             "      ws.onclose = () => { ready = null; ws = null; };\n"
@@ -1481,8 +1483,10 @@ static int emit_wasm_spa_files(const char* out_dir)
             "      return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); ws.send(encodeCall(id, cap, op, value)); });\n"
             "    }\n"
             "  };\n"
-            "}\n") >= (int)sizeof(remote_client_js)) {
-        return 0;
+            "}\n";
+        if (snprintf(remote_client_js, sizeof(remote_client_js), "%s%s", remote_client_js_head, remote_client_js_tail) >= (int)sizeof(remote_client_js)) {
+            return 0;
+        }
     }
     return write_text_file(index_path, index_html) &&
            write_text_file(main_path, main_js) &&

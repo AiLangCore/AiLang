@@ -129,6 +129,36 @@ EOF
     echo "Skipping native cache smoke: tools/airun build/clean commands unavailable." >&2
   fi
 
+  TMP_NATIVE_CALL_FIXUP_REPRO="${ROOT_DIR}/.tmp/aivm-c-native-call-fixup-repro.aos"
+  cat > "${TMP_NATIVE_CALL_FIXUP_REPRO}" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Let#l2(name=v) {
+          Call#c1(target=helper) { Lit#i1(value=1) }
+        }
+        Return#r1 { Var#v1(name=v) }
+      }
+    }
+  }
+  Let#l3(name=helper) {
+    Fn#f2(params=x) {
+      Block#b2 {
+        Return#r2 { Add#a1 { Var#v2(name=x) Lit#i2(value=1) } }
+      }
+    }
+  }
+}
+EOF
+  TMP_NATIVE_CALL_FIXUP_OUT="$("${ROOT_DIR}/tools/airun" run "${TMP_NATIVE_CALL_FIXUP_REPRO}" 2>&1 || true)"
+  if [[ "${TMP_NATIVE_CALL_FIXUP_OUT}" != *"Ok#ok1(type=int value=2)"* ]]; then
+    echo "native call fixup smoke failed: expected value=2 from helper call" >&2
+    printf '%s\n' "${TMP_NATIVE_CALL_FIXUP_OUT}" >&2
+    exit 1
+  fi
+
   TMP_NATIVE_DEBUG_MEM_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem"
   TMP_NATIVE_DEBUG_MEM_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem-out"
   TMP_NATIVE_DEBUG_MEM_APP="${TMP_NATIVE_DEBUG_MEM_DIR}/memory_pressure.aos"

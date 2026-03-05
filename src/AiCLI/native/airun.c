@@ -152,7 +152,7 @@ static int simple_failf(const char* fmt, ...);
 static const char* native_build_error(void);
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
-#define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-04-map-field-cachefix-v1"
+#define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -6410,11 +6410,6 @@ static int simple_compile_call_ext(
         } else {
             if (!simple_add_fixup(ctx, call_inst_index, target)) {
                 return simple_fail("failed storing call fixup");
-            }
-            if (!ctx->funcs[fn_index].compiling) {
-                if (!simple_compile_fn_by_index(ctx, fn_index)) {
-                    return 0;
-                }
             }
         }
     }

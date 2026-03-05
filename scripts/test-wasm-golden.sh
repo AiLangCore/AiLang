@@ -64,6 +64,8 @@ NET_SPA_WARN="${TMP_DIR}/net-spa.warn"
 NET_FULLSTACK_WARN="${TMP_DIR}/net-fullstack.warn"
 MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
 MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
+FULLSTACK_HOST_STDOUT="${TMP_DIR}/fullstack-host.stdout"
+FULLSTACK_HOST_STDERR="${TMP_DIR}/fullstack-host.stderr"
 
 case "$(uname -s)" in
   Darwin)
@@ -169,7 +171,15 @@ const errs = [];
 const remoteCalls = [];
 
 globalThis.location = { hostname: 'localhost' };
-globalThis.document = { getElementById() { return null; } };
+const outputNode = { textContent: '' };
+globalThis.document = {
+  getElementById(id) {
+    if (id === 'output') {
+      return outputNode;
+    }
+    return null;
+  }
+};
 globalThis.console = {
   log(value) { logs.push(String(value)); },
   error(value) { errs.push(String(value)); }
@@ -241,6 +251,10 @@ if (!logs.includes('main-ok')) {
 }
 if (!errs.includes('main-err')) {
   throw new Error('runtime printErr mirror mismatch');
+}
+if (!outputNode.textContent.includes('main-ok') ||
+    !outputNode.textContent.includes('main-err')) {
+  throw new Error('browser output textContent mirror mismatch');
 }
 EOF
 
@@ -491,6 +505,42 @@ fi
 
 run_web_runtime_js_mode_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_js_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+
+FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
+(
+  cd "${PUBLISH_FULLSTACK_DIR}"
+  PORT="${FULLSTACK_HOST_PORT}" "./${EXPECTED_FULLSTACK_APP_BIN}" >"${FULLSTACK_HOST_STDOUT}" 2>"${FULLSTACK_HOST_STDERR}"
+) &
+fullstack_host_pid=$!
+host_exit_observed=0
+for _ in {1..20}; do
+  if ! kill -0 "${fullstack_host_pid}" >/dev/null 2>&1; then
+    host_exit_observed=1
+    break
+  fi
+  sleep 0.1
+done
+if [[ "${host_exit_observed}" == "1" ]]; then
+  set +e
+  wait "${fullstack_host_pid}"
+  fullstack_host_rc=$?
+  set -e
+  if [[ ${fullstack_host_rc} -ne 2 ]]; then
+    echo "wasm fullstack host mismatch: expected launcher bind/listen failure exit 2, got ${fullstack_host_rc}" >&2
+    exit 1
+  fi
+  if ! contains_fixed 'Err#err1(code=RUN001 message="Failed to bind/listen fullstack server socket." nodeId=publish)' "${FULLSTACK_HOST_STDERR}"; then
+    echo "wasm fullstack host mismatch: expected deterministic bind/listen stderr diagnostic" >&2
+    exit 1
+  fi
+else
+  if ! contains_fixed '[fullstack] serving static client from' "${FULLSTACK_HOST_STDOUT}"; then
+    echo "wasm fullstack host mismatch: expected stdout serving banner when launcher stays alive" >&2
+    exit 1
+  fi
+  kill "${fullstack_host_pid}" >/dev/null 2>&1 || true
+  wait "${fullstack_host_pid}" 2>/dev/null || true
+fi
 
 mkdir -p "${MANIFEST_HOST_TARGET_DIR}/src"
 cp "${PUBLISH_FULLSTACK_DIR}/app.aibc1" "${MANIFEST_HOST_TARGET_DIR}/src/app.aibc1"

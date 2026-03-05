@@ -468,6 +468,27 @@ if (globalThis.__aivmUiPollEventType(999) !== -1) {
 if (globalThis.__aivmUiGetWindowWidth(999) !== -1 || globalThis.__aivmUiGetWindowHeight(999) !== -1) {
   throw new Error('ui getWindowSize should reject unknown window id');
 }
+if (globalThis.__aivmUiBeginFrame(999) !== -1 ||
+    globalThis.__aivmUiDrawRect(999, 0, 0, 1, 1, '#000') !== -1 ||
+    globalThis.__aivmUiDrawText(999, 0, 0, 'x', '#000', 12) !== -1 ||
+    globalThis.__aivmUiDrawLine(999, 0, 0, 1, 1, '#000', 1) !== -1 ||
+    globalThis.__aivmUiDrawEllipse(999, 0, 0, 2, 2, '#000') !== -1 ||
+    globalThis.__aivmUiDrawPath(999, 'M0 0 L1 1', '#000', 1) !== -1 ||
+    globalThis.__aivmUiDrawImage(999, 0, 0, 1, 1, 'x') !== -1 ||
+    globalThis.__aivmUiEndFrame(999) !== -1 ||
+    globalThis.__aivmUiPresent(999) !== -1 ||
+    globalThis.__aivmUiWaitFrame(999) !== -1) {
+  throw new Error('ui frame/draw bridges should reject unknown window id');
+}
+if (globalThis.__aivmUiPollEventX(999) !== -1 ||
+    globalThis.__aivmUiPollEventY(999) !== -1 ||
+    globalThis.__aivmUiPollEventRepeat(999) !== -1 ||
+    globalThis.__aivmUiPollEventTargetId(999) !== '' ||
+    globalThis.__aivmUiPollEventKey(999) !== '' ||
+    globalThis.__aivmUiPollEventText(999) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(999) !== '') {
+  throw new Error('ui poll-event accessors should reject unknown window id deterministically');
+}
 
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');

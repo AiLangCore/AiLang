@@ -144,11 +144,11 @@ EOF
     echo "native debug memory smoke failed: expected debug artifacts missing" >&2
     exit 1
   fi
-  if ! grep -q "vm_code=AIVM008" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
-    echo "native debug memory smoke failed: expected vm_code=AIVM008 in diagnostics.toml" >&2
+  if ! grep -q "vm_code=AIVM011" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected vm_code=AIVM011 in diagnostics.toml" >&2
     exit 1
   fi
-  if ! grep -q "detail=Node arena capacity exceeded\\." "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+  if ! grep -Eq "detail=(AIVMM005: )?node arena capacity exceeded\\." "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
     echo "native debug memory smoke failed: expected node arena capacity detail in diagnostics.toml" >&2
     exit 1
   fi
@@ -158,6 +158,14 @@ EOF
   fi
   if ! grep -q "locals_count" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
     echo "native debug memory smoke failed: locals snapshot missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: gc interval policy missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: gc pressure threshold missing in state_snapshots.toml" >&2
     exit 1
   fi
 fi

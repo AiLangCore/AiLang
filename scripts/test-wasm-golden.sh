@@ -3130,6 +3130,10 @@ if ! contains_fixed '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdin drain bridge in main.js" >&2
   exit 1
 fi
+if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui createWindow bridge in main.js" >&2
+  exit 1
+fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
   exit 1
@@ -3169,6 +3173,10 @@ if ! contains_fixed '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; t
 fi
 if ! contains_fixed '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit stdin drain bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui createWindow bridge in www/main.js" >&2
   exit 1
 fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
@@ -3339,12 +3347,12 @@ if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not av
   echo "wasm cli warning mismatch: expected WASM001 warning for sys.ui.drawRect" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'spa'" "${UI_SPA_WARN}"; then
-  echo "wasm spa warning mismatch: expected WASM001 warning for sys.ui.drawRect" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'spa'" "${UI_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.drawRect" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'fullstack'" "${UI_FULLSTACK_WARN}"; then
-  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.ui.drawRect" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not available on wasm profile 'fullstack'" "${UI_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.drawRect" >&2
   exit 1
 fi
 

@@ -1268,9 +1268,7 @@ static int wasm_syscall_unavailable_for_profile(const char* profile, const char*
                strcmp(target, "sys.process.stderr.read") == 0 ||
                strcmp(target, "sys.process.poll") == 0 ||
                strncmp(target, "sys.net.", 8U) == 0 ||
-               strncmp(target, "sys.fs.", 7U) == 0 ||
-               strncmp(target, "sys.ui.", 7U) == 0 ||
-               strncmp(target, "sys.ui_", 7U) == 0;
+               strncmp(target, "sys.fs.", 7U) == 0;
     }
     return 0;
 }
@@ -1364,7 +1362,7 @@ static int emit_wasm_spa_files(const char* out_dir)
     char main_path[PATH_MAX];
     char remote_client_path[PATH_MAX];
     char index_html[2048];
-    char main_js[12288];
+    char main_js[32768];
     char remote_client_js[8192];
     if (out_dir == NULL) {
         return 0;
@@ -1380,9 +1378,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><title>AiLang wasm app</title></head>\n<body>\n  <pre id=\"output\"></pre>\n  <script type=\"module\" src=\"./main.js\"></script>\n</body>\n</html>\n") >= (int)sizeof(index_html)) {
         return 0;
     }
-    if (snprintf(
-            main_js,
-            sizeof(main_js),
+    {
+        const char* main_js_head =
             "import createRuntime from './aivm-runtime-wasm32-web.mjs';\n"
             "import { createAivmRemoteClient } from './remote-client.js';\n"
             "const output = document.getElementById('output');\n"
@@ -1394,6 +1391,72 @@ static int emit_wasm_spa_files(const char* out_dir)
             "}\n"
             "const stdinQueue = [];\n"
             "let stdinClosed = false;\n"
+            "const uiState = { windows: new Map() };\n"
+            "function xmlEscape(text) {\n"
+            "  return String(text ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\"', '&quot;').replaceAll(\"'\", '&apos;');\n"
+            "}\n"
+            "function ensureUiWindow(windowId, title, width, height) {\n"
+            "  if (typeof document === 'undefined' || !document || !document.createElement) return null;\n"
+            "  const existing = uiState.windows.get(windowId);\n"
+            "  if (existing) return existing;\n"
+            "  const host = document.createElement('div');\n"
+            "  host.setAttribute('data-aivm-window-id', String(windowId));\n"
+            "  host.style.maxWidth = `${width}px`;\n"
+            "  const label = document.createElement('div');\n"
+            "  label.textContent = String(title ?? 'AiLang');\n"
+            "  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');\n"
+            "  svg.setAttribute('width', String(width));\n"
+            "  svg.setAttribute('height', String(height));\n"
+            "  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);\n"
+            "  svg.style.border = '1px solid #999';\n"
+            "  host.appendChild(label);\n"
+            "  host.appendChild(svg);\n"
+            "  (document.body || document.documentElement).appendChild(host);\n"
+            "  const state = { host, svg, width, height, frameParts: [] };\n"
+            "  uiState.windows.set(windowId, state);\n"
+            "  return state;\n"
+            "}\n"
+            "globalThis.__aivmUiCreateWindow = (windowId, title, width, height) => {\n"
+            "  if (!Number.isInteger(windowId) || windowId <= 0 || !Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return -1;\n"
+            "  return ensureUiWindow(windowId, title, width, height) ? 0 : -1;\n"
+            "};\n"
+            "globalThis.__aivmUiBeginFrame = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  win.frameParts = [];\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiDrawRect = (windowId, x, y, w, h, color) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  win.frameParts.push(`<rect x=\"${x|0}\" y=\"${y|0}\" width=\"${w|0}\" height=\"${h|0}\" fill=\"${xmlEscape(color)}\"/>`);\n"
+            "  return 0;\n"
+            "};\n";
+        const char* main_js_tail =
+            "globalThis.__aivmUiDrawText = (windowId, x, y, text, color, size) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  const textEscaped = xmlEscape(text);\n"
+            "  win.frameParts.push(`<text x=\"${x|0}\" y=\"${y|0}\" fill=\"${xmlEscape(color)}\" font-size=\"${size|0}\">${textEscaped}</text>`);\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiEndFrame = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  return win ? 0 : -1;\n"
+            "};\n"
+            "globalThis.__aivmUiPresent = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  win.svg.innerHTML = win.frameParts.join('');\n"
+            "  return 0;\n"
+            "};\n"
+            "globalThis.__aivmUiCloseWindow = (windowId) => {\n"
+            "  const win = uiState.windows.get(windowId);\n"
+            "  if (!win) return -1;\n"
+            "  win.host.remove();\n"
+            "  uiState.windows.delete(windowId);\n"
+            "  return 0;\n"
+            "};\n"
             "function readHostStdin() {\n"
             "  if (typeof globalThis.AIVM_HOST_STDIN_READ !== 'function') return undefined;\n"
             "  return globalThis.AIVM_HOST_STDIN_READ();\n"
@@ -1431,8 +1494,10 @@ static int emit_wasm_spa_files(const char* out_dir)
             "runtime.print = (line) => { const s = String(line); logs.push(s); console.log(s); };\n"
             "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
-            "if (output) output.textContent = logs.join('\\n');\n") >= (int)sizeof(main_js)) {
-        return 0;
+            "if (output) output.textContent = logs.join('\\n');\n";
+        if (snprintf(main_js, sizeof(main_js), "%s%s", main_js_head, main_js_tail) >= (int)sizeof(main_js)) {
+            return 0;
+        }
     }
     {
         const char* remote_client_js_head =

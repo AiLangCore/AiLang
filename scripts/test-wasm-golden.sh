@@ -507,6 +507,9 @@ if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
 if (globalThis.__aivmUiCreateWindow(1, 'T-duplicate', 200, 120) !== 0) {
   throw new Error('ui duplicate createWindow should be deterministic success');
 }
+if (globalThis.__aivmUiGetWindowWidth(1) !== 100 || globalThis.__aivmUiGetWindowHeight(1) !== 50) {
+  throw new Error('ui duplicate createWindow should not mutate existing window dimensions');
+}
 if (body.children.length < 1 || body.children[0].children.length < 2) {
   throw new Error('ui createWindow did not create expected host/svg structure');
 }

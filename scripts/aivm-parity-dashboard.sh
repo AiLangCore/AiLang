@@ -19,6 +19,17 @@ mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
 cd "${ROOT_DIR}"
 
+ensure_runtime() {
+  if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+    return 0
+  fi
+  ./scripts/build-airun.sh >/dev/null
+  if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
+    echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
+    exit 2
+  fi
+}
+
 run_c_mode() {
   local input="$1"
   local output="$2"
@@ -37,6 +48,7 @@ status_word() {
 }
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
+ensure_runtime
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
 

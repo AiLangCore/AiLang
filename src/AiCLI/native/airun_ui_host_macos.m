@@ -64,7 +64,10 @@ static int native_ui_lock_focus(NativeUiWindowSlot* slot, NSRect* out_bounds)
     if (content_view == nil) {
         return 0;
     }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (![content_view lockFocusIfCanDraw]) {
+#pragma clang diagnostic pop
         return 0;
     }
     if (out_bounds != NULL) {
@@ -81,7 +84,10 @@ static void native_ui_unlock_focus(NativeUiWindowSlot* slot)
     }
     content_view = [slot->window contentView];
     if (content_view != nil) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [content_view unlockFocus];
+#pragma clang diagnostic pop
     }
 }
 

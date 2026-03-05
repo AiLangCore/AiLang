@@ -3390,6 +3390,7 @@ static char g_native_ui_event_type[16] = "none";
 static char g_native_ui_event_key[48] = "";
 static char g_native_ui_event_text[128] = "";
 static char g_native_ui_event_target_id[48] = "";
+static int64_t g_native_ui_active_window_handles[8];
 
 enum {
     NATIVE_UI_EVENT_ATTR_TYPE = 0,
@@ -3440,6 +3441,59 @@ static int native_vm_append_host_node(
     }
     *out_handle = (int64_t)vm->node_count;
     return 1;
+}
+
+static void native_ui_runtime_reset_handles(void)
+{
+    memset(g_native_ui_active_window_handles, 0, sizeof(g_native_ui_active_window_handles));
+}
+
+static int native_ui_runtime_is_active_handle(int64_t handle)
+{
+    size_t i;
+    if (handle <= 0) {
+        return 0;
+    }
+    for (i = 0U; i < sizeof(g_native_ui_active_window_handles) / sizeof(g_native_ui_active_window_handles[0]); i += 1U) {
+        if (g_native_ui_active_window_handles[i] == handle) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int native_ui_runtime_register_handle(int64_t handle)
+{
+    size_t i;
+    if (handle <= 0) {
+        return 0;
+    }
+    for (i = 0U; i < sizeof(g_native_ui_active_window_handles) / sizeof(g_native_ui_active_window_handles[0]); i += 1U) {
+        if (g_native_ui_active_window_handles[i] == handle) {
+            return 1;
+        }
+    }
+    for (i = 0U; i < sizeof(g_native_ui_active_window_handles) / sizeof(g_native_ui_active_window_handles[0]); i += 1U) {
+        if (g_native_ui_active_window_handles[i] == 0) {
+            g_native_ui_active_window_handles[i] = handle;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void native_ui_runtime_unregister_handle(int64_t handle)
+{
+    size_t i;
+    if (handle <= 0) {
+        return;
+    }
+    for (i = 0U; i < sizeof(g_native_ui_active_window_handles) / sizeof(g_native_ui_active_window_handles[0]); i += 1U) {
+        if (g_native_ui_active_window_handles[i] == handle) {
+            g_native_ui_active_window_handles[i] = 0;
+            return;
+        }
+    }
 }
 
 static int native_ui_ensure_event_node(AivmVm* vm, int64_t* out_handle)
@@ -3573,6 +3627,11 @@ static int native_syscall_ui_create_window(
             *result = aivm_value_int(-1);
             return AIVM_SYSCALL_OK;
         }
+        if (!native_ui_runtime_register_handle(handle)) {
+            (void)native_host_ui_close_window(handle);
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
         *result = aivm_value_int(handle);
     }
     return AIVM_SYSCALL_OK;
@@ -3592,11 +3651,16 @@ static int native_syscall_ui_void_1(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
     if (strcmp(target, "sys.ui.closeWindow") == 0) {
         if (!native_host_ui_close_window(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        native_ui_runtime_unregister_handle(args[0].int_value);
     } else if (strcmp(target, "sys.ui.waitFrame") == 0) {
         if (!native_host_ui_wait_frame(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
@@ -3638,6 +3702,10 @@ static int native_syscall_ui_draw_rect(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
     if (!native_host_ui_draw_rect(
         args[0].int_value,
         (int)args[1].int_value,
@@ -3667,6 +3735,10 @@ static int native_syscall_ui_draw_text(
         args[3].type != AIVM_VAL_STRING || args[4].type != AIVM_VAL_STRING || args[5].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     if (!native_host_ui_draw_text(
         args[0].int_value,
@@ -3699,6 +3771,10 @@ static int native_syscall_ui_draw_line(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
     if (!native_host_ui_draw_line(
         args[0].int_value,
         (int)args[1].int_value,
@@ -3730,6 +3806,10 @@ static int native_syscall_ui_draw_path(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
     if (!native_host_ui_draw_path(
         args[0].int_value,
         args[1].string_value,
@@ -3755,6 +3835,10 @@ static int native_syscall_ui_poll_event(
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     {
         NativeHostUiEvent event;
@@ -3788,6 +3872,10 @@ static int native_syscall_ui_get_window_size(
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     if (g_native_active_vm == NULL) {
         result->type = AIVM_VAL_VOID;
@@ -5075,6 +5163,7 @@ static int run_native_compiled_program(
     g_native_ui_event_key[0] = '\0';
     g_native_ui_event_text[0] = '\0';
     g_native_ui_event_target_id[0] = '\0';
+    native_ui_runtime_reset_handles();
     native_host_ui_reset();
 
     bindings[0].target = "sys.stdout.writeLine";

@@ -163,6 +163,7 @@ Rationale:
     - unknown response-id frames ignored without corrupting active call resolution
     - handshake-close before readiness now rejects deterministically (no hung ensureSocket)
     - reconnect after socket error is verified (first call fails, next call re-establishes and succeeds)
+    - reconnect after handshake deny is verified (first call denied, next call re-establishes and succeeds)
     - default endpoint fallback (`ws://${location.hostname}:8765`)
   - Deterministic invalid `AIVM_REMOTE_MODE` runtime diagnostics (`RUN101`) with executable checks.
   - Browser-side stdin queue (`AiLang.stdin.push/close`) FIFO+EOF behavior with executable checks.

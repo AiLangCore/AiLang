@@ -103,9 +103,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AIVM_LEAK_CHECK_ITERATIONS=20 \
-          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          mkdir -p .tmp/leak-reports
+          AIVM_LEAK_CHECK_ITERATIONS=50 \
+          AIVM_LEAK_MAX_GROWTH_KB=2048 \
+          AIVM_LEAK_REPORT=.tmp/leak-reports/toolkit-release-${{ matrix.os }}.txt \
           ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolkit-release-leak-report-${{ matrix.os }}
+          path: .tmp/leak-reports/toolkit-release-${{ matrix.os }}.txt
+          if-no-files-found: ignore
 
       - name: Runtime smoke (Windows)
         if: runner.os == 'Windows'
@@ -140,7 +150,7 @@ jobs:
             artifact_dir: .artifacts/airun-linux-arm64
             frontend: aos_frontend
             airun: airun
-          - os: macos-13
+          - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64

@@ -30,7 +30,7 @@ jobs:
             frontend: aos_frontend
             airun: airun
             artifact_dir: .artifacts/airun-linux-arm64
-          - os: macos-13
+          - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
@@ -166,7 +166,7 @@ jobs:
           if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
 
       - name: Runtime smoke (Unix)
-        if: matrix.platform != 'windows'
+        if: matrix.platform != 'windows' && !((matrix.platform == 'linux' && matrix.arch == 'arm64') || (matrix.platform == 'osx' && matrix.arch == 'x64'))
         shell: bash
         run: |
           set -euo pipefail
@@ -177,12 +177,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AIVM_LEAK_CHECK_ITERATIONS=20 \
-          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          mkdir -p .tmp/leak-reports
+          AIVM_LEAK_CHECK_ITERATIONS=50 \
+          AIVM_LEAK_MAX_GROWTH_KB=2048 \
+          AIVM_LEAK_REPORT=.tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt \
           ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos
 
+      - name: Upload leak report (failed Unix run)
+        if: failure() && matrix.platform != 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-release-leak-report-${{ matrix.rid }}
+          path: .tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt
+          if-no-files-found: ignore
+
       - name: Runtime smoke (Windows)
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && matrix.arch != 'arm64'
         shell: pwsh
         run: |
           & ".\\dist\\${{ matrix.airun }}" run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null

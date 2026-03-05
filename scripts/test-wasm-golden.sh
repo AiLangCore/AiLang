@@ -414,6 +414,19 @@ globalThis.window = {
     if (!list) return;
     const idx = list.indexOf(fn);
     if (idx >= 0) list.splice(idx, 1);
+  },
+  listenerCount(type) {
+    const list = this._listeners.get(String(type));
+    return list ? list.length : 0;
+  },
+  emit(type, ev) {
+    const list = this._listeners.get(String(type));
+    if (!list) return 0;
+    const snapshot = list.slice();
+    for (const fn of snapshot) {
+      fn(ev);
+    }
+    return snapshot.length;
   }
 };
 globalThis.location = { hostname: 'localhost' };
@@ -455,6 +468,21 @@ if (body.children.length < 1 || body.children[0].children.length < 2) {
 const svg = body.children[0].children[1];
 if (typeof svg.listenerCount !== 'function' || typeof svg.emit !== 'function') {
   throw new Error('ui test harness node is missing listener inspection hooks');
+}
+if (typeof globalThis.window.listenerCount !== 'function' || typeof globalThis.window.emit !== 'function') {
+  throw new Error('ui test harness window listener hooks are missing');
+}
+if (globalThis.window.listenerCount('resize') !== 1) {
+  throw new Error('ui resize listener registration mismatch');
+}
+svg.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
+if (globalThis.window.emit('resize', {}) !== 1) {
+  throw new Error('ui resize listener dispatch mismatch');
+}
+const resizedW = globalThis.__aivmUiGetWindowWidth(1);
+const resizedH = globalThis.__aivmUiGetWindowHeight(1);
+if (resizedW !== 121 || resizedH !== 76) {
+  throw new Error(`ui resize sync payload mismatch (${String(resizedW)}x${String(resizedH)})`);
 }
 if (svg.listenerCount('pointerdown') !== 1 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
   throw new Error('ui pointer-first listener registration mismatch');
@@ -604,6 +632,9 @@ if (globalThis.__aivmUiPollEventKey(1) !== 'a' || globalThis.__aivmUiPollEventTe
 }
 if (globalThis.__aivmUiCloseWindow(1) !== 0) {
   throw new Error('ui closeWindow failed');
+}
+if (globalThis.window.listenerCount('resize') !== 0) {
+  throw new Error('ui resize listener was not removed on close');
 }
 if (svg.listenerCount('pointerdown') !== 0 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
   throw new Error('ui pointer listeners were not removed on close');

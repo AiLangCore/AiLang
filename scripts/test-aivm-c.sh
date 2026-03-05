@@ -18,6 +18,16 @@ cmake --build "${BUILD_DIR}"
 ctest --test-dir "${BUILD_DIR}" --output-on-failure
 
 if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+  AIRUN_HELP_TEXT="$("${ROOT_DIR}/tools/airun" 2>&1 || true)"
+  AIRUN_HAS_BUILD=0
+  AIRUN_HAS_CLEAN=0
+  if printf "%s\n" "${AIRUN_HELP_TEXT}" | rg -q '^\s+build(\s|$)'; then
+    AIRUN_HAS_BUILD=1
+  fi
+  if printf "%s\n" "${AIRUN_HELP_TEXT}" | rg -q '^\s+clean(\s|$)'; then
+    AIRUN_HAS_CLEAN=1
+  fi
+
   "${ROOT_DIR}/tools/airun" run "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
   TMP_NATIVE_PUBLISH_DIR="${ROOT_DIR}/.tmp/aivm-c-native-publish-smoke"
   rm -rf "${TMP_NATIVE_PUBLISH_DIR}"
@@ -62,7 +72,7 @@ Program#p1 {
 }
 EOF
     cat > "${TMP_NATIVE_PROJECT_DIR}/main.aos" <<'EOF'
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
@@ -74,10 +84,60 @@ EOF
       exit 1
     fi
   fi
+
+  TMP_NATIVE_CACHE_PROJECT="${ROOT_DIR}/.tmp/aivm-c-native-cache-smoke"
+  TMP_NATIVE_CACHE_OUT_NO="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-no"
+  TMP_NATIVE_CACHE_OUT_YES="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-yes"
+  rm -rf "${TMP_NATIVE_CACHE_PROJECT}" "${TMP_NATIVE_CACHE_OUT_NO}" "${TMP_NATIVE_CACHE_OUT_YES}"
+  mkdir -p "${TMP_NATIVE_CACHE_PROJECT}"
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="cache_smoke" entryFile="app.aos" entryExport="start")
+}
+EOF
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/app.aos" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Return#r1 { Lit#i1(value=0) }
+      }
+    }
+  }
+}
+EOF
+  if [[ "${AIRUN_HAS_BUILD}" == "1" && "${AIRUN_HAS_CLEAN}" == "1" ]]; then
+    "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    "${ROOT_DIR}/tools/airun" build --no-cache "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_NO}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: --no-cache build populated cache unexpectedly" >&2
+      exit 1
+    fi
+    "${ROOT_DIR}/tools/airun" build "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_YES}" >/dev/null
+    if ! find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: cached build did not write cache artifact" >&2
+      exit 1
+    fi
+    "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: clean did not remove cache artifacts" >&2
+      exit 1
+    fi
+  else
+    echo "Skipping native cache smoke: tools/airun build/clean commands unavailable." >&2
+  fi
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
 printf 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover\n' > "${PARITY_REPORT}"
+
+if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
+  leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"
+  leak_target="${AIVM_LEAK_CHECK_TARGET:-${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos}"
+  AIVM_LEAK_MAX_GROWTH_KB="${AIVM_LEAK_MAX_GROWTH_KB:-2048}" \
+    "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" "${leak_target}" "${leak_iterations}" >/dev/null
+fi
 
 if [[ "${AIVM_PERF_SMOKE:-0}" == "1" ]]; then
   "${ROOT_DIR}/scripts/aivm-c-perf-smoke.sh" "${AIVM_PERF_RUNS:-10}"

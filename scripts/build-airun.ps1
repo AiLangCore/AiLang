@@ -26,8 +26,8 @@ $sources = @(
   (Join-Path $nativeSrc 'aivm_types.c'),
   (Join-Path $nativeSrc 'aivm_vm.c'),
   (Join-Path $nativeSrc 'aivm_program.c'),
-  (Join-Path $nativeSrc 'aivm_syscall.c'),
-  (Join-Path $nativeSrc 'aivm_syscall_contracts.c'),
+  (Join-Path $nativeSrc 'sys/aivm_syscall.c'),
+  (Join-Path $nativeSrc 'sys/aivm_syscall_contracts.c'),
   (Join-Path $nativeSrc 'aivm_parity.c'),
   (Join-Path $nativeSrc 'aivm_runtime.c'),
   (Join-Path $nativeSrc 'aivm_c_api.c')
@@ -39,6 +39,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Get-ChildItem -Path $root -Filter '*.obj' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
-if (-not $env:AIVM_AIRUN_ARCH) {
+if ($targetArch -eq 'x64') {
   Copy-Item $wrapperPath $hostWrapperPath -Force
 }

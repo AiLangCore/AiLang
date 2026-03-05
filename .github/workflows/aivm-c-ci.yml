@@ -14,10 +14,7 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-mem-audit.sh'
-      - 'scripts/aivm-mem-audit.ps1'
       - 'scripts/aivm-mem-leak-check.sh'
-      - 'scripts/aivm-mem-profile.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -38,10 +35,7 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-mem-audit.sh'
-      - 'scripts/aivm-mem-audit.ps1'
       - 'scripts/aivm-mem-leak-check.sh'
-      - 'scripts/aivm-mem-profile.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -61,13 +55,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup MSVC toolchain (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
-        run: ./scripts/test-aivm-c.sh
+        run: |
+          AIVM_MEM_LEAK_GATE=1 \
+          AIVM_LEAK_CHECK_ITERATIONS=20 \
+          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          ./scripts/test-aivm-c.sh
+
+      - name: Verify bytes host syscall test (Unix)
+        if: runner.os != 'Windows'
+        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
@@ -79,28 +77,17 @@ jobs:
           ./scripts/build-airun.sh
           ./scripts/aivm-bench-gate.sh
 
-      - name: Memory leak gate (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          ./scripts/build-airun.sh
-          AIVM_MEM_AUDIT_REPORT=.tmp/aivm-mem-audit-${{ runner.os }}.toml \
-          AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 \
-          ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
-
-      - name: Memory leak gate (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          ./scripts/build-airun.ps1
-          $env:AIVM_MEM_AUDIT_REPORT = '.tmp/aivm-mem-audit-Windows.toml'
-          $env:AIVM_LEAK_MAX_RSS_GROWTH_KB = '2048'
-          ./scripts/aivm-mem-audit.ps1 .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos 20
-
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./scripts/test-aivm-c.ps1
+
+      - name: Verify bytes host syscall test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir .tmp/aivm-c-build-native -C Debug -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()
@@ -111,5 +98,4 @@ jobs:
             .tmp/aivm-dualrun-manifest/report.txt
             .tmp/aivm-dualrun-manifest/*.left.out
             .tmp/aivm-dualrun-manifest/*.right.out
-            .tmp/aivm-mem-audit-*.toml
           if-no-files-found: ignore

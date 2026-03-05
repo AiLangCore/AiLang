@@ -193,7 +193,14 @@ Rationale:
   - Closed window records are removed deterministically after `closed` event payload readout completes (post-`repeat` field read), preventing stale state retention.
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
   - Browser adapter now syncs window size on browser `resize` so `sys.ui.getWindowSize` stays aligned with live viewport dimensions.
-  - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
+  - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles and prioritizes live window state over stale viewBox fallback.
+  - Unknown-window UI bridge calls now return deterministic failure/default values across frame/draw/present/wait/poll/size accessors.
+  - New windows now emit deterministic default `none` event payloads (`type=none`, canonical empty/-1 fields) and repeated none-polling is stable.
+  - Duplicate `createWindow` with same id is deterministic (success without duplicate DOM/listener state).
+  - Close lifecycle semantics are locked:
+    - repeated close before close-event cleanup is idempotent
+    - exactly one `closed` event is emitted
+    - after close-event cleanup the window record is removed and subsequent close returns missing-window failure.
 
 - Remaining:
   - None for this task scope.

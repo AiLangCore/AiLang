@@ -67,6 +67,13 @@ Current strategy for browser UI parity is SVG backend mapping from vector-orient
 | event input | N/A | browser event (`click`/`keydown`/`keyup` baseline) -> deterministic queue | browser event (`click`/`keydown`/`keyup` baseline) -> deterministic queue |
 | deterministic frame contract | N/A | beginFrame/draw/endFrame/present mapping | beginFrame/draw/endFrame/present mapping |
 
+Runtime invariants locked by tests:
+- unknown-window UI bridge calls return deterministic sentinel values (`-1` for numeric, `''` for string accessors)
+- default `pollEvent` baseline is deterministic `none` with canonical payload defaults
+- repeated none-polling is stable (no hidden state mutation)
+- duplicate `createWindow` on same id is deterministic and does not duplicate host/listener state
+- close lifecycle is deterministic (single closed-event emission + post-cleanup missing-window behavior)
+
 ## File I/O Matrix
 
 | Area | wasm cli | wasm spa | wasm fullstack |

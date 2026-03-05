@@ -5,6 +5,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,6 +89,36 @@ static unsigned long native_ui_linux_parse_color(const char* color, unsigned lon
         return fallback_pixel;
     }
     return xcolor.pixel;
+}
+
+static const char* native_ui_linux_path_skip(const char* cursor)
+{
+    while (cursor != NULL && *cursor != '\0') {
+        if (!isspace((unsigned char)*cursor) && *cursor != ',') {
+            break;
+        }
+        cursor += 1;
+    }
+    return cursor;
+}
+
+static int native_ui_linux_path_parse_number(const char** io_cursor, double* out_value)
+{
+    char* end_ptr = NULL;
+    const char* cursor;
+    if (io_cursor == NULL || *io_cursor == NULL || out_value == NULL) {
+        return 0;
+    }
+    cursor = native_ui_linux_path_skip(*io_cursor);
+    if (cursor == NULL || *cursor == '\0') {
+        return 0;
+    }
+    *out_value = strtod(cursor, &end_ptr);
+    if (end_ptr == cursor) {
+        return 0;
+    }
+    *io_cursor = end_ptr;
+    return 1;
 }
 
 void native_host_ui_reset(void)
@@ -287,11 +318,93 @@ int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, con
 
 int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
 {
-    (void)handle;
-    (void)path;
-    (void)color;
-    (void)stroke_width;
-    return 0;
+    NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
+    unsigned long pixel;
+    const char* cursor;
+    char cmd = '\0';
+    double x = 0.0;
+    double y = 0.0;
+    double start_x = 0.0;
+    double start_y = 0.0;
+    int has_point = 0;
+    if (slot == NULL || g_native_ui_display == NULL || path == NULL) {
+        return 0;
+    }
+    pixel = native_ui_linux_parse_color(color, BlackPixel(g_native_ui_display, g_native_ui_screen));
+    XSetForeground(g_native_ui_display, slot->gc, pixel);
+    if (stroke_width > 0) {
+        XSetLineAttributes(g_native_ui_display, slot->gc, (unsigned int)stroke_width, LineSolid, CapButt, JoinMiter);
+    }
+    cursor = path;
+    while (cursor != NULL && *cursor != '\0') {
+        double a = 0.0;
+        double b = 0.0;
+        cursor = native_ui_linux_path_skip(cursor);
+        if (*cursor == '\0') {
+            break;
+        }
+        if (isalpha((unsigned char)*cursor)) {
+            cmd = *cursor;
+            cursor += 1;
+            if (cmd == 'Z' || cmd == 'z') {
+                if (has_point) {
+                    XDrawLine(g_native_ui_display, slot->window, slot->gc, (int)x, (int)y, (int)start_x, (int)start_y);
+                    x = start_x;
+                    y = start_y;
+                }
+                cmd = '\0';
+            }
+            continue;
+        }
+        if (cmd == '\0') {
+            return 0;
+        }
+        if (cmd == 'M' || cmd == 'm' || cmd == 'L' || cmd == 'l') {
+            if (!native_ui_linux_path_parse_number(&cursor, &a) || !native_ui_linux_path_parse_number(&cursor, &b)) {
+                return 0;
+            }
+            if (cmd == 'm' || cmd == 'l') {
+                a += x;
+                b += y;
+            }
+            if (cmd == 'M' || cmd == 'm') {
+                x = a;
+                y = b;
+                start_x = x;
+                start_y = y;
+                has_point = 1;
+                cmd = (cmd == 'm') ? 'l' : 'L';
+            } else {
+                XDrawLine(g_native_ui_display, slot->window, slot->gc, (int)x, (int)y, (int)a, (int)b);
+                x = a;
+                y = b;
+                has_point = 1;
+            }
+            continue;
+        }
+        if (cmd == 'H' || cmd == 'h') {
+            if (!native_ui_linux_path_parse_number(&cursor, &a)) {
+                return 0;
+            }
+            a = (cmd == 'h') ? (x + a) : a;
+            XDrawLine(g_native_ui_display, slot->window, slot->gc, (int)x, (int)y, (int)a, (int)y);
+            x = a;
+            has_point = 1;
+            continue;
+        }
+        if (cmd == 'V' || cmd == 'v') {
+            if (!native_ui_linux_path_parse_number(&cursor, &a)) {
+                return 0;
+            }
+            a = (cmd == 'v') ? (y + a) : a;
+            XDrawLine(g_native_ui_display, slot->window, slot->gc, (int)x, (int)y, (int)x, (int)a);
+            y = a;
+            has_point = 1;
+            continue;
+        }
+        return 0;
+    }
+    return 1;
 }
 
 int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)

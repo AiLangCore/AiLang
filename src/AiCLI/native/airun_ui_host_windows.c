@@ -116,6 +116,36 @@ static COLORREF native_ui_windows_parse_color(const char* color, COLORREF fallba
     return fallback;
 }
 
+static const char* native_ui_windows_path_skip(const char* cursor)
+{
+    while (cursor != NULL && *cursor != '\0') {
+        if (!isspace((unsigned char)*cursor) && *cursor != ',') {
+            break;
+        }
+        cursor += 1;
+    }
+    return cursor;
+}
+
+static int native_ui_windows_path_parse_number(const char** io_cursor, double* out_value)
+{
+    char* end_ptr = NULL;
+    const char* cursor;
+    if (io_cursor == NULL || *io_cursor == NULL || out_value == NULL) {
+        return 0;
+    }
+    cursor = native_ui_windows_path_skip(*io_cursor);
+    if (cursor == NULL || *cursor == '\0') {
+        return 0;
+    }
+    *out_value = strtod(cursor, &end_ptr);
+    if (end_ptr == cursor) {
+        return 0;
+    }
+    *io_cursor = end_ptr;
+    return 1;
+}
+
 static void native_ui_windows_key_name(WPARAM wparam, char* out_key, size_t key_capacity)
 {
     UINT vk = (UINT)wparam;
@@ -426,11 +456,122 @@ int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, con
 
 int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
 {
-    (void)handle;
-    (void)path;
-    (void)color;
-    (void)stroke_width;
-    return 0;
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    HPEN pen = NULL;
+    HPEN prev_pen = NULL;
+    const char* cursor;
+    char cmd = '\0';
+    double x = 0.0;
+    double y = 0.0;
+    double start_x = 0.0;
+    double start_y = 0.0;
+    int has_point = 0;
+    if (slot == NULL || slot->hwnd == NULL || path == NULL) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    pen = CreatePen(PS_SOLID, stroke_width > 0 ? stroke_width : 1, native_ui_windows_parse_color(color, RGB(0, 0, 0)));
+    if (pen == NULL) {
+        ReleaseDC(slot->hwnd, dc);
+        return 0;
+    }
+    prev_pen = (HPEN)SelectObject(dc, pen);
+    cursor = path;
+    while (cursor != NULL && *cursor != '\0') {
+        double a = 0.0;
+        double b = 0.0;
+        cursor = native_ui_windows_path_skip(cursor);
+        if (*cursor == '\0') {
+            break;
+        }
+        if (isalpha((unsigned char)*cursor)) {
+            cmd = *cursor;
+            cursor += 1;
+            if (cmd == 'Z' || cmd == 'z') {
+                if (has_point) {
+                    MoveToEx(dc, (int)x, (int)y, NULL);
+                    (void)LineTo(dc, (int)start_x, (int)start_y);
+                    x = start_x;
+                    y = start_y;
+                }
+                cmd = '\0';
+            }
+            continue;
+        }
+        if (cmd == '\0') {
+            SelectObject(dc, prev_pen);
+            DeleteObject(pen);
+            ReleaseDC(slot->hwnd, dc);
+            return 0;
+        }
+        if (cmd == 'M' || cmd == 'm' || cmd == 'L' || cmd == 'l') {
+            if (!native_ui_windows_path_parse_number(&cursor, &a) || !native_ui_windows_path_parse_number(&cursor, &b)) {
+                SelectObject(dc, prev_pen);
+                DeleteObject(pen);
+                ReleaseDC(slot->hwnd, dc);
+                return 0;
+            }
+            if (cmd == 'm' || cmd == 'l') {
+                a += x;
+                b += y;
+            }
+            if (cmd == 'M' || cmd == 'm') {
+                x = a;
+                y = b;
+                start_x = x;
+                start_y = y;
+                has_point = 1;
+                cmd = (cmd == 'm') ? 'l' : 'L';
+            } else {
+                MoveToEx(dc, (int)x, (int)y, NULL);
+                (void)LineTo(dc, (int)a, (int)b);
+                x = a;
+                y = b;
+                has_point = 1;
+            }
+            continue;
+        }
+        if (cmd == 'H' || cmd == 'h') {
+            if (!native_ui_windows_path_parse_number(&cursor, &a)) {
+                SelectObject(dc, prev_pen);
+                DeleteObject(pen);
+                ReleaseDC(slot->hwnd, dc);
+                return 0;
+            }
+            a = (cmd == 'h') ? (x + a) : a;
+            MoveToEx(dc, (int)x, (int)y, NULL);
+            (void)LineTo(dc, (int)a, (int)y);
+            x = a;
+            has_point = 1;
+            continue;
+        }
+        if (cmd == 'V' || cmd == 'v') {
+            if (!native_ui_windows_path_parse_number(&cursor, &a)) {
+                SelectObject(dc, prev_pen);
+                DeleteObject(pen);
+                ReleaseDC(slot->hwnd, dc);
+                return 0;
+            }
+            a = (cmd == 'v') ? (y + a) : a;
+            MoveToEx(dc, (int)x, (int)y, NULL);
+            (void)LineTo(dc, (int)x, (int)a);
+            y = a;
+            has_point = 1;
+            continue;
+        }
+        SelectObject(dc, prev_pen);
+        DeleteObject(pen);
+        ReleaseDC(slot->hwnd, dc);
+        return 0;
+    }
+    SelectObject(dc, prev_pen);
+    DeleteObject(pen);
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
 }
 
 int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)

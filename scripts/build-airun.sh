@@ -6,6 +6,7 @@ SOURCE_PATH="${ROOT_DIR}/src/AiCLI/native/airun.c"
 NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
 NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native/src"
 NATIVE_UI_HOST_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_macos.m"
+NATIVE_UI_HOST_LINUX_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_linux.c"
 NATIVE_UI_HOST_UNAVAILABLE_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
 UNAME_M="$(uname -m)"
@@ -62,9 +63,14 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
+  UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
+  LD_EXTRA=(-lX11)
   if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
+elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
+  LD_EXTRA=(-lX11)
 fi
 
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \

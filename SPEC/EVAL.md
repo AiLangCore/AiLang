@@ -278,3 +278,7 @@ This file is normative for `aic run` evaluation behavior.
 - `config.toml` (policy constants)
 - `state_snapshots.toml` (live counters)
 - `diagnostics.toml` memory table (summary counters)
+- Telemetry includes per-arena pressure counters:
+- `string_arena_pressure_count`
+- `bytes_arena_pressure_count`
+- `node_arena_pressure_count`

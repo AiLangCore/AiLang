@@ -1429,7 +1429,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "    return String(target.getAttribute('data-aivm-id') ?? '');\n"
             "  }\n"
             "  return '';\n"
-            "}\n"
+            "}\n";
+        const char* main_js_head3 =
             "function ensureUiWindow(windowId, title, width, height) {\n"
             "  if (typeof document === 'undefined' || !document || !document.createElement) return null;\n"
             "  const existing = uiState.windows.get(windowId);\n"
@@ -1450,6 +1451,15 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  (document.body || document.documentElement).appendChild(host);\n"
             "  const state = { host, svg, width, height, frameParts: [], nextElementId: 1, focusedTargetId: '', closed: false, eventQueue: [], lastPolledEvent: { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false } };\n"
             "  const pushEvent = (evt) => { state.eventQueue.push(evt); if (state.eventQueue.length > 64) state.eventQueue.shift(); };\n"
+            "  const syncWindowSize = () => {\n"
+            "    const rect = svg.getBoundingClientRect();\n"
+            "    const nextW = Math.max(1, rect.width | 0);\n"
+            "    const nextH = Math.max(1, rect.height | 0);\n"
+            "    state.width = nextW; state.height = nextH;\n"
+            "    svg.setAttribute('width', String(nextW));\n"
+            "    svg.setAttribute('height', String(nextH));\n"
+            "    svg.setAttribute('viewBox', `0 0 ${nextW} ${nextH}`);\n"
+            "  };\n"
             "  svg.addEventListener('click', (ev) => {\n"
             "    svg.focus();\n"
             "    const targetId = uiEventTargetId(ev);\n"
@@ -1459,6 +1469,9 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  svg.addEventListener('keydown', (ev) => {\n"
             "    pushEvent({ type: 'key', targetId: String(state.focusedTargetId ?? ''), x: -1, y: -1, key: uiEventKey(ev?.key), text: uiEventText(ev), modifiers: uiEventModifiers(ev), repeat: !!ev?.repeat });\n"
             "  });\n"
+            "  if (typeof window !== 'undefined' && window?.addEventListener) {\n"
+            "    window.addEventListener('resize', syncWindowSize);\n"
+            "  }\n"
             "  uiState.windows.set(windowId, state);\n"
             "  return state;\n"
             "}\n"
@@ -1648,7 +1661,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
             "if (output) output.textContent = logs.join('\\n');\n";
-        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s", main_js_head, main_js_head2, main_js_mid, main_js_tail, main_js_tail2) >= (int)sizeof(main_js)) {
+        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_mid, main_js_tail, main_js_tail2) >= (int)sizeof(main_js)) {
             return 0;
         }
     }

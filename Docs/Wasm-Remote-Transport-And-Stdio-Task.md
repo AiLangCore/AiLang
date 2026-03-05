@@ -180,6 +180,7 @@ Rationale:
   - Browser SVG draw primitives now emit deterministic `data-aivm-id` tags so click events can populate stable `targetId` values.
   - Browser adapter now tracks deterministic focused target (`focusedTargetId`) so `key` events route through canonical `targetId` based on last click.
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
+  - Browser adapter now syncs window size on browser `resize` so `sys.ui.getWindowSize` stays aligned with live viewport dimensions.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
 
 - Remaining:

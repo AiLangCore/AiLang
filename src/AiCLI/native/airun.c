@@ -6681,15 +6681,7 @@ static int native_syscall_crypto_random_bytes(
     {
         size_t i;
         for (i = 0U; i < len; i += 1U) {
-            unsigned int v = 0U;
-#if defined(_MSC_VER)
-            if (rand_s(&v) != 0) {
-                result->type = AIVM_VAL_VOID;
-                return AIVM_SYSCALL_ERR_INVALID;
-            }
-#else
-            v = (unsigned int)rand();
-#endif
+            unsigned int v = (unsigned int)rand();
             g_native_bytes_scratch[i] = (uint8_t)(v & 0xFFU);
         }
     }

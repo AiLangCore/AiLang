@@ -5173,9 +5173,12 @@ static int native_syscall_ui_draw_rect(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawRect") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5207,9 +5210,12 @@ static int native_syscall_ui_draw_ellipse(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawEllipse") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5241,9 +5247,12 @@ static int native_syscall_ui_draw_image(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawImage") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5265,9 +5274,12 @@ static int native_syscall_ui_draw_text(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawText") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5299,9 +5311,12 @@ static int native_syscall_ui_draw_line(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawLine") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 7U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5335,9 +5350,12 @@ static int native_syscall_ui_draw_path(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawPath") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 4U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_STRING ||
@@ -5367,9 +5385,12 @@ static int native_syscall_ui_poll_event(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.pollEvent") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
@@ -5404,9 +5425,12 @@ static int native_syscall_ui_get_window_size(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.getWindowSize") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;

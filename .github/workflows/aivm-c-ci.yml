@@ -127,6 +127,10 @@ jobs:
 
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Run C native suite (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./scripts/test-aivm-c.ps1

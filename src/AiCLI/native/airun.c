@@ -4722,6 +4722,200 @@ static char g_native_ui_event_key[48] = "";
 static char g_native_ui_event_text[128] = "";
 static char g_native_ui_event_target_id[48] = "";
 static int64_t g_native_ui_active_window_handles[8];
+static const char* g_native_debug_mode = "off";
+static int g_native_scene_capture_enabled = 0;
+static FILE* g_native_scene_capture_file = NULL;
+static int64_t g_native_scene_frame_id = 0;
+static int64_t g_native_scene_frame_node_count = 0;
+static int g_native_scene_frame_open = 0;
+
+static void native_scene_capture_close(void)
+{
+    if (g_native_scene_capture_file != NULL) {
+        fclose(g_native_scene_capture_file);
+        g_native_scene_capture_file = NULL;
+    }
+}
+
+static void native_scene_capture_reset(void)
+{
+    g_native_scene_capture_enabled = 0;
+    g_native_scene_frame_id = 0;
+    g_native_scene_frame_node_count = 0;
+    g_native_scene_frame_open = 0;
+    native_scene_capture_close();
+}
+
+static int native_scene_capture_escape(const char* text, char* out, size_t out_capacity)
+{
+    size_t i = 0U;
+    size_t j = 0U;
+    if (out == NULL || out_capacity == 0U) {
+        return 0;
+    }
+    if (text == NULL) {
+        out[0] = '\0';
+        return 1;
+    }
+    while (text[i] != '\0' && j + 1U < out_capacity) {
+        char ch = text[i];
+        if ((ch == '\\' || ch == '"') && j + 2U < out_capacity) {
+            out[j++] = '\\';
+            out[j++] = ch;
+        } else if (ch == '\n' && j + 2U < out_capacity) {
+            out[j++] = '\\';
+            out[j++] = 'n';
+        } else if (ch == '\r' && j + 2U < out_capacity) {
+            out[j++] = '\\';
+            out[j++] = 'r';
+        } else {
+            out[j++] = ch;
+        }
+        i += 1U;
+    }
+    out[j] = '\0';
+    return 1;
+}
+
+static void native_scene_capture_emit_line(const char* line)
+{
+    if (line == NULL || line[0] == '\0') {
+        return;
+    }
+    fprintf(stdout, "%s\n", line);
+    fflush(stdout);
+    if (g_native_scene_capture_file != NULL) {
+        fprintf(g_native_scene_capture_file, "%s\n", line);
+        fflush(g_native_scene_capture_file);
+    }
+}
+
+static void native_scene_capture_begin_frame(int64_t handle, int width, int height)
+{
+    char line[256];
+    if (!g_native_scene_capture_enabled) {
+        return;
+    }
+    if (width < 64) {
+        width = 800;
+    }
+    if (height < 64) {
+        height = 600;
+    }
+    g_native_scene_frame_id += 1;
+    g_native_scene_frame_node_count = 0;
+    g_native_scene_frame_open = 1;
+    (void)snprintf(
+        line,
+        sizeof(line),
+        "aivectra.frame = { id=%lld, width=%d, height=%d, hash=\"native-%lld-%lld\" }",
+        (long long)g_native_scene_frame_id,
+        width,
+        height,
+        (long long)handle,
+        (long long)g_native_scene_frame_id);
+    native_scene_capture_emit_line(line);
+}
+
+static void native_scene_capture_end_frame(void)
+{
+    char line[128];
+    if (!g_native_scene_capture_enabled || !g_native_scene_frame_open) {
+        return;
+    }
+    (void)snprintf(
+        line,
+        sizeof(line),
+        "aivectra.frame_end = { id=%lld, node_count=%lld }",
+        (long long)g_native_scene_frame_id,
+        (long long)g_native_scene_frame_node_count);
+    native_scene_capture_emit_line(line);
+    g_native_scene_frame_open = 0;
+}
+
+static void native_scene_capture_emit_node(
+    const char* kind,
+    const char* fill,
+    const char* stroke,
+    int stroke_width,
+    const char* text_value,
+    const char* path_value,
+    int font_size,
+    int x,
+    int y,
+    int w,
+    int h)
+{
+    char line[1536];
+    char id[64];
+    char fill_escaped[128];
+    char stroke_escaped[128];
+    char text_escaped[512];
+    char path_escaped[512];
+    if (!g_native_scene_capture_enabled || !g_native_scene_frame_open || kind == NULL) {
+        return;
+    }
+    g_native_scene_frame_node_count += 1;
+    (void)snprintf(
+        id,
+        sizeof(id),
+        "n%lld_%lld",
+        (long long)g_native_scene_frame_id,
+        (long long)g_native_scene_frame_node_count);
+    (void)native_scene_capture_escape(fill == NULL ? "" : fill, fill_escaped, sizeof(fill_escaped));
+    (void)native_scene_capture_escape(stroke == NULL ? "" : stroke, stroke_escaped, sizeof(stroke_escaped));
+    (void)native_scene_capture_escape(text_value == NULL ? "" : text_value, text_escaped, sizeof(text_escaped));
+    (void)native_scene_capture_escape(path_value == NULL ? "" : path_value, path_escaped, sizeof(path_escaped));
+    (void)snprintf(
+        line,
+        sizeof(line),
+        "aivectra.node = { frame=%lld, order=%lld, id=\"%s\", parent=\"\", kind=\"%s\", transform=\"matrix(1,0,0,1,0,0)\", fill=\"%s\", stroke=\"%s\", stroke_width=%d, text=\"%s\", path=\"%s\", font_size=%d, x=%d, y=%d, w=%d, h=%d }",
+        (long long)g_native_scene_frame_id,
+        (long long)g_native_scene_frame_node_count,
+        id,
+        kind,
+        fill_escaped,
+        stroke_escaped,
+        stroke_width,
+        text_escaped,
+        path_escaped,
+        font_size,
+        x,
+        y,
+        w,
+        h);
+    native_scene_capture_emit_line(line);
+}
+
+static void native_scene_capture_configure(const char* debug_mode, const char* out_dir)
+{
+    char scene_log_path[PATH_MAX];
+    native_scene_capture_reset();
+    g_native_debug_mode = "off";
+    if (debug_mode == NULL || debug_mode[0] == '\0') {
+        return;
+    }
+    g_native_debug_mode = debug_mode;
+    if (!starts_with(debug_mode, "scene")) {
+        return;
+    }
+    g_native_scene_capture_enabled = 1;
+    if (out_dir == NULL || out_dir[0] == '\0') {
+        return;
+    }
+    if (!ensure_directory_recursive(out_dir)) {
+        g_native_scene_capture_enabled = 0;
+        return;
+    }
+    if (!join_path(out_dir, "scene.log", scene_log_path, sizeof(scene_log_path))) {
+        g_native_scene_capture_enabled = 0;
+        return;
+    }
+    g_native_scene_capture_file = fopen(scene_log_path, "wb");
+    if (g_native_scene_capture_file == NULL) {
+        g_native_scene_capture_enabled = 0;
+    }
+}
 
 enum {
     NATIVE_UI_EVENT_ATTR_TYPE = 0,
@@ -5149,11 +5343,21 @@ static int native_syscall_ui_void_1(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        {
+            int width = 0;
+            int height = 0;
+            if (native_host_ui_get_window_size(args[0].int_value, &width, &height)) {
+                native_scene_capture_begin_frame(args[0].int_value, width, height);
+            } else {
+                native_scene_capture_begin_frame(args[0].int_value, 800, 600);
+            }
+        }
     } else if (strcmp(target, "sys.ui.endFrame") == 0) {
         if (!native_host_ui_end_frame(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        native_scene_capture_end_frame();
     } else if (strcmp(target, "sys.ui.present") == 0) {
         if (!native_host_ui_present(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
@@ -5200,6 +5404,18 @@ static int native_syscall_ui_draw_rect(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    native_scene_capture_emit_node(
+        "Rect",
+        args[5].string_value,
+        "",
+        0,
+        "",
+        "",
+        0,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        (int)args[3].int_value,
+        (int)args[4].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -5237,6 +5453,18 @@ static int native_syscall_ui_draw_ellipse(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    native_scene_capture_emit_node(
+        "Ellipse",
+        args[5].string_value,
+        "",
+        0,
+        "",
+        "",
+        0,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        (int)args[3].int_value,
+        (int)args[4].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -5301,6 +5529,18 @@ static int native_syscall_ui_draw_text(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    native_scene_capture_emit_node(
+        "Text",
+        args[4].string_value,
+        "",
+        0,
+        args[3].string_value,
+        "",
+        (int)args[5].int_value,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        0,
+        0);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -5340,6 +5580,29 @@ static int native_syscall_ui_draw_line(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    {
+        char path_text[128];
+        (void)snprintf(
+            path_text,
+            sizeof(path_text),
+            "M%d,%d L%d,%d",
+            (int)args[1].int_value,
+            (int)args[2].int_value,
+            (int)args[3].int_value,
+            (int)args[4].int_value);
+        native_scene_capture_emit_node(
+            "Path",
+            "",
+            args[5].string_value,
+            (int)args[6].int_value,
+            "",
+            path_text,
+            0,
+            0,
+            0,
+            0,
+            0);
+    }
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -5375,6 +5638,18 @@ static int native_syscall_ui_draw_path(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    native_scene_capture_emit_node(
+        "Path",
+        "",
+        args[2].string_value,
+        (int)args[3].int_value,
+        "",
+        args[1].string_value,
+        0,
+        0,
+        0,
+        0,
+        0);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -5459,6 +5734,99 @@ static int native_syscall_ui_get_window_size(
         native_ui_update_size_node(g_native_active_vm, width, height);
         *result = aivm_value_node(node_handle);
     }
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_debug_mode(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args != NULL && arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_string((g_native_debug_mode == NULL) ? "off" : g_native_debug_mode);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_debug_capture_frame_begin(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 3U ||
+        args[0].type != AIVM_VAL_INT ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    native_scene_capture_begin_frame(args[0].int_value, (int)args[1].int_value, (int)args[2].int_value);
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_debug_capture_draw(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    native_scene_capture_emit_node(
+        "Debug",
+        "",
+        "",
+        0,
+        args[0].string_value,
+        args[1].string_value,
+        0,
+        0,
+        0,
+        0,
+        0);
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_debug_capture_frame_end(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    native_scene_capture_end_frame();
+    *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
 
@@ -6856,6 +7224,7 @@ typedef struct {
     int emit_bundle;
     const char* out_dir;
     const char* input_path;
+    const char* debug_mode;
 } NativeDebugOptions;
 
 static const char* aivm_opcode_name(AivmOpcode opcode)
@@ -6971,6 +7340,7 @@ static int write_native_debug_bundle(
         return 0;
     }
     fprintf(f, "mode = \"debug-run-native\"\n");
+    fprintf(f, "debug_mode = \"%s\"\n", (options->debug_mode == NULL) ? "off" : options->debug_mode);
     fprintf(f, "app_path = \"%s\"\n", (options->input_path == NULL) ? "" : options->input_path);
     fprintf(f, "status = \"%s\"\n", (vm != NULL && vm->status == AIVM_VM_STATUS_ERROR) ? "error" : "ok");
     fprintf(f, "exit_code = %d\n", has_exit_code ? exit_code : 0);
@@ -7206,7 +7576,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[96];
+    AivmSyscallBinding bindings[100];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -7222,6 +7592,9 @@ static int run_native_compiled_program(
     g_native_ui_event_key[0] = '\0';
     g_native_ui_event_text[0] = '\0';
     g_native_ui_event_target_id[0] = '\0';
+    native_scene_capture_configure(
+        (debug_options == NULL) ? "off" : debug_options->debug_mode,
+        (debug_options == NULL) ? NULL : debug_options->out_dir);
     native_ui_runtime_reset_handles();
     native_host_ui_reset();
     native_net_reset();
@@ -7419,10 +7792,18 @@ static int run_native_compiled_program(
     bindings[94].handler = native_syscall_crypto_hmac_sha256;
     bindings[95].target = "sys.crypto.randomBytes";
     bindings[95].handler = native_syscall_crypto_random_bytes;
+    bindings[96].target = "sys.debug.mode";
+    bindings[96].handler = native_syscall_debug_mode;
+    bindings[97].target = "sys.debug.captureFrameBegin";
+    bindings[97].handler = native_syscall_debug_capture_frame_begin;
+    bindings[98].target = "sys.debug.captureDraw";
+    bindings[98].handler = native_syscall_debug_capture_draw;
+    bindings[99].target = "sys.debug.captureFrameEnd";
+    bindings[99].handler = native_syscall_debug_capture_frame_end;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        96U,
+        100U,
         process_argv,
         process_argv_count,
         &vm);
@@ -7438,6 +7819,7 @@ static int run_native_compiled_program(
         (void)write_native_debug_bundle(debug_options, program, &vm, 0, 0, diagnostics_line);
         native_net_reset();
         native_host_ui_shutdown();
+        native_scene_capture_reset();
         g_native_active_vm = NULL;
         return emit_vm_error_with_context(program, &vm, vm_error_message);
     }
@@ -7457,6 +7839,7 @@ static int run_native_compiled_program(
     (void)write_native_debug_bundle(debug_options, program, &vm, exit_code, has_exit_code, diagnostics_line);
     native_net_reset();
     native_host_ui_shutdown();
+    native_scene_capture_reset();
     g_native_active_vm = NULL;
     if (has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", exit_code);
@@ -10112,12 +10495,14 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         int app_arg_start = -1;
         int i;
         const char* out_dir = NULL;
+        const char* debug_mode = "off";
         NativeDebugOptions debug_options;
         int rc;
         char config_path[PATH_MAX];
         debug_options.emit_bundle = 0;
         debug_options.out_dir = NULL;
         debug_options.input_path = NULL;
+        debug_options.debug_mode = "off";
 
         for (i = 3; i < argc; i += 1) {
             const char* arg = argv[i];
@@ -10137,6 +10522,20 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
             }
             if (starts_with(arg, "--out=") && app_arg_start < 0) {
                 out_dir = arg + 6;
+                continue;
+            }
+            if (strcmp(arg, "--debug-mode") == 0 && app_arg_start < 0) {
+                if ((i + 1) >= argc) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Missing --debug-mode value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                debug_mode = argv[i + 1];
+                i += 1;
+                continue;
+            }
+            if (starts_with(arg, "--debug-mode=") && app_arg_start < 0) {
+                debug_mode = arg + 13;
                 continue;
             }
             if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
@@ -10170,6 +10569,20 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
                     out_dir = arg + 6;
                     continue;
                 }
+                if (strcmp(arg, "--debug-mode") == 0) {
+                    if ((i + 1) >= argc) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"Missing --debug-mode value.\" nodeId=argv)\n");
+                        return 2;
+                    }
+                    debug_mode = argv[i + 1];
+                    i += 1;
+                    continue;
+                }
+                if (starts_with(arg, "--debug-mode=")) {
+                    debug_mode = arg + 13;
+                    continue;
+                }
                 if (starts_with(arg, "--vm=")) {
                     const char* mode = arg + 5;
                     if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
@@ -10194,11 +10607,12 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
             debug_options.out_dir = out_dir;
             debug_options.input_path = program_path;
         }
+        debug_options.debug_mode = debug_mode;
         rc = run_via_resolved_input(
             program_path,
             (const char* const*)&argv[app_arg_start],
             (size_t)(argc - app_arg_start),
-            (out_dir == NULL) ? NULL : &debug_options);
+            &debug_options);
         if (out_dir != NULL &&
             join_path(out_dir, "config.toml", config_path, sizeof(config_path)) &&
             !file_exists(config_path)) {

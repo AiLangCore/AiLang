@@ -229,16 +229,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .tmp
-          pushd src/AiVM.Core/native >/dev/null
-          cmake --preset aivm-native-unix --fresh
-          cmake --build --preset aivm-native-unix-build
-          ctest --preset aivm-native-unix-test-wasm --output-on-failure | tee "${GITHUB_WORKSPACE}/.tmp/test-wasm-ctest.log"
-          wasm_tests="$(ctest --preset aivm-native-unix-test-wasm -N | awk '/Total Tests:/ {print $3}')"
-          popd >/dev/null
-          echo "### WASM Golden Coverage" >> "${GITHUB_STEP_SUMMARY}"
-          echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| Metric | Value |" >> "${GITHUB_STEP_SUMMARY}"
-          echo "|---|---|" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| ctest wasm label tests | ${wasm_tests:-0} |" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| wasm ctest status | pass |" >> "${GITHUB_STEP_SUMMARY}"
+          ./scripts/ci/wasm-ctest-smoke.sh

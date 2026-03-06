@@ -315,6 +315,438 @@ Program#std_core_p1 {
     }
   }
 
+  Let#std_core_l34(name=mapFieldKey) {
+    Fn#std_core_f20(params=field) {
+      Block#std_core_b30 {
+        Return#std_core_r25 {
+          AttrValueString#std_core_avs5 {
+            Var#std_core_v53(name=field)
+            Lit#std_core_i41(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l35(name=mapFieldValue) {
+    Fn#std_core_f21(params=field) {
+      Block#std_core_b31 {
+        Return#std_core_r26 {
+          ChildAt#std_core_ca8 {
+            Var#std_core_v54(name=field)
+            Lit#std_core_i42(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l36(name=mapHasAt) {
+    Fn#std_core_f22(params=mapNode,key,index) {
+      Block#std_core_b32 {
+        If#std_core_if6 {
+          Eq#std_core_eq1 {
+            Var#std_core_v55(name=index)
+            ChildCount#std_core_cc1 { Var#std_core_v56(name=mapNode) }
+          }
+          Block#std_core_b33 { Return#std_core_r27 { Lit#std_core_i43(value=false) } }
+          Block#std_core_b34 {
+            Let#std_core_l37(name=field) {
+              ChildAt#std_core_ca9 {
+                Var#std_core_v57(name=mapNode)
+                Var#std_core_v58(name=index)
+              }
+            }
+            If#std_core_if7 {
+              Eq#std_core_eq2 {
+                Call#std_core_c10(target=mapFieldKey) { Var#std_core_v59(name=field) }
+                Var#std_core_v60(name=key)
+              }
+              Block#std_core_b35 { Return#std_core_r28 { Lit#std_core_i44(value=true) } }
+              Block#std_core_b36 {
+                Return#std_core_r29 {
+                  Call#std_core_c11(target=mapHasAt) {
+                    Var#std_core_v61(name=mapNode)
+                    Var#std_core_v62(name=key)
+                    Add#std_core_a1 {
+                      Var#std_core_v63(name=index)
+                      Lit#std_core_i45(value=1)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l38(name=mapHas) {
+    Fn#std_core_f23(params=mapNode,key) {
+      Block#std_core_b37 {
+        Return#std_core_r30 {
+          Call#std_core_c12(target=mapHasAt) {
+            Var#std_core_v64(name=mapNode)
+            Var#std_core_v65(name=key)
+            Lit#std_core_i46(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l39(name=mapGetNodeOrAt) {
+    Fn#std_core_f24(params=mapNode,key,index,fallback) {
+      Block#std_core_b38 {
+        If#std_core_if8 {
+          Eq#std_core_eq3 {
+            Var#std_core_v66(name=index)
+            ChildCount#std_core_cc2 { Var#std_core_v67(name=mapNode) }
+          }
+          Block#std_core_b39 { Return#std_core_r31 { Var#std_core_v68(name=fallback) } }
+          Block#std_core_b40 {
+            Let#std_core_l40(name=field) {
+              ChildAt#std_core_ca10 {
+                Var#std_core_v69(name=mapNode)
+                Var#std_core_v70(name=index)
+              }
+            }
+            If#std_core_if9 {
+              Eq#std_core_eq4 {
+                Call#std_core_c13(target=mapFieldKey) { Var#std_core_v71(name=field) }
+                Var#std_core_v72(name=key)
+              }
+              Block#std_core_b41 {
+                Return#std_core_r32 { Call#std_core_c14(target=mapFieldValue) { Var#std_core_v73(name=field) } }
+              }
+              Block#std_core_b42 {
+                Return#std_core_r33 {
+                  Call#std_core_c15(target=mapGetNodeOrAt) {
+                    Var#std_core_v74(name=mapNode)
+                    Var#std_core_v75(name=key)
+                    Add#std_core_a2 {
+                      Var#std_core_v76(name=index)
+                      Lit#std_core_i47(value=1)
+                    }
+                    Var#std_core_v77(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l41(name=mapGetNodeOr) {
+    Fn#std_core_f25(params=mapNode,key,fallback) {
+      Block#std_core_b43 {
+        Return#std_core_r34 {
+          Call#std_core_c16(target=mapGetNodeOrAt) {
+            Var#std_core_v78(name=mapNode)
+            Var#std_core_v79(name=key)
+            Lit#std_core_i48(value=0)
+            Var#std_core_v80(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l42(name=mapGetStringOrAt) {
+    Fn#std_core_f26(params=mapNode,key,index,fallback) {
+      Block#std_core_b44 {
+        If#std_core_if10 {
+          Eq#std_core_eq5 {
+            Var#std_core_v81(name=index)
+            ChildCount#std_core_cc3 { Var#std_core_v82(name=mapNode) }
+          }
+          Block#std_core_b45 { Return#std_core_r35 { Var#std_core_v83(name=fallback) } }
+          Block#std_core_b46 {
+            Let#std_core_l43(name=field) {
+              ChildAt#std_core_ca11 {
+                Var#std_core_v84(name=mapNode)
+                Var#std_core_v85(name=index)
+              }
+            }
+            If#std_core_if11 {
+              Eq#std_core_eq6 {
+                Call#std_core_c17(target=mapFieldKey) { Var#std_core_v86(name=field) }
+                Var#std_core_v87(name=key)
+              }
+              Block#std_core_b47 {
+                Return#std_core_r36 {
+                  AttrValueString#std_core_avs6 {
+                    Call#std_core_c18(target=mapFieldValue) { Var#std_core_v88(name=field) }
+                    Lit#std_core_i49(value=0)
+                  }
+                }
+              }
+              Block#std_core_b48 {
+                Return#std_core_r37 {
+                  Call#std_core_c19(target=mapGetStringOrAt) {
+                    Var#std_core_v89(name=mapNode)
+                    Var#std_core_v90(name=key)
+                    Add#std_core_a3 {
+                      Var#std_core_v91(name=index)
+                      Lit#std_core_i50(value=1)
+                    }
+                    Var#std_core_v92(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l44(name=mapGetStringOr) {
+    Fn#std_core_f27(params=mapNode,key,fallback) {
+      Block#std_core_b49 {
+        Return#std_core_r38 {
+          Call#std_core_c20(target=mapGetStringOrAt) {
+            Var#std_core_v93(name=mapNode)
+            Var#std_core_v94(name=key)
+            Lit#std_core_i51(value=0)
+            Var#std_core_v95(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l45(name=mapGetIntOrAt) {
+    Fn#std_core_f28(params=mapNode,key,index,fallback) {
+      Block#std_core_b50 {
+        If#std_core_if12 {
+          Eq#std_core_eq7 {
+            Var#std_core_v96(name=index)
+            ChildCount#std_core_cc4 { Var#std_core_v97(name=mapNode) }
+          }
+          Block#std_core_b51 { Return#std_core_r39 { Var#std_core_v98(name=fallback) } }
+          Block#std_core_b52 {
+            Let#std_core_l46(name=field) {
+              ChildAt#std_core_ca12 {
+                Var#std_core_v99(name=mapNode)
+                Var#std_core_v100(name=index)
+              }
+            }
+            If#std_core_if13 {
+              Eq#std_core_eq8 {
+                Call#std_core_c21(target=mapFieldKey) { Var#std_core_v101(name=field) }
+                Var#std_core_v102(name=key)
+              }
+              Block#std_core_b53 {
+                Return#std_core_r40 {
+                  AttrValueInt#std_core_avi1 {
+                    Call#std_core_c22(target=mapFieldValue) { Var#std_core_v103(name=field) }
+                    Lit#std_core_i52(value=0)
+                  }
+                }
+              }
+              Block#std_core_b54 {
+                Return#std_core_r41 {
+                  Call#std_core_c23(target=mapGetIntOrAt) {
+                    Var#std_core_v104(name=mapNode)
+                    Var#std_core_v105(name=key)
+                    Add#std_core_a4 {
+                      Var#std_core_v106(name=index)
+                      Lit#std_core_i53(value=1)
+                    }
+                    Var#std_core_v107(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l47(name=mapGetIntOr) {
+    Fn#std_core_f29(params=mapNode,key,fallback) {
+      Block#std_core_b55 {
+        Return#std_core_r42 {
+          Call#std_core_c24(target=mapGetIntOrAt) {
+            Var#std_core_v108(name=mapNode)
+            Var#std_core_v109(name=key)
+            Lit#std_core_i54(value=0)
+            Var#std_core_v110(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l48(name=mapGetBoolOrAt) {
+    Fn#std_core_f30(params=mapNode,key,index,fallback) {
+      Block#std_core_b56 {
+        If#std_core_if14 {
+          Eq#std_core_eq9 {
+            Var#std_core_v111(name=index)
+            ChildCount#std_core_cc5 { Var#std_core_v112(name=mapNode) }
+          }
+          Block#std_core_b57 { Return#std_core_r43 { Var#std_core_v113(name=fallback) } }
+          Block#std_core_b58 {
+            Let#std_core_l49(name=field) {
+              ChildAt#std_core_ca13 {
+                Var#std_core_v114(name=mapNode)
+                Var#std_core_v115(name=index)
+              }
+            }
+            If#std_core_if15 {
+              Eq#std_core_eq10 {
+                Call#std_core_c25(target=mapFieldKey) { Var#std_core_v116(name=field) }
+                Var#std_core_v117(name=key)
+              }
+              Block#std_core_b59 {
+                Return#std_core_r44 {
+                  AttrValueBool#std_core_avb3 {
+                    Call#std_core_c26(target=mapFieldValue) { Var#std_core_v118(name=field) }
+                    Lit#std_core_i55(value=0)
+                  }
+                }
+              }
+              Block#std_core_b60 {
+                Return#std_core_r45 {
+                  Call#std_core_c27(target=mapGetBoolOrAt) {
+                    Var#std_core_v119(name=mapNode)
+                    Var#std_core_v120(name=key)
+                    Add#std_core_a5 {
+                      Var#std_core_v121(name=index)
+                      Lit#std_core_i56(value=1)
+                    }
+                    Var#std_core_v122(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l50(name=mapGetBoolOr) {
+    Fn#std_core_f31(params=mapNode,key,fallback) {
+      Block#std_core_b61 {
+        Return#std_core_r46 {
+          Call#std_core_c28(target=mapGetBoolOrAt) {
+            Var#std_core_v123(name=mapNode)
+            Var#std_core_v124(name=key)
+            Lit#std_core_i57(value=0)
+            Var#std_core_v125(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l51(name=mapSetFold) {
+    Fn#std_core_f32(params=mapNode,key,value,index,acc,replaced) {
+      Block#std_core_b62 {
+        If#std_core_if16 {
+          Eq#std_core_eq11 {
+            Var#std_core_v126(name=index)
+            ChildCount#std_core_cc6 { Var#std_core_v127(name=mapNode) }
+          }
+          Block#std_core_b63 {
+            If#std_core_if17 {
+              Var#std_core_v128(name=replaced)
+              Block#std_core_b64 { Return#std_core_r47 { Var#std_core_v129(name=acc) } }
+              Block#std_core_b65 {
+                Return#std_core_r48 {
+                  AppendChild#std_core_ap12 {
+                    Var#std_core_v130(name=acc)
+                    MakeFieldString#std_core_mfs1 {
+                      Var#std_core_v131(name=key)
+                      Var#std_core_v132(name=value)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#std_core_b66 {
+            Let#std_core_l52(name=field) {
+              ChildAt#std_core_ca14 {
+                Var#std_core_v133(name=mapNode)
+                Var#std_core_v134(name=index)
+              }
+            }
+            If#std_core_if18 {
+              Eq#std_core_eq12 {
+                Call#std_core_c29(target=mapFieldKey) { Var#std_core_v135(name=field) }
+                Var#std_core_v136(name=key)
+              }
+              Block#std_core_b67 {
+                Return#std_core_r49 {
+                  Call#std_core_c30(target=mapSetFold) {
+                    Var#std_core_v137(name=mapNode)
+                    Var#std_core_v138(name=key)
+                    Var#std_core_v139(name=value)
+                    Add#std_core_a6 {
+                      Var#std_core_v140(name=index)
+                      Lit#std_core_i58(value=1)
+                    }
+                    AppendChild#std_core_ap13 {
+                      Var#std_core_v141(name=acc)
+                      MakeFieldString#std_core_mfs2 {
+                        Var#std_core_v142(name=key)
+                        Var#std_core_v143(name=value)
+                      }
+                    }
+                    Lit#std_core_i59(value=true)
+                  }
+                }
+              }
+              Block#std_core_b68 {
+                Return#std_core_r50 {
+                  Call#std_core_c31(target=mapSetFold) {
+                    Var#std_core_v144(name=mapNode)
+                    Var#std_core_v145(name=key)
+                    Var#std_core_v146(name=value)
+                    Add#std_core_a7 {
+                      Var#std_core_v147(name=index)
+                      Lit#std_core_i60(value=1)
+                    }
+                    AppendChild#std_core_ap14 {
+                      Var#std_core_v148(name=acc)
+                      Var#std_core_v149(name=field)
+                    }
+                    Var#std_core_v150(name=replaced)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l53(name=mapSet) {
+    Fn#std_core_f33(params=mapNode,key,value) {
+      Block#std_core_b69 {
+        Return#std_core_r51 {
+          Call#std_core_c32(target=mapSetFold) {
+            Var#std_core_v151(name=mapNode)
+            Var#std_core_v152(name=key)
+            Var#std_core_v153(name=value)
+            Lit#std_core_i61(value=0)
+            MakeBlock#std_core_mb9 { Lit#std_core_i62(value="Map") }
+            Lit#std_core_i63(value=false)
+          }
+        }
+      }
+    }
+  }
+
   Export#std_core_e1(name=assert)
   Export#std_core_e2(name=resultOkString)
   Export#std_core_e14(name=resultOkInt)
@@ -334,4 +766,18 @@ Program#std_core_p1 {
   Export#std_core_e11(name=nodeWithString)
   Export#std_core_e12(name=nodeWithInt)
   Export#std_core_e13(name=nodeWithBool)
+  Export#std_core_e20(name=mapFieldKey)
+  Export#std_core_e21(name=mapFieldValue)
+  Export#std_core_e22(name=mapHasAt)
+  Export#std_core_e23(name=mapHas)
+  Export#std_core_e24(name=mapGetNodeOrAt)
+  Export#std_core_e25(name=mapGetNodeOr)
+  Export#std_core_e26(name=mapGetStringOrAt)
+  Export#std_core_e27(name=mapGetStringOr)
+  Export#std_core_e28(name=mapGetIntOrAt)
+  Export#std_core_e29(name=mapGetIntOr)
+  Export#std_core_e30(name=mapGetBoolOrAt)
+  Export#std_core_e31(name=mapGetBoolOr)
+  Export#std_core_e32(name=mapSetFold)
+  Export#std_core_e33(name=mapSet)
 }

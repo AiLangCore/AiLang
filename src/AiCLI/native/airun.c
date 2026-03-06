@@ -9607,10 +9607,16 @@ static int simple_compile_expr_ext(
         }
         return 1;
     }
-    if (starts_with(node->kind, "MakeLitString") || starts_with(node->kind, "MakeLitInt")) {
+    if (starts_with(node->kind, "MakeLitString") || starts_with(node->kind, "MakeLitInt") ||
+        starts_with(node->kind, "MakeFieldString")) {
         SimpleNodeView id_node;
         SimpleNodeView value_node;
-        AivmOpcode make_opcode = starts_with(node->kind, "MakeLitString") ? AIVM_OP_MAKE_LIT_STRING : AIVM_OP_MAKE_LIT_INT;
+        AivmOpcode make_opcode = AIVM_OP_MAKE_LIT_INT;
+        if (starts_with(node->kind, "MakeLitString")) {
+            make_opcode = AIVM_OP_MAKE_LIT_STRING;
+        } else if (starts_with(node->kind, "MakeFieldString")) {
+            make_opcode = AIVM_OP_MAKE_FIELD_STRING;
+        }
         if (!simple_parse_next_node(node->body_start, node->body_end, &id_node) ||
             !simple_parse_next_node(id_node.next, node->body_end, &value_node)) {
             return simple_failf("%s requires (id,value)", node->kind);

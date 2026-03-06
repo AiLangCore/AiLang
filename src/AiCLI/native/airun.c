@@ -5159,6 +5159,9 @@ static int native_syscall_ui_void_1(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+    } else {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;

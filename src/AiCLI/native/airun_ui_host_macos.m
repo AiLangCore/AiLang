@@ -283,7 +283,11 @@ static int native_ui_init_app(void)
         return 1;
     }
     [NSApplication sharedApplication];
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    if (NSApp == nil) {
+        return 0;
+    }
+    (void)[NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+    (void)[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp finishLaunching];
     g_native_ui_app_initialized = 1;
     return 1;
@@ -440,7 +444,7 @@ int native_host_ui_create_window(const char* title, int width, int height, int64
     delegate.slot = slot;
     [window setDelegate:delegate];
     [window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp updateWindows];
     slot->handle = g_native_ui_next_handle++;
     slot->window = window;
     slot->delegate_ref = delegate;

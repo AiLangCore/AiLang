@@ -326,6 +326,12 @@ if (BUILD_TESTING)
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../..
                 $<TARGET_FILE:aivm_parity_cli>
         )
+        add_test(
+            NAME aivm_test_debug_memory_smoke
+            COMMAND bash
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_debug_memory_smoke.sh
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+        )
     endif()
 
     set_tests_properties(
@@ -354,6 +360,12 @@ if (BUILD_TESTING)
         aivm_test_memory_cycle
         PROPERTIES LABELS "unit;memory"
     )
+    if (NOT WIN32)
+        set_tests_properties(
+            aivm_test_debug_memory_smoke
+            PROPERTIES LABELS "integration;memory;host"
+        )
+    endif()
     set_tests_properties(
         aivm_test_remote_channel
         aivm_test_remote_session

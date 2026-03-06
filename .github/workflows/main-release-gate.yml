@@ -229,21 +229,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x ./scripts/test-wasm-golden.sh
           mkdir -p .tmp
-          ./scripts/test-wasm-golden.sh | tee .tmp/test-wasm-golden.log
-          source_cases="$(rg -o 'wasm golden corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
-          bytecode_cases="$(rg -o 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
-          malformed_cases="$(rg -o 'wasm malformed corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
-          profiles_status="fail"
-          if rg -q 'wasm golden profiles: PASS \(cli/spa/fullstack\)' .tmp/test-wasm-golden.log; then
-            profiles_status="pass"
-          fi
+          pushd src/AiVM.Core/native >/dev/null
+          cmake --preset aivm-native-unix --fresh
+          cmake --build --preset aivm-native-unix-build
+          ctest --preset aivm-native-unix-test-wasm --output-on-failure | tee "${GITHUB_WORKSPACE}/.tmp/test-wasm-ctest.log"
+          wasm_tests="$(ctest --preset aivm-native-unix-test-wasm -N | awk '/Total Tests:/ {print $3}')"
+          popd >/dev/null
           echo "### WASM Golden Coverage" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "| Metric | Value |" >> "${GITHUB_STEP_SUMMARY}"
           echo "|---|---|" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| source corpus | ${source_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| bytecode-only corpus | ${bytecode_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| malformed corpus | ${malformed_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
-          echo "| profiles (cli/spa/fullstack) | ${profiles_status} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| ctest wasm label tests | ${wasm_tests:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| wasm ctest status | pass |" >> "${GITHUB_STEP_SUMMARY}"

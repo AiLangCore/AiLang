@@ -58,8 +58,17 @@ status_word() {
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
 ensure_runtime
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
-cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+USE_PRESETS=0
+if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
+  USE_PRESETS=1
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix --fresh >/dev/null
+  cmake --build --preset aivm-native-unix-build --target aivm_parity_cli >/dev/null
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
+  cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+fi
 
 GOLDEN_INPUTS=()
 while IFS= read -r line; do
@@ -167,8 +176,15 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   t1=$?
   ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
   t2=$?
-  ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
-  t3=$?
+  if [[ "${USE_PRESETS}" == "1" ]]; then
+    pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+    ctest --preset aivm-native-unix-test -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+    t3=$?
+    popd >/dev/null
+  else
+    ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+    t3=$?
+  fi
   set -e
   if [[ ${t1} -eq 0 ]]; then TEST_AIVM_C_STATUS="pass"; else TEST_AIVM_C_STATUS="fail"; fi
   if [[ ${t2} -eq 0 ]]; then TEST_FULL_STATUS="pass"; else TEST_FULL_STATUS="fail"; fi

@@ -10,6 +10,14 @@ if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
   SHARED_FLAG="-DAIVM_BUILD_SHARED=ON"
 fi
 
+if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
+  ./scripts/build-airun.sh >/dev/null
+fi
+if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
+  echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
+  exit 2
+fi
+
 if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
   echo "missing ${AIVM_C_SOURCE_DIR}/CMakePresets.json; native test flow requires presets" >&2
   exit 2

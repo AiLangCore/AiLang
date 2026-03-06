@@ -6,6 +6,15 @@ NATIVE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 LOG_DIR="${ROOT_DIR}/.tmp"
 LOG_FILE="${LOG_DIR}/test-wasm-ctest.log"
 
+if ! command -v emcc >/dev/null 2>&1; then
+  echo "missing dependency: emcc" >&2
+  exit 2
+fi
+if ! command -v wasmtime >/dev/null 2>&1; then
+  echo "missing dependency: wasmtime" >&2
+  exit 2
+fi
+
 mkdir -p "${LOG_DIR}"
 
 pushd "${NATIVE_DIR}" >/dev/null

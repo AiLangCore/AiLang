@@ -6,6 +6,25 @@ $preferredSource = Join-Path $root 'src/AiVM.Core/native'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
 $presetFile = Join-Path $sourceDir 'CMakePresets.json'
+
+if ($IsWindows) {
+  $airunExe = Join-Path $root 'tools/airun.exe'
+  if (-not (Test-Path $airunExe)) {
+    if (Get-Command cl -ErrorAction SilentlyContinue) {
+      & (Join-Path $root 'scripts/build-airun.ps1')
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+  }
+  if (-not (Test-Path $airunExe)) { throw "missing $airunExe" }
+} else {
+  $airun = Join-Path $root 'tools/airun'
+  if (-not (Test-Path $airun)) {
+    & bash (Join-Path $root 'scripts/build-airun.sh')
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  }
+  if (-not (Test-Path $airun)) { throw "missing $airun" }
+}
+
 if (-not (Test-Path $presetFile)) {
   throw "missing $presetFile; native test flow requires presets"
 }
@@ -31,16 +50,6 @@ try {
   }
 } finally {
   Pop-Location
-}
-
-if ($IsWindows) {
-  if (Get-Command cl -ErrorAction SilentlyContinue) {
-    & (Join-Path $root 'scripts/build-airun.ps1')
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    if (!(Test-Path .\tools\airun.exe)) { throw 'failed to compile tools/airun.exe' }
-  } else {
-    Write-Host 'Skipping tools/airun.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
-  }
 }
 
 $parityDir = Split-Path -Parent $parityReport

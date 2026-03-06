@@ -4101,6 +4101,68 @@ static int native_syscall_net_tcp_connect(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_net_tcp_connect_tls(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int native_syscall_net_tcp_listen_tls(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 4U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_STRING || args[2].string_value == NULL ||
+        args[3].type != AIVM_VAL_STRING || args[3].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int native_syscall_net_tcp_connect_tls_start(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 static int native_syscall_net_tcp_read(
     const char* target,
     const AivmValue* args,
@@ -7358,7 +7420,7 @@ static int run_native_compiled_program(
     bindings[71].target = "sys.net.tcp.listen";
     bindings[71].handler = native_syscall_net_tcp_listen;
     bindings[72].target = "sys.net.tcp.listenTls";
-    bindings[72].handler = native_syscall_net_tcp_listen;
+    bindings[72].handler = native_syscall_net_tcp_listen_tls;
     bindings[73].target = "sys.net.tcp.accept";
     bindings[73].handler = native_syscall_net_tcp_accept;
     bindings[74].target = "sys.net.tcp.read";
@@ -7366,11 +7428,11 @@ static int run_native_compiled_program(
     bindings[75].target = "sys.net.tcp.write";
     bindings[75].handler = native_syscall_net_tcp_write;
     bindings[76].target = "sys.net.tcp.connectTls";
-    bindings[76].handler = native_syscall_net_tcp_connect;
+    bindings[76].handler = native_syscall_net_tcp_connect_tls;
     bindings[77].target = "sys.net.tcp.connectStart";
     bindings[77].handler = native_syscall_net_start_op;
     bindings[78].target = "sys.net.tcp.connectTlsStart";
-    bindings[78].handler = native_syscall_net_start_op;
+    bindings[78].handler = native_syscall_net_tcp_connect_tls_start;
     bindings[79].target = "sys.net.tcp.readStart";
     bindings[79].handler = native_syscall_net_start_op;
     bindings[80].target = "sys.net.tcp.writeStart";

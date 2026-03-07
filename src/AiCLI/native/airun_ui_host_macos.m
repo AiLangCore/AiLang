@@ -646,6 +646,7 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
         NativeUiWindowSlot* slot = native_ui_find_slot(handle);
         NativeUiCanvasView* canvas;
         NSEvent* event;
+        int forward_to_appkit;
         if (slot == NULL || out_event == NULL) {
             return 0;
         }
@@ -663,6 +664,7 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
         if (event == nil) {
             return 1;
         }
+        forward_to_appkit = 1;
         canvas = native_ui_canvas_for_slot(slot);
         switch ([event type]) {
             case NSEventTypeLeftMouseDown: {
@@ -696,12 +698,15 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
                     ((flags & NSEventModifierFlagControl) != 0 ? 2 : 0) |
                     ((flags & NSEventModifierFlagOption) != 0 ? 4 : 0) |
                     ((flags & NSEventModifierFlagCommand) != 0 ? 8 : 0);
+                forward_to_appkit = 0;
                 break;
             }
             default:
                 break;
         }
-        [NSApp sendEvent:event];
+        if (forward_to_appkit != 0) {
+            [NSApp sendEvent:event];
+        }
         [NSApp updateWindows];
         return 1;
     }

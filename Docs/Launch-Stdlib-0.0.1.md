@@ -23,6 +23,10 @@ These modules are the required minimum baseline for production AiLang programs.
 The baseline is enforced by `Docs/Stdlib-Baseline-Manifest.tsv` plus
 `scripts/test-stdlib-conformance.sh`.
 
+Per-target support expectations for those baseline modules are declared in
+`Docs/Stdlib-Capability-Matrix.tsv` and validated by
+`scripts/test-stdlib-capabilities.sh`.
+
 ### Tier 1: Language core
 
 - `src/std/core.aos`
@@ -117,6 +121,7 @@ Each production-baseline module must meet all of these:
   warranted.
 - Behaves deterministically.
 - Has target-specific unsupported behavior documented when capability-limited.
+- Declares target capability status in `Docs/Stdlib-Capability-Matrix.tsv`.
 - Has coverage through library tests, golden coverage, or sample usage.
 - For debugging libraries, has clear production behavior for capture, replay,
   and diagnostic emission.

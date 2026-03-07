@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 ./scripts/test-stdlib-conformance.sh
+./scripts/test-stdlib-capabilities.sh
 
 # Samples are language-level showcases: direct syscall targets are forbidden.
 if command -v rg >/dev/null 2>&1; then

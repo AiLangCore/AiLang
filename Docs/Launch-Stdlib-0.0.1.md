@@ -72,8 +72,8 @@ production stdlib contract.
 - `src/std/ui_input.aos`
   - Useful, but profile-specific and not required for non-UI programs.
 - `src/std/platform.aos`
-  - Redundant with `std.system.platform`; keep only as a temporary compatibility
-    wrapper or remove once call sites are migrated.
+  - Redundant with `std.system.platform` and should be removed instead of kept
+    as an alias.
 
 ## Compiler namespace status
 
@@ -97,6 +97,14 @@ Rules:
 - If `std.*` requires functionality from `compiler.*`, that dependency should
   be considered technical debt unless it is purely toolchain-facing.
 
+## Contract policy
+
+- Contract negotiation remains open until `1.0.0`.
+- Pre-`1.0.0`, do not preserve aliases or fallback surfaces just for backward
+  compatibility.
+- If a name or shape is wrong, replace it cleanly and update repo call sites in
+  the same change.
+
 ## Baseline quality bar
 
 Each production-baseline module must meet all of these:
@@ -114,8 +122,8 @@ Each production-baseline module must meet all of these:
 ## Immediate cleanup targets
 
 1. Make `std.*` the only intended application library namespace.
-2. Remove or deprecate duplicate wrappers such as `src/std/platform.aos` where a
-   broader module already owns the contract.
+2. Remove duplicate wrappers such as `src/std/platform.aos` where a broader
+   module already owns the contract.
 3. Audit `std.http` and `std.json` for any lingering dependency on
    `compiler.*`-shaped app behavior.
 4. Define per-target support expectations for baseline modules, especially wasm

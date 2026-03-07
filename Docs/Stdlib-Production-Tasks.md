@@ -8,9 +8,11 @@ This branch exists to turn the baseline in
 1. Audit every application-facing library entrypoint still living in
    `src/compiler/`.
 2. Move app-facing helpers into `src/std/` or mark them toolchain-only.
-3. Remove or deprecate duplicate modules:
+3. Remove duplicate modules:
    - `src/std/platform.aos` vs `src/std/system.aos`
 4. Update docs and samples to prefer `std.*` only.
+5. Do not introduce aliases or fallback library names while contract negotiation
+   is still open before `1.0.0`.
 
 ## Phase 2: Baseline conformance
 
@@ -57,4 +59,5 @@ This branch is complete when:
 - baseline modules are enforced by tests or conformance checks
 - samples prefer `std.*`
 - `std.debug` is treated as required production surface
+- duplicate/alias stdlib surfaces are removed rather than preserved
 - `compiler.*` is no longer acting as an app-library dumping ground

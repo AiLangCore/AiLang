@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <sys/select.h>
@@ -2328,23 +2329,40 @@ static int native_net_socket_would_block(void)
 #endif
 }
 
-static int native_net_parse_ipv4(const char* host, uint16_t port, struct sockaddr_in* out_addr)
+static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_type, int passive, struct sockaddr_in* out_addr)
 {
+    struct addrinfo hints;
+    struct addrinfo* results = NULL;
+    struct addrinfo* cursor = NULL;
+    char port_text[16];
     if (out_addr == NULL) {
         return 0;
     }
     memset(out_addr, 0, sizeof(*out_addr));
-    out_addr->sin_family = AF_INET;
-    out_addr->sin_port = htons(port);
-    if (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0 || strcmp(host, "0.0.0.0") == 0) {
-        out_addr->sin_addr.s_addr = htonl(INADDR_ANY);
-        return 1;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = socket_type;
+    hints.ai_protocol = (socket_type == SOCK_DGRAM) ? IPPROTO_UDP : IPPROTO_TCP;
+    hints.ai_flags = passive ? AI_PASSIVE : 0;
+    (void)snprintf(port_text, sizeof(port_text), "%u", (unsigned)port);
+    if (getaddrinfo(
+            (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0) ? NULL : host,
+            port_text,
+            &hints,
+            &results) != 0) {
+        return 0;
     }
-    if (strcmp(host, "localhost") == 0) {
-        out_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        return 1;
+    for (cursor = results; cursor != NULL; cursor = cursor->ai_next) {
+        if (cursor->ai_family == AF_INET &&
+            cursor->ai_addr != NULL &&
+            cursor->ai_addrlen >= (socklen_t)sizeof(struct sockaddr_in)) {
+            memcpy(out_addr, cursor->ai_addr, sizeof(*out_addr));
+            freeaddrinfo(results);
+            return 1;
+        }
     }
-    return inet_pton(AF_INET, host, &out_addr->sin_addr) == 1;
+    freeaddrinfo(results);
+    return 0;
 }
 
 static NativeNetHandleState* native_net_handle_lookup(int64_t handle)
@@ -4087,7 +4105,7 @@ static int native_syscall_net_tcp_listen(
     }
     if (!native_net_platform_init() ||
         args[1].int_value <= 0 || args[1].int_value > 65535 ||
-        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_STREAM, 1, &addr)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
@@ -4170,7 +4188,7 @@ static int native_syscall_net_tcp_connect(
     }
     if (!native_net_platform_init() ||
         args[1].int_value <= 0 || args[1].int_value > 65535 ||
-        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_STREAM, 0, &addr)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
@@ -4374,7 +4392,7 @@ static int native_syscall_net_udp_bind(
     }
     if (!native_net_platform_init() ||
         args[1].int_value <= 0 || args[1].int_value > 65535 ||
-        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_DGRAM, 1, &addr)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
@@ -4422,7 +4440,7 @@ static int native_syscall_net_udp_send(
     state = native_net_handle_lookup(args[0].int_value);
     if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_UDP_SOCKET ||
         args[2].int_value <= 0 || args[2].int_value > 65535 ||
-        !native_net_parse_ipv4(args[1].string_value, (uint16_t)args[2].int_value, &addr)) {
+        !native_net_resolve_ipv4(args[1].string_value, (uint16_t)args[2].int_value, SOCK_DGRAM, 0, &addr)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
@@ -4736,7 +4754,7 @@ static int native_syscall_net_start_op(
             args[1].type != AIVM_VAL_INT ||
             !native_net_platform_init() ||
             args[1].int_value <= 0 || args[1].int_value > 65535 ||
-            !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+            !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_STREAM, 0, &addr)) {
             native_net_async_set_failure(op, "connect_failed");
             *result = aivm_value_int(op_handle);
             return AIVM_SYSCALL_OK;

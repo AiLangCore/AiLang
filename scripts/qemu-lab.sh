@@ -186,6 +186,38 @@ guest_scp_common() {
        "-P" "${port}"
 }
 
+WINDOWS_STORAGE_ARGS=()
+
+build_windows_storage_args() {
+  local guest_dir_path
+  guest_dir_path="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")"
+  WINDOWS_STORAGE_ARGS=(
+    -drive "if=none,id=win_disk,format=qcow2,file=${AIVM_QEMU_WINDOWS_IMAGE}"
+    -device virtio-blk-pci,drive=win_disk,bootindex=1
+  )
+
+  if [[ -n "${AIVM_QEMU_WINDOWS_INSTALL_ISO:-}" ]]; then
+    WINDOWS_STORAGE_ARGS+=(
+      -drive "if=none,id=win_install,media=cdrom,file=${AIVM_QEMU_WINDOWS_INSTALL_ISO}"
+      -device usb-storage,drive=win_install,bootindex=0
+    )
+  fi
+
+  if [[ -f "${guest_dir_path}/autounattend.iso" ]]; then
+    WINDOWS_STORAGE_ARGS+=(
+      -drive "if=none,id=win_autounattend,media=cdrom,file=${guest_dir_path}/autounattend.iso"
+      -device usb-storage,drive=win_autounattend,bootindex=2
+    )
+  fi
+
+  if [[ -n "${AIVM_QEMU_WINDOWS_VIRTIO_ISO:-}" ]]; then
+    WINDOWS_STORAGE_ARGS+=(
+      -drive "if=none,id=win_virtio,media=cdrom,file=${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"
+      -device usb-storage,drive=win_virtio,bootindex=3
+    )
+  fi
+}
+
 cmd_doctor() {
   load_config
   echo "host_os=$(uname -s)"
@@ -526,6 +558,7 @@ cmd_windows_run() {
   require_file "${AIVM_QEMU_EFI_CODE:-}"
   require_file "${AIVM_QEMU_WINDOWS_IMAGE:-}"
   ensure_guest_vars "${AIVM_QEMU_WINDOWS_NAME}"
+  build_windows_storage_args
   vars_path="$(guest_vars_path "${AIVM_QEMU_WINDOWS_NAME}")"
   serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
 
@@ -543,10 +576,7 @@ cmd_windows_run() {
     -serial "file:${serial_log_path}" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
-    -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
-    ${AIVM_QEMU_WINDOWS_INSTALL_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_INSTALL_ISO}"} \
-    ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
-    $( [[ -f "$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ) \
+    "${WINDOWS_STORAGE_ARGS[@]}" \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0
 }
@@ -559,6 +589,7 @@ cmd_windows_start() {
   require_file "${AIVM_QEMU_EFI_CODE:-}"
   require_file "${AIVM_QEMU_WINDOWS_IMAGE:-}"
   ensure_guest_vars "${AIVM_QEMU_WINDOWS_NAME}"
+  build_windows_storage_args
   if guest_is_running "${AIVM_QEMU_WINDOWS_NAME}"; then
     guest_status "${AIVM_QEMU_WINDOWS_NAME}"
     return 0
@@ -589,10 +620,7 @@ cmd_windows_start() {
     -serial "file:${serial_log_path}" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
-    -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
-    ${AIVM_QEMU_WINDOWS_INSTALL_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_INSTALL_ISO}"} \
-    ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
-    $( [[ -f "$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ) \
+    "${WINDOWS_STORAGE_ARGS[@]}" \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0 \
     -D "${log_path}"

@@ -379,6 +379,11 @@ cmd_windows_create_disk() {
   echo "created ${AIVM_QEMU_WINDOWS_IMAGE}"
 }
 
+cmd_windows_prepare() {
+  cmd_windows_create_disk
+  cmd_windows_unattend
+}
+
 cmd_windows_unattend() {
   local guest_dir_path unattend_path setup_path key_path iso_path user password
   load_config
@@ -965,6 +970,7 @@ Commands:
   linux-gui-click <x> <y> [button] Click inside the guest display
   linux-gui-smoke [path] Run guest GUI smoke flow and capture screenshot
   windows-create-disk  Create Windows qcow2 disk
+  windows-prepare      Create Windows disk and unattended seed ISO
   windows-unattend     Generate Windows unattended install seed ISO
   windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
@@ -1009,6 +1015,7 @@ main() {
     linux-gui-click) cmd_linux_gui_click "$@" ;;
     linux-gui-smoke) cmd_linux_gui_smoke "$@" ;;
     windows-create-disk) cmd_windows_create_disk ;;
+    windows-prepare) cmd_windows_prepare ;;
     windows-unattend) cmd_windows_unattend ;;
     windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;

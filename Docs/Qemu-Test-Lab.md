@@ -200,6 +200,7 @@ Once guest SSH is working, these should become normal flows:
 Windows unattended seed support now exists in the repo:
 
 ```bash
+./scripts/qemu-lab.sh windows-prepare
 ./scripts/qemu-lab.sh windows-unattend
 ```
 

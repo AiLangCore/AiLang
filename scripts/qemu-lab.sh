@@ -14,6 +14,8 @@ load_config() {
   : "${AIVM_QEMU_MACHINE:=virt}"
   : "${AIVM_QEMU_ACCEL:=hvf}"
   : "${AIVM_QEMU_CPU:=host}"
+  : "${AIVM_QEMU_DISPLAY:=cocoa}"
+  : "${AIVM_QEMU_BG_DISPLAY:=none}"
   : "${AIVM_QEMU_LINUX_NAME:=linux-arm64}"
   : "${AIVM_QEMU_WINDOWS_NAME:=windows-arm64}"
   : "${AIVM_QEMU_LINUX_SSH_PORT:=2222}"
@@ -26,6 +28,13 @@ load_config() {
   : "${AIVM_QEMU_WINDOWS_DISK_GB:=96}"
   : "${AIVM_QEMU_LINUX_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_USER:=ailang}"
+
+  if [[ -z "${AIVM_QEMU_EFI_CODE:-}" && -f /opt/homebrew/share/qemu/edk2-aarch64-code.fd ]]; then
+    AIVM_QEMU_EFI_CODE=/opt/homebrew/share/qemu/edk2-aarch64-code.fd
+  fi
+  if [[ -z "${AIVM_QEMU_EFI_VARS_TEMPLATE:-}" && -f /opt/homebrew/share/qemu/edk2-arm-vars.fd ]]; then
+    AIVM_QEMU_EFI_VARS_TEMPLATE=/opt/homebrew/share/qemu/edk2-arm-vars.fd
+  fi
 
   LAB_DIR="${ROOT_DIR}/${AIVM_QEMU_LAB_DIR}"
   KEYS_DIR="${LAB_DIR}/keys"
@@ -74,9 +83,66 @@ guest_dir() {
   echo "${LAB_DIR}/${guest}"
 }
 
+guest_pid_path() {
+  local guest="$1"
+  echo "$(guest_dir "${guest}")/vm.pid"
+}
+
+guest_log_path() {
+  local guest="$1"
+  echo "$(guest_dir "${guest}")/vm.log"
+}
+
+guest_serial_log_path() {
+  local guest="$1"
+  echo "$(guest_dir "${guest}")/serial.log"
+}
+
 guest_vars_path() {
   local guest="$1"
   echo "$(guest_dir "${guest}")/efi-vars.fd"
+}
+
+guest_is_running() {
+  local guest="$1"
+  local pid_path pid
+  pid_path="$(guest_pid_path "${guest}")"
+  if [[ ! -f "${pid_path}" ]]; then
+    return 1
+  fi
+  pid="$(cat "${pid_path}")"
+  [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1
+}
+
+guest_stop() {
+  local guest="$1"
+  local pid_path pid
+  pid_path="$(guest_pid_path "${guest}")"
+  if ! guest_is_running "${guest}"; then
+    rm -f "${pid_path}"
+    echo "${guest}: not running"
+    return 0
+  fi
+  pid="$(cat "${pid_path}")"
+  kill "${pid}" >/dev/null 2>&1 || true
+  sleep 1
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill -9 "${pid}" >/dev/null 2>&1 || true
+  fi
+  rm -f "${pid_path}"
+  echo "${guest}: stopped"
+}
+
+guest_status() {
+  local guest="$1"
+  local pid_path log_path
+  pid_path="$(guest_pid_path "${guest}")"
+  log_path="$(guest_log_path "${guest}")"
+  if guest_is_running "${guest}"; then
+    echo "${guest}: running pid=$(cat "${pid_path}") log=${log_path}"
+  else
+    echo "${guest}: stopped log=${log_path}"
+  fi
 }
 
 ensure_guest_vars() {
@@ -94,6 +160,9 @@ guest_ssh_common() {
   echo "-o" "StrictHostKeyChecking=no" \
        "-o" "UserKnownHostsFile=/dev/null" \
        "-o" "LogLevel=ERROR" \
+       "-o" "BatchMode=yes" \
+       "-o" "ConnectTimeout=5" \
+       "-o" "ConnectionAttempts=1" \
        "-i" "${SSH_KEY_PATH}" \
        "-p" "${port}"
 }
@@ -164,12 +233,20 @@ EOF
 
   if command -v hdiutil >/dev/null 2>&1; then
     rm -f "${iso_path}"
-    hdiutil makehybrid -quiet -o "${iso_path}" "${guest_dir_path}" -iso -joliet >/dev/null
+    hdiutil makehybrid -quiet -o "${iso_path}" "${guest_dir_path}" -iso -joliet -default-volume-name cidata >/dev/null
+    echo "wrote ${iso_path}"
+  elif command -v mkisofs >/dev/null 2>&1; then
+    rm -f "${iso_path}"
+    mkisofs -quiet -output "${iso_path}" -volid cidata -joliet -rock "${guest_dir_path}" >/dev/null 2>&1
+    echo "wrote ${iso_path}"
+  elif command -v genisoimage >/dev/null 2>&1; then
+    rm -f "${iso_path}"
+    genisoimage -quiet -output "${iso_path}" -volid cidata -joliet -rock "${guest_dir_path}" >/dev/null 2>&1
     echo "wrote ${iso_path}"
   else
     echo "wrote ${meta_data}"
     echo "wrote ${user_data}"
-    echo "hdiutil not found; cloud-init ISO not created"
+    echo "no ISO tool found; cloud-init ISO not created"
   fi
 }
 
@@ -190,7 +267,7 @@ cmd_linux_create_disk() {
 }
 
 cmd_linux_run() {
-  local vars_path guest_dir_path cloud_init_path
+  local vars_path guest_dir_path cloud_init_path serial_log_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -200,17 +277,20 @@ cmd_linux_run() {
   vars_path="$(guest_vars_path "${AIVM_QEMU_LINUX_NAME}")"
   guest_dir_path="$(guest_dir "${AIVM_QEMU_LINUX_NAME}")"
   cloud_init_path="${guest_dir_path}/cloud-init.iso"
+  serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_LINUX_NAME}")"
 
   exec qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
     -cpu "${AIVM_QEMU_CPU}" \
     -smp "${AIVM_QEMU_LINUX_CPUS}" \
     -m "${AIVM_QEMU_LINUX_RAM_MB}" \
-    -display cocoa \
+    -display "${AIVM_QEMU_DISPLAY}" \
     -device virtio-gpu-pci \
+    -device virtio-rng-pci \
     -device qemu-xhci \
     -device usb-kbd \
     -device usb-tablet \
+    -serial "file:${serial_log_path}" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_LINUX_IMAGE}" \
@@ -218,6 +298,51 @@ cmd_linux_run() {
     $( [[ -f "${cloud_init_path}" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="${cloud_init_path}" ) \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_LINUX_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0
+}
+
+cmd_linux_start() {
+  local vars_path guest_dir_path cloud_init_path pid_path log_path serial_log_path
+  load_config
+  ensure_dirs
+  require_cmd qemu-system-aarch64
+  require_file "${AIVM_QEMU_EFI_CODE:-}"
+  require_file "${AIVM_QEMU_LINUX_IMAGE:-}"
+  ensure_guest_vars "${AIVM_QEMU_LINUX_NAME}"
+  if guest_is_running "${AIVM_QEMU_LINUX_NAME}"; then
+    guest_status "${AIVM_QEMU_LINUX_NAME}"
+    return 0
+  fi
+  vars_path="$(guest_vars_path "${AIVM_QEMU_LINUX_NAME}")"
+  guest_dir_path="$(guest_dir "${AIVM_QEMU_LINUX_NAME}")"
+  cloud_init_path="${guest_dir_path}/cloud-init.iso"
+  pid_path="$(guest_pid_path "${AIVM_QEMU_LINUX_NAME}")"
+  log_path="$(guest_log_path "${AIVM_QEMU_LINUX_NAME}")"
+  serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_LINUX_NAME}")"
+  : >"${serial_log_path}"
+
+  qemu-system-aarch64 \
+    -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
+    -cpu "${AIVM_QEMU_CPU}" \
+    -smp "${AIVM_QEMU_LINUX_CPUS}" \
+    -m "${AIVM_QEMU_LINUX_RAM_MB}" \
+    -daemonize \
+    -pidfile "${pid_path}" \
+    -display "${AIVM_QEMU_BG_DISPLAY}" \
+    -device virtio-gpu-pci \
+    -device virtio-rng-pci \
+    -device qemu-xhci \
+    -device usb-kbd \
+    -device usb-tablet \
+    -serial "file:${serial_log_path}" \
+    -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
+    -drive if=pflash,format=raw,file="${vars_path}" \
+    -drive if=virtio,format=qcow2,file="${AIVM_QEMU_LINUX_IMAGE}" \
+    ${AIVM_QEMU_LINUX_EXTRA_CDROM:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_LINUX_EXTRA_CDROM}"} \
+    $( [[ -f "${cloud_init_path}" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="${cloud_init_path}" ) \
+    -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_LINUX_SSH_PORT}-:22" \
+    -device virtio-net-pci,netdev=net0 \
+    -D "${log_path}"
+  guest_status "${AIVM_QEMU_LINUX_NAME}"
 }
 
 cmd_windows_create_disk() {
@@ -236,7 +361,7 @@ cmd_windows_create_disk() {
 }
 
 cmd_windows_run() {
-  local vars_path
+  local vars_path serial_log_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -244,17 +369,20 @@ cmd_windows_run() {
   require_file "${AIVM_QEMU_WINDOWS_IMAGE:-}"
   ensure_guest_vars "${AIVM_QEMU_WINDOWS_NAME}"
   vars_path="$(guest_vars_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
 
   exec qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
     -cpu "${AIVM_QEMU_CPU}" \
     -smp "${AIVM_QEMU_WINDOWS_CPUS}" \
     -m "${AIVM_QEMU_WINDOWS_RAM_MB}" \
-    -display cocoa \
+    -display "${AIVM_QEMU_DISPLAY}" \
     -device virtio-gpu-pci \
+    -device virtio-rng-pci \
     -device qemu-xhci \
     -device usb-kbd \
     -device usb-tablet \
+    -serial "file:${serial_log_path}" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
@@ -262,6 +390,65 @@ cmd_windows_run() {
     ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0
+}
+
+cmd_windows_start() {
+  local vars_path pid_path log_path serial_log_path
+  load_config
+  ensure_dirs
+  require_cmd qemu-system-aarch64
+  require_file "${AIVM_QEMU_EFI_CODE:-}"
+  require_file "${AIVM_QEMU_WINDOWS_IMAGE:-}"
+  ensure_guest_vars "${AIVM_QEMU_WINDOWS_NAME}"
+  if guest_is_running "${AIVM_QEMU_WINDOWS_NAME}"; then
+    guest_status "${AIVM_QEMU_WINDOWS_NAME}"
+    return 0
+  fi
+  vars_path="$(guest_vars_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  pid_path="$(guest_pid_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  log_path="$(guest_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  : >"${serial_log_path}"
+
+  qemu-system-aarch64 \
+    -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
+    -cpu "${AIVM_QEMU_CPU}" \
+    -smp "${AIVM_QEMU_WINDOWS_CPUS}" \
+    -m "${AIVM_QEMU_WINDOWS_RAM_MB}" \
+    -daemonize \
+    -pidfile "${pid_path}" \
+    -display "${AIVM_QEMU_BG_DISPLAY}" \
+    -device virtio-gpu-pci \
+    -device virtio-rng-pci \
+    -device qemu-xhci \
+    -device usb-kbd \
+    -device usb-tablet \
+    -serial "file:${serial_log_path}" \
+    -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
+    -drive if=pflash,format=raw,file="${vars_path}" \
+    -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
+    ${AIVM_QEMU_WINDOWS_INSTALL_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_INSTALL_ISO}"} \
+    ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
+    -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
+    -device virtio-net-pci,netdev=net0 \
+    -D "${log_path}"
+  guest_status "${AIVM_QEMU_WINDOWS_NAME}"
+}
+
+cmd_linux_stop() {
+  load_config
+  guest_stop "${AIVM_QEMU_LINUX_NAME}"
+}
+
+cmd_windows_stop() {
+  load_config
+  guest_stop "${AIVM_QEMU_WINDOWS_NAME}"
+}
+
+cmd_status() {
+  load_config
+  guest_status "${AIVM_QEMU_LINUX_NAME}"
+  guest_status "${AIVM_QEMU_WINDOWS_NAME}"
 }
 
 cmd_linux_ssh() {
@@ -315,13 +502,18 @@ Commands:
   init                 Create repo-local lab directories and SSH key
   linux-cloud-init     Generate Linux cloud-init files and ISO
   linux-create-disk    Create Linux qcow2 disk from configured cloud image
+  linux-start          Launch Linux ARM guest in background
   linux-run            Launch Linux ARM guest
+  linux-stop           Stop Linux ARM guest
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
   windows-create-disk  Create Windows qcow2 disk
+  windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
+  windows-stop         Stop Windows ARM guest
   windows-ssh          SSH into Windows guest on forwarded port
   windows-exec <cmd...> Run command inside Windows guest over SSH
+  status               Show Linux/Windows guest status
   screenshot [path]    Capture a host screenshot
 
 Config:
@@ -337,13 +529,18 @@ main() {
     init) cmd_init ;;
     linux-cloud-init) cmd_linux_cloud_init ;;
     linux-create-disk) cmd_linux_create_disk ;;
+    linux-start) cmd_linux_start ;;
     linux-run) cmd_linux_run ;;
+    linux-stop) cmd_linux_stop ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
     windows-create-disk) cmd_windows_create_disk ;;
+    windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;
+    windows-stop) cmd_windows_stop ;;
     windows-ssh) cmd_windows_ssh ;;
     windows-exec) cmd_windows_exec "$@" ;;
+    status) cmd_status ;;
     screenshot) cmd_screenshot "$@" ;;
     ""|-h|--help|help) usage ;;
     *) echo "unknown command: ${cmd}" >&2; usage; exit 1 ;;

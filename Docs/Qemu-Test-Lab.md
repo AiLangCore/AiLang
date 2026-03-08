@@ -170,11 +170,38 @@ Once guest SSH is working, these should become normal flows:
 ./scripts/qemu-lab.sh windows-exec pwd
 ```
 
+Windows unattended seed support now exists in the repo:
+
+```bash
+./scripts/qemu-lab.sh windows-unattend
+```
+
+What it generates:
+
+- `Autounattend.xml`
+- `windows-firstboot.ps1`
+- `autounattend.iso`
+
+Current intent of that seed:
+
+- create the configured local Windows user
+- auto-log in for first boot
+- install and enable OpenSSH Server
+- write the repo-local SSH public key into the configured user profile
+
+Current default local credentials in the example config:
+
+- user: `ailang`
+- password: `AiLangQemu!23`
+
+You can override both in `scripts/qemu-lab.env`.
+
 For installer bring-up on macOS, use `windows-run` for the visible session. `windows-start` is intended for headless/background use only.
 
 Visible installer session:
 
 ```bash
+./scripts/qemu-lab.sh windows-unattend
 ./scripts/qemu-lab.sh windows-run
 ```
 
@@ -192,7 +219,7 @@ This first iteration does not yet provide:
 - deterministic host-side click/key injection into guest windows
 - repo-level guest-side screenshot wrapper commands
 - automatic guest provisioning for Windows
-- Windows image bring-up
+- post-install validation that OpenSSH came up exactly as seeded
 
 Those are the next steps after QEMU is installed and the Windows guest image is available.
 

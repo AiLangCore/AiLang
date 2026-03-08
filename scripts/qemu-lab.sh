@@ -32,6 +32,7 @@ load_config() {
   : "${AIVM_QEMU_WINDOWS_DISK_GB:=96}"
   : "${AIVM_QEMU_LINUX_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_USER:=ailang}"
+  : "${AIVM_QEMU_WINDOWS_PASSWORD:=AiLangQemu!23}"
 
   if [[ -z "${AIVM_QEMU_EFI_CODE:-}" && -f /opt/homebrew/share/qemu/edk2-aarch64-code.fd ]]; then
     AIVM_QEMU_EFI_CODE=/opt/homebrew/share/qemu/edk2-aarch64-code.fd
@@ -364,6 +365,140 @@ cmd_windows_create_disk() {
   echo "created ${AIVM_QEMU_WINDOWS_IMAGE}"
 }
 
+cmd_windows_unattend() {
+  local guest_dir_path unattend_path setup_path key_path iso_path user password
+  load_config
+  ensure_dirs
+  ensure_ssh_key
+  guest_dir_path="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")"
+  unattend_path="${guest_dir_path}/Autounattend.xml"
+  setup_path="${guest_dir_path}/windows-firstboot.ps1"
+  key_path="${guest_dir_path}/authorized_keys"
+  iso_path="${guest_dir_path}/autounattend.iso"
+  user="${AIVM_QEMU_WINDOWS_USER}"
+  password="${AIVM_QEMU_WINDOWS_PASSWORD}"
+
+  cat >"${setup_path}" <<EOF
+\$ErrorActionPreference = 'Stop'
+\$user = '${user}'
+\$password = '${password}'
+\$sshKey = Get-Content 'A:\\authorized_keys' -Raw
+
+if (-not (Get-LocalUser -Name \$user -ErrorAction SilentlyContinue)) {
+  \$securePassword = ConvertTo-SecureString \$password -AsPlainText -Force
+  New-LocalUser -Name \$user -Password \$securePassword -AccountNeverExpires -PasswordNeverExpires
+}
+
+Add-LocalGroupMember -Group 'Administrators' -Member \$user -ErrorAction SilentlyContinue
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType Automatic
+
+New-Item -ItemType Directory -Force -Path "C:\\Users\\\$user\\.ssh" | Out-Null
+Set-Content -Path "C:\\Users\\\$user\\.ssh\\authorized_keys" -Value \$sshKey -NoNewline
+
+icacls "C:\\Users\\\$user\\.ssh" /inheritance:r | Out-Null
+icacls "C:\\Users\\\$user\\.ssh" /grant "\${user}:(OI)(CI)F" | Out-Null
+icacls "C:\\Users\\\$user\\.ssh\\authorized_keys" /inheritance:r | Out-Null
+icacls "C:\\Users\\\$user\\.ssh\\authorized_keys" /grant "\${user}:F" | Out-Null
+netsh advfirewall firewall add rule name='OpenSSH Server (sshd)' dir=in action=allow protocol=TCP localport=22 | Out-Null
+EOF
+
+  cat "${SSH_PUB_KEY_PATH}" >"${key_path}"
+
+  cat >"${unattend_path}" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>en-US</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>en-US</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallToAvailablePartition>true</InstallToAvailablePartition>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+    </component>
+  </settings>
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>en-US</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="arm64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <AutoLogon>
+        <Enabled>true</Enabled>
+        <Username>${user}</Username>
+        <Password>
+          <Value>${password}</Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <LogonCount>2</LogonCount>
+      </AutoLogon>
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Work</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+      </OOBE>
+      <TimeZone>UTC</TimeZone>
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+            <Name>${user}</Name>
+            <Group>Administrators</Group>
+            <DisplayName>${user}</DisplayName>
+            <Password>
+              <Value>${password}</Value>
+              <PlainText>true</PlainText>
+            </Password>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+          <Order>1</Order>
+          <Description>Run AiLang guest bootstrap</Description>
+          <CommandLine>powershell -ExecutionPolicy Bypass -File A:\windows-firstboot.ps1</CommandLine>
+        </SynchronousCommand>
+      </FirstLogonCommands>
+    </component>
+  </settings>
+</unattend>
+EOF
+
+  rm -f "${iso_path}"
+  if command -v hdiutil >/dev/null 2>&1; then
+    hdiutil makehybrid -quiet -o "${iso_path}" "${guest_dir_path}" -iso -joliet -default-volume-name AUTOUNATTEND >/dev/null
+  elif command -v mkisofs >/dev/null 2>&1; then
+    mkisofs -quiet -output "${iso_path}" -volid AUTOUNATTEND -joliet -rock "${guest_dir_path}" >/dev/null 2>&1
+  elif command -v genisoimage >/dev/null 2>&1; then
+    genisoimage -quiet -output "${iso_path}" -volid AUTOUNATTEND -joliet -rock "${guest_dir_path}" >/dev/null 2>&1
+  else
+    echo "no ISO tool found; Windows autounattend ISO not created" >&2
+    return 1
+  fi
+
+  echo "wrote ${unattend_path}"
+  echo "wrote ${setup_path}"
+  echo "wrote ${iso_path}"
+}
+
 cmd_windows_run() {
   local vars_path serial_log_path
   load_config
@@ -392,6 +527,7 @@ cmd_windows_run() {
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
     ${AIVM_QEMU_WINDOWS_INSTALL_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_INSTALL_ISO}"} \
     ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
+    $( [[ -f "$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ) \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0
 }
@@ -437,6 +573,7 @@ cmd_windows_start() {
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_WINDOWS_IMAGE}" \
     ${AIVM_QEMU_WINDOWS_INSTALL_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_INSTALL_ISO}"} \
     ${AIVM_QEMU_WINDOWS_VIRTIO_ISO:+-drive if=virtio,media=cdrom,file="${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"} \
+    $( [[ -f "$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ]] && printf '%s ' -drive if=virtio,media=cdrom,file="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")/autounattend.iso" ) \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0 \
     -D "${log_path}"
@@ -560,6 +697,7 @@ Commands:
   linux-gui-bootstrap  Install and enable Linux desktop + GUI automation tools
   linux-gui-status     Show Linux guest desktop/session status
   windows-create-disk  Create Windows qcow2 disk
+  windows-unattend     Generate Windows unattended install seed ISO
   windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
   windows-stop         Stop Windows ARM guest
@@ -589,6 +727,7 @@ main() {
     linux-gui-bootstrap) cmd_linux_gui_bootstrap ;;
     linux-gui-status) cmd_linux_gui_status ;;
     windows-create-disk) cmd_windows_create_disk ;;
+    windows-unattend) cmd_windows_unattend ;;
     windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;
     windows-stop) cmd_windows_stop ;;

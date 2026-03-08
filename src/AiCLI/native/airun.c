@@ -9162,6 +9162,25 @@ static int parse_attr_span(const char* attrs, const char* key, char* out, size_t
     return 1;
 }
 
+static int parse_attr_value_is_quoted(const char* attrs, const char* key)
+{
+    char needle[64];
+    const char* pos;
+    const char* vstart;
+    if (attrs == NULL || key == NULL) {
+        return 0;
+    }
+    if (snprintf(needle, sizeof(needle), "%s=", key) >= (int)sizeof(needle)) {
+        return 0;
+    }
+    pos = strstr(attrs, needle);
+    if (pos == NULL) {
+        return 0;
+    }
+    vstart = pos + strlen(needle);
+    return *vstart == '"';
+}
+
 static int has_attr_key(const char* attrs, const char* key)
 {
     char needle[64];
@@ -9798,13 +9817,14 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
     }
     if (strcmp(node->kind, "Lit") == 0) {
         char value[256];
+        int value_is_quoted = parse_attr_value_is_quoted(node->attrs, "value");
         if (!parse_attr_span(node->attrs, "value", value, sizeof(value))) {
             return simple_fail("lit missing value");
         }
-        if (strcmp(value, "true") == 0 || strcmp(value, "false") == 0) {
+        if (!value_is_quoted && (strcmp(value, "true") == 0 || strcmp(value, "false") == 0)) {
             return simple_emit_instruction(program, AIVM_OP_PUSH_BOOL, (strcmp(value, "true") == 0) ? 1 : 0);
         }
-        {
+        if (!value_is_quoted) {
             char* end = NULL;
             long long parsed = strtoll(value, &end, 10);
             if (end != value && *end == '\0') {

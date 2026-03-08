@@ -99,6 +99,7 @@ The current working path on Apple Silicon is:
 ./scripts/qemu-lab.sh linux-create-disk
 ./scripts/qemu-lab.sh linux-start
 ./scripts/qemu-lab.sh linux-log-tail 40 serial
+./scripts/qemu-lab.sh linux-screendump .tmp/qemu-lab/linux-screen.ppm
 ./scripts/qemu-lab.sh linux-wait-ssh 120
 ./scripts/qemu-lab.sh linux-ssh
 ```
@@ -193,6 +194,7 @@ Once guest SSH is working, these should become normal flows:
 ```bash
 ./scripts/qemu-lab.sh windows-wait-ssh 300
 ./scripts/qemu-lab.sh windows-log-tail 80 serial
+./scripts/qemu-lab.sh windows-screendump .tmp/qemu-lab/windows-screen.ppm
 ./scripts/qemu-lab.sh windows-ssh
 ./scripts/qemu-lab.sh windows-exec pwd
 ```

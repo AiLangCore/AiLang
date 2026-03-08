@@ -108,6 +108,11 @@ guest_serial_log_path() {
   echo "$(guest_dir "${guest}")/serial.log"
 }
 
+guest_monitor_path() {
+  local guest="$1"
+  echo "$(guest_dir "${guest}")/monitor.sock"
+}
+
 guest_vars_path() {
   local guest="$1"
   echo "$(guest_dir "${guest}")/efi-vars.fd"
@@ -145,14 +150,27 @@ guest_stop() {
 
 guest_status() {
   local guest="$1"
-  local pid_path log_path
+  local pid_path log_path monitor_path
   pid_path="$(guest_pid_path "${guest}")"
   log_path="$(guest_log_path "${guest}")"
+  monitor_path="$(guest_monitor_path "${guest}")"
   if guest_is_running "${guest}"; then
-    echo "${guest}: running pid=$(cat "${pid_path}") log=${log_path}"
+    echo "${guest}: running pid=$(cat "${pid_path}") log=${log_path} monitor=${monitor_path}"
   else
-    echo "${guest}: stopped log=${log_path}"
+    echo "${guest}: stopped log=${log_path} monitor=${monitor_path}"
   fi
+}
+
+guest_monitor_send() {
+  local guest="$1" command="$2"
+  local monitor_path
+  monitor_path="$(guest_monitor_path "${guest}")"
+  require_cmd nc
+  if [[ ! -S "${monitor_path}" ]]; then
+    echo "missing monitor socket: ${monitor_path}" >&2
+    return 1
+  fi
+  printf '%s\n' "${command}" | nc -U "${monitor_path}" >/dev/null
 }
 
 ensure_guest_vars() {
@@ -319,7 +337,7 @@ cmd_linux_create_disk() {
 }
 
 cmd_linux_run() {
-  local vars_path guest_dir_path cloud_init_path serial_log_path
+  local vars_path guest_dir_path cloud_init_path serial_log_path monitor_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -330,6 +348,8 @@ cmd_linux_run() {
   guest_dir_path="$(guest_dir "${AIVM_QEMU_LINUX_NAME}")"
   cloud_init_path="${guest_dir_path}/cloud-init.iso"
   serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_LINUX_NAME}")"
+  monitor_path="$(guest_monitor_path "${AIVM_QEMU_LINUX_NAME}")"
+  rm -f "${monitor_path}"
 
   exec qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
@@ -343,6 +363,7 @@ cmd_linux_run() {
     -device usb-kbd \
     -device usb-tablet \
     -serial "file:${serial_log_path}" \
+    -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_LINUX_IMAGE}" \
@@ -353,7 +374,7 @@ cmd_linux_run() {
 }
 
 cmd_linux_start() {
-  local vars_path guest_dir_path cloud_init_path pid_path log_path serial_log_path
+  local vars_path guest_dir_path cloud_init_path pid_path log_path serial_log_path monitor_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -370,7 +391,9 @@ cmd_linux_start() {
   pid_path="$(guest_pid_path "${AIVM_QEMU_LINUX_NAME}")"
   log_path="$(guest_log_path "${AIVM_QEMU_LINUX_NAME}")"
   serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_LINUX_NAME}")"
+  monitor_path="$(guest_monitor_path "${AIVM_QEMU_LINUX_NAME}")"
   : >"${serial_log_path}"
+  rm -f "${monitor_path}"
 
   qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
@@ -386,6 +409,7 @@ cmd_linux_start() {
     -device usb-kbd \
     -device usb-tablet \
     -serial "file:${serial_log_path}" \
+    -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     -drive if=virtio,format=qcow2,file="${AIVM_QEMU_LINUX_IMAGE}" \
@@ -552,7 +576,7 @@ EOF
 }
 
 cmd_windows_run() {
-  local vars_path serial_log_path
+  local vars_path serial_log_path monitor_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -562,6 +586,8 @@ cmd_windows_run() {
   build_windows_storage_args
   vars_path="$(guest_vars_path "${AIVM_QEMU_WINDOWS_NAME}")"
   serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  monitor_path="$(guest_monitor_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  rm -f "${monitor_path}"
 
   exec qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
@@ -575,6 +601,7 @@ cmd_windows_run() {
     -device usb-kbd \
     -device usb-tablet \
     -serial "file:${serial_log_path}" \
+    -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     "${WINDOWS_STORAGE_ARGS[@]}" \
@@ -583,7 +610,7 @@ cmd_windows_run() {
 }
 
 cmd_windows_start() {
-  local vars_path pid_path log_path serial_log_path
+  local vars_path pid_path log_path serial_log_path monitor_path
   load_config
   ensure_dirs
   require_cmd qemu-system-aarch64
@@ -603,7 +630,9 @@ cmd_windows_start() {
   pid_path="$(guest_pid_path "${AIVM_QEMU_WINDOWS_NAME}")"
   log_path="$(guest_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
   serial_log_path="$(guest_serial_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
+  monitor_path="$(guest_monitor_path "${AIVM_QEMU_WINDOWS_NAME}")"
   : >"${serial_log_path}"
+  rm -f "${monitor_path}"
 
   qemu-system-aarch64 \
     -machine "${AIVM_QEMU_MACHINE},accel=${AIVM_QEMU_ACCEL}" \
@@ -619,6 +648,7 @@ cmd_windows_start() {
     -device usb-kbd \
     -device usb-tablet \
     -serial "file:${serial_log_path}" \
+    -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
     -drive if=pflash,format=raw,file="${vars_path}" \
     "${WINDOWS_STORAGE_ARGS[@]}" \
@@ -669,6 +699,36 @@ cmd_windows_log_tail() {
   local lines="${1:-40}" kind="${2:-qemu}"
   load_config
   cmd_guest_log_tail "${AIVM_QEMU_WINDOWS_NAME}" "${lines}" "${kind}"
+}
+
+cmd_guest_screendump() {
+  local guest="$1" out_path="${2:-}" dump_path
+  load_config
+  if [[ -z "${out_path}" ]]; then
+    out_path="${LAB_DIR}/${guest}-screen-$(timestamp_utc).ppm"
+  fi
+  mkdir -p "$(dirname "${out_path}")"
+  if [[ "${out_path}" = /* ]]; then
+    dump_path="${out_path}"
+  else
+    dump_path="${ROOT_DIR}/${out_path}"
+  fi
+  guest_monitor_send "${guest}" "screendump ${dump_path}"
+  if [[ ! -f "${out_path}" ]]; then
+    echo "missing screendump output: ${out_path}" >&2
+    return 1
+  fi
+  echo "wrote ${out_path}"
+}
+
+cmd_linux_screendump() {
+  load_config
+  cmd_guest_screendump "${AIVM_QEMU_LINUX_NAME}" "${1:-}"
+}
+
+cmd_windows_screendump() {
+  load_config
+  cmd_guest_screendump "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}"
 }
 
 cmd_guest_wait_ssh() {
@@ -983,6 +1043,7 @@ Commands:
   linux-run            Launch Linux ARM guest
   linux-stop           Stop Linux ARM guest
   linux-log-tail [lines] [qemu|serial] Tail Linux guest log
+  linux-screendump [path] Capture host-side QEMU framebuffer dump for Linux guest
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
@@ -1005,6 +1066,7 @@ Commands:
   windows-run          Launch Windows ARM guest
   windows-stop         Stop Windows ARM guest
   windows-log-tail [lines] [qemu|serial] Tail Windows guest log
+  windows-screendump [path] Capture host-side QEMU framebuffer dump for Windows guest
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
   windows-ssh          SSH into Windows guest on forwarded port
   windows-exec <cmd...> Run command inside Windows guest over SSH
@@ -1028,6 +1090,7 @@ main() {
     linux-run) cmd_linux_run ;;
     linux-stop) cmd_linux_stop ;;
     linux-log-tail) cmd_linux_log_tail "$@" ;;
+    linux-screendump) cmd_linux_screendump "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
@@ -1050,6 +1113,7 @@ main() {
     windows-run) cmd_windows_run ;;
     windows-stop) cmd_windows_stop ;;
     windows-log-tail) cmd_windows_log_tail "$@" ;;
+    windows-screendump) cmd_windows_screendump "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
     windows-ssh) cmd_windows_ssh ;;
     windows-exec) cmd_windows_exec "$@" ;;

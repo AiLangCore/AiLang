@@ -70,6 +70,10 @@ print_cmd_path() {
   echo "${name}=${path}"
 }
 
+timestamp_utc() {
+  date -u +"%Y%m%d-%H%M%S"
+}
+
 ensure_dirs() {
   mkdir -p "${LAB_DIR}" "${KEYS_DIR}" \
     "${LAB_DIR}/${AIVM_QEMU_LINUX_NAME}" \
@@ -170,6 +174,16 @@ guest_ssh_common() {
        "-o" "ConnectionAttempts=1" \
        "-i" "${SSH_KEY_PATH}" \
        "-p" "${port}"
+}
+
+guest_scp_common() {
+  local port="$1"
+  echo "-o" "StrictHostKeyChecking=no" \
+       "-o" "UserKnownHostsFile=/dev/null" \
+       "-o" "LogLevel=ERROR" \
+       "-o" "BatchMode=yes" \
+       "-i" "${SSH_KEY_PATH}" \
+       "-P" "${port}"
 }
 
 cmd_doctor() {
@@ -654,6 +668,103 @@ cmd_linux_gui_status() {
   '
 }
 
+cmd_linux_gui_screenshot() {
+  local out_path remote_path
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  require_cmd scp
+  out_path="${1:-${LAB_DIR}/${AIVM_QEMU_LINUX_NAME}-screenshot-$(timestamp_utc).png}"
+  remote_path="/tmp/ailang-qemu-shot-$$.png"
+  mkdir -p "$(dirname "${out_path}")"
+  # shellcheck disable=SC2048,SC2086
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "DISPLAY=:0 scrot '${remote_path}'"
+  # shellcheck disable=SC2048,SC2086
+  scp $(guest_scp_common "${AIVM_QEMU_LINUX_SSH_PORT}") \
+    "${AIVM_QEMU_LINUX_USER}@127.0.0.1:${remote_path}" "${out_path}" >/dev/null
+  # shellcheck disable=SC2048,SC2086
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "rm -f '${remote_path}'" >/dev/null
+  echo "wrote ${out_path}"
+}
+
+cmd_linux_gui_windows() {
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
+    set -euo pipefail
+    DISPLAY=:0 bash -lc '"'"'
+      ids=$(xdotool search --onlyvisible --name ".*" 2>/dev/null || true)
+      for id in $ids; do
+        name=$(xdotool getwindowname "$id" 2>/dev/null || true)
+        cls=$(xprop -id "$id" WM_CLASS 2>/dev/null | awk -F" = " "/WM_CLASS/ {print \$2}" || true)
+        if [[ -z "$name" && -z "$cls" ]]; then
+          continue
+        fi
+        printf "%s\t%s\t%s\n" "$id" "$name" "$cls"
+      done
+    '"'"'
+  '
+}
+
+cmd_linux_gui_focus() {
+  local target="${1:-}"
+  if [[ -z "${target}" ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-focus <window-id>" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "DISPLAY=:0 xdotool windowactivate --sync '${target}'"
+}
+
+cmd_linux_gui_key() {
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-key <key-sequence>" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "DISPLAY=:0 xdotool key --delay 50 $*"
+}
+
+cmd_linux_gui_type() {
+  local text="${1:-}"
+  if [[ -z "${text}" ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-type <text>" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "DISPLAY=:0 xdotool type --delay 30 -- '$text'"
+}
+
+cmd_linux_gui_click() {
+  local x="${1:-}" y="${2:-}" button="${3:-1}"
+  if [[ -z "${x}" || -z "${y}" ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-click <x> <y> [button]" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "DISPLAY=:0 xdotool mousemove --sync '${x}' '${y}' click '${button}'"
+}
+
 cmd_windows_ssh() {
   load_config
   ensure_ssh_key
@@ -696,6 +807,12 @@ Commands:
   linux-exec <cmd...>  Run command inside Linux guest over SSH
   linux-gui-bootstrap  Install and enable Linux desktop + GUI automation tools
   linux-gui-status     Show Linux guest desktop/session status
+  linux-gui-screenshot [path]  Capture guest screenshot and copy it to host
+  linux-gui-windows    List visible guest X11 windows
+  linux-gui-focus <id> Focus guest window by X11 window id
+  linux-gui-key <keys> Send xdotool key sequence to the guest
+  linux-gui-type <text> Type text into the focused guest window
+  linux-gui-click <x> <y> [button] Click inside the guest display
   windows-create-disk  Create Windows qcow2 disk
   windows-unattend     Generate Windows unattended install seed ISO
   windows-start        Launch Windows ARM guest in background
@@ -726,6 +843,12 @@ main() {
     linux-exec) cmd_linux_exec "$@" ;;
     linux-gui-bootstrap) cmd_linux_gui_bootstrap ;;
     linux-gui-status) cmd_linux_gui_status ;;
+    linux-gui-screenshot) cmd_linux_gui_screenshot "$@" ;;
+    linux-gui-windows) cmd_linux_gui_windows ;;
+    linux-gui-focus) cmd_linux_gui_focus "$@" ;;
+    linux-gui-key) cmd_linux_gui_key "$@" ;;
+    linux-gui-type) cmd_linux_gui_type "$@" ;;
+    linux-gui-click) cmd_linux_gui_click "$@" ;;
     windows-create-disk) cmd_windows_create_disk ;;
     windows-unattend) cmd_windows_unattend ;;
     windows-start) cmd_windows_start ;;

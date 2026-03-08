@@ -123,6 +123,20 @@ Current verified Linux guest checks:
 - `xdotool` works
 - `scrot` works
 
+Current repo-level Linux GUI helper commands:
+
+```bash
+./scripts/qemu-lab.sh linux-gui-status
+./scripts/qemu-lab.sh linux-gui-screenshot
+./scripts/qemu-lab.sh linux-gui-windows
+./scripts/qemu-lab.sh linux-gui-focus <window-id>
+./scripts/qemu-lab.sh linux-gui-key Ctrl+l
+./scripts/qemu-lab.sh linux-gui-type "hello"
+./scripts/qemu-lab.sh linux-gui-click 640 400
+```
+
+These are thin wrappers over guest-side `xdotool` and `scrot` running against `DISPLAY=:0`.
+
 ## Linux guest recommendation
 
 Use Linux first.

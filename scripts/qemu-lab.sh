@@ -173,6 +173,24 @@ guest_monitor_send() {
   printf '%s\n' "${command}" | nc -U "${monitor_path}" >/dev/null
 }
 
+cmd_linux_monitor() {
+  load_config
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-monitor <qemu-monitor-command>" >&2
+    return 1
+  fi
+  guest_monitor_send "${AIVM_QEMU_LINUX_NAME}" "$*"
+}
+
+cmd_windows_monitor() {
+  load_config
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh windows-monitor <qemu-monitor-command>" >&2
+    return 1
+  fi
+  guest_monitor_send "${AIVM_QEMU_WINDOWS_NAME}" "$*"
+}
+
 ensure_guest_vars() {
   local guest="$1"
   local dst
@@ -731,6 +749,24 @@ cmd_windows_screendump() {
   cmd_guest_screendump "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}"
 }
 
+cmd_linux_sendkey() {
+  load_config
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-sendkey <qemu-key-name>" >&2
+    return 1
+  fi
+  cmd_linux_monitor "sendkey $*"
+}
+
+cmd_windows_sendkey() {
+  load_config
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh windows-sendkey <qemu-key-name>" >&2
+    return 1
+  fi
+  cmd_windows_monitor "sendkey $*"
+}
+
 cmd_guest_wait_ssh() {
   local user="$1" port="$2" timeout="${3:-120}" name="$4"
   local end
@@ -1044,6 +1080,8 @@ Commands:
   linux-stop           Stop Linux ARM guest
   linux-log-tail [lines] [qemu|serial] Tail Linux guest log
   linux-screendump [path] Capture host-side QEMU framebuffer dump for Linux guest
+  linux-monitor <cmd...> Send raw QEMU monitor command to Linux guest
+  linux-sendkey <key>    Send QEMU key to Linux guest
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
@@ -1067,6 +1105,8 @@ Commands:
   windows-stop         Stop Windows ARM guest
   windows-log-tail [lines] [qemu|serial] Tail Windows guest log
   windows-screendump [path] Capture host-side QEMU framebuffer dump for Windows guest
+  windows-monitor <cmd...> Send raw QEMU monitor command to Windows guest
+  windows-sendkey <key>  Send QEMU key to Windows guest
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
   windows-ssh          SSH into Windows guest on forwarded port
   windows-exec <cmd...> Run command inside Windows guest over SSH
@@ -1091,6 +1131,8 @@ main() {
     linux-stop) cmd_linux_stop ;;
     linux-log-tail) cmd_linux_log_tail "$@" ;;
     linux-screendump) cmd_linux_screendump "$@" ;;
+    linux-monitor) cmd_linux_monitor "$@" ;;
+    linux-sendkey) cmd_linux_sendkey "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
@@ -1114,6 +1156,8 @@ main() {
     windows-stop) cmd_windows_stop ;;
     windows-log-tail) cmd_windows_log_tail "$@" ;;
     windows-screendump) cmd_windows_screendump "$@" ;;
+    windows-monitor) cmd_windows_monitor "$@" ;;
+    windows-sendkey) cmd_windows_sendkey "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
     windows-ssh) cmd_windows_ssh ;;
     windows-exec) cmd_windows_exec "$@" ;;

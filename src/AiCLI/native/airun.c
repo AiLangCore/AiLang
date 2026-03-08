@@ -8434,6 +8434,19 @@ static const char* aivm_opcode_name(AivmOpcode opcode)
     }
 }
 
+static const char* airun_value_type_name(AivmValueType type)
+{
+    switch (type) {
+        case AIVM_VAL_VOID: return "void";
+        case AIVM_VAL_INT: return "int";
+        case AIVM_VAL_BOOL: return "bool";
+        case AIVM_VAL_STRING: return "string";
+        case AIVM_VAL_BYTES: return "bytes";
+        case AIVM_VAL_NODE: return "node";
+        default: return "unknown";
+    }
+}
+
 static const char* infer_call_target(const AivmProgram* program, const AivmVm* vm)
 {
     size_t pc;
@@ -8611,6 +8624,9 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
     const char* detail = NULL;
     const char* detail_target = NULL;
     char detail_target_storage[128];
+    const char* stack_top0 = "empty";
+    const char* stack_top1 = "empty";
+    const char* stack_top2 = "empty";
     size_t pc = 0U;
     size_t display_pc = 0U;
     const AivmInstruction* inst = NULL;
@@ -8633,6 +8649,15 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
     }
     if (vm->error == AIVM_VM_ERR_SYSCALL) {
         phase = "syscall";
+        if (vm->stack_count > 0U) {
+            stack_top0 = airun_value_type_name(vm->stack[vm->stack_count - 1U].type);
+        }
+        if (vm->stack_count > 1U) {
+            stack_top1 = airun_value_type_name(vm->stack[vm->stack_count - 2U].type);
+        }
+        if (vm->stack_count > 2U) {
+            stack_top2 = airun_value_type_name(vm->stack[vm->stack_count - 3U].type);
+        }
     }
     if (program->instructions != NULL && display_pc < program->instruction_count) {
         inst = &program->instructions[display_pc];
@@ -8715,7 +8740,7 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
                 call_target != NULL &&
                 strcmp(detail_target, call_target) != 0) {
                 fprintf(stderr,
-                    "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s bytecodeTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
+                    "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s bytecodeTarget=%s stackTop0=%s stackTop1=%s stackTop2=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
                     typed_code,
                     phase,
                     function_name,
@@ -8724,6 +8749,9 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
                     opcode_name,
                     detail_target,
                     call_target,
+                    stack_top0,
+                    stack_top1,
+                    stack_top2,
                     vm_code,
                     vm_msg,
                     detail);

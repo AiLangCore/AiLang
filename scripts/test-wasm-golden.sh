@@ -4196,8 +4196,8 @@ if ! contains_fixed 'Err#err1(code=RUN101 message="ui bridge is not available on
   echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.getWindowSize unsupported runtime" >&2
   exit 1
 fi
-if ! contains_regex 'Err#err1\(code=AIVMS003 message="phase=syscall .*callTarget=sys.image.decodeToRgbaBase64 .*vmCode=AIVM010' "${IMAGE_RUNTIME_OUT}"; then
-  echo "wasm image runtime mismatch: expected deterministic syscall-missing diagnostic for sys.image.decodeToRgbaBase64 unsupported runtime" >&2
+if ! contains_fixed 'Err#err1(code=RUN101 message="sys.image.decodeToRgbaBase64 is not available on this target." nodeId=vm)' "${IMAGE_RUNTIME_OUT}"; then
+  echo "wasm image runtime mismatch: expected deterministic RUN101 diagnostic for sys.image.decodeToRgbaBase64 unsupported runtime" >&2
   exit 1
 fi
 

@@ -1,4 +1,5 @@
 Program#std_http_p1 {
+  Import#std_http_im0(path="./core.aos")
   Import#std_http_im1(path="./bytes.aos")
   Let#std_http_l1(name=httpHeaders) {
     Fn#std_http_f1(params=req) {
@@ -1024,6 +1025,56 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l29q1(name=httpResponseInfo) {
+    Fn#std_http_f20ha(params=responseText) {
+      Block#std_http_b26va {
+        Let#std_http_l29q2(name=base) { Call#std_http_c11ra(target=nodeEmpty) { Lit#std_http_i46ac0(value="Map") } }
+        Let#std_http_l29q3(name=withStatus) {
+          Call#std_http_c11rb(target=mapSet) {
+            Var#std_http_v60wa(name=base)
+            Lit#std_http_i46ac1(value="statusCode")
+            Call#std_http_c11rc(target=httpResponseStatusCode) { Var#std_http_v60wb(name=responseText) }
+          }
+        }
+        Let#std_http_l29q4(name=withContentType) {
+          Call#std_http_c11rd(target=mapSet) {
+            Var#std_http_v60wc(name=withStatus)
+            Lit#std_http_i46ac2(value="contentType")
+            Call#std_http_c11re(target=httpResponseHeaderGet) {
+              Var#std_http_v60wd(name=responseText)
+              Lit#std_http_i46ac3(value="Content-Type")
+              Lit#std_http_i46ac4(value="")
+            }
+          }
+        }
+        Let#std_http_l29q5(name=withLocation) {
+          Call#std_http_c11rf(target=mapSet) {
+            Var#std_http_v60we(name=withContentType)
+            Lit#std_http_i46ac5(value="redirectLocation")
+            Call#std_http_c11rg(target=httpResponseRedirectLocation) {
+              Var#std_http_v60wf(name=responseText)
+              Lit#std_http_i46ac6(value="")
+            }
+          }
+        }
+        Let#std_http_l29q6(name=withIsRedirect) {
+          Call#std_http_c11rh(target=mapSet) {
+            Var#std_http_v60wg(name=withLocation)
+            Lit#std_http_i46ac7(value="isRedirect")
+            Call#std_http_c11ri(target=httpResponseIsRedirect) { Var#std_http_v60wh(name=responseText) }
+          }
+        }
+        Return#std_http_r23oa {
+          Call#std_http_c11rj(target=mapSet) {
+            Var#std_http_v60wi(name=withIsRedirect)
+            Lit#std_http_i46ac8(value="body")
+            Call#std_http_c11rk(target=httpResponseBody) { Var#std_http_v60wj(name=responseText) }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l29r(name=httpResponseIsRedirect) {
     Fn#std_http_f20i(params=responseText) {
       Block#std_http_b26w {
@@ -1759,6 +1810,15 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l69(name=httpRequestAwaitInfo) {
+    Fn#std_http_f31(params=state) {
+      Block#std_http_b79 {
+        Let#std_http_l70(name=raw) { Call#std_http_c115(target=httpRequestAwait) { Var#std_http_v190(name=state) } }
+        Return#std_http_r55 { Call#std_http_c116(target=httpResponseInfo) { Var#std_http_v191(name=raw) } }
+      }
+    }
+  }
+
   Export#std_http_e1(name=httpHeaders)
   Export#std_http_e2(name=httpQuery)
   Export#std_http_e3(name=httpPath)
@@ -1791,6 +1851,7 @@ Program#std_http_p1 {
   Export#std_http_e30(name=httpResponseBodyBytes)
   Export#std_http_e31(name=httpResponseStatusCode)
   Export#std_http_e32(name=httpResponseHeaderGet)
+  Export#std_http_e32aa(name=httpResponseInfo)
   Export#std_http_e32a(name=httpResponseRedirectLocation)
   Export#std_http_e32b(name=httpResponseIsRedirect)
   Export#std_http_e33(name=httpRequestAwaitBody)
@@ -1799,4 +1860,5 @@ Program#std_http_p1 {
   Export#std_http_e36(name=httpRequestAwaitStatusCode)
   Export#std_http_e37(name=httpRequestAwaitHeaderGet)
   Export#std_http_e38(name=httpRequestFollowRedirects)
+  Export#std_http_e39(name=httpRequestAwaitInfo)
 }

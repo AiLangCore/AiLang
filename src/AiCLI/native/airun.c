@@ -8609,6 +8609,8 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
     const char* vm_code = "VM000";
     const char* vm_msg = "Unknown VM error.";
     const char* detail = NULL;
+    const char* detail_target = NULL;
+    char detail_target_storage[128];
     size_t pc = 0U;
     size_t display_pc = 0U;
     const AivmInstruction* inst = NULL;
@@ -8676,6 +8678,26 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
     }
 
     if (vm->error == AIVM_VM_ERR_SYSCALL && detail != NULL && detail[0] != '\0') {
+        {
+            const char* target_marker = strstr(detail, "target=");
+            if (target_marker != NULL) {
+                size_t target_len = 0U;
+                target_marker += strlen("target=");
+                while (target_marker[target_len] != '\0' &&
+                       !isspace((unsigned char)target_marker[target_len]) &&
+                       target_marker[target_len] != '"') {
+                    target_len += 1U;
+                }
+                if (target_len > 0U) {
+                    if (target_len >= sizeof(detail_target_storage)) {
+                        target_len = sizeof(detail_target_storage) - 1U;
+                    }
+                    memcpy(detail_target_storage, target_marker, target_len);
+                    detail_target_storage[target_len] = '\0';
+                    detail_target = detail_target_storage;
+                }
+            }
+        }
         memset(typed_code, 0, sizeof(typed_code));
         detail_colon = strchr(detail, ':');
         detail_slash = strchr(detail, '/');
@@ -8689,18 +8711,36 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
         if (code_len > 0U && code_len < sizeof(typed_code)) {
             memcpy(typed_code, detail, code_len);
             typed_code[code_len] = '\0';
-            fprintf(stderr,
-                "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
-                typed_code,
-                phase,
-                function_name,
-                (unsigned long long)display_pc,
-                node_id,
-                opcode_name,
-                (call_target == NULL) ? "unknown" : call_target,
-                vm_code,
-                vm_msg,
-                detail);
+            if (detail_target != NULL &&
+                call_target != NULL &&
+                strcmp(detail_target, call_target) != 0) {
+                fprintf(stderr,
+                    "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s bytecodeTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
+                    typed_code,
+                    phase,
+                    function_name,
+                    (unsigned long long)display_pc,
+                    node_id,
+                    opcode_name,
+                    detail_target,
+                    call_target,
+                    vm_code,
+                    vm_msg,
+                    detail);
+            } else {
+                fprintf(stderr,
+                    "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
+                    typed_code,
+                    phase,
+                    function_name,
+                    (unsigned long long)display_pc,
+                    node_id,
+                    opcode_name,
+                    (call_target == NULL) ? "unknown" : call_target,
+                    vm_code,
+                    vm_msg,
+                    detail);
+            }
             return 3;
         }
     }

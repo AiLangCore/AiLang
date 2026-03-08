@@ -710,6 +710,65 @@ cmd_linux_gui_windows() {
   '
 }
 
+cmd_linux_gui_find() {
+  local pattern="${1:-}"
+  if [[ -z "${pattern}" ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-find <pattern>" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
+    DISPLAY=:0 bash -lc '
+      xdotool search --onlyvisible --name \"${pattern}\" 2>/dev/null || true
+    '
+  "
+}
+
+cmd_linux_gui_wait() {
+  local pattern="${1:-}" timeout="${2:-15}"
+  if [[ -z "${pattern}" ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-wait <pattern> [timeout-seconds]" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
+    DISPLAY=:0 bash -lc '
+      end=\$((SECONDS + ${timeout}))
+      while (( SECONDS < end )); do
+        id=\$(xdotool search --onlyvisible --name \"${pattern}\" 2>/dev/null | head -n1 || true)
+        if [[ -n \"\$id\" ]]; then
+          echo \"\$id\"
+          exit 0
+        fi
+        sleep 1
+      done
+      exit 1
+    '
+  "
+}
+
+cmd_linux_gui_launch() {
+  local guest_cmd remote_cmd
+  if [[ $# -lt 1 ]]; then
+    echo "usage: scripts/qemu-lab.sh linux-gui-launch <command...>" >&2
+    return 1
+  fi
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  guest_cmd="$*"
+  remote_cmd="DISPLAY=:0 nohup ${guest_cmd} >/tmp/ailang-qemu-gui-launch.log 2>&1 </dev/null &"
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+    "bash -lc $(printf '%q' "$remote_cmd")"
+}
+
 cmd_linux_gui_focus() {
   local target="${1:-}"
   if [[ -z "${target}" ]]; then
@@ -809,6 +868,9 @@ Commands:
   linux-gui-status     Show Linux guest desktop/session status
   linux-gui-screenshot [path]  Capture guest screenshot and copy it to host
   linux-gui-windows    List visible guest X11 windows
+  linux-gui-find <pattern> Find visible guest windows by title regex
+  linux-gui-wait <pattern> [timeout] Wait for a visible guest window to appear
+  linux-gui-launch <cmd...> Launch a GUI app inside the guest
   linux-gui-focus <id> Focus guest window by X11 window id
   linux-gui-key <keys> Send xdotool key sequence to the guest
   linux-gui-type <text> Type text into the focused guest window
@@ -845,6 +907,9 @@ main() {
     linux-gui-status) cmd_linux_gui_status ;;
     linux-gui-screenshot) cmd_linux_gui_screenshot "$@" ;;
     linux-gui-windows) cmd_linux_gui_windows ;;
+    linux-gui-find) cmd_linux_gui_find "$@" ;;
+    linux-gui-wait) cmd_linux_gui_wait "$@" ;;
+    linux-gui-launch) cmd_linux_gui_launch "$@" ;;
     linux-gui-focus) cmd_linux_gui_focus "$@" ;;
     linux-gui-key) cmd_linux_gui_key "$@" ;;
     linux-gui-type) cmd_linux_gui_type "$@" ;;

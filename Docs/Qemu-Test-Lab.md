@@ -129,6 +129,9 @@ Current repo-level Linux GUI helper commands:
 ./scripts/qemu-lab.sh linux-gui-status
 ./scripts/qemu-lab.sh linux-gui-screenshot
 ./scripts/qemu-lab.sh linux-gui-windows
+./scripts/qemu-lab.sh linux-gui-find "XTerm"
+./scripts/qemu-lab.sh linux-gui-wait "CodexGuiSmoke" 10
+./scripts/qemu-lab.sh linux-gui-launch xterm -T CodexGuiSmoke
 ./scripts/qemu-lab.sh linux-gui-focus <window-id>
 ./scripts/qemu-lab.sh linux-gui-key Ctrl+l
 ./scripts/qemu-lab.sh linux-gui-type "hello"

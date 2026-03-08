@@ -1903,8 +1903,13 @@ Program#std_http_p1 {
                 }
               }
             }
-            Let#std_http_l50(name=responseBytes) { Call#std_http_c108(target=sys.net.async.resultBytes) { Var#std_http_v120(name=op) } }
-            Let#std_http_l50a(name=response) { Call#std_http_c49(target=toUtf8String) { Var#std_http_v120a(name=responseBytes) } }
+            Let#std_http_l50(name=responseBytesText) { Call#std_http_c108(target=sys.net.async.resultBytes) { Var#std_http_v120(name=op) } }
+            Let#std_http_l50a(name=response) { Call#std_http_c49(target=toUtf8String) { Var#std_http_v120a(name=responseBytesText) } }
+            Let#std_http_l50b(name=responseBytesBase64) {
+              Call#std_http_c49a(target=toBase64) {
+                Call#std_http_c108a(target=sys.net.async.resultBytes) { Var#std_http_v120b(name=op) }
+              }
+            }
             Call#std_http_c50(target=sys.net.tcp.close) { Var#std_http_v121(name=connection) }
             Return#std_http_r34 {
               Call#std_http_c51(target=httpMakeRequestState) {
@@ -1914,7 +1919,7 @@ Program#std_http_p1 {
                 Lit#std_http_i100(value=0)
                 Lit#std_http_i101(value=0)
                 Var#std_http_v124a(name=response)
-                Call#std_http_c51a(target=toBase64) { Var#std_http_v124(name=responseBytes) }
+                Var#std_http_v124(name=responseBytesBase64)
                 Lit#std_http_i102(value="")
                 Lit#std_http_i153(value=0)
               }

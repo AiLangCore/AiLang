@@ -129,6 +129,12 @@ static int native_image_decode_to_rgba_base64(
     size_t input_len,
     const char* mime_type,
     AivmValue* result);
+typedef enum {
+    AIRUN_LOG_OFF = 0,
+    AIRUN_LOG_ERROR = 1,
+    AIRUN_LOG_INFO = 2,
+    AIRUN_LOG_TRACE = 3
+} AirunLogLevel;
 typedef struct NativeNetAsyncState NativeNetAsyncState;
 static int native_syscall_net_start_op(
     const char* target,
@@ -143,6 +149,62 @@ static char g_native_open_url_test_scratch[1024];
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
+
+static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
+
+static const char* airun_log_level_name(AirunLogLevel level)
+{
+    switch (level) {
+        case AIRUN_LOG_ERROR: return "error";
+        case AIRUN_LOG_INFO: return "info";
+        case AIRUN_LOG_TRACE: return "trace";
+        default: return "off";
+    }
+}
+
+static AirunLogLevel airun_parse_log_level(const char* text)
+{
+    if (text == NULL || text[0] == '\0' || strcmp(text, "off") == 0) {
+        return AIRUN_LOG_OFF;
+    }
+    if (strcmp(text, "error") == 0) {
+        return AIRUN_LOG_ERROR;
+    }
+    if (strcmp(text, "info") == 0) {
+        return AIRUN_LOG_INFO;
+    }
+    if (strcmp(text, "trace") == 0 || strcmp(text, "debug") == 0) {
+        return AIRUN_LOG_TRACE;
+    }
+    return AIRUN_LOG_ERROR;
+}
+
+static void airun_configure_log_level(const char* cli_level)
+{
+    const char* env_level = getenv("AIVM_LOG_LEVEL");
+    if (cli_level != NULL && cli_level[0] != '\0') {
+        g_airun_log_level = airun_parse_log_level(cli_level);
+        return;
+    }
+    g_airun_log_level = airun_parse_log_level(env_level);
+}
+
+static void airun_log_message(AirunLogLevel level, const char* category, const char* fmt, ...)
+{
+    va_list args;
+    char message[512];
+    if (level > g_airun_log_level || level == AIRUN_LOG_OFF) {
+        return;
+    }
+    va_start(args, fmt);
+    (void)vsnprintf(message, sizeof(message), fmt, args);
+    va_end(args);
+    fprintf(stderr,
+        "aivm.log level=%s category=%s message=\"%s\"\n",
+        airun_log_level_name(level),
+        (category == NULL || category[0] == '\0') ? "runtime" : category,
+        message);
+}
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -2815,6 +2877,10 @@ static void native_net_async_set_success_int(NativeNetAsyncState* op, int64_t va
     op->status = 1;
     op->result_int = value;
     op->error[0] = '\0';
+    airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld kind=%d status=success-int value=%lld",
+        (long long)((op - g_native_net_async_ops) + 1),
+        op->kind,
+        (long long)value);
 }
 
 static void native_net_async_set_success_bytes(NativeNetAsyncState* op, const uint8_t* bytes, size_t len)
@@ -2841,6 +2907,10 @@ static void native_net_async_set_success_bytes(NativeNetAsyncState* op, const ui
     op->status = 1;
     op->result_int = 0;
     op->error[0] = '\0';
+    airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld kind=%d status=success-bytes len=%llu",
+        (long long)((op - g_native_net_async_ops) + 1),
+        op->kind,
+        (unsigned long long)len);
 }
 
 static void native_net_async_set_failure(NativeNetAsyncState* op, const char* message)
@@ -2856,6 +2926,10 @@ static void native_net_async_set_failure(NativeNetAsyncState* op, const char* me
     } else {
         (void)snprintf(op->error, sizeof(op->error), "%s", message);
     }
+    airun_log_message(AIRUN_LOG_ERROR, "net.async", "op=%lld kind=%d status=failure error=%s",
+        (long long)((op - g_native_net_async_ops) + 1),
+        op->kind,
+        op->error);
 }
 
 static void native_net_async_cancel_pending_socket(NativeNetAsyncState* op)
@@ -2881,6 +2955,8 @@ static void native_net_async_close_worker_socket(NativeNetAsyncState* op)
     }
 #endif
     if (op->worker_socket != NATIVE_INVALID_SOCKET) {
+        airun_log_message(AIRUN_LOG_TRACE, "net.async", "op=%lld closing-worker-socket",
+            (long long)((op - g_native_net_async_ops) + 1));
         native_socket_close(op->worker_socket);
         op->worker_socket = NATIVE_INVALID_SOCKET;
     }
@@ -2898,6 +2974,12 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
         return;
     }
     op = ctx->op;
+    airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld worker-start host=%s port=%d tls=%d gen=%llu",
+        (long long)((op - g_native_net_async_ops) + 1),
+        ctx->host,
+        ctx->port,
+        ctx->use_tls,
+        (unsigned long long)ctx->generation);
     worker_error[0] = '\0';
     if (!native_net_platform_init() ||
         ctx->port <= 0 || ctx->port > 65535 ||
@@ -2948,6 +3030,12 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
     worker_result_status = 1;
 finalize:
     if (op->used == 0 || op->generation != ctx->generation || op->canceled != 0) {
+        airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld worker-discarded used=%d canceled=%d gen=%llu expected=%llu",
+            (long long)((op - g_native_net_async_ops) + 1),
+            op->used,
+            op->canceled,
+            (unsigned long long)op->generation,
+            (unsigned long long)ctx->generation);
 #ifdef __APPLE__
         if (tls_state != NULL) {
             native_tls_stream_destroy((NativeTlsStreamState*)tls_state);
@@ -2964,6 +3052,10 @@ finalize:
     op->worker_socket = socket_fd;
     op->worker_tls_state = tls_state;
     op->worker_done = 1;
+    airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld worker-finished result=%d error=%s",
+        (long long)((op - g_native_net_async_ops) + 1),
+        worker_result_status,
+        worker_error);
 }
 
 #ifdef _WIN32
@@ -3041,6 +3133,8 @@ static void native_net_async_maybe_finalize_worker(NativeNetAsyncState* op)
         return;
     }
     if (op->worker_done != 0 && op->worker_joined == 0) {
+        airun_log_message(AIRUN_LOG_TRACE, "net.async", "op=%lld finalize-worker",
+            (long long)((op - g_native_net_async_ops) + 1));
         native_net_async_finalize_connect_worker(op);
     }
 }
@@ -3052,6 +3146,11 @@ static void native_net_async_process(NativeNetAsyncState* op)
     if (op == NULL || op->status != 0) {
         return;
     }
+    airun_log_message(AIRUN_LOG_TRACE, "net.async", "op=%lld process kind=%d status=%d socket=%lld",
+        (long long)((op - g_native_net_async_ops) + 1),
+        op->kind,
+        op->status,
+        (long long)op->socket_handle);
     if (op->kind == 1) {
         native_net_async_maybe_finalize_worker(op);
         if (op->status != 0) {
@@ -5162,6 +5261,7 @@ static int native_syscall_net_async_poll(
     }
     op = native_net_async_lookup(args[0].int_value);
     if (op != NULL && op->status == 0) {
+        airun_log_message(AIRUN_LOG_TRACE, "net.async", "op=%lld poll-enter", (long long)args[0].int_value);
         native_net_async_process(op);
         if (op->status == 0) {
 #ifdef _WIN32
@@ -5196,6 +5296,7 @@ static int native_syscall_net_async_cancel(
         return AIVM_SYSCALL_OK;
     }
     op->canceled = 1;
+    airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld cancel", (long long)args[0].int_value);
     native_net_async_maybe_finalize_worker(op);
     native_net_async_cancel_pending_socket(op);
     native_net_async_release_pending_bytes(op);
@@ -5362,6 +5463,12 @@ static int native_syscall_net_start_op(
         op->canceled = 0;
         op->worker_socket = NATIVE_INVALID_SOCKET;
         op->worker_tls_state = NULL;
+        airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld start target=%s host=%s port=%d tls=%d",
+            (long long)op_handle,
+            target,
+            op->host,
+            op->port,
+            op->use_tls);
         worker_ctx = (NativeNetAsyncConnectWorkerContext*)calloc(1U, sizeof(*worker_ctx));
         if (worker_ctx == NULL) {
             native_net_async_set_failure(op, op->use_tls ? "connect_tls_failed" : "connect_failed");
@@ -5404,6 +5511,11 @@ static int native_syscall_net_start_op(
         op->kind = 2;
         op->socket_handle = args[0].int_value;
         op->max_bytes = (int)args[1].int_value;
+        airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld start target=%s socket=%lld maxBytes=%d",
+            (long long)op_handle,
+            target,
+            (long long)op->socket_handle,
+            op->max_bytes);
         native_net_async_process(op);
     } else if (strcmp(target, "sys.net.tcp.writeStart") == 0) {
         NativeNetHandleState* state;
@@ -5423,6 +5535,11 @@ static int native_syscall_net_start_op(
         }
         op->kind = 3;
         op->socket_handle = args[0].int_value;
+        airun_log_message(AIRUN_LOG_INFO, "net.async", "op=%lld start target=%s socket=%lld pendingBytes=%llu",
+            (long long)op_handle,
+            target,
+            (long long)op->socket_handle,
+            (unsigned long long)args[1].bytes_value.length);
         if (args[1].bytes_value.length > 0U && args[1].bytes_value.data != NULL) {
             op->pending_bytes = (uint8_t*)malloc(args[1].bytes_value.length);
             if (op->pending_bytes == NULL) {
@@ -11750,6 +11867,7 @@ typedef struct {
     int app_arg_start;
     int app_arg_count;
     int use_cache;
+    const char* log_level;
 } RunTarget;
 
 static int derive_build_out_dir(const char* program_input, char* out_dir, size_t out_dir_len);
@@ -11766,6 +11884,7 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
     const char* program_path = NULL;
     int app_arg_start = -1;
     int use_cache = 1;
+    const char* log_level = NULL;
 
     if (out_target == NULL) {
         return 2;
@@ -11780,6 +11899,20 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
         }
         if (strcmp(arg, "--no-cache") == 0 && app_arg_start < 0) {
             use_cache = 0;
+            continue;
+        }
+        if (strcmp(arg, "--log-level") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
+                return 2;
+            }
+            log_level = argv[i + 1];
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--log-level=") && app_arg_start < 0) {
+            log_level = arg + 12;
             continue;
         }
         if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
@@ -11814,6 +11947,7 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
         out_target->app_arg_count = 0;
     }
     out_target->use_cache = use_cache;
+    out_target->log_level = log_level;
     return 0;
 }
 
@@ -11869,6 +12003,7 @@ static int handle_run(int argc, char** argv)
     if (parse_rc != 0) {
         return parse_rc;
     }
+    airun_configure_log_level(target.log_level);
 
     if (target.program_path != NULL &&
         !ends_with(target.program_path, ".aibc1") &&
@@ -11921,6 +12056,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         int i;
         const char* out_dir = NULL;
         const char* debug_mode = "off";
+        const char* log_level = NULL;
         NativeDebugOptions debug_options;
         int rc;
         char config_path[PATH_MAX];
@@ -11961,6 +12097,20 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
             }
             if (starts_with(arg, "--debug-mode=") && app_arg_start < 0) {
                 debug_mode = arg + 13;
+                continue;
+            }
+            if (strcmp(arg, "--log-level") == 0 && app_arg_start < 0) {
+                if ((i + 1) >= argc) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                log_level = argv[i + 1];
+                i += 1;
+                continue;
+            }
+            if (starts_with(arg, "--log-level=") && app_arg_start < 0) {
+                log_level = arg + 12;
                 continue;
             }
             if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
@@ -12008,6 +12158,20 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
                     debug_mode = arg + 13;
                     continue;
                 }
+                if (strcmp(arg, "--log-level") == 0) {
+                    if ((i + 1) >= argc) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
+                        return 2;
+                    }
+                    log_level = argv[i + 1];
+                    i += 1;
+                    continue;
+                }
+                if (starts_with(arg, "--log-level=")) {
+                    log_level = arg + 12;
+                    continue;
+                }
                 if (starts_with(arg, "--vm=")) {
                     const char* mode = arg + 5;
                     if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
@@ -12027,6 +12191,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         if (app_arg_start < 0 || app_arg_start > argc) {
             app_arg_start = argc;
         }
+        airun_configure_log_level(log_level);
         if (out_dir != NULL) {
             debug_options.emit_bundle = 1;
             debug_options.out_dir = out_dir;

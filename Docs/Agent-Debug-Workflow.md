@@ -34,6 +34,12 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 ./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
 ```
 
+5. When a debug command needs both tool flags and compiled-app argv, put app argv after `--`:
+
+```bash
+./tools/airun debug capture run ./src/AiVectra.Cli/app.aibc1 --out .artifacts/debug/aivectra-cli -- debug snapshot
+```
+
 5. CI-parity local path:
 
 ```bash
@@ -50,3 +56,5 @@ Each debug capture run writes one directory with deterministic files:
 - `state_snapshots.toml`: stack/locals/env snapshots
 
 When interactive behavior is required, prefer runtime-owned injected events over external UI scripting so the captured artifact and the executed interaction stay in the same debug surface.
+
+When compiled-app argv are present, treat `--` as mandatory delimiter between debug-tool flags and app argv so higher-layer CLIs can preserve indefinite subcommand depth.

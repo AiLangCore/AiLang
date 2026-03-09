@@ -16,6 +16,8 @@ Current:
 - `run` supports deterministic build cache bypass and compiled-app argv passthrough:
   - `airun run <program|project-dir> [--no-cache] [--] [app-args...]`
   - higher-layer compiled CLIs must preserve indefinite subcommand depth in app argv
+- For `debug * run`, place app argv after `--` once any native debug flags (`--out`, `--log-level`, injected input) are present:
+  - `airun debug capture run <app.aibc1> --out <dir> -- debug snapshot`
 - `clean` command clears native build cache for a project: `airun clean [program|project-dir]`.
 - Canonical higher-layer CLI option syntax is GNU-style `--full-name` / `-f`; slash-prefixed flags are not part of the AiVectra CLI contract.
 - Source/project `run` compiles through native C paths only (no backend delegation).

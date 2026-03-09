@@ -105,6 +105,7 @@ static int dirname_of(const char* path, char* out, size_t out_len);
 static int simple_resolve_path(const char* base_file, const char* import_path, char* out_path, size_t out_path_len);
 static int simple_fail(const char* message);
 static int simple_failf(const char* fmt, ...);
+static int starts_with(const char* value, const char* prefix);
 static const char* native_build_error(void);
 static AivmVm* g_native_active_vm;
 static int native_vm_append_host_node(
@@ -149,6 +150,12 @@ typedef struct {
     size_t count;
     size_t next_index;
 } AirunInjectedEventQueue;
+typedef struct {
+    int enabled;
+    int eof_reached;
+    char pending[2048];
+    size_t pending_len;
+} AirunInteractState;
 static int native_syscall_net_start_op(
     const char* target,
     const AivmValue* args,
@@ -167,6 +174,7 @@ static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
 static FILE* g_airun_log_file = NULL;
 static AirunInjectedClick g_airun_injected_click = {0, 0, 0, 0};
 static AirunInjectedEventQueue g_airun_injected_events = {{{0}}, 0U, 0U};
+static AirunInteractState g_airun_interact_state = {0, 0, {0}, 0U};
 static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size);
 
 static const char* airun_log_level_name(AirunLogLevel level)
@@ -415,6 +423,7 @@ static void airun_reset_injected_events(void)
 {
     memset(&g_airun_injected_click, 0, sizeof(g_airun_injected_click));
     memset(&g_airun_injected_events, 0, sizeof(g_airun_injected_events));
+    memset(&g_airun_interact_state, 0, sizeof(g_airun_interact_state));
 }
 
 static int airun_queue_injected_event(const NativeHostUiEvent* event)
@@ -485,6 +494,110 @@ static int airun_pop_injected_event(NativeHostUiEvent* out_event)
     *out_event = g_airun_injected_events.events[g_airun_injected_events.next_index];
     g_airun_injected_events.next_index += 1U;
     return 1;
+}
+
+static void airun_compact_injected_events(void)
+{
+    size_t remaining;
+    if (g_airun_injected_events.next_index == 0U) {
+        return;
+    }
+    if (g_airun_injected_events.next_index >= g_airun_injected_events.count) {
+        g_airun_injected_events.count = 0U;
+        g_airun_injected_events.next_index = 0U;
+        return;
+    }
+    remaining = g_airun_injected_events.count - g_airun_injected_events.next_index;
+    memmove(
+        g_airun_injected_events.events,
+        &g_airun_injected_events.events[g_airun_injected_events.next_index],
+        remaining * sizeof(g_airun_injected_events.events[0]));
+    g_airun_injected_events.count = remaining;
+    g_airun_injected_events.next_index = 0U;
+}
+
+static int airun_parse_interact_line(const char* line)
+{
+    int x = 0;
+    int y = 0;
+    if (line == NULL) {
+        return 1;
+    }
+    while (*line == ' ' || *line == '\t') {
+        line += 1;
+    }
+    if (*line == '\0' || *line == '#') {
+        return 1;
+    }
+    if (starts_with(line, "click ")) {
+        if (!airun_parse_click_point(line + 6, &x, &y)) {
+            return 0;
+        }
+        return airun_queue_injected_click(x, y);
+    }
+    if (starts_with(line, "key ")) {
+        return airun_queue_injected_key(line + 4, "");
+    }
+    if (starts_with(line, "text ")) {
+        return airun_queue_injected_text(line + 5);
+    }
+    if (strcmp(line, "enter") == 0) {
+        return airun_queue_injected_key("enter", "");
+    }
+    if (strcmp(line, "backspace") == 0) {
+        return airun_queue_injected_key("backspace", "");
+    }
+    if (strcmp(line, "quit") == 0 || strcmp(line, "exit") == 0) {
+        g_airun_interact_state.eof_reached = 1;
+        return 1;
+    }
+    return 0;
+}
+
+static void airun_interact_drain_stdin(void)
+{
+#ifdef _WIN32
+    (void)g_airun_interact_state;
+#else
+    fd_set readfds;
+    struct timeval timeout;
+    char buffer[256];
+    ssize_t read_count;
+    size_t i;
+    if (!g_airun_interact_state.enabled || g_airun_interact_state.eof_reached) {
+        return;
+    }
+    while (1) {
+        FD_ZERO(&readfds);
+        FD_SET(STDIN_FILENO, &readfds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        if (select(STDIN_FILENO + 1, &readfds, NULL, NULL, &timeout) <= 0) {
+            break;
+        }
+        read_count = read(STDIN_FILENO, buffer, sizeof(buffer));
+        if (read_count <= 0) {
+            g_airun_interact_state.eof_reached = 1;
+            break;
+        }
+        for (i = 0U; i < (size_t)read_count; i += 1U) {
+            char ch = buffer[i];
+            if (ch == '\r') {
+                continue;
+            }
+            if (ch == '\n') {
+                g_airun_interact_state.pending[g_airun_interact_state.pending_len] = '\0';
+                (void)airun_parse_interact_line(g_airun_interact_state.pending);
+                g_airun_interact_state.pending_len = 0U;
+                continue;
+            }
+            if (g_airun_interact_state.pending_len + 1U < sizeof(g_airun_interact_state.pending)) {
+                g_airun_interact_state.pending[g_airun_interact_state.pending_len++] = ch;
+            }
+        }
+    }
+#endif
+    airun_compact_injected_events();
 }
 
 static int ends_with(const char* value, const char* suffix)
@@ -1680,6 +1793,7 @@ static void print_usage(void)
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
         "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
         "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
+        "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -7037,6 +7151,7 @@ static int native_syscall_ui_poll_event(
         }
         memset(&event, 0, sizeof(event));
         (void)snprintf(event.type, sizeof(event.type), "none");
+        airun_interact_drain_stdin();
         if (airun_pop_injected_event(&event)) {
             airun_log_message(
                 AIRUN_LOG_INFO,
@@ -12385,7 +12500,8 @@ static int handle_debug_run_mode(
     int start_index,
     const char* default_log_level,
     int default_emit_bundle,
-    const char* default_out_dir)
+    const char* default_out_dir,
+    int interact_mode)
 {
     const char* program_path = NULL;
     int app_arg_start = -1;
@@ -12401,6 +12517,7 @@ static int handle_debug_run_mode(
     debug_options.input_path = NULL;
     debug_options.debug_mode = "off";
     airun_reset_injected_events();
+    g_airun_interact_state.enabled = interact_mode;
 
     for (i = start_index; i < argc; i += 1) {
         const char* arg = argv[i];
@@ -12550,6 +12667,9 @@ static int handle_debug_run_mode(
         debug_options.input_path = program_path;
     }
     debug_options.debug_mode = debug_mode;
+    if (interact_mode) {
+        airun_interact_drain_stdin();
+    }
     rc = run_via_resolved_input(
         program_path,
         (const char* const*)&argv[app_arg_start],
@@ -12567,16 +12687,19 @@ static int handle_debug_run_mode(
 static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
-        return handle_debug_run_mode(argc, argv, 3, NULL, 0, NULL);
+        return handle_debug_run_mode(argc, argv, 3, NULL, 0, NULL, 0);
     }
     if (argc >= 4 && strcmp(argv[2], "trace") == 0 && strcmp(argv[3], "run") == 0) {
-        return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL);
+        return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL, 0);
     }
     if (argc >= 4 && strcmp(argv[2], "capture") == 0 && strcmp(argv[3], "run") == 0) {
-        return handle_debug_run_mode(argc, argv, 4, "trace", 1, ".artifacts/debug/native-capture");
+        return handle_debug_run_mode(argc, argv, 4, "trace", 1, ".artifacts/debug/native-capture", 0);
+    }
+    if (argc >= 4 && strcmp(argv[2], "interact") == 0 && strcmp(argv[3], "run") == 0) {
+        return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL, 1);
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>\" nodeId=command)\n");
     return 2;
 }
 

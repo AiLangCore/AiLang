@@ -144,6 +144,11 @@ typedef struct {
     int x;
     int y;
 } AirunInjectedClick;
+typedef struct {
+    NativeHostUiEvent events[256];
+    size_t count;
+    size_t next_index;
+} AirunInjectedEventQueue;
 static int native_syscall_net_start_op(
     const char* target,
     const AivmValue* args,
@@ -161,6 +166,7 @@ static char g_native_open_url_test_scratch[1024];
 static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
 static FILE* g_airun_log_file = NULL;
 static AirunInjectedClick g_airun_injected_click = {0, 0, 0, 0};
+static AirunInjectedEventQueue g_airun_injected_events = {{{0}}, 0U, 0U};
 static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size);
 
 static const char* airun_log_level_name(AirunLogLevel level)
@@ -402,6 +408,82 @@ static int airun_parse_click_point(const char* text, int* out_x, int* out_y)
     }
     *out_x = (int)parsed_x;
     *out_y = (int)parsed_y;
+    return 1;
+}
+
+static void airun_reset_injected_events(void)
+{
+    memset(&g_airun_injected_click, 0, sizeof(g_airun_injected_click));
+    memset(&g_airun_injected_events, 0, sizeof(g_airun_injected_events));
+}
+
+static int airun_queue_injected_event(const NativeHostUiEvent* event)
+{
+    if (event == NULL) {
+        return 0;
+    }
+    if (g_airun_injected_events.count >= (sizeof(g_airun_injected_events.events) / sizeof(g_airun_injected_events.events[0]))) {
+        return 0;
+    }
+    g_airun_injected_events.events[g_airun_injected_events.count] = *event;
+    g_airun_injected_events.count += 1U;
+    return 1;
+}
+
+static int airun_queue_injected_click(int x, int y)
+{
+    NativeHostUiEvent event;
+    memset(&event, 0, sizeof(event));
+    (void)snprintf(event.type, sizeof(event.type), "click");
+    event.x = x;
+    event.y = y;
+    return airun_queue_injected_event(&event);
+}
+
+static int airun_queue_injected_key(const char* key_name, const char* text_value)
+{
+    NativeHostUiEvent event;
+    memset(&event, 0, sizeof(event));
+    (void)snprintf(event.type, sizeof(event.type), "key");
+    event.x = -1;
+    event.y = -1;
+    if (key_name != NULL) {
+        (void)snprintf(event.key, sizeof(event.key), "%s", key_name);
+    }
+    if (text_value != NULL) {
+        (void)snprintf(event.text, sizeof(event.text), "%s", text_value);
+    }
+    return airun_queue_injected_event(&event);
+}
+
+static int airun_queue_injected_text(const char* text)
+{
+    size_t i = 0U;
+    if (text == NULL) {
+        return 0;
+    }
+    while (text[i] != '\0') {
+        char key_text[2];
+        key_text[0] = text[i];
+        key_text[1] = '\0';
+        if (!airun_queue_injected_key(key_text, key_text)) {
+            return 0;
+        }
+        i += 1U;
+    }
+    return 1;
+}
+
+static int airun_pop_injected_event(NativeHostUiEvent* out_event)
+{
+    if (out_event == NULL) {
+        return 0;
+    }
+    if (g_airun_injected_events.next_index >= g_airun_injected_events.count) {
+        return 0;
+    }
+    *out_event = g_airun_injected_events.events[g_airun_injected_events.next_index];
+    g_airun_injected_events.next_index += 1U;
     return 1;
 }
 
@@ -1595,9 +1677,9 @@ static void print_usage(void)
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>]\n"
-        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>]\n"
-        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
+        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
+        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -6955,18 +7037,17 @@ static int native_syscall_ui_poll_event(
         }
         memset(&event, 0, sizeof(event));
         (void)snprintf(event.type, sizeof(event.type), "none");
-        if (g_airun_injected_click.enabled && !g_airun_injected_click.consumed) {
-            (void)snprintf(event.type, sizeof(event.type), "click");
-            event.x = g_airun_injected_click.x;
-            event.y = g_airun_injected_click.y;
-            g_airun_injected_click.consumed = 1;
+        if (airun_pop_injected_event(&event)) {
             airun_log_message(
                 AIRUN_LOG_INFO,
                 "debug",
-                "inject-click handle=%lld x=%d y=%d",
+                "inject-event handle=%lld type=%s x=%d y=%d key=%s text=%s",
                 (long long)args[0].int_value,
+                event.type,
                 event.x,
-                event.y);
+                event.y,
+                event.key,
+                event.text);
         } else if (!native_host_ui_poll_event(args[0].int_value, &event)) {
             if (g_native_active_vm != NULL) {
                 (void)snprintf(
@@ -8913,9 +8994,6 @@ struct NativeDebugOptions {
     const char* out_dir;
     const char* input_path;
     const char* debug_mode;
-    int inject_click_enabled;
-    int inject_click_x;
-    int inject_click_y;
 };
 
 static const char* aivm_opcode_name(AivmOpcode opcode)
@@ -12256,10 +12334,7 @@ static int handle_run(int argc, char** argv)
         return parse_rc;
     }
     airun_configure_log_level(target.log_level);
-    g_airun_injected_click.enabled = 0;
-    g_airun_injected_click.consumed = 0;
-    g_airun_injected_click.x = 0;
-    g_airun_injected_click.y = 0;
+    airun_reset_injected_events();
 
     if (target.program_path != NULL &&
         !ends_with(target.program_path, ".aibc1") &&
@@ -12325,9 +12400,7 @@ static int handle_debug_run_mode(
     debug_options.out_dir = NULL;
     debug_options.input_path = NULL;
     debug_options.debug_mode = "off";
-    debug_options.inject_click_enabled = 0;
-    debug_options.inject_click_x = 0;
-    debug_options.inject_click_y = 0;
+    airun_reset_injected_events();
 
     for (i = start_index; i < argc; i += 1) {
         const char* arg = argv[i];
@@ -12383,33 +12456,65 @@ static int handle_debug_run_mode(
             continue;
         }
         if (strcmp(arg, "--inject-click") == 0 && app_arg_start < 0) {
+            int x = 0;
+            int y = 0;
             if ((i + 1) >= argc) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Missing --inject-click value.\" nodeId=argv)\n");
                 return 2;
             }
-            if (!airun_parse_click_point(
-                    argv[i + 1],
-                    &debug_options.inject_click_x,
-                    &debug_options.inject_click_y)) {
+            if (!airun_parse_click_point(argv[i + 1], &x, &y) ||
+                !airun_queue_injected_click(x, y)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Invalid --inject-click value. Expected x,y.\" nodeId=argv)\n");
                 return 2;
             }
-            debug_options.inject_click_enabled = 1;
             i += 1;
             continue;
         }
         if (starts_with(arg, "--inject-click=") && app_arg_start < 0) {
-            if (!airun_parse_click_point(
-                    arg + 15,
-                    &debug_options.inject_click_x,
-                    &debug_options.inject_click_y)) {
+            int x = 0;
+            int y = 0;
+            if (!airun_parse_click_point(arg + 15, &x, &y) ||
+                !airun_queue_injected_click(x, y)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Invalid --inject-click value. Expected x,y.\" nodeId=argv)\n");
                 return 2;
             }
-            debug_options.inject_click_enabled = 1;
+            continue;
+        }
+        if (strcmp(arg, "--inject-key") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc || !airun_queue_injected_key(argv[i + 1], "")) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing or invalid --inject-key value.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--inject-key=") && app_arg_start < 0) {
+            if (!airun_queue_injected_key(arg + 13, "")) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid --inject-key value.\" nodeId=argv)\n");
+                return 2;
+            }
+            continue;
+        }
+        if (strcmp(arg, "--inject-text") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc || !airun_queue_injected_text(argv[i + 1])) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing or invalid --inject-text value.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--inject-text=") && app_arg_start < 0) {
+            if (!airun_queue_injected_text(arg + 14)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid --inject-text value.\" nodeId=argv)\n");
+                return 2;
+            }
             continue;
         }
         if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
@@ -12440,10 +12545,6 @@ static int handle_debug_run_mode(
         app_arg_start = argc;
     }
     airun_configure_log_level(log_level);
-    g_airun_injected_click.enabled = debug_options.inject_click_enabled;
-    g_airun_injected_click.consumed = 0;
-    g_airun_injected_click.x = debug_options.inject_click_x;
-    g_airun_injected_click.y = debug_options.inject_click_y;
     if (debug_options.emit_bundle && out_dir != NULL) {
         debug_options.out_dir = out_dir;
         debug_options.input_path = program_path;

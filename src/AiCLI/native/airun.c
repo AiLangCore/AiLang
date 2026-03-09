@@ -2998,6 +2998,16 @@ static void native_net_async_finalize_connect_worker(NativeNetAsyncState* op)
     native_net_async_set_success_int(op, handle);
 }
 
+static void native_net_async_maybe_finalize_worker(NativeNetAsyncState* op)
+{
+    if (op == NULL || op->kind != 1) {
+        return;
+    }
+    if (op->worker_done != 0 && op->worker_joined == 0) {
+        native_net_async_finalize_connect_worker(op);
+    }
+}
+
 static void native_net_async_process(NativeNetAsyncState* op)
 {
     NativeNetHandleState* state;
@@ -3009,9 +3019,7 @@ static void native_net_async_process(NativeNetAsyncState* op)
         return;
     }
     if (op->kind == 1) {
-        if (op->worker_done != 0) {
-            native_net_async_finalize_connect_worker(op);
-        }
+        native_net_async_maybe_finalize_worker(op);
         if (op->status != 0) {
             return;
         }
@@ -5147,9 +5155,7 @@ static int native_syscall_net_async_cancel(
         return AIVM_SYSCALL_OK;
     }
     op->canceled = 1;
-    if (op->kind == 1 && op->worker_done != 0) {
-        native_net_async_finalize_connect_worker(op);
-    }
+    native_net_async_maybe_finalize_worker(op);
     native_net_async_cancel_pending_socket(op);
     native_net_async_release_pending_bytes(op);
     op->status = -2;
@@ -5179,6 +5185,7 @@ static int native_syscall_net_async_await(
     }
     while (op->status == 0) {
         native_net_async_process(op);
+        native_net_async_maybe_finalize_worker(op);
         if (op->status != 0) {
             break;
         }
@@ -5188,6 +5195,7 @@ static int native_syscall_net_async_await(
         usleep(1000);
 #endif
     }
+    native_net_async_maybe_finalize_worker(op);
     *result = aivm_value_int((int64_t)op->status);
     return AIVM_SYSCALL_OK;
 }
@@ -5208,6 +5216,7 @@ static int native_syscall_net_async_result_int(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     op = native_net_async_lookup(args[0].int_value);
+    native_net_async_maybe_finalize_worker(op);
     *result = aivm_value_int((op == NULL || op->status != 1) ? 0 : op->result_int);
     return AIVM_SYSCALL_OK;
 }
@@ -5228,6 +5237,7 @@ static int native_syscall_net_async_result_bytes(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     op = native_net_async_lookup(args[0].int_value);
+    native_net_async_maybe_finalize_worker(op);
     if (op == NULL || op->status != 1 || op->result_bytes == NULL || op->result_bytes_len == 0U) {
         *result = aivm_value_bytes(NULL, 0U);
         return AIVM_SYSCALL_OK;
@@ -5252,6 +5262,7 @@ static int native_syscall_net_async_error(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     op = native_net_async_lookup(args[0].int_value);
+    native_net_async_maybe_finalize_worker(op);
     *result = aivm_value_string((op == NULL || op->status != -1) ? "" : op->error);
     return AIVM_SYSCALL_OK;
 }

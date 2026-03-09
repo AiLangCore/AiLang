@@ -6290,6 +6290,11 @@ static int native_syscall_ui_create_window(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_INFO, "ui", "create-window title=%s width=%lld height=%lld handle=%lld",
+            args[0].string_value,
+            (long long)args[1].int_value,
+            (long long)args[2].int_value,
+            (long long)handle);
         *result = aivm_value_int(handle);
     }
     return AIVM_SYSCALL_OK;
@@ -6318,17 +6323,20 @@ static int native_syscall_ui_void_1(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_INFO, "ui", "close-window handle=%lld", (long long)args[0].int_value);
         native_ui_runtime_unregister_handle(args[0].int_value);
     } else if (strcmp(target, "sys.ui.waitFrame") == 0) {
         if (!native_host_ui_wait_frame(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_TRACE, "ui", "wait-frame handle=%lld", (long long)args[0].int_value);
     } else if (strcmp(target, "sys.ui.beginFrame") == 0) {
         if (!native_host_ui_begin_frame(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_TRACE, "ui", "begin-frame handle=%lld", (long long)args[0].int_value);
         {
             int width = 0;
             int height = 0;
@@ -6343,12 +6351,14 @@ static int native_syscall_ui_void_1(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_TRACE, "ui", "end-frame handle=%lld", (long long)args[0].int_value);
         native_scene_capture_end_frame();
     } else if (strcmp(target, "sys.ui.present") == 0) {
         if (!native_host_ui_present(args[0].int_value)) {
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+        airun_log_message(AIRUN_LOG_TRACE, "ui", "present handle=%lld", (long long)args[0].int_value);
     } else {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
@@ -6757,6 +6767,18 @@ static int native_syscall_ui_poll_event(
             return AIVM_SYSCALL_ERR_INVALID;
         }
         native_ui_update_event_node(g_native_active_vm, &event);
+        if (strcmp(event.type, "none") != 0) {
+            airun_log_message(AIRUN_LOG_INFO, "ui", "poll-event handle=%lld type=%s x=%d y=%d key=%s text=%s target=%s",
+                (long long)args[0].int_value,
+                event.type,
+                event.x,
+                event.y,
+                event.key,
+                event.text,
+                event.target_id);
+        } else {
+            airun_log_message(AIRUN_LOG_TRACE, "ui", "poll-event handle=%lld type=none", (long long)args[0].int_value);
+        }
         *result = aivm_value_node(node_handle);
     }
     return AIVM_SYSCALL_OK;
@@ -6814,6 +6836,10 @@ static int native_syscall_ui_get_window_size(
             return AIVM_SYSCALL_ERR_INVALID;
         }
         native_ui_update_size_node(g_native_active_vm, width, height);
+        airun_log_message(AIRUN_LOG_TRACE, "ui", "window-size handle=%lld width=%d height=%d",
+            (long long)args[0].int_value,
+            width,
+            height);
         *result = aivm_value_node(node_handle);
     }
     return AIVM_SYSCALL_OK;

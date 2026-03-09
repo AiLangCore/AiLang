@@ -179,10 +179,17 @@ Run C runtime test suite:
 Rebuild `tools/airun` (native C, host platform):
 
 ```bash
-./scripts/build-airun.sh
+./build.sh
 ```
 
-`scripts/build-airun.sh` also rebuilds the standalone frontend parser `tools/aos_frontend`.
+`build.sh` is the canonical bootstrap entrypoint for AiLang tooling.
+
+- `./build.sh` builds host-native tools (`tools/airun`, `tools/aos_frontend`).
+- `./build.sh shared` builds the shared AiVM native library.
+- `./build.sh wasm` builds wasm runtime artifacts.
+- `./build.sh all` builds all bootstrap artifacts.
+
+The underlying `scripts/build-*.sh` files remain implementation details behind this entrypoint.
 
 ## Runtime Engine
 

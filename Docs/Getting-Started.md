@@ -13,7 +13,7 @@ Run build and verification flows with deterministic outputs.
 
 1. Build runtime:
 ```bash
-./scripts/build-airun.sh
+./build.sh
 ```
 2. Execute golden suite:
 ```bash
@@ -41,7 +41,10 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 
 ## Expected Output
 
-- `build-airun.sh`: rebuilds `tools/airun`.
+- `build.sh`: canonical tooling bootstrap entrypoint. Default target rebuilds `tools/airun`.
+- `build.sh shared`: builds the shared AiVM native library.
+- `build.sh wasm`: builds wasm runtime artifacts.
+- `build.sh all`: builds all bootstrap artifacts.
 - `test.sh`: prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
@@ -73,7 +76,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 ```
 - For wasm publish/run validation, build the wasm runtime artifact first:
 ```bash
-./scripts/build-aivm-wasm.sh
+./build.sh wasm
 ```
 
 ## Current Compile Coverage Note

@@ -2,6 +2,12 @@
 
 This workflow is tooling-only. Do not modify app source to debug runtime behavior.
 
+## Prime Directive
+
+- Prefer AiLang and AiVectra built-in debug and automation surfaces over external tooling.
+- If the current debug surface cannot complete the task cleanly, improve the debug surface first.
+- Human verification is exception-only. Repeated need for human confirmation means the runtime or UI tooling is still incomplete.
+
 ## Commands
 
 1. Bootstrap fixtures from a clean checkout:
@@ -13,19 +19,19 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 2. Run app with artifact capture:
 
 ```bash
-./tools/airun debug /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
+./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
 ```
 
-3. Run deterministic replay from event fixture:
+3. Run app with trace output:
 
 ```bash
-./tools/airun debug /absolute/or/relative/path/to/app.aos --events examples/debug/events/minimal.events.toml --out .artifacts/debug/replay-run
+./tools/airun debug trace run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/trace-run
 ```
 
-4. Run one named scenario fixture:
+4. Use runtime-owned synthetic input when UI automation is required:
 
 ```bash
-./tools/airun debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal
+./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
 ```
 
 5. CI-parity local path:
@@ -36,28 +42,11 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 
 ## Artifact Bundle
 
-Each debug run writes one directory with deterministic files:
+Each debug capture run writes one directory with deterministic files:
 
 - `config.toml`: run configuration + exit status
-- `stdout.txt`: canonical CLI output
-- `vm_trace.toml`: step trace (`nodeId`, `op`, `function`, `pc`)
+- `runtime_trace.log`: host/runtime trace with UI, async, and syscall activity
+- `vm_trace.toml`: VM step trace (`nodeId`, `op`, `function`, `pc`)
 - `state_snapshots.toml`: stack/locals/env snapshots
-- `syscalls.toml`: syscall args/results
-- `events.toml`: lifecycle/input events (includes `sys.ui.pollEvent`)
-- `diagnostics.toml`: deterministic diagnostics captured during run
 
-## Scenario Fixture Format
-
-Scenario fixtures are TOML files with `[[scenario]]` rows:
-
-```toml
-[[scenario]]
-name = "my-case"
-app_path = "../apps/debug_minimal.aos"
-vm = "bytecode"
-debug_mode = "replay"
-events_path = "../events/minimal.events.toml"
-compare_path = "../golden/minimal.stdout.txt"
-out_dir = ".artifacts/debug/minimal"
-args = []
-```
+When interactive behavior is required, prefer runtime-owned injected events over external UI scripting so the captured artifact and the executed interaction stay in the same debug surface.

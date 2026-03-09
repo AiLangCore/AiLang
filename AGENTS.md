@@ -3,6 +3,17 @@
 This repository is an AI-native language runtime.
 The AI must treat architectural constraints as hard rules.
 
+## Prime Directive
+
+AiLang exists to let AI agents create, understand, modify, debug, and ship software for any target from high-level intent, with humans acting mainly as prioritizers and approvers.
+
+## Tooling Boundary
+
+- Agents must prefer improving AiLang and AiVectra built-in capabilities, diagnostics, debug surfaces, and automation over forcing progress with inadequate tooling.
+- If a task cannot be completed cleanly with the current toolchain, the correct next step is to extend the toolchain rather than normalize manual or external workarounds.
+- Human verification is exception-only. If agents repeatedly need a human to confirm what the runtime or UI shows, treat that as a tooling gap to be closed.
+- Agent-visible debug artifacts should match user-visible reality under the same build, runtime, input, and target conditions.
+
 ## Non-negotiable constraints
 
 - NO external libraries or NuGet packages.

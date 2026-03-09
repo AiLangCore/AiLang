@@ -46,6 +46,12 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - No hidden side effects.
 - No semantic drift from `SPEC/`.
 
+## Agent Operating Rule
+
+- Prefer improving AiLang and AiVectra built-in tooling over working around missing capability with manual steps or brittle external helpers.
+- If a task cannot be completed cleanly with the current debug, automation, or diagnostic surface, extend the toolchain first.
+- Treat repeated need for human verification of UI/runtime state as a tooling defect, not a normal workflow.
+
 ## Project Root Contract
 
 Treat this repository as an AiLang project with:

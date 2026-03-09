@@ -161,6 +161,7 @@ static char g_native_open_url_test_scratch[1024];
 static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
 static FILE* g_airun_log_file = NULL;
 static AirunInjectedClick g_airun_injected_click = {0, 0, 0, 0};
+static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size);
 
 static const char* airun_log_level_name(AirunLogLevel level)
 {
@@ -255,12 +256,30 @@ static int native_syscall_dispatch_traced(
 {
     AivmSyscallHandler handler = native_trace_lookup_real_handler(target);
     int status;
+    char arg0_preview[96];
+    char arg1_preview[96];
+    char arg2_preview[96];
+    arg0_preview[0] = '\0';
+    arg1_preview[0] = '\0';
+    arg2_preview[0] = '\0';
+    if (arg_count > 0U) {
+        airun_format_value_preview(&args[0], arg0_preview, sizeof(arg0_preview));
+    }
+    if (arg_count > 1U) {
+        airun_format_value_preview(&args[1], arg1_preview, sizeof(arg1_preview));
+    }
+    if (arg_count > 2U) {
+        airun_format_value_preview(&args[2], arg2_preview, sizeof(arg2_preview));
+    }
     airun_log_message(
         AIRUN_LOG_TRACE,
         "syscall",
-        "enter target=%s argCount=%llu",
+        "enter target=%s argCount=%llu arg0=%s arg1=%s arg2=%s",
         (target == NULL) ? "<null>" : target,
-        (unsigned long long)arg_count);
+        (unsigned long long)arg_count,
+        arg_count > 0U ? arg0_preview : "<none>",
+        arg_count > 1U ? arg1_preview : "<none>",
+        arg_count > 2U ? arg2_preview : "<none>");
     if (handler == NULL) {
         if (result != NULL) {
             *result = aivm_value_void();
@@ -300,6 +319,45 @@ static void native_prepare_traced_bindings(AivmSyscallBinding* bindings, size_t 
         bindings[i].handler = native_syscall_dispatch_traced;
     }
     g_native_trace_real_binding_count = binding_count;
+}
+
+static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size)
+{
+    if (buffer == NULL || buffer_size == 0U) {
+        return;
+    }
+    buffer[0] = '\0';
+    if (value == NULL) {
+        (void)snprintf(buffer, buffer_size, "<null>");
+        return;
+    }
+    switch (value->type) {
+        case AIVM_VAL_INT:
+            (void)snprintf(buffer, buffer_size, "int(%lld)", (long long)value->int_value);
+            break;
+        case AIVM_VAL_BOOL:
+            (void)snprintf(buffer, buffer_size, "bool(%s)", value->bool_value ? "true" : "false");
+            break;
+        case AIVM_VAL_STRING:
+            (void)snprintf(
+                buffer,
+                buffer_size,
+                "string(\"%.48s\")",
+                value->string_value == NULL ? "<null>" : value->string_value);
+            break;
+        case AIVM_VAL_NODE:
+            (void)snprintf(buffer, buffer_size, "node(%lld)", (long long)value->node_handle);
+            break;
+        case AIVM_VAL_BYTES:
+            (void)snprintf(buffer, buffer_size, "bytes(len=%llu)", (unsigned long long)value->bytes_value.length);
+            break;
+        case AIVM_VAL_VOID:
+            (void)snprintf(buffer, buffer_size, "void");
+            break;
+        default:
+            (void)snprintf(buffer, buffer_size, "%s", airun_value_type_name(value->type));
+            break;
+    }
 }
 
 static void airun_log_capture_close(void)

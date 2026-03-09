@@ -7,7 +7,7 @@ Define repository components and stable operating assumptions for agents.
 ## Preconditions
 
 - Working directory is repo root.
-- `tools/airun` exists (or run `./scripts/build-airun.sh`).
+- `tools/airun` exists (or run `./build.sh`).
 
 ## Components
 

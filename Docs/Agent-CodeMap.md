@@ -32,12 +32,12 @@
 
 - Unit/integration tests: `tests/AiLang.Tests/AosTests.cs`
 - Golden fixtures: `examples/golden/**/*.in.aos`, `.out.aos`, `.err`
-- Golden runner: `./scripts/test.sh`
+- Golden runner: `./test.sh`
 
 ## Debug Playbook
 
 - Fast local signal:
-  - `./scripts/test.sh`
+  - `./test.sh`
   - expected success tail: `Ok#ok1(type=int value=0)`
 - Focused guard tests:
   - `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -c Release --no-restore --filter "Validator_UpdateContext_RejectsBlockingCalls|VmRunBytecode_UpdateContext_RejectsBlockingCall_Transitively|AstRuntime_UpdateContext_RejectsBlockingCall_Transitively"`

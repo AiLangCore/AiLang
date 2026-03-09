@@ -30,7 +30,7 @@ Updated: 2026-02-20
 - Golden test suite passes on clean checkout.
 - Replay/debug artifacts are byte-stable for same inputs.
 - Current: `Green`
-- Notes: full `scripts/test.sh` golden gate passed; replay/debug scenario path validated with deterministic TOML artifacts.
+- Notes: full `./test.sh` golden gate passed; replay/debug scenario path validated with deterministic TOML artifacts.
 
 4. Capability/security boundary
 - Criteria:
@@ -65,7 +65,7 @@ Updated: 2026-02-20
 - Criteria:
 - One command mirrors CI launch-gate behavior.
 - Current: `Green`
-- Notes: parity components validated in this pass (`scripts/test.sh` + debug scenario run + fixture bootstrap).
+- Notes: parity components validated in this pass (`./test.sh` + debug scenario run + fixture bootstrap).
 
 9. Release hygiene
 - Criteria:
@@ -78,7 +78,7 @@ Updated: 2026-02-20
 
 - `dotnet build src/AiCLI/AiCLI.csproj -v minimal -m:1 /nr:false` passed.
 - `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -v minimal -m:1 /nr:false --filter "Name~CliInvocationParsing_|Name~Cli_HelpText_ContainsCommandSectionsAndExamples|Name~VmSyscallDispatcher_DebugSyscalls_AreWired|Name~SyscallRegistry_ResolvesDebugAliases|Name~VmSyscallDispatcher_WorkerSyscalls_AreWired|Name~DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll"` passed (11 tests).
-- `scripts/test.sh` passed (full golden gate).
+- `./test.sh` passed (full golden gate).
 - `airun --version` reports `version=0.0.1`.
 - Targeted tests passed:
 - `VmSyscallDispatcher_DebugSyscalls_AreWired`

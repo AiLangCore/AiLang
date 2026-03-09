@@ -6457,6 +6457,14 @@ static int native_syscall_ui_poll_event(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        if (g_native_active_vm != NULL) {
+            (void)snprintf(
+                g_native_active_vm->error_detail_storage,
+                sizeof(g_native_active_vm->error_detail_storage),
+                "AIVMS001: sys.ui.pollEvent invalid window handle=%lld active=false",
+                (long long)args[0].int_value);
+            g_native_active_vm->error_detail = g_native_active_vm->error_detail_storage;
+        }
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
@@ -6470,6 +6478,14 @@ static int native_syscall_ui_poll_event(
         memset(&event, 0, sizeof(event));
         (void)snprintf(event.type, sizeof(event.type), "none");
         if (!native_host_ui_poll_event(args[0].int_value, &event)) {
+            if (g_native_active_vm != NULL) {
+                (void)snprintf(
+                    g_native_active_vm->error_detail_storage,
+                    sizeof(g_native_active_vm->error_detail_storage),
+                    "AIVMS001: sys.ui.pollEvent host poll failed handle=%lld",
+                    (long long)args[0].int_value);
+                g_native_active_vm->error_detail = g_native_active_vm->error_detail_storage;
+            }
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
@@ -6497,6 +6513,14 @@ static int native_syscall_ui_get_window_size(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        if (g_native_active_vm != NULL) {
+            (void)snprintf(
+                g_native_active_vm->error_detail_storage,
+                sizeof(g_native_active_vm->error_detail_storage),
+                "AIVMS001: sys.ui.getWindowSize invalid window handle=%lld active=false",
+                (long long)args[0].int_value);
+            g_native_active_vm->error_detail = g_native_active_vm->error_detail_storage;
+        }
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
@@ -6513,6 +6537,12 @@ static int native_syscall_ui_get_window_size(
             return AIVM_SYSCALL_ERR_INVALID;
         }
         if (!native_host_ui_get_window_size(args[0].int_value, &width, &height)) {
+            (void)snprintf(
+                g_native_active_vm->error_detail_storage,
+                sizeof(g_native_active_vm->error_detail_storage),
+                "AIVMS001: sys.ui.getWindowSize host size failed handle=%lld",
+                (long long)args[0].int_value);
+            g_native_active_vm->error_detail = g_native_active_vm->error_detail_storage;
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }

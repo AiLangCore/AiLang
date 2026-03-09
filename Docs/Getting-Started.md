@@ -23,15 +23,19 @@ Run build and verification flows with deterministic outputs.
 ```bash
 ./tools/airun run examples/hello.aos
 ```
-4. Build bytecode from project/source:
+4. Scaffold a new project:
+```bash
+./tools/airun init ./.tmp/MyApp --template cli
+```
+5. Build bytecode from project/source:
 ```bash
 ./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
 ```
-5. Publish wasm package (web default):
+6. Publish wasm package (web default):
 ```bash
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./.tmp/publish-cli-fetch-wasm
 ```
-6. Run compiler driver modes:
+7. Run compiler driver modes:
 ```bash
 cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt
 cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt --ids
@@ -46,6 +50,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `build.sh wasm`: builds wasm runtime artifacts.
 - `build.sh all`: builds all bootstrap artifacts.
 - `test.sh`: canonical verification entrypoint. Prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
+- `airun init`: scaffolds a valid project layout with built-in templates (`cli`, `cli-args`).
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
 - `publish --target wasm32`:

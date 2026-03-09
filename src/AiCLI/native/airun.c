@@ -91,6 +91,7 @@ static int same_file_path(const char* left, const char* right);
 static int remove_file_if_exists(const char* path);
 static int run_native_fullstack_server(const char* www_dir);
 static int ensure_directory_recursive(const char* path);
+static int native_fs_dir_count_entries(const char* path, int64_t* out_count);
 
 #ifdef _WIN32
 typedef SOCKET NativeSocket;
@@ -1839,6 +1840,7 @@ static void print_usage(void)
         "Commands:\n"
         "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache] [--] [app-args...]\n"
         "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>] [--no-cache]\n"
+        "  init <project-dir> [--template <cli|cli-args>] [--force]\n"
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
@@ -1866,6 +1868,255 @@ static int print_unsupported_vm_mode(const char* mode)
         "Err#err1(code=DEV008 message=\"Unsupported VM mode for native C runtime: %s\" nodeId=vmMode)\n",
         mode);
     return 2;
+}
+
+typedef struct {
+    const char* name;
+    const char* description;
+} AirunInitTemplate;
+
+static const AirunInitTemplate g_airun_init_templates[] = {
+    { "cli", "Basic CLI app that prints a greeting." },
+    { "cli-args", "CLI app that prints the first app argument." }
+};
+
+static int sanitize_project_name(const char* raw, char* out, size_t out_len)
+{
+    size_t i = 0U;
+    size_t w = 0U;
+    int previous_dash = 0;
+    if (raw == NULL || out == NULL || out_len == 0U) {
+        return 0;
+    }
+    while (raw[i] != '\0') {
+        unsigned char ch = (unsigned char)raw[i];
+        if (isalnum(ch)) {
+            if (w + 1U >= out_len) {
+                return 0;
+            }
+            out[w++] = (char)tolower(ch);
+            previous_dash = 0;
+        } else if ((ch == '-' || ch == '_' || isspace(ch)) && !previous_dash) {
+            if (w + 1U >= out_len) {
+                return 0;
+            }
+            out[w++] = '-';
+            previous_dash = 1;
+        }
+        i += 1U;
+    }
+    while (w > 0U && out[w - 1U] == '-') {
+        w -= 1U;
+    }
+    if (w == 0U) {
+        if (out_len < 4U) {
+            return 0;
+        }
+        memcpy(out, "app", 4U);
+        return 1;
+    }
+    out[w] = '\0';
+    return 1;
+}
+
+static const AirunInitTemplate* find_init_template(const char* name)
+{
+    size_t i;
+    const char* wanted = (name == NULL || name[0] == '\0') ? "cli" : name;
+    for (i = 0U; i < (sizeof(g_airun_init_templates) / sizeof(g_airun_init_templates[0])); i += 1U) {
+        if (strcmp(g_airun_init_templates[i].name, wanted) == 0) {
+            return &g_airun_init_templates[i];
+        }
+    }
+    return NULL;
+}
+
+static int render_init_project_file(const char* project_name, char* out, size_t out_len)
+{
+    int n;
+    if (project_name == NULL || out == NULL || out_len == 0U) {
+        return 0;
+    }
+    n = snprintf(
+        out,
+        out_len,
+        "Program#p1 {\n"
+        "  Project#proj1(\n"
+        "    name=\"%s\"\n"
+        "    entryFile=\"src/app.aos\"\n"
+        "    entryExport=\"start\"\n"
+        "  )\n"
+        "}\n",
+        project_name);
+    return n >= 0 && (size_t)n < out_len;
+}
+
+static int render_init_app_file(const char* template_name, const char* project_name, char* out, size_t out_len)
+{
+    int n;
+    if (template_name == NULL || project_name == NULL || out == NULL || out_len == 0U) {
+        return 0;
+    }
+    if (strcmp(template_name, "cli-args") == 0) {
+        n = snprintf(
+            out,
+            out_len,
+            "Program#p1 {\n"
+            "  Export#e1(name=start)\n"
+            "\n"
+            "  Let#l1(name=start) {\n"
+            "    Fn#f1(params=args) {\n"
+            "      Block#b1 {\n"
+            "        Let#l2(name=count) { ChildCount#cc1 { Var#v1(name=args) } }\n"
+            "        If#i1 {\n"
+            "          Eq#eq1 { Var#v2(name=count) Lit#i1(value=0) }\n"
+            "          Block#b2 {\n"
+            "            Call#c1(target=sys.stdout.writeLine) { Lit#s1(value=\"%s: no app args\") }\n"
+            "            Return#r1 { Lit#i2(value=0) }\n"
+            "          }\n"
+            "          Block#b3 {\n"
+            "            Call#c2(target=sys.stdout.writeLine) {\n"
+            "              AttrValueString#a1 {\n"
+            "                ChildAt#ca1 { Var#v3(name=args) Lit#i3(value=0) }\n"
+            "                Lit#i4(value=0)\n"
+            "              }\n"
+            "            }\n"
+            "            Return#r2 { Lit#i5(value=0) }\n"
+            "          }\n"
+            "        }\n"
+            "      }\n"
+            "    }\n"
+            "  }\n"
+            "}\n",
+            project_name);
+        return n >= 0 && (size_t)n < out_len;
+    }
+
+    n = snprintf(
+        out,
+        out_len,
+        "Program#p1 {\n"
+        "  Export#e1(name=start)\n"
+        "\n"
+        "  Let#l1(name=start) {\n"
+        "    Fn#f1(params=args) {\n"
+        "      Block#b1 {\n"
+        "        Call#c1(target=sys.stdout.writeLine) { Lit#s1(value=\"Hello from %s\") }\n"
+        "        Return#r1 { Lit#i1(value=0) }\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "}\n",
+        project_name);
+    return n >= 0 && (size_t)n < out_len;
+}
+
+static AIRUN_MAYBE_UNUSED int handle_init(int argc, char** argv)
+{
+    const char* project_dir = NULL;
+    const char* template_name = "cli";
+    const AirunInitTemplate* template_def;
+    char project_name[128];
+    char project_file[PATH_MAX];
+    char agents_file[PATH_MAX];
+    char gitignore_file[PATH_MAX];
+    char src_dir[PATH_MAX];
+    char app_file[PATH_MAX];
+    char project_text[1024];
+    char app_text[4096];
+    int force = 0;
+    int64_t existing_entries = 0;
+    int i;
+
+    for (i = 2; i < argc; i += 1) {
+        if (strcmp(argv[i], "--template") == 0) {
+            if ((i + 1) >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --template value.\" nodeId=argv)\n");
+                return 2;
+            }
+            template_name = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--force") == 0) {
+            force = 1;
+            continue;
+        }
+        if (project_dir == NULL && argv[i][0] != '-') {
+            project_dir = argv[i];
+            continue;
+        }
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported init argument.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    if (project_dir == NULL) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Missing init project directory.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    template_def = find_init_template(template_name);
+    if (template_def == NULL) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unknown init template.\" nodeId=template)\n");
+        return 2;
+    }
+
+    if (!sanitize_project_name(path_basename_ptr(project_dir), project_name, sizeof(project_name))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to derive project name.\" nodeId=project)\n");
+        return 2;
+    }
+
+    if (directory_exists(project_dir)) {
+        if (!native_fs_dir_count_entries(project_dir, &existing_entries)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to inspect init target directory.\" nodeId=project)\n");
+            return 2;
+        }
+        if (existing_entries > 0 && !force) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Init target directory is not empty. Use --force to scaffold into an existing directory.\" nodeId=project)\n");
+            return 2;
+        }
+    } else if (!ensure_directory_recursive(project_dir)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to create init project directory.\" nodeId=project)\n");
+        return 2;
+    }
+
+    if (!join_path(project_dir, "src", src_dir, sizeof(src_dir)) ||
+        !ensure_directory_recursive(src_dir) ||
+        !join_path(project_dir, "project.aiproj", project_file, sizeof(project_file)) ||
+        !join_path(project_dir, "AGENTS.md", agents_file, sizeof(agents_file)) ||
+        !join_path(project_dir, ".gitignore", gitignore_file, sizeof(gitignore_file)) ||
+        !join_path(src_dir, "app.aos", app_file, sizeof(app_file))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Init path overflow or directory creation failed.\" nodeId=project)\n");
+        return 2;
+    }
+
+    if (!render_init_project_file(project_name, project_text, sizeof(project_text)) ||
+        !render_init_app_file(template_def->name, project_name, app_text, sizeof(app_text)) ||
+        !write_text_file(project_file, project_text) ||
+        !write_text_file(
+            agents_file,
+            "Prefer AiLang built-in tooling. Keep behavior deterministic.\n") ||
+        !write_text_file(
+            gitignore_file,
+            ".toolchain/\n"
+            "dist/\n"
+            ".artifacts/\n") ||
+        !write_text_file(app_file, app_text)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to emit init template files.\" nodeId=project)\n");
+        return 2;
+    }
+
+    printf("Ok#ok1(type=string value=\"%s\")\n", project_dir);
+    return 0;
 }
 
 static int is_reserved_cv_selector(const char* mode)
@@ -13813,6 +14064,9 @@ int main(int argc, char** argv)
 #else
     if (strcmp(argv[1], "build") == 0) {
         return handle_build(argc, argv);
+    }
+    if (strcmp(argv[1], "init") == 0) {
+        return handle_init(argc, argv);
     }
     if (strcmp(argv[1], "serve") == 0) {
         return handle_serve(argc, argv);

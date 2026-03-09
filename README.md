@@ -191,6 +191,26 @@ Rebuild `tools/airun` (native C, host platform):
 
 The underlying `scripts/build-*.sh` files remain implementation details behind this entrypoint.
 
+## New Project
+
+Scaffold a new AiLang project:
+
+```bash
+./tools/airun init MyApp
+```
+
+Available built-in templates:
+
+- `cli` (default): basic greeting CLI
+- `cli-args`: CLI that prints the first app arg
+
+Example:
+
+```bash
+./tools/airun init MyApp --template cli-args
+./tools/airun run ./MyApp/ hello
+```
+
 ## Runtime Engine
 
 - Canonical runtime: AiBC1 bytecode VM (default).

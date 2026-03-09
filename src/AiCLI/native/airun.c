@@ -221,6 +221,80 @@ static void airun_log_message(AirunLogLevel level, const char* category, const c
         message);
 }
 
+static AivmSyscallBinding g_native_trace_real_bindings[128];
+static size_t g_native_trace_real_binding_count = 0U;
+static const char* airun_value_type_name(AivmValueType type);
+
+static AivmSyscallHandler native_trace_lookup_real_handler(const char* target)
+{
+    size_t i;
+    if (target == NULL) {
+        return NULL;
+    }
+    for (i = 0U; i < g_native_trace_real_binding_count; i += 1U) {
+        if (g_native_trace_real_bindings[i].target != NULL &&
+            strcmp(g_native_trace_real_bindings[i].target, target) == 0) {
+            return g_native_trace_real_bindings[i].handler;
+        }
+    }
+    return NULL;
+}
+
+static int native_syscall_dispatch_traced(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    AivmSyscallHandler handler = native_trace_lookup_real_handler(target);
+    int status;
+    airun_log_message(
+        AIRUN_LOG_TRACE,
+        "syscall",
+        "enter target=%s argCount=%llu",
+        (target == NULL) ? "<null>" : target,
+        (unsigned long long)arg_count);
+    if (handler == NULL) {
+        if (result != NULL) {
+            *result = aivm_value_void();
+        }
+        airun_log_message(
+            AIRUN_LOG_TRACE,
+            "syscall",
+            "exit target=%s status=%s resultType=%s",
+            (target == NULL) ? "<null>" : target,
+            aivm_syscall_status_code(AIVM_SYSCALL_ERR_NOT_FOUND),
+            (result == NULL) ? "null" : airun_value_type_name(result->type));
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    status = handler(target, args, arg_count, result);
+    airun_log_message(
+        AIRUN_LOG_TRACE,
+        "syscall",
+        "exit target=%s status=%s resultType=%s",
+        (target == NULL) ? "<null>" : target,
+        aivm_syscall_status_code((AivmSyscallStatus)status),
+        (result == NULL) ? "null" : airun_value_type_name(result->type));
+    return status;
+}
+
+static void native_prepare_traced_bindings(AivmSyscallBinding* bindings, size_t binding_count)
+{
+    size_t i;
+    if (bindings == NULL) {
+        g_native_trace_real_binding_count = 0U;
+        return;
+    }
+    if (binding_count > (sizeof(g_native_trace_real_bindings) / sizeof(g_native_trace_real_bindings[0]))) {
+        binding_count = sizeof(g_native_trace_real_bindings) / sizeof(g_native_trace_real_bindings[0]);
+    }
+    for (i = 0U; i < binding_count; i += 1U) {
+        g_native_trace_real_bindings[i] = bindings[i];
+        bindings[i].handler = native_syscall_dispatch_traced;
+    }
+    g_native_trace_real_binding_count = binding_count;
+}
+
 static void airun_log_capture_close(void)
 {
     if (g_airun_log_file != NULL) {
@@ -9368,6 +9442,11 @@ static int run_native_compiled_program(
     bindings[101].handler = native_syscall_host_open_default;
     bindings[103].target = "sys.image.decodeToRgbaBase64";
     bindings[103].handler = native_syscall_image_decode_to_rgba_base64;
+    if (g_airun_log_level >= AIRUN_LOG_TRACE) {
+        native_prepare_traced_bindings(bindings, 104U);
+    } else {
+        g_native_trace_real_binding_count = 0U;
+    }
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,

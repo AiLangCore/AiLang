@@ -1396,7 +1396,9 @@ static void print_usage(void)
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>]\n"
+        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>]\n"
+        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -12074,170 +12076,138 @@ static AIRUN_MAYBE_UNUSED int handle_serve(int argc, char** argv)
     return 2;
 }
 
+static int handle_debug_run_mode(
+    int argc,
+    char** argv,
+    int start_index,
+    const char* default_log_level,
+    int default_emit_bundle,
+    const char* default_out_dir)
+{
+    const char* program_path = NULL;
+    int app_arg_start = -1;
+    int i;
+    const char* out_dir = default_out_dir;
+    const char* debug_mode = "off";
+    const char* log_level = default_log_level;
+    NativeDebugOptions debug_options;
+    int rc;
+    char config_path[PATH_MAX];
+    debug_options.emit_bundle = default_emit_bundle;
+    debug_options.out_dir = NULL;
+    debug_options.input_path = NULL;
+    debug_options.debug_mode = "off";
+
+    for (i = start_index; i < argc; i += 1) {
+        const char* arg = argv[i];
+        if (strcmp(arg, "--") == 0) {
+            app_arg_start = i + 1;
+            break;
+        }
+        if (strcmp(arg, "--out") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                return 2;
+            }
+            out_dir = argv[i + 1];
+            debug_options.emit_bundle = 1;
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--out=") && app_arg_start < 0) {
+            out_dir = arg + 6;
+            debug_options.emit_bundle = 1;
+            continue;
+        }
+        if (strcmp(arg, "--debug-mode") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --debug-mode value.\" nodeId=argv)\n");
+                return 2;
+            }
+            debug_mode = argv[i + 1];
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--debug-mode=") && app_arg_start < 0) {
+            debug_mode = arg + 13;
+            continue;
+        }
+        if (strcmp(arg, "--log-level") == 0 && app_arg_start < 0) {
+            if ((i + 1) >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
+                return 2;
+            }
+            log_level = argv[i + 1];
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--log-level=") && app_arg_start < 0) {
+            log_level = arg + 12;
+            continue;
+        }
+        if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
+            const char* mode = arg + 5;
+            if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
+                return print_unsupported_vm_mode(mode);
+            }
+            continue;
+        }
+        if (program_path == NULL && arg[0] != '-' && app_arg_start < 0) {
+            program_path = arg;
+            continue;
+        }
+        if (program_path == NULL && arg[0] == '-' && app_arg_start < 0) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Unsupported flag for native C runtime.\" nodeId=argv)\n");
+            return 2;
+        }
+        if (app_arg_start < 0) {
+            app_arg_start = i;
+        }
+        break;
+    }
+    if (program_path == NULL) {
+        program_path = ".";
+    }
+    if (app_arg_start < 0 || app_arg_start > argc) {
+        app_arg_start = argc;
+    }
+    airun_configure_log_level(log_level);
+    if (debug_options.emit_bundle && out_dir != NULL) {
+        debug_options.out_dir = out_dir;
+        debug_options.input_path = program_path;
+    }
+    debug_options.debug_mode = debug_mode;
+    rc = run_via_resolved_input(
+        program_path,
+        (const char* const*)&argv[app_arg_start],
+        (size_t)(argc - app_arg_start),
+        &debug_options);
+    if (debug_options.emit_bundle &&
+        debug_options.out_dir != NULL &&
+        join_path(debug_options.out_dir, "config.toml", config_path, sizeof(config_path)) &&
+        !file_exists(config_path)) {
+        (void)write_native_debug_bundle(&debug_options, NULL, NULL, rc, 1, "native-debug-run-pre-exec-failure");
+    }
+    return rc;
+}
+
 static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
-        const char* program_path = NULL;
-        int app_arg_start = -1;
-        int i;
-        const char* out_dir = NULL;
-        const char* debug_mode = "off";
-        const char* log_level = NULL;
-        NativeDebugOptions debug_options;
-        int rc;
-        char config_path[PATH_MAX];
-        debug_options.emit_bundle = 0;
-        debug_options.out_dir = NULL;
-        debug_options.input_path = NULL;
-        debug_options.debug_mode = "off";
-
-        for (i = 3; i < argc; i += 1) {
-            const char* arg = argv[i];
-            if (strcmp(arg, "--") == 0) {
-                app_arg_start = i + 1;
-                break;
-            }
-            if (strcmp(arg, "--out") == 0 && app_arg_start < 0) {
-                if ((i + 1) >= argc) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
-                    return 2;
-                }
-                out_dir = argv[i + 1];
-                i += 1;
-                continue;
-            }
-            if (starts_with(arg, "--out=") && app_arg_start < 0) {
-                out_dir = arg + 6;
-                continue;
-            }
-            if (strcmp(arg, "--debug-mode") == 0 && app_arg_start < 0) {
-                if ((i + 1) >= argc) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"Missing --debug-mode value.\" nodeId=argv)\n");
-                    return 2;
-                }
-                debug_mode = argv[i + 1];
-                i += 1;
-                continue;
-            }
-            if (starts_with(arg, "--debug-mode=") && app_arg_start < 0) {
-                debug_mode = arg + 13;
-                continue;
-            }
-            if (strcmp(arg, "--log-level") == 0 && app_arg_start < 0) {
-                if ((i + 1) >= argc) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
-                    return 2;
-                }
-                log_level = argv[i + 1];
-                i += 1;
-                continue;
-            }
-            if (starts_with(arg, "--log-level=") && app_arg_start < 0) {
-                log_level = arg + 12;
-                continue;
-            }
-            if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
-                const char* mode = arg + 5;
-                if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
-                    return print_unsupported_vm_mode(mode);
-                }
-                continue;
-            }
-            if (program_path == NULL && arg[0] != '-' && app_arg_start < 0) {
-                program_path = arg;
-                continue;
-            }
-            if (program_path == NULL && arg[0] == '-' && app_arg_start < 0) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Unsupported flag for native C runtime.\" nodeId=argv)\n");
-                return 2;
-            }
-            if (program_path != NULL && app_arg_start < 0) {
-                if (strcmp(arg, "--out") == 0) {
-                    if ((i + 1) >= argc) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
-                        return 2;
-                    }
-                    out_dir = argv[i + 1];
-                    i += 1;
-                    continue;
-                }
-                if (starts_with(arg, "--out=")) {
-                    out_dir = arg + 6;
-                    continue;
-                }
-                if (strcmp(arg, "--debug-mode") == 0) {
-                    if ((i + 1) >= argc) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"Missing --debug-mode value.\" nodeId=argv)\n");
-                        return 2;
-                    }
-                    debug_mode = argv[i + 1];
-                    i += 1;
-                    continue;
-                }
-                if (starts_with(arg, "--debug-mode=")) {
-                    debug_mode = arg + 13;
-                    continue;
-                }
-                if (strcmp(arg, "--log-level") == 0) {
-                    if ((i + 1) >= argc) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"Missing --log-level value.\" nodeId=argv)\n");
-                        return 2;
-                    }
-                    log_level = argv[i + 1];
-                    i += 1;
-                    continue;
-                }
-                if (starts_with(arg, "--log-level=")) {
-                    log_level = arg + 12;
-                    continue;
-                }
-                if (starts_with(arg, "--vm=")) {
-                    const char* mode = arg + 5;
-                    if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
-                        return print_unsupported_vm_mode(mode);
-                    }
-                    continue;
-                }
-            }
-            if (app_arg_start < 0) {
-                app_arg_start = i;
-            }
-            break;
-        }
-        if (program_path == NULL) {
-            program_path = ".";
-        }
-        if (app_arg_start < 0 || app_arg_start > argc) {
-            app_arg_start = argc;
-        }
-        airun_configure_log_level(log_level);
-        if (out_dir != NULL) {
-            debug_options.emit_bundle = 1;
-            debug_options.out_dir = out_dir;
-            debug_options.input_path = program_path;
-        }
-        debug_options.debug_mode = debug_mode;
-        rc = run_via_resolved_input(
-            program_path,
-            (const char* const*)&argv[app_arg_start],
-            (size_t)(argc - app_arg_start),
-            &debug_options);
-        if (out_dir != NULL &&
-            join_path(out_dir, "config.toml", config_path, sizeof(config_path)) &&
-            !file_exists(config_path)) {
-            (void)write_native_debug_bundle(&debug_options, NULL, NULL, rc, 1, "native-debug-run-pre-exec-failure");
-        }
-        return rc;
+        return handle_debug_run_mode(argc, argv, 3, NULL, 0, NULL);
+    }
+    if (argc >= 4 && strcmp(argv[2], "trace") == 0 && strcmp(argv[3], "run") == 0) {
+        return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL);
+    }
+    if (argc >= 4 && strcmp(argv[2], "capture") == 0 && strcmp(argv[3], "run") == 0) {
+        return handle_debug_run_mode(argc, argv, 4, "trace", 1, ".artifacts/debug/native-capture");
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports only: debug run <program>\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>\" nodeId=command)\n");
     return 2;
 }
 

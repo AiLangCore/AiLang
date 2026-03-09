@@ -3048,10 +3048,7 @@ static void native_net_async_maybe_finalize_worker(NativeNetAsyncState* op)
 static void native_net_async_process(NativeNetAsyncState* op)
 {
     NativeNetHandleState* state;
-    fd_set read_set;
-    fd_set write_set;
-    struct timeval timeout;
-    int select_rc;
+    int use_select;
     if (op == NULL || op->status != 0) {
         return;
     }
@@ -3071,23 +3068,30 @@ static void native_net_async_process(NativeNetAsyncState* op)
         native_net_async_set_failure(op, "invalid_handle");
         return;
     }
-    FD_ZERO(&read_set);
-    FD_ZERO(&write_set);
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 1000;
-    if (op->kind == 3) {
-        FD_SET(state->socket, &write_set);
-    }
-    if (op->kind == 2) {
-        FD_SET(state->socket, &read_set);
-    }
+    use_select = (state->kind == NATIVE_NET_HANDLE_KIND_TCP_STREAM);
+    if (use_select) {
+        fd_set read_set;
+        fd_set write_set;
+        struct timeval timeout;
+        int select_rc;
+        FD_ZERO(&read_set);
+        FD_ZERO(&write_set);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1000;
+        if (op->kind == 3) {
+            FD_SET(state->socket, &write_set);
+        }
+        if (op->kind == 2) {
+            FD_SET(state->socket, &read_set);
+        }
 #ifdef _WIN32
-    select_rc = select(0, &read_set, &write_set, NULL, &timeout);
+        select_rc = select(0, &read_set, &write_set, NULL, &timeout);
 #else
-    select_rc = select((int)state->socket + 1, &read_set, &write_set, NULL, &timeout);
+        select_rc = select((int)state->socket + 1, &read_set, &write_set, NULL, &timeout);
 #endif
-    if (select_rc <= 0) {
-        return;
+        if (select_rc <= 0) {
+            return;
+        }
     }
     if (op->kind == 2) {
         int max_bytes = op->max_bytes;

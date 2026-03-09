@@ -89,6 +89,7 @@ static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
 static int remove_file_if_exists(const char* path);
 static int run_native_fullstack_server(const char* www_dir);
+static int ensure_directory_recursive(const char* path);
 
 #ifdef _WIN32
 typedef SOCKET NativeSocket;
@@ -135,6 +136,7 @@ typedef enum {
     AIRUN_LOG_INFO = 2,
     AIRUN_LOG_TRACE = 3
 } AirunLogLevel;
+typedef struct NativeDebugOptions NativeDebugOptions;
 typedef struct NativeNetAsyncState NativeNetAsyncState;
 static int native_syscall_net_start_op(
     const char* target,
@@ -151,6 +153,7 @@ static char g_native_open_url_test_scratch[1024];
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
 
 static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
+static FILE* g_airun_log_file = NULL;
 
 static const char* airun_log_level_name(AirunLogLevel level)
 {
@@ -192,18 +195,54 @@ static void airun_configure_log_level(const char* cli_level)
 static void airun_log_message(AirunLogLevel level, const char* category, const char* fmt, ...)
 {
     va_list args;
+    va_list args_copy;
     char message[512];
     if (level > g_airun_log_level || level == AIRUN_LOG_OFF) {
         return;
     }
     va_start(args, fmt);
+    va_copy(args_copy, args);
     (void)vsnprintf(message, sizeof(message), fmt, args);
     va_end(args);
+    if (g_airun_log_file != NULL) {
+        fprintf(g_airun_log_file,
+            "aivm.log level=%s category=%s message=\"",
+            airun_log_level_name(level),
+            (category == NULL || category[0] == '\0') ? "runtime" : category);
+        vfprintf(g_airun_log_file, fmt, args_copy);
+        fprintf(g_airun_log_file, "\"\n");
+        fflush(g_airun_log_file);
+    }
+    va_end(args_copy);
     fprintf(stderr,
         "aivm.log level=%s category=%s message=\"%s\"\n",
         airun_log_level_name(level),
         (category == NULL || category[0] == '\0') ? "runtime" : category,
         message);
+}
+
+static void airun_log_capture_close(void)
+{
+    if (g_airun_log_file != NULL) {
+        fclose(g_airun_log_file);
+        g_airun_log_file = NULL;
+    }
+}
+
+static void airun_log_capture_configure(int emit_bundle, const char* out_dir)
+{
+    char path[PATH_MAX];
+    airun_log_capture_close();
+    if (!emit_bundle || out_dir == NULL) {
+        return;
+    }
+    if (!ensure_directory_recursive(out_dir)) {
+        return;
+    }
+    if (!join_path(out_dir, "runtime_trace.log", path, sizeof(path))) {
+        return;
+    }
+    g_airun_log_file = fopen(path, "wb");
 }
 
 static int ends_with(const char* value, const char* suffix)
@@ -8697,12 +8736,12 @@ static int native_syscall_str_decode_unicode_surrogate_pair_hex4(
     return AIVM_SYSCALL_OK;
 }
 
-typedef struct {
+struct NativeDebugOptions {
     int emit_bundle;
     const char* out_dir;
     const char* input_path;
     const char* debug_mode;
-} NativeDebugOptions;
+};
 
 static const char* aivm_opcode_name(AivmOpcode opcode)
 {
@@ -9113,6 +9152,9 @@ static int run_native_compiled_program(
     native_scene_capture_configure(
         (debug_options == NULL) ? "off" : debug_options->debug_mode,
         (debug_options == NULL) ? NULL : debug_options->out_dir);
+    airun_log_capture_configure(
+        (debug_options == NULL) ? 0 : debug_options->emit_bundle,
+        (debug_options == NULL) ? NULL : debug_options->out_dir);
     native_ui_runtime_reset_handles();
     native_host_ui_reset();
     native_net_reset();
@@ -9346,6 +9388,7 @@ static int run_native_compiled_program(
         native_net_reset();
         native_host_ui_shutdown();
         native_scene_capture_reset();
+        airun_log_capture_close();
         g_native_active_vm = NULL;
         return emit_vm_error_with_context(program, &vm, vm_error_message);
     }
@@ -9366,6 +9409,7 @@ static int run_native_compiled_program(
     native_net_reset();
     native_host_ui_shutdown();
     native_scene_capture_reset();
+    airun_log_capture_close();
     g_native_active_vm = NULL;
     if (has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", exit_code);

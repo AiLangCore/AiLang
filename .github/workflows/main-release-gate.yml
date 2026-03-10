@@ -87,7 +87,7 @@ jobs:
           mkdir -p ./dist
           AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
           AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
-          ./scripts/build-airun.sh
+          ./build.sh
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
@@ -98,7 +98,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
           $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
-          ./scripts/build-airun.ps1
+          ./build.ps1
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" ".\\dist\\${{ matrix.airun }}"
 

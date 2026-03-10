@@ -81,14 +81,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/build-airun.sh
+          ./build.sh
           test -x ./tools/airun
 
       - name: Build airun (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./scripts/build-airun.ps1
+          ./build.ps1
           if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
 
       - name: Runtime smoke (Unix)
@@ -223,14 +223,14 @@ jobs:
           set -euo pipefail
           AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
           AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
-          ./scripts/build-airun.sh
+          ./build.sh
 
       - name: Build airun runtime (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
-          ./scripts/build-airun.ps1
+          ./build.ps1
 
       - name: Build frontend parser (Unix)
         if: matrix.platform != 'windows'

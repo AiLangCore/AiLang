@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/build-airun.sh
+          ./build.sh
           test -x ./tools/airun
 
       - name: Setup MSVC tools
@@ -84,7 +84,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./scripts/build-airun.ps1
+          ./build.ps1
           if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
 
       - name: Build frontend parser (non-Windows)

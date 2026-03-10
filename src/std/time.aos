@@ -98,6 +98,32 @@ Program#std_time_p1 {
     }
   }
 
+  Let#std_time_l14a(name=nowUtc) {
+    Fn#std_time_f7a(params=_) {
+      Block#std_time_b7a {
+        Return#std_time_r7a {
+          Call#std_time_c12a(target=timeUtc) {
+            Call#std_time_c12b(target=nowUnixMs) { }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_time_l14b(name=timeLocal) {
+    Fn#std_time_f7b(params=unixMs) {
+      Block#std_time_b7b {
+        Return#std_time_r7b {
+          Call#std_time_c12c(target=timeFromUnixMs) {
+            Var#std_time_v13a(name=unixMs)
+            Call#std_time_c12d(target=timeZoneId) { }
+            Call#std_time_c12e(target=timeZoneOffsetMinutesAt) { Var#std_time_v13b(name=unixMs) }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_time_l15(name=timeUnixMs) {
     Fn#std_time_f8(params=timeValue) {
       Block#std_time_b8 {
@@ -175,9 +201,11 @@ Program#std_time_p1 {
   Export#std_time_e5(name=timeZoneOffsetMinutesAt)
   Export#std_time_e6(name=timeFromUnixMs)
   Export#std_time_e7(name=now)
-  Export#std_time_e8(name=timeUnixMs)
-  Export#std_time_e9(name=timeZone)
-  Export#std_time_e10(name=timeUtc)
-  Export#std_time_e11(name=timeIsUtc)
-  Export#std_time_e12(name=timeOffsetMinutes)
+  Export#std_time_e8(name=nowUtc)
+  Export#std_time_e9(name=timeLocal)
+  Export#std_time_e10(name=timeUnixMs)
+  Export#std_time_e11(name=timeZone)
+  Export#std_time_e12(name=timeUtc)
+  Export#std_time_e13(name=timeIsUtc)
+  Export#std_time_e14(name=timeOffsetMinutes)
 }

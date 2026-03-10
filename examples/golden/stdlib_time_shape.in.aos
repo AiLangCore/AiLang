@@ -33,4 +33,17 @@ Program#gtime_p1 {
     ToString#gtime_t1 { Call#gtime_c14(target=timeIsUtc) { Var#gtime_v6(name=tUtc) } }
   }
 
+
+
+  Let#gtime_l3(name=tLocal) {
+    Call#gtime_c15(target=timeLocal) { Lit#gtime_i4(value=1700000000000) }
+  }
+
+  Call#gtime_c16(target=io.print) {
+    Call#gtime_c17(target=timeUnixMs) { Var#gtime_v7(name=tLocal) }
+  }
+
+  Call#gtime_c18(target=io.print) {
+    ToString#gtime_t2 { Call#gtime_c19(target=timeIsUtc) { Call#gtime_c20(target=nowUtc) { } } }
+  }
 }

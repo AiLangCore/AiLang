@@ -5109,6 +5109,7 @@ static int native_syscall_process_spawn(
 
         pid = fork();
         if (pid == 0) {
+            (void)signal(SIGPIPE, SIG_IGN);
             if (args[2].string_value[0] != '\0') {
                 if (chdir(args[2].string_value) != 0) {
                     _exit(126);
@@ -12989,9 +12990,19 @@ static int run_via_resolved_input(
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
+    airun_log_message(
+        AIRUN_LOG_TRACE,
+        "runtime",
+        "run-via-resolved-input start input=%s argv_count=%llu debug_mode=%s bundle=%d",
+        (input == NULL) ? "" : input,
+        (unsigned long long)process_argv_count,
+        (debug_options == NULL || debug_options->debug_mode == NULL) ? "off" : debug_options->debug_mode,
+        (debug_options == NULL) ? 0 : debug_options->emit_bundle);
     if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
+        airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input kind=aibundle path=%s", input);
         int rc = run_native_bundle(input, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
+            airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input done kind=aibundle rc=%d", rc);
             return rc;
         }
         fprintf(stderr,
@@ -12999,11 +13010,14 @@ static int run_via_resolved_input(
         return 2;
     }
     if (resolve_input_to_aibc1(input, resolved, sizeof(resolved))) {
+        airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input kind=aibc1 path=%s", resolved);
         return run_native_aibc1(resolved, process_argv, process_argv_count, debug_options);
     }
     if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
+        airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input kind=aos path=%s", source_aos);
         int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
+            airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input done kind=bytecode-aos rc=%d", rc);
             return rc;
         }
         if (source_file_looks_like_bytecode_aos(source_aos)) {
@@ -13013,9 +13027,11 @@ static int run_via_resolved_input(
         }
         rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
+            airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input done kind=simple-program-aos rc=%d", rc);
             return rc;
         }
     }
+    airun_log_message(AIRUN_LOG_TRACE, "runtime", "resolved-input failed input=%s", (input == NULL) ? "" : input);
     fprintf(stderr,
         "Err#err1(code=DEV008 message=\"Native C runtime cannot compile this source/project shape yet. Provide .aibc1 or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
     return 2;
@@ -13309,11 +13325,22 @@ static int handle_debug_run_mode(
     if (interact_mode) {
         airun_interact_drain_stdin();
     }
+    airun_log_message(
+        AIRUN_LOG_TRACE,
+        "debug",
+        "debug-run start program=%s debug_mode=%s emit_bundle=%d out_dir=%s app_arg_count=%d interact=%d",
+        (program_path == NULL) ? "" : program_path,
+        (debug_mode == NULL) ? "off" : debug_mode,
+        debug_options.emit_bundle,
+        (debug_options.out_dir == NULL) ? "" : debug_options.out_dir,
+        argc - app_arg_start,
+        interact_mode);
     rc = run_via_resolved_input(
         program_path,
         (const char* const*)&argv[app_arg_start],
         (size_t)(argc - app_arg_start),
         &debug_options);
+    airun_log_message(AIRUN_LOG_TRACE, "debug", "debug-run done rc=%d program=%s", rc, (program_path == NULL) ? "" : program_path);
     if (debug_options.emit_bundle &&
         debug_options.out_dir != NULL &&
         join_path(debug_options.out_dir, "config.toml", config_path, sizeof(config_path)) &&

@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $root
 
-& ./scripts/test-aivm-c.ps1
+& ./test-aivm-c.ps1
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }

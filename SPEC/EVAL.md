@@ -28,8 +28,9 @@ This file is normative for `aic run` evaluation behavior.
 - `Continue`: valid only inside `Loop`; skips to next nearest-loop iteration.
 - `Eq`: evaluate both sides, then compare by primitive type and value.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
-- `Add`: evaluate both sides, both must be int literals.
+- `Add`: evaluate both sides, both must be exact whole-number literals.
 - `bytes` values are first-class runtime values and participate in equality by length+byte-content.
+- `null` is a first-class runtime value distinct from `void`.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
@@ -254,6 +255,9 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.image.decodeToRgbaBase64(bytes, mimeType)` is a host decode primitive.
 - Host owns compressed image decoding mechanics; libraries own fetch, cache, and render policy.
 - Unsupported targets or undecodable payloads must fail explicitly through the syscall boundary.
+- `sys.time.nowUnixMs()` returns Unix epoch milliseconds.
+- `sys.time.timeZoneId()` returns the current local timezone identifier when the host can provide one, otherwise a stable best-effort label.
+- `sys.time.timeZoneOffsetMinutesAt(epochMs)` returns the local UTC offset in minutes for the supplied Unix epoch milliseconds.
 
 ## Result Emission
 

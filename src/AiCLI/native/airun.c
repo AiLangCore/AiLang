@@ -442,6 +442,9 @@ static void airun_format_value_preview(const AivmValue* value, char* buffer, siz
         case AIVM_VAL_BOOL:
             (void)snprintf(buffer, buffer_size, "bool(%s)", value->bool_value ? "true" : "false");
             break;
+        case AIVM_VAL_NULL:
+            (void)snprintf(buffer, buffer_size, "null");
+            break;
         case AIVM_VAL_STRING:
             (void)snprintf(
                 buffer,
@@ -3427,10 +3430,7 @@ static AivmValue native_process_consume_buffer(
     }
     unread_len = *length - *position;
     value = aivm_value_bytes(*buffer + *position, unread_len);
-    free(*buffer);
-    *buffer = NULL;
-    *length = 0U;
-    *position = 0U;
+    *position = *length;
     return value;
 }
 
@@ -3554,6 +3554,23 @@ static void native_process_release_slot(NativeProcessState* process)
     }
 #endif
     native_process_init_slot(process);
+}
+
+static void native_process_maybe_release_finished(NativeProcessState* process)
+{
+    if (process == NULL || !process->used || !process->finished) {
+        return;
+    }
+    if (!process->stdout_closed || !process->stderr_closed) {
+        return;
+    }
+    if (process->stdout_buffer_pos < process->stdout_buffer_len) {
+        return;
+    }
+    if (process->stderr_buffer_pos < process->stderr_buffer_len) {
+        return;
+    }
+    native_process_release_slot(process);
 }
 
 static NativeProcessState* native_process_lookup(int64_t handle_value)
@@ -4664,6 +4681,118 @@ static int native_syscall_time_now_unix_ms(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_time_zone_id(char* buffer, size_t buffer_size)
+{
+    if (buffer == NULL || buffer_size == 0U) {
+        return 0;
+    }
+    buffer[0] = '\0';
+#ifdef _WIN32
+    {
+        DYNAMIC_TIME_ZONE_INFORMATION info;
+        DWORD status = GetDynamicTimeZoneInformation(&info);
+        size_t i = 0U;
+        (void)status;
+        while (i + 1U < buffer_size && info.TimeZoneKeyName[i] != 0) {
+            buffer[i] = (char)info.TimeZoneKeyName[i];
+            i += 1U;
+        }
+        buffer[i] = '\0';
+        return i > 0U ? 1 : 0;
+    }
+#else
+    {
+        const char* env_tz = getenv("TZ");
+        if (env_tz != NULL && env_tz[0] != '\0') {
+            (void)snprintf(buffer, buffer_size, "%s", env_tz);
+            return 1;
+        }
+    }
+#if !defined(_WIN32)
+    {
+        char target[PATH_MAX];
+        ssize_t read_count = readlink("/etc/localtime", target, sizeof(target) - 1);
+        const char* zoneinfo = NULL;
+        if (read_count > 0) {
+            target[read_count] = '\0';
+            zoneinfo = strstr(target, "/zoneinfo/");
+            if (zoneinfo != NULL && zoneinfo[10] != '\0') {
+                (void)snprintf(buffer, buffer_size, "%s", zoneinfo + 10);
+                return 1;
+            }
+        }
+    }
+#endif
+    {
+        time_t now_value = time(NULL);
+        struct tm local_tm;
+        if (now_value == (time_t)-1) {
+            return 0;
+        }
+#ifdef _WIN32
+        if (localtime_s(&local_tm, &now_value) != 0) {
+            return 0;
+        }
+#else
+        if (localtime_r(&now_value, &local_tm) == NULL) {
+            return 0;
+        }
+#endif
+        if (strftime(buffer, buffer_size, "%Z", &local_tm) == 0U) {
+            return 0;
+        }
+        return buffer[0] != '\0' ? 1 : 0;
+    }
+#endif
+}
+
+static int native_time_zone_offset_minutes_at(int64_t epoch_ms, int64_t* out_minutes)
+{
+    if (out_minutes == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    {
+        TIME_ZONE_INFORMATION tz;
+        DWORD tz_status = GetTimeZoneInformation(&tz);
+        LONG bias = tz.Bias;
+        if (tz_status == TIME_ZONE_ID_DAYLIGHT) {
+            bias += tz.DaylightBias;
+        } else if (tz_status == TIME_ZONE_ID_STANDARD) {
+            bias += tz.StandardBias;
+        }
+        *out_minutes = (int64_t)(-bias);
+        (void)epoch_ms;
+        return 1;
+    }
+#else
+    {
+        time_t epoch_seconds = (time_t)(epoch_ms / 1000LL);
+        struct tm local_tm;
+        if (localtime_r(&epoch_seconds, &local_tm) == NULL) {
+            return 0;
+        }
+#if defined(__APPLE__) || defined(__linux__) || defined(__unix__)
+        *out_minutes = (int64_t)(local_tm.tm_gmtoff / 60);
+        return 1;
+#else
+        {
+            struct tm gm_tm;
+            time_t local_seconds;
+            time_t gm_seconds;
+            if (gmtime_r(&epoch_seconds, &gm_tm) == NULL) {
+                return 0;
+            }
+            local_seconds = mktime(&local_tm);
+            gm_seconds = mktime(&gm_tm);
+            *out_minutes = (int64_t)((local_seconds - gm_seconds) / 60);
+            return 1;
+        }
+#endif
+    }
+#endif
+}
+
 static int native_syscall_time_monotonic_ms(
     const char* target,
     const AivmValue* args,
@@ -4691,6 +4820,52 @@ static int native_syscall_time_monotonic_ms(
         *result = aivm_value_int((int64_t)ts.tv_sec * 1000LL + (int64_t)(ts.tv_nsec / 1000000L));
     }
 #endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_time_zone_id(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    static char zone_id[128];
+    (void)target;
+    (void)args;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_time_zone_id(zone_id, sizeof(zone_id))) {
+        zone_id[0] = '\0';
+    }
+    *result = aivm_value_string(zone_id);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_time_zone_offset_minutes_at(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    int64_t minutes = 0;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_time_zone_offset_minutes_at(args[0].int_value, &minutes)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_int(minutes);
     return AIVM_SYSCALL_OK;
 }
 
@@ -5517,7 +5692,7 @@ static int native_syscall_process_wait(
     }
     exit_code = process->exit_code;
     *result = aivm_value_int((int64_t)exit_code);
-    native_process_release_slot(process);
+    native_process_maybe_release_finished(process);
     return AIVM_SYSCALL_OK;
 #else
     if (!process->finished) {
@@ -5544,7 +5719,7 @@ static int native_syscall_process_wait(
     }
     exit_code = process->exit_code;
     *result = aivm_value_int((int64_t)exit_code);
-    native_process_release_slot(process);
+    native_process_maybe_release_finished(process);
     return AIVM_SYSCALL_OK;
 #endif
 }
@@ -5668,6 +5843,7 @@ static int native_syscall_process_stream_read(
                     &process->stdout_buffer,
                     &process->stdout_buffer_len,
                     &process->stdout_buffer_pos);
+                native_process_maybe_release_finished(process);
                 return AIVM_SYSCALL_OK;
             }
         } else {
@@ -5676,6 +5852,7 @@ static int native_syscall_process_stream_read(
                     &process->stderr_buffer,
                     &process->stderr_buffer_len,
                     &process->stderr_buffer_pos);
+                native_process_maybe_release_finished(process);
                 return AIVM_SYSCALL_OK;
             }
         }
@@ -5685,6 +5862,7 @@ static int native_syscall_process_stream_read(
         DWORD read_count = 0;
         if (*closed_flag || stream == NULL) {
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         if (!PeekNamedPipe(stream, NULL, 0, NULL, &available, NULL)) {
@@ -5698,6 +5876,7 @@ static int native_syscall_process_stream_read(
                 }
                 *closed_flag = 1;
                 *result = aivm_value_bytes(NULL, 0U);
+                native_process_maybe_release_finished(process);
                 return AIVM_SYSCALL_OK;
             }
             *result = aivm_value_bytes(NULL, 0U);
@@ -5705,6 +5884,7 @@ static int native_syscall_process_stream_read(
         }
         if (available == 0) {
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         if (available > (DWORD)NATIVE_PROCESS_READ_CHUNK) {
@@ -5722,10 +5902,12 @@ static int native_syscall_process_stream_read(
                 *closed_flag = 1;
             }
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         if (read_count == 0) {
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
@@ -5739,6 +5921,7 @@ static int native_syscall_process_stream_read(
                     &process->stdout_buffer,
                     &process->stdout_buffer_len,
                     &process->stdout_buffer_pos);
+                native_process_maybe_release_finished(process);
                 return AIVM_SYSCALL_OK;
             }
         } else {
@@ -5747,6 +5930,7 @@ static int native_syscall_process_stream_read(
                     &process->stderr_buffer,
                     &process->stderr_buffer_len,
                     &process->stderr_buffer_pos);
+                native_process_maybe_release_finished(process);
                 return AIVM_SYSCALL_OK;
             }
         }
@@ -5755,6 +5939,7 @@ static int native_syscall_process_stream_read(
         ssize_t read_count;
         if (*closed_flag || fd < 0) {
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         read_count = read(fd, g_native_process_read_scratch, NATIVE_PROCESS_READ_CHUNK);
@@ -5771,6 +5956,7 @@ static int native_syscall_process_stream_read(
                 process->stderr_fd = -1;
             }
             *result = aivm_value_bytes(NULL, 0U);
+            native_process_maybe_release_finished(process);
             return AIVM_SYSCALL_OK;
         }
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -5778,6 +5964,7 @@ static int native_syscall_process_stream_read(
             return AIVM_SYSCALL_OK;
         }
         *result = aivm_value_bytes(NULL, 0U);
+        native_process_maybe_release_finished(process);
         return AIVM_SYSCALL_OK;
     }
 #endif
@@ -10108,6 +10295,7 @@ static const char* airun_value_type_name(AivmValueType type)
         case AIVM_VAL_VOID: return "void";
         case AIVM_VAL_INT: return "int";
         case AIVM_VAL_BOOL: return "bool";
+        case AIVM_VAL_NULL: return "null";
         case AIVM_VAL_STRING: return "string";
         case AIVM_VAL_BYTES: return "bytes";
         case AIVM_VAL_NODE: return "node";
@@ -10486,7 +10674,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[104];
+    AivmSyscallBinding bindings[105];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -10647,109 +10835,113 @@ static int run_native_compiled_program(
     bindings[54].handler = native_syscall_time_monotonic_ms;
     bindings[55].target = "sys.time.sleepMs";
     bindings[55].handler = native_syscall_time_sleep_ms;
-    bindings[56].target = "sys.fs.file.read";
-    bindings[56].handler = native_syscall_fs_file_read;
-    bindings[57].target = "sys.fs.file.exists";
-    bindings[57].handler = native_syscall_fs_file_exists;
-    bindings[58].target = "sys.fs.path.exists";
-    bindings[58].handler = native_syscall_fs_path_exists;
-    bindings[59].target = "sys.fs.file.write";
-    bindings[59].handler = native_syscall_fs_file_write;
-    bindings[60].target = "sys.fs.dir.create";
-    bindings[60].handler = native_syscall_fs_dir_create;
-    bindings[61].target = "sys.str.utf8ByteCount";
-    bindings[61].handler = native_syscall_str_utf8_byte_count;
-    bindings[62].target = "sys.console.write";
-    bindings[62].handler = native_syscall_console_write;
-    bindings[63].target = "sys.console.writeLine";
-    bindings[63].handler = native_syscall_console_write_line;
-    bindings[64].target = "sys.console.writeErrLine";
-    bindings[64].handler = native_syscall_console_write_err_line;
-    bindings[65].target = "sys.console.readLine";
-    bindings[65].handler = native_syscall_console_read_line;
-    bindings[66].target = "sys.console.readAllStdin";
-    bindings[66].handler = native_syscall_console_read_all_stdin;
-    bindings[67].target = "sys.process.exit";
-    bindings[67].handler = native_syscall_process_exit;
-    bindings[68].target = "sys.fs.dir.list";
-    bindings[68].handler = native_syscall_fs_dir_list;
-    bindings[69].target = "sys.fs.path.stat";
-    bindings[69].handler = native_syscall_fs_path_stat;
-    bindings[70].target = "sys.net.tcp.close";
-    bindings[70].handler = native_syscall_net_tcp_close;
-    bindings[71].target = "sys.net.tcp.connect";
-    bindings[71].handler = native_syscall_net_tcp_connect;
-    bindings[72].target = "sys.net.tcp.listen";
-    bindings[72].handler = native_syscall_net_tcp_listen;
-    bindings[73].target = "sys.net.tcp.listenTls";
-    bindings[73].handler = native_syscall_net_tcp_listen_tls;
-    bindings[74].target = "sys.net.tcp.accept";
-    bindings[74].handler = native_syscall_net_tcp_accept;
-    bindings[75].target = "sys.net.tcp.read";
-    bindings[75].handler = native_syscall_net_tcp_read;
-    bindings[76].target = "sys.net.tcp.write";
-    bindings[76].handler = native_syscall_net_tcp_write;
-    bindings[77].target = "sys.net.tcp.connectTls";
-    bindings[77].handler = native_syscall_net_tcp_connect_tls;
-    bindings[78].target = "sys.net.tcp.connectStart";
-    bindings[78].handler = native_syscall_net_start_op;
-    bindings[79].target = "sys.net.tcp.connectTlsStart";
-    bindings[79].handler = native_syscall_net_tcp_connect_tls_start;
-    bindings[80].target = "sys.net.tcp.readStart";
+    bindings[56].target = "sys.time.timeZoneId";
+    bindings[56].handler = native_syscall_time_zone_id;
+    bindings[57].target = "sys.time.timeZoneOffsetMinutesAt";
+    bindings[57].handler = native_syscall_time_zone_offset_minutes_at;
+    bindings[58].target = "sys.fs.file.read";
+    bindings[58].handler = native_syscall_fs_file_read;
+    bindings[59].target = "sys.fs.file.exists";
+    bindings[59].handler = native_syscall_fs_file_exists;
+    bindings[60].target = "sys.fs.path.exists";
+    bindings[60].handler = native_syscall_fs_path_exists;
+    bindings[61].target = "sys.fs.file.write";
+    bindings[61].handler = native_syscall_fs_file_write;
+    bindings[62].target = "sys.fs.dir.create";
+    bindings[62].handler = native_syscall_fs_dir_create;
+    bindings[63].target = "sys.str.utf8ByteCount";
+    bindings[63].handler = native_syscall_str_utf8_byte_count;
+    bindings[64].target = "sys.console.write";
+    bindings[64].handler = native_syscall_console_write;
+    bindings[65].target = "sys.console.writeLine";
+    bindings[65].handler = native_syscall_console_write_line;
+    bindings[66].target = "sys.console.writeErrLine";
+    bindings[66].handler = native_syscall_console_write_err_line;
+    bindings[67].target = "sys.console.readLine";
+    bindings[67].handler = native_syscall_console_read_line;
+    bindings[68].target = "sys.console.readAllStdin";
+    bindings[68].handler = native_syscall_console_read_all_stdin;
+    bindings[69].target = "sys.process.exit";
+    bindings[69].handler = native_syscall_process_exit;
+    bindings[70].target = "sys.fs.dir.list";
+    bindings[70].handler = native_syscall_fs_dir_list;
+    bindings[71].target = "sys.fs.path.stat";
+    bindings[71].handler = native_syscall_fs_path_stat;
+    bindings[72].target = "sys.net.tcp.close";
+    bindings[72].handler = native_syscall_net_tcp_close;
+    bindings[73].target = "sys.net.tcp.connect";
+    bindings[73].handler = native_syscall_net_tcp_connect;
+    bindings[74].target = "sys.net.tcp.listen";
+    bindings[74].handler = native_syscall_net_tcp_listen;
+    bindings[75].target = "sys.net.tcp.listenTls";
+    bindings[75].handler = native_syscall_net_tcp_listen_tls;
+    bindings[76].target = "sys.net.tcp.accept";
+    bindings[76].handler = native_syscall_net_tcp_accept;
+    bindings[77].target = "sys.net.tcp.read";
+    bindings[77].handler = native_syscall_net_tcp_read;
+    bindings[78].target = "sys.net.tcp.write";
+    bindings[78].handler = native_syscall_net_tcp_write;
+    bindings[79].target = "sys.net.tcp.connectTls";
+    bindings[79].handler = native_syscall_net_tcp_connect_tls;
+    bindings[80].target = "sys.net.tcp.connectStart";
     bindings[80].handler = native_syscall_net_start_op;
-    bindings[81].target = "sys.net.tcp.writeStart";
-    bindings[81].handler = native_syscall_net_start_op;
-    bindings[82].target = "sys.net.async.poll";
-    bindings[82].handler = native_syscall_net_async_poll;
-    bindings[83].target = "sys.net.async.cancel";
-    bindings[83].handler = native_syscall_net_async_cancel;
-    bindings[84].target = "sys.net.async.await";
-    bindings[84].handler = native_syscall_net_async_await;
-    bindings[85].target = "sys.net.async.resultInt";
-    bindings[85].handler = native_syscall_net_async_result_int;
-    bindings[86].target = "sys.net.async.resultBytes";
-    bindings[86].handler = native_syscall_net_async_result_bytes;
-    bindings[87].target = "sys.net.async.error";
-    bindings[87].handler = native_syscall_net_async_error;
-    bindings[88].target = "sys.net.udp.bind";
-    bindings[88].handler = native_syscall_net_udp_bind;
-    bindings[89].target = "sys.net.udp.recv";
-    bindings[89].handler = native_syscall_net_udp_recv;
-    bindings[90].target = "sys.net.udp.send";
-    bindings[90].handler = native_syscall_net_udp_send;
-    bindings[91].target = "sys.crypto.base64Encode";
-    bindings[91].handler = native_syscall_crypto_string_base64_encode;
-    bindings[92].target = "sys.crypto.base64Decode";
-    bindings[92].handler = native_syscall_crypto_string_base64_decode;
-    bindings[93].target = "sys.crypto.sha1";
-    bindings[93].handler = native_syscall_crypto_sha1;
-    bindings[94].target = "sys.crypto.sha256";
-    bindings[94].handler = native_syscall_crypto_sha256;
-    bindings[95].target = "sys.crypto.hmacSha256";
-    bindings[95].handler = native_syscall_crypto_hmac_sha256;
-    bindings[96].target = "sys.crypto.randomBytes";
-    bindings[96].handler = native_syscall_crypto_random_bytes;
-    bindings[97].target = "sys.debug.mode";
-    bindings[97].handler = native_syscall_debug_mode;
-    bindings[98].target = "sys.debug.captureFrameBegin";
-    bindings[98].handler = native_syscall_debug_capture_frame_begin;
-    bindings[99].target = "sys.debug.captureDraw";
-    bindings[99].handler = native_syscall_debug_capture_draw;
-    bindings[100].target = "sys.debug.captureFrameEnd";
-    bindings[100].handler = native_syscall_debug_capture_frame_end;
-    bindings[101].target = "sys.host.openDefault";
-    bindings[101].handler = native_syscall_host_open_default;
-    bindings[103].target = "sys.image.decodeToRgbaBase64";
-    bindings[103].handler = native_syscall_image_decode_to_rgba_base64;
+    bindings[81].target = "sys.net.tcp.connectTlsStart";
+    bindings[81].handler = native_syscall_net_tcp_connect_tls_start;
+    bindings[82].target = "sys.net.tcp.readStart";
+    bindings[82].handler = native_syscall_net_start_op;
+    bindings[83].target = "sys.net.tcp.writeStart";
+    bindings[83].handler = native_syscall_net_start_op;
+    bindings[84].target = "sys.net.async.poll";
+    bindings[84].handler = native_syscall_net_async_poll;
+    bindings[85].target = "sys.net.async.cancel";
+    bindings[85].handler = native_syscall_net_async_cancel;
+    bindings[86].target = "sys.net.async.await";
+    bindings[86].handler = native_syscall_net_async_await;
+    bindings[87].target = "sys.net.async.resultInt";
+    bindings[87].handler = native_syscall_net_async_result_int;
+    bindings[88].target = "sys.net.async.resultBytes";
+    bindings[88].handler = native_syscall_net_async_result_bytes;
+    bindings[89].target = "sys.net.async.error";
+    bindings[89].handler = native_syscall_net_async_error;
+    bindings[90].target = "sys.net.udp.bind";
+    bindings[90].handler = native_syscall_net_udp_bind;
+    bindings[91].target = "sys.net.udp.recv";
+    bindings[91].handler = native_syscall_net_udp_recv;
+    bindings[92].target = "sys.net.udp.send";
+    bindings[92].handler = native_syscall_net_udp_send;
+    bindings[93].target = "sys.crypto.base64Encode";
+    bindings[93].handler = native_syscall_crypto_string_base64_encode;
+    bindings[94].target = "sys.crypto.base64Decode";
+    bindings[94].handler = native_syscall_crypto_string_base64_decode;
+    bindings[95].target = "sys.crypto.sha1";
+    bindings[95].handler = native_syscall_crypto_sha1;
+    bindings[96].target = "sys.crypto.sha256";
+    bindings[96].handler = native_syscall_crypto_sha256;
+    bindings[97].target = "sys.crypto.hmacSha256";
+    bindings[97].handler = native_syscall_crypto_hmac_sha256;
+    bindings[98].target = "sys.crypto.randomBytes";
+    bindings[98].handler = native_syscall_crypto_random_bytes;
+    bindings[99].target = "sys.debug.mode";
+    bindings[99].handler = native_syscall_debug_mode;
+    bindings[100].target = "sys.debug.captureFrameBegin";
+    bindings[100].handler = native_syscall_debug_capture_frame_begin;
+    bindings[101].target = "sys.debug.captureDraw";
+    bindings[101].handler = native_syscall_debug_capture_draw;
+    bindings[102].target = "sys.debug.captureFrameEnd";
+    bindings[102].handler = native_syscall_debug_capture_frame_end;
+    bindings[103].target = "sys.host.openDefault";
+    bindings[103].handler = native_syscall_host_open_default;
+    bindings[104].target = "sys.image.decodeToRgbaBase64";
+    bindings[104].handler = native_syscall_image_decode_to_rgba_base64;
     if (g_airun_log_level >= AIRUN_LOG_TRACE) {
-        native_prepare_traced_bindings(bindings, 104U);
+        native_prepare_traced_bindings(bindings, 105U);
     } else {
         g_native_trace_real_binding_count = 0U;
     }
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        104U,
+        105U,
         process_argv,
         process_argv_count,
         &vm);
@@ -11132,7 +11324,7 @@ static int parse_bytecode_aos_to_program_text(
         if (!parse_attr_span(attrs, "kind", kind, sizeof(kind))) {
             return 0;
         }
-        if (strcmp(kind, "int") == 0) {
+        if (strcmp(kind, "int") == 0 || strcmp(kind, "number") == 0) {
             int64_t v = 0;
             if (!parse_attr_int64(attrs, "value", &v)) {
                 return 0;
@@ -11168,6 +11360,8 @@ static int parse_bytecode_aos_to_program_text(
                The native publish path preserves the value family as a deterministic node handle. */
             out_program->constant_storage[out_program->constant_count] =
                 aivm_value_node((int64_t)(out_program->constant_count + 1U));
+        } else if (strcmp(kind, "null") == 0) {
+            out_program->constant_storage[out_program->constant_count] = aivm_value_null();
         } else if (strcmp(kind, "void") == 0) {
             out_program->constant_storage[out_program->constant_count] = aivm_value_void();
         } else {
@@ -11554,6 +11748,17 @@ static int simple_compile_expr_node(const SimpleNodeView* node, AivmProgram* pro
         }
         if (!value_is_quoted && (strcmp(value, "true") == 0 || strcmp(value, "false") == 0)) {
             return simple_emit_instruction(program, AIVM_OP_PUSH_BOOL, (strcmp(value, "true") == 0) ? 1 : 0);
+        }
+        if (!value_is_quoted && strcmp(value, "null") == 0) {
+            if (program->constant_count >= AIVM_PROGRAM_MAX_CONSTANTS) {
+                return simple_fail("lit null constant capacity exceeded");
+            }
+            program->constant_storage[program->constant_count] = aivm_value_null();
+            if (!simple_emit_instruction(program, AIVM_OP_CONST, (int64_t)program->constant_count)) {
+                return 0;
+            }
+            program->constant_count += 1U;
+            return 1;
         }
         if (!value_is_quoted) {
             char* end = NULL;
@@ -13242,6 +13447,8 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
             const_payload_size += 1U + 8U;
         } else if (v.type == AIVM_VAL_BOOL) {
             const_payload_size += 1U + 1U;
+        } else if (v.type == AIVM_VAL_NULL) {
+            const_payload_size += 1U;
         } else if (v.type == AIVM_VAL_STRING) {
             size_t len = (v.string_value == NULL) ? 0U : strlen(v.string_value);
             if (len > 0xffffffffU) {
@@ -13296,6 +13503,8 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
             } else if (v.type == AIVM_VAL_BOOL) {
                 (void)fputc(2, f);
                 (void)fputc(v.bool_value ? 1 : 0, f);
+            } else if (v.type == AIVM_VAL_NULL) {
+                (void)fputc(6, f);
             } else if (v.type == AIVM_VAL_STRING) {
                 uint32_t len = (uint32_t)((v.string_value == NULL) ? 0U : strlen(v.string_value));
                 (void)fputc(3, f);

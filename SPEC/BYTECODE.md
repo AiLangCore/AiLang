@@ -32,12 +32,13 @@ No section may rely on map/hash iteration order.
 Each `Const` child represents one constant.
 
 - required attrs:
-  - `kind=string|int|bool|null|node`
+  - `kind=string|int|number|bool|null|node`
   - `value=...`
 - constants are addressed by zero-based child index
 - compiler emits constants in deterministic first-seen order for the canonical walk
 
 `kind=node` uses canonical AOS text encoding of exactly one node value.
+`kind=number` is the canonical language-facing exact numeric family and currently encodes the same exact whole-number payload as `kind=int`.
 
 ## Function Table
 

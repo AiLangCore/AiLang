@@ -1,0 +1,23 @@
+Program#gtime_p1 {
+  Import#gtime_i1(path="./src/std/time.aos")
+
+  Let#gtime_l1(name=t) {
+    Call#gtime_c1(target=timeFromUnixMs) {
+      Lit#gtime_i1(value=1700000000000)
+      Lit#gtime_s1(value="America/Chicago")
+      Lit#gtime_i2(value=-360)
+    }
+  }
+
+  Call#gtime_c2(target=io.print) {
+    Call#gtime_c3(target=timeUnixMs) { Var#gtime_v1(name=t) }
+  }
+
+  Call#gtime_c4(target=io.print) {
+    Call#gtime_c5(target=timeZone) { Var#gtime_v2(name=t) }
+  }
+
+  Call#gtime_c6(target=io.print) {
+    Call#gtime_c7(target=timeOffsetMinutes) { Var#gtime_v3(name=t) }
+  }
+}

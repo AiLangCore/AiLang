@@ -10,7 +10,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Block` | none | `0..N` | Evaluate children in order. |
 | `Let` | `name` (identifier) | `1` | Binds evaluated child result to `name`. |
 | `Var` | `name` (identifier) | `0` | Reads from environment. |
-| `Lit` | `value` (`string\|int\|bool\|bytes`) | `0` | Literal value node. |
+| `Lit` | `value` (`string\|number\|bool\|null\|bytes`) | `0` | Literal value node. |
 | `Call` | `target` (identifier/dotted identifier) | `0..N` | Native or user-defined call. |
 | `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. |
 | `Export` | `name` (identifier) | `0` | Exposes one binding from current module. |
@@ -28,7 +28,8 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 - Runtime values are represented as nodes:
 - `Lit(value=...)` for primitive values.
-- Primitive runtime kinds are `string`, `int`, `bool`, and `bytes`.
+- Primitive runtime kinds are `string`, `number`, `bool`, `null`, and `bytes`.
+- Current AiBC1 numeric execution is exact integer-only; `number` is the canonical language-facing numeric family and currently lowers to exact whole-number runtime values.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
 - `Task(handle=...)` for async in-flight work handles returned by async calls.

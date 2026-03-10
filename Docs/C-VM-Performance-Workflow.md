@@ -2,6 +2,11 @@
 
 Use these scripts to validate a C VM against the canonical runtime behavior and collect repeatable performance data.
 
+Normal bootstrap and verification should still go through:
+
+- `./build.sh`
+- `./test.sh`
+
 ## Scripts
 
 - `./scripts/test-c-vm.sh`

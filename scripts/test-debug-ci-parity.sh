@@ -5,5 +5,5 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 ./scripts/bootstrap-golden-publish-fixtures.sh
-./scripts/test.sh
+./test.sh
 ./tools/airun debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal

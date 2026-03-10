@@ -7,7 +7,7 @@ cd "${ROOT_DIR}"
 RESULTS_DIR="${1:-/tmp/ailang-coverage-stable}"
 mkdir -p "${RESULTS_DIR}"
 
-./scripts/test.sh
+./test.sh
 
 REPORT="${RESULTS_DIR}/coverage-placeholder.txt"
 {

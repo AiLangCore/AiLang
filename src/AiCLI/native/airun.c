@@ -141,6 +141,13 @@ typedef enum {
 } AirunLogLevel;
 typedef struct NativeDebugOptions NativeDebugOptions;
 typedef struct NativeNetAsyncState NativeNetAsyncState;
+static int write_native_debug_bundle(
+    const NativeDebugOptions* options,
+    const AivmProgram* program,
+    const AivmVm* vm,
+    int exit_code,
+    int has_exit_code,
+    const char* diagnostics_line);
 typedef struct {
     int enabled;
     int consumed;
@@ -251,7 +258,29 @@ static void airun_log_message(AirunLogLevel level, const char* category, const c
 
 static AivmSyscallBinding g_native_trace_real_bindings[128];
 static size_t g_native_trace_real_binding_count = 0U;
+static const NativeDebugOptions* g_airun_live_debug_options = NULL;
+static const AivmProgram* g_airun_live_debug_program = NULL;
+static const AivmVm* g_airun_live_debug_vm = NULL;
+static size_t g_airun_live_debug_refresh_counter = 0U;
+static int g_airun_live_debug_emit_bundle = 0;
 static const char* airun_value_type_name(AivmValueType type);
+
+static void airun_refresh_live_debug_bundle(const char* diagnostics_line)
+{
+    if (g_airun_live_debug_options == NULL ||
+        g_airun_live_debug_program == NULL ||
+        g_airun_live_debug_vm == NULL ||
+        !g_airun_live_debug_emit_bundle) {
+        return;
+    }
+    (void)write_native_debug_bundle(
+        g_airun_live_debug_options,
+        g_airun_live_debug_program,
+        g_airun_live_debug_vm,
+        0,
+        0,
+        diagnostics_line);
+}
 
 static AivmSyscallHandler native_trace_lookup_real_handler(const char* target)
 {
@@ -321,6 +350,10 @@ static int native_syscall_dispatch_traced(
         (target == NULL) ? "<null>" : target,
         aivm_syscall_status_code((AivmSyscallStatus)status),
         (result == NULL) ? "null" : airun_value_type_name(result->type));
+    g_airun_live_debug_refresh_counter += 1U;
+    if ((g_airun_live_debug_refresh_counter % 128U) == 0U) {
+        airun_refresh_live_debug_bundle("status=running");
+    }
     return status;
 }
 
@@ -10374,6 +10407,11 @@ static int run_native_compiled_program(
         return 2;
     }
     g_native_active_vm = &vm;
+    g_airun_live_debug_options = debug_options;
+    g_airun_live_debug_program = program;
+    g_airun_live_debug_vm = &vm;
+    g_airun_live_debug_refresh_counter = 0U;
+    g_airun_live_debug_emit_bundle = (debug_options == NULL) ? 0 : debug_options->emit_bundle;
     (void)snprintf(g_native_ui_event_type, sizeof(g_native_ui_event_type), "none");
     g_native_ui_event_key[0] = '\0';
     g_native_ui_event_text[0] = '\0';
@@ -10638,6 +10676,11 @@ static int run_native_compiled_program(
         native_host_ui_shutdown();
         native_scene_capture_reset();
         airun_log_capture_close();
+        g_airun_live_debug_options = NULL;
+        g_airun_live_debug_program = NULL;
+        g_airun_live_debug_vm = NULL;
+        g_airun_live_debug_refresh_counter = 0U;
+        g_airun_live_debug_emit_bundle = 0;
         g_native_active_vm = NULL;
         return emit_vm_error_with_context(program, &vm, vm_error_message);
     }
@@ -10659,6 +10702,11 @@ static int run_native_compiled_program(
     native_host_ui_shutdown();
     native_scene_capture_reset();
     airun_log_capture_close();
+    g_airun_live_debug_options = NULL;
+    g_airun_live_debug_program = NULL;
+    g_airun_live_debug_vm = NULL;
+    g_airun_live_debug_refresh_counter = 0U;
+    g_airun_live_debug_emit_bundle = 0;
     g_native_active_vm = NULL;
     if (has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", exit_code);

@@ -4689,6 +4689,144 @@ static int native_syscall_fs_dir_delete(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_vm_lookup_node_record(
+    const AivmVm* vm,
+    int64_t handle,
+    const AivmNodeRecord** out_node)
+{
+    size_t index;
+    if (vm == NULL || out_node == NULL || handle <= 0) {
+        return 0;
+    }
+    index = (size_t)(handle - 1);
+    if (index >= vm->node_count) {
+        return 0;
+    }
+    *out_node = &vm->nodes[index];
+    return 1;
+}
+
+static const char* native_vm_node_first_string_attr(const AivmVm* vm, int64_t node_handle)
+{
+    const AivmNodeRecord* node;
+    size_t i;
+    if (!native_vm_lookup_node_record(vm, node_handle, &node)) {
+        return NULL;
+    }
+    for (i = 0U; i < node->attr_count; i += 1U) {
+        const AivmNodeAttr* attr = &vm->node_attrs[node->attr_start + i];
+        if (attr->kind == AIVM_NODE_ATTR_STRING && attr->string_value != NULL) {
+            return attr->string_value;
+        }
+    }
+    return NULL;
+}
+
+static int native_vm_collect_process_argv(
+    const AivmVm* vm,
+    const char* command,
+    int64_t args_node_handle,
+    char*** out_argv,
+    size_t* out_argc)
+{
+    const AivmNodeRecord* args_node = NULL;
+    char** argv_values = NULL;
+    size_t argc = 0U;
+    size_t child_count = 0U;
+    size_t i;
+
+    if (vm == NULL || command == NULL || out_argv == NULL || out_argc == NULL) {
+        return 0;
+    }
+    if (args_node_handle > 0) {
+        if (!native_vm_lookup_node_record(vm, args_node_handle, &args_node)) {
+            return 0;
+        }
+        child_count = args_node->child_count;
+    }
+
+    argv_values = (char**)calloc(child_count + 2U, sizeof(char*));
+    if (argv_values == NULL) {
+        return 0;
+    }
+    argv_values[argc++] = (char*)command;
+    for (i = 0U; i < child_count; i += 1U) {
+        const char* arg_text =
+            native_vm_node_first_string_attr(vm, vm->node_children[args_node->child_start + i]);
+        if (arg_text == NULL) {
+            free(argv_values);
+            return 0;
+        }
+        argv_values[argc++] = (char*)arg_text;
+    }
+    argv_values[argc] = NULL;
+    *out_argv = argv_values;
+    *out_argc = argc;
+    return 1;
+}
+
+#ifdef _WIN32
+static int native_windows_append_quoted_arg(
+    char* buffer,
+    size_t buffer_len,
+    size_t* io_used,
+    const char* arg)
+{
+    size_t used;
+    size_t i;
+    int needs_quotes = 0;
+
+    if (buffer == NULL || io_used == NULL || arg == NULL) {
+        return 0;
+    }
+    used = *io_used;
+    for (i = 0U; arg[i] != '\0'; i += 1U) {
+        if (arg[i] == ' ' || arg[i] == '\t' || arg[i] == '"') {
+            needs_quotes = 1;
+            break;
+        }
+    }
+    if (used > 0U) {
+        if (used + 1U >= buffer_len) {
+            return 0;
+        }
+        buffer[used++] = ' ';
+    }
+    if (needs_quotes) {
+        if (used + 1U >= buffer_len) {
+            return 0;
+        }
+        buffer[used++] = '"';
+    }
+    for (i = 0U; arg[i] != '\0'; i += 1U) {
+        if (arg[i] == '"') {
+            if (used + 2U >= buffer_len) {
+                return 0;
+            }
+            buffer[used++] = '\\';
+            buffer[used++] = '"';
+        } else {
+            if (used + 1U >= buffer_len) {
+                return 0;
+            }
+            buffer[used++] = arg[i];
+        }
+    }
+    if (needs_quotes) {
+        if (used + 1U >= buffer_len) {
+            return 0;
+        }
+        buffer[used++] = '"';
+    }
+    if (used >= buffer_len) {
+        return 0;
+    }
+    buffer[used] = '\0';
+    *io_used = used;
+    return 1;
+}
+#endif
+
 static int native_syscall_process_spawn(
     const char* target,
     const AivmValue* args,
@@ -4707,6 +4845,10 @@ static int native_syscall_process_spawn(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (g_native_active_vm == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
 #ifdef _WIN32
     {
         SECURITY_ATTRIBUTES security_attributes;
@@ -4719,6 +4861,9 @@ static int native_syscall_process_spawn(
         int64_t slot_handle;
         NativeProcessState* process;
         char* command_line;
+        char** argv_values = NULL;
+        size_t argv_count = 0U;
+        size_t command_line_used = 0U;
         const char* cwd = NULL;
 
         memset(&security_attributes, 0, sizeof(security_attributes));
@@ -4755,8 +4900,12 @@ static int native_syscall_process_spawn(
         startup_info.hStdOutput = stdout_write;
         startup_info.hStdError = stderr_write;
 
-        command_line = _strdup(args[0].string_value);
-        if (command_line == NULL) {
+        if (!native_vm_collect_process_argv(
+                g_native_active_vm,
+                args[0].string_value,
+                args[1].node_handle,
+                &argv_values,
+                &argv_count)) {
             CloseHandle(stdout_read);
             CloseHandle(stdout_write);
             CloseHandle(stderr_read);
@@ -4764,12 +4913,35 @@ static int native_syscall_process_spawn(
             *result = aivm_value_int(-1);
             return AIVM_SYSCALL_OK;
         }
+        command_line = (char*)calloc(8192U, 1U);
+        if (command_line == NULL) {
+            free(argv_values);
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        for (size_t arg_i = 0U; arg_i < argv_count; arg_i += 1U) {
+            if (!native_windows_append_quoted_arg(command_line, 8192U, &command_line_used, argv_values[arg_i])) {
+                free(command_line);
+                free(argv_values);
+                CloseHandle(stdout_read);
+                CloseHandle(stdout_write);
+                CloseHandle(stderr_read);
+                CloseHandle(stderr_write);
+                *result = aivm_value_int(-1);
+                return AIVM_SYSCALL_OK;
+            }
+        }
+        free(argv_values);
         if (args[2].string_value[0] != '\0') {
             cwd = args[2].string_value;
         }
 
         if (!CreateProcessA(
-                NULL,
+                args[0].string_value,
                 command_line,
                 NULL,
                 NULL,
@@ -4825,6 +4997,8 @@ static int native_syscall_process_spawn(
         pid_t pid;
         int64_t slot_handle;
         NativeProcessState* process;
+        char** argv_values = NULL;
+        size_t argv_count = 0U;
         if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0) {
             if (stdout_pipe[0] >= 0) {
                 close(stdout_pipe[0]);
@@ -4838,6 +5012,19 @@ static int native_syscall_process_spawn(
             if (stderr_pipe[1] >= 0) {
                 close(stderr_pipe[1]);
             }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        if (!native_vm_collect_process_argv(
+                g_native_active_vm,
+                args[0].string_value,
+                args[1].node_handle,
+                &argv_values,
+                &argv_count)) {
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
             *result = aivm_value_int(-1);
             return AIVM_SYSCALL_OK;
         }
@@ -4855,9 +5042,10 @@ static int native_syscall_process_spawn(
             close(stdout_pipe[1]);
             close(stderr_pipe[0]);
             close(stderr_pipe[1]);
-            execl("/bin/sh", "sh", "-c", args[0].string_value, (char*)NULL);
+            execvp(args[0].string_value, argv_values);
             _exit(127);
         }
+        free(argv_values);
         if (pid < 0) {
             close(stdout_pipe[0]);
             close(stdout_pipe[1]);

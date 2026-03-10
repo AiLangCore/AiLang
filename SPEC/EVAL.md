@@ -123,6 +123,9 @@ This file is normative for `aic run` evaluation behavior.
 
 - Process APIs are host-executed effectful operations with owner-thread-visible completion:
 - `sys.process.spawn(command, argsNode, cwd, envNode) -> processHandle`
+  - `command` is the executable path/name.
+  - `argsNode` uses the same node shape returned by `sys.process.args`: a block/list of string-bearing child nodes, one child per argv entry after `command`.
+  - Native runtime launches `command` with `argv = [command] + argsNode`.
 - `sys.process_poll(processHandle) -> status`
 - `sys.process_wait(processHandle) -> status`
 - `sys.process.stdout.read(processHandle) -> bytes`

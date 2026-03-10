@@ -18,6 +18,19 @@ Current:
   - higher-layer compiled CLIs must preserve indefinite subcommand depth in app argv
 - For `debug * run`, place app argv after `--` once any native debug flags (`--out`, `--log-level`, injected input) are present:
   - `airun debug capture run <app.aibc1> --out <dir> -- debug snapshot`
+- Built-in live debug sequencing is available for interactive apps:
+  - `--inject-click <x,y>`
+  - `--inject-text <text>`
+  - `--inject-key <name>`
+  - `--inject-wait <polls>`
+  - `--inject-close`
+  - `--inject-script <path>`
+- `--inject-script` uses one command per line with the same `debug interact run` vocabulary:
+  - `click 124,138`
+  - `text 76103`
+  - `key enter`
+  - `wait 30`
+  - `close`
 - `clean` command clears native build cache for a project: `airun clean [program|project-dir]`.
 - Canonical higher-layer CLI option syntax is GNU-style `--full-name` / `-f`; slash-prefixed flags are not part of the AiVectra CLI contract.
 - Source/project `run` compiles through native C paths only (no backend delegation).

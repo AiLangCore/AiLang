@@ -34,6 +34,25 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 ./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
 ```
 
+4a. Use built-in deterministic waits and close/finalization for live UI flows:
+
+```bash
+./tools/airun debug capture run ./samples/WeatherApp/ --inject-text 76103 --inject-key enter --inject-wait 60 --inject-close --out .artifacts/debug/weather-live
+```
+
+4b. For multi-step live scenarios, prefer a script file over long flag chains:
+
+```text
+text 76103
+key enter
+wait 60
+close
+```
+
+```bash
+./tools/airun debug capture run ./samples/WeatherApp/ --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-live
+```
+
 5. When a debug command needs both tool flags and compiled-app argv, put app argv after `--`:
 
 ```bash
@@ -56,5 +75,16 @@ Each debug capture run writes one directory with deterministic files:
 - `state_snapshots.toml`: stack/locals/env snapshots
 
 When interactive behavior is required, prefer runtime-owned injected events over external UI scripting so the captured artifact and the executed interaction stay in the same debug surface.
+
+The built-in injected-event script format is line-oriented and deterministic:
+
+- `click x,y`
+- `text value`
+- `key name`
+- `wait polls`
+- `close`
+- `enter`
+- `backspace`
+- `quit`
 
 When compiled-app argv are present, treat `--` as mandatory delimiter between debug-tool flags and app argv so higher-layer CLIs can preserve indefinite subcommand depth.

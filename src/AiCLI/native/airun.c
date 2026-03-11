@@ -2184,6 +2184,7 @@ static void print_usage(void)
         "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
+        "  debug dns <host> [port]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -2205,6 +2206,8 @@ static int print_unsupported_vm_mode(const char* mode)
         mode);
     return 2;
 }
+
+static int parse_int(const char* text, int* out);
 
 typedef struct {
     const char* name;
@@ -14240,6 +14243,43 @@ static int handle_debug_run_mode(
 
 static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
+    if (argc >= 4 && strcmp(argv[2], "dns") == 0) {
+        const char* host = argv[3];
+        uint16_t port = 443U;
+        int parsed_port = 0;
+        struct sockaddr_in addr;
+        char error_text[256];
+        char ip_text[INET_ADDRSTRLEN];
+        if (argc >= 5) {
+            if (!parse_int(argv[4], &parsed_port) || parsed_port > 65535) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid debug dns port.\" nodeId=argv)\n");
+                return 2;
+            }
+            port = (uint16_t)parsed_port;
+        }
+        if (host == NULL || host[0] == '\0') {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Missing debug dns host.\" nodeId=argv)\n");
+            return 2;
+        }
+        error_text[0] = '\0';
+        memset(&addr, 0, sizeof(addr));
+        memset(ip_text, 0, sizeof(ip_text));
+        if (!native_net_resolve_ipv4_detail(host, port, SOCK_STREAM, 0, &addr, error_text, sizeof(error_text))) {
+            fprintf(stderr,
+                "Err#err1(code=NET001 message=\"DNS lookup failed.\" detail=\"%s\" nodeId=dns)\n",
+                error_text[0] == '\0' ? "dns_failed" : error_text);
+            return 1;
+        }
+        if (inet_ntop(AF_INET, &addr.sin_addr, ip_text, sizeof(ip_text)) == NULL) {
+            fprintf(stderr,
+                "Err#err1(code=NET001 message=\"DNS lookup succeeded but address formatting failed.\" nodeId=dns)\n");
+            return 1;
+        }
+        printf("Ok#ok1(type=string value=\"%s\")\n", ip_text);
+        return 0;
+    }
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
         return handle_debug_run_mode(argc, argv, 3, NULL, 0, NULL, 0);
     }
@@ -14253,7 +14293,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL, 1);
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>, debug dns <host> [port]\" nodeId=command)\n");
     return 2;
 }
 

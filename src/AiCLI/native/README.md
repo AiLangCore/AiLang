@@ -25,6 +25,10 @@ Current:
   - `--inject-wait <polls>`
   - `--inject-close`
   - `--inject-script <path>`
+- Built-in host DNS diagnostics are available:
+  - `airun debug dns <host> [port]`
+  - success prints `Ok#ok1(type=string value="<ipv4>")`
+  - failure prints `Err#err1(code=NET001 ...)` with `detail="dns_failed:..."`
 - `--inject-script` uses one command per line with the same `debug interact run` vocabulary:
   - `click 124,138`
   - `text 76103`

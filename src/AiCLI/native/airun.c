@@ -10934,7 +10934,7 @@ static int run_native_compiled_program(
     bindings[105].target = "sys.bytes.fromUtf8String";
     bindings[105].handler = native_syscall_bytes_from_utf8_string;
     if (g_airun_log_level >= AIRUN_LOG_TRACE) {
-        native_prepare_traced_bindings(bindings, 105U);
+        native_prepare_traced_bindings(bindings, 106U);
     } else {
         g_native_trace_real_binding_count = 0U;
     }

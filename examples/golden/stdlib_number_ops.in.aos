@@ -1,0 +1,28 @@
+Program#gnumber_ops_p1 {
+  Import#gnumber_ops_i1(path="./src/std/number.aos")
+  Import#gnumber_ops_i2(path="./src/std/io.aos")
+
+  Call#gnumber_ops_c1(target=io.print) {
+    Call#gnumber_ops_c2(target=toString) { Call#gnumber_ops_c3(target=negate) { Lit#gnumber_ops_i1(value=7) } }
+  }
+
+  Call#gnumber_ops_c4(target=io.print) {
+    Call#gnumber_ops_c5(target=toString) { Call#gnumber_ops_c6(target=abs) { Lit#gnumber_ops_i2(value=-7) } }
+  }
+
+  Call#gnumber_ops_c7(target=io.print) {
+    Call#gnumber_ops_c8(target=toString) { Call#gnumber_ops_c9(target=sign) { Lit#gnumber_ops_i3(value=-7) } }
+  }
+
+  Call#gnumber_ops_c10(target=io.print) {
+    Call#gnumber_ops_c11(target=toString) { Call#gnumber_ops_c12(target=sign) { Lit#gnumber_ops_i4(value=0) } }
+  }
+
+  Call#gnumber_ops_c13(target=io.print) {
+    Call#gnumber_ops_c14(target=toString) { Call#gnumber_ops_c15(target=max) { Lit#gnumber_ops_i5(value=-7) Lit#gnumber_ops_i6(value=3) } }
+  }
+
+  Call#gnumber_ops_c16(target=io.print) {
+    Call#gnumber_ops_c17(target=toString) { Call#gnumber_ops_c18(target=min) { Lit#gnumber_ops_i7(value=-7) Lit#gnumber_ops_i8(value=3) } }
+  }
+}

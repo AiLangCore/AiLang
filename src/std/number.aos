@@ -55,6 +55,73 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l7a(name=negate) {
+    Fn#std_number_f7a(params=value) {
+      Block#std_number_b7a {
+        Return#std_number_r7a {
+          Add#std_number_a3a {
+            Lit#std_number_i4a(value=0)
+            Add#std_number_a3b { Lit#std_number_i4b(value=-1) Var#std_number_v7a(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7b(name=abs) {
+    Fn#std_number_f7b(params=value) {
+      Block#std_number_b7b {
+        If#std_number_if0 {
+          Call#std_number_c0(target=intLt) { Var#std_number_v7b(name=value) Lit#std_number_i4c(value=0) }
+          Block#std_number_b7c { Return#std_number_r7b { Call#std_number_c0a(target=negate) { Var#std_number_v7c(name=value) } } }
+          Block#std_number_b7d { Return#std_number_r7c { Var#std_number_v7d(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7c(name=sign) {
+    Fn#std_number_f7c(params=value) {
+      Block#std_number_b7e {
+        If#std_number_if0a {
+          Call#std_number_c0b(target=intLt) { Var#std_number_v7e(name=value) Lit#std_number_i4d(value=0) }
+          Block#std_number_b7f { Return#std_number_r7d { Lit#std_number_i4e(value=-1) } }
+          Block#std_number_b7g {
+            If#std_number_if0b {
+              Eq#std_number_eq0 { Var#std_number_v7f(name=value) Lit#std_number_i4f(value=0) }
+              Block#std_number_b7h { Return#std_number_r7e { Lit#std_number_i4g(value=0) } }
+              Block#std_number_b7i { Return#std_number_r7f { Lit#std_number_i4h(value=1) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7d(name=min) {
+    Fn#std_number_f7d(params=a,b) {
+      Block#std_number_b7j {
+        If#std_number_if0c {
+          Call#std_number_c0c(target=intLt) { Var#std_number_v7g(name=a) Var#std_number_v7h(name=b) }
+          Block#std_number_b7k { Return#std_number_r7g { Var#std_number_v7i(name=a) } }
+          Block#std_number_b7l { Return#std_number_r7h { Var#std_number_v7j(name=b) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7e(name=max) {
+    Fn#std_number_f7e(params=a,b) {
+      Block#std_number_b7m {
+        If#std_number_if0d {
+          Call#std_number_c0d(target=intLt) { Var#std_number_v7k(name=a) Var#std_number_v7l(name=b) }
+          Block#std_number_b7n { Return#std_number_r7i { Var#std_number_v7m(name=b) } }
+          Block#std_number_b7o { Return#std_number_r7j { Var#std_number_v7n(name=a) } }
+        }
+      }
+    }
+  }
+
 
   Let#std_number_l8(name=digitValue) {
     Fn#std_number_f8(params=ch) {
@@ -359,6 +426,11 @@ Program#std_number_p1 {
   Export#std_number_e5(name=dec)
   Export#std_number_e6(name=equals)
   Export#std_number_e7(name=toString)
+  Export#std_number_e7a(name=negate)
+  Export#std_number_e7b(name=abs)
+  Export#std_number_e7c(name=sign)
+  Export#std_number_e7d(name=min)
+  Export#std_number_e7e(name=max)
   Export#std_number_e8(name=digitValue)
   Export#std_number_e9(name=isWholeString)
   Export#std_number_e10(name=parseWholeOr)

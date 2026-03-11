@@ -812,6 +812,101 @@ Program#std_core_p1 {
     }
   }
 
+  Let#std_core_l54(name=recordEmpty) {
+    Fn#std_core_f34(params=kind) {
+      Block#std_core_b70 {
+        Return#std_core_r52 {
+          Call#std_core_c33(target=nodeEmpty) {
+            Var#std_core_v154(name=kind)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l55(name=recordHas) {
+    Fn#std_core_f35(params=recordNode,key) {
+      Block#std_core_b71 {
+        Return#std_core_r53 {
+          Call#std_core_c34(target=mapHas) {
+            Var#std_core_v155(name=recordNode)
+            Var#std_core_v156(name=key)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l56(name=recordGetNodeOr) {
+    Fn#std_core_f36(params=recordNode,key,fallback) {
+      Block#std_core_b72 {
+        Return#std_core_r54 {
+          Call#std_core_c35(target=mapGetNodeOr) {
+            Var#std_core_v157(name=recordNode)
+            Var#std_core_v158(name=key)
+            Var#std_core_v159(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l57(name=recordGetStringOr) {
+    Fn#std_core_f37(params=recordNode,key,fallback) {
+      Block#std_core_b73 {
+        Return#std_core_r55 {
+          Call#std_core_c36(target=mapGetStringOr) {
+            Var#std_core_v160(name=recordNode)
+            Var#std_core_v161(name=key)
+            Var#std_core_v162(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l58(name=recordGetIntOr) {
+    Fn#std_core_f38(params=recordNode,key,fallback) {
+      Block#std_core_b74 {
+        Return#std_core_r56 {
+          Call#std_core_c37(target=mapGetIntOr) {
+            Var#std_core_v163(name=recordNode)
+            Var#std_core_v164(name=key)
+            Var#std_core_v165(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l59(name=recordGetBoolOr) {
+    Fn#std_core_f39(params=recordNode,key,fallback) {
+      Block#std_core_b75 {
+        Return#std_core_r57 {
+          Call#std_core_c38(target=mapGetBoolOr) {
+            Var#std_core_v166(name=recordNode)
+            Var#std_core_v167(name=key)
+            Var#std_core_v168(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l60(name=recordSet) {
+    Fn#std_core_f40(params=recordNode,key,value) {
+      Block#std_core_b76 {
+        Return#std_core_r58 {
+          Call#std_core_c39(target=mapSet) {
+            Var#std_core_v169(name=recordNode)
+            Var#std_core_v170(name=key)
+            Var#std_core_v171(name=value)
+          }
+        }
+      }
+    }
+  }
+
   Export#std_core_e1(name=assert)
   Export#std_core_e2(name=resultOkString)
   Export#std_core_e14(name=resultOkInt)
@@ -846,4 +941,11 @@ Program#std_core_p1 {
   Export#std_core_e31(name=mapGetBoolOr)
   Export#std_core_e32(name=mapSetFold)
   Export#std_core_e33(name=mapSet)
+  Export#std_core_e34(name=recordEmpty)
+  Export#std_core_e35(name=recordHas)
+  Export#std_core_e36(name=recordGetNodeOr)
+  Export#std_core_e37(name=recordGetStringOr)
+  Export#std_core_e38(name=recordGetIntOr)
+  Export#std_core_e39(name=recordGetBoolOr)
+  Export#std_core_e40(name=recordSet)
 }

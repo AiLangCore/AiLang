@@ -1,0 +1,20 @@
+Program#gnumber_compare_p1 {
+  Import#gnumber_compare_i1(path="./src/std/number.aos")
+  Import#gnumber_compare_i2(path="./src/std/io.aos")
+
+  Call#gnumber_compare_c1(target=io.print) {
+    ToString#gnumber_compare_t1 { Call#gnumber_compare_c2(target=lt) { Lit#gnumber_compare_i1(value=2) Lit#gnumber_compare_i2(value=3) } }
+  }
+
+  Call#gnumber_compare_c3(target=io.print) {
+    ToString#gnumber_compare_t2 { Call#gnumber_compare_c4(target=lte) { Lit#gnumber_compare_i3(value=3) Lit#gnumber_compare_i4(value=3) } }
+  }
+
+  Call#gnumber_compare_c5(target=io.print) {
+    ToString#gnumber_compare_t3 { Call#gnumber_compare_c6(target=gt) { Lit#gnumber_compare_i5(value=5) Lit#gnumber_compare_i6(value=1) } }
+  }
+
+  Call#gnumber_compare_c7(target=io.print) {
+    ToString#gnumber_compare_t4 { Call#gnumber_compare_c8(target=gte) { Lit#gnumber_compare_i7(value=1) Lit#gnumber_compare_i8(value=5) } }
+  }
+}

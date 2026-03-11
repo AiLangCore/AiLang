@@ -47,6 +47,46 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l6a(name=lt) {
+    Fn#std_number_f6a(params=a,b) {
+      Block#std_number_b6a {
+        Return#std_number_r6a { Call#std_number_c0h(target=intLt) { Var#std_number_v6a(name=a) Var#std_number_v6b(name=b) } }
+      }
+    }
+  }
+
+  Let#std_number_l6b(name=lte) {
+    Fn#std_number_f6b(params=a,b) {
+      Block#std_number_b6b {
+        If#std_number_iflt1 {
+          Call#std_number_c0i(target=lt) { Var#std_number_v6c(name=a) Var#std_number_v6d(name=b) }
+          Block#std_number_b6c { Return#std_number_r6b { Lit#std_number_i3a(value=true) } }
+          Block#std_number_b6d { Return#std_number_r6c { Call#std_number_c0j(target=equals) { Var#std_number_v6e(name=a) Var#std_number_v6f(name=b) } } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6c(name=gt) {
+    Fn#std_number_f6c(params=a,b) {
+      Block#std_number_b6e {
+        Return#std_number_r6d { Call#std_number_c0k(target=lt) { Var#std_number_v6g(name=b) Var#std_number_v6h(name=a) } }
+      }
+    }
+  }
+
+  Let#std_number_l6d(name=gte) {
+    Fn#std_number_f6d(params=a,b) {
+      Block#std_number_b6f {
+        If#std_number_iflt2 {
+          Call#std_number_c0l(target=gt) { Var#std_number_v6i(name=a) Var#std_number_v6j(name=b) }
+          Block#std_number_b6g { Return#std_number_r6e { Lit#std_number_i3b(value=true) } }
+          Block#std_number_b6h { Return#std_number_r6f { Call#std_number_c0m(target=equals) { Var#std_number_v6k(name=a) Var#std_number_v6l(name=b) } } }
+        }
+      }
+    }
+  }
+
   Let#std_number_l7(name=toString) {
     Fn#std_number_f7(params=value) {
       Block#std_number_b7 {
@@ -461,6 +501,10 @@ Program#std_number_p1 {
   Export#std_number_e4(name=inc)
   Export#std_number_e5(name=dec)
   Export#std_number_e6(name=equals)
+  Export#std_number_e6a(name=lt)
+  Export#std_number_e6b(name=lte)
+  Export#std_number_e6c(name=gt)
+  Export#std_number_e6d(name=gte)
   Export#std_number_e7(name=toString)
   Export#std_number_e7a(name=negate)
   Export#std_number_e7b(name=abs)

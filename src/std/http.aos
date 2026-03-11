@@ -1756,6 +1756,7 @@ Program#std_http_p1 {
               Eq#std_http_eq66 { Var#std_http_v83(name=status) Lit#std_http_i64(value=1) }
               Block#std_http_b37 { Lit#std_http_i65(value=0) }
               Block#std_http_b38 {
+                Let#std_http_l38a(name=connectError) { Call#std_http_c17a(target=sys.net.async.error) { Var#std_http_v83a(name=op) } }
                 Return#std_http_r26 {
                   Call#std_http_c18(target=httpMakeRequestState) {
                     Lit#std_http_i66(value="error")
@@ -1765,7 +1766,7 @@ Program#std_http_p1 {
                     Lit#std_http_i68(value=-1)
                     Lit#std_http_i69(value="")
                     Lit#std_http_i69a(value="")
-                    Lit#std_http_i70(value="connect_failed")
+                    Var#std_http_v83b(name=connectError)
                     Lit#std_http_i127(value=0)
                   }
                 }

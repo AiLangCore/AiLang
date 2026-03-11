@@ -3320,6 +3320,16 @@ typedef struct NativeNetAsyncConnectWorkerContext
     char host[256];
 } NativeNetAsyncConnectWorkerContext;
 
+typedef struct NativeNetLastFailure
+{
+    int valid;
+    int kind;
+    int use_tls;
+    int port;
+    char host[256];
+    char error[128];
+} NativeNetLastFailure;
+
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -3334,12 +3344,31 @@ static OSStatus g_native_tls_last_status = noErr;
 static NativeNetHandleState g_native_net_handles[NATIVE_NET_HANDLE_CAPACITY];
 static NativeNetAsyncState g_native_net_async_ops[NATIVE_NET_ASYNC_CAPACITY];
 static uint64_t g_native_net_async_next_generation = 1U;
+static NativeNetLastFailure g_native_net_last_failure;
 static uint8_t g_native_net_bytes_scratch[NATIVE_NET_BYTES_CHUNK];
 static char g_native_net_text_scratch[NATIVE_NET_BYTES_CHUNK];
 static char g_native_net_host_scratch[64];
 static int native_net_handle_close(int64_t handle);
 static void native_net_async_release_pending_bytes(NativeNetAsyncState* op);
 static int native_net_socket_would_block(void);
+
+static void native_net_record_last_failure(const NativeNetAsyncState* op, const char* message)
+{
+    if (op == NULL) {
+        return;
+    }
+    memset(&g_native_net_last_failure, 0, sizeof(g_native_net_last_failure));
+    g_native_net_last_failure.valid = 1;
+    g_native_net_last_failure.kind = op->kind;
+    g_native_net_last_failure.use_tls = op->use_tls;
+    g_native_net_last_failure.port = op->port;
+    (void)snprintf(g_native_net_last_failure.host, sizeof(g_native_net_last_failure.host), "%s", op->host);
+    (void)snprintf(
+        g_native_net_last_failure.error,
+        sizeof(g_native_net_last_failure.error),
+        "%s",
+        (message == NULL || message[0] == '\0') ? "failed" : message);
+}
 
 #ifdef __APPLE__
 #pragma clang diagnostic push
@@ -3776,6 +3805,7 @@ static int64_t native_process_allocate_slot(void)
 static void native_net_reset(void)
 {
     size_t i;
+    memset(&g_native_net_last_failure, 0, sizeof(g_native_net_last_failure));
     for (i = 0U; i < NATIVE_NET_HANDLE_CAPACITY; i += 1U) {
         if (g_native_net_handles[i].used) {
             (void)native_net_handle_close((int64_t)(i + 1U));
@@ -4150,6 +4180,7 @@ static void native_net_async_set_failure(NativeNetAsyncState* op, const char* me
     } else {
         (void)snprintf(op->error, sizeof(op->error), "%s", message);
     }
+    native_net_record_last_failure(op, op->error);
     airun_log_message(AIRUN_LOG_ERROR, "net.async", "op=%lld kind=%d status=failure error=%s",
         (long long)((op - g_native_net_async_ops) + 1),
         op->kind,
@@ -10708,6 +10739,16 @@ static int write_native_debug_bundle(
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_arena_pressure_count));
+    if (g_native_net_last_failure.valid != 0) {
+        fprintf(
+            f,
+            "network = { kind = %d, tls = %s, host = \"%s\", port = %d, error = \"%s\" }\n",
+            g_native_net_last_failure.kind,
+            g_native_net_last_failure.use_tls ? "true" : "false",
+            g_native_net_last_failure.host,
+            g_native_net_last_failure.port,
+            g_native_net_last_failure.error);
+    }
     fclose(f);
     return 1;
 }

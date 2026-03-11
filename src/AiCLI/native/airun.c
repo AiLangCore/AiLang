@@ -10941,7 +10941,7 @@ static int run_native_compiled_program(
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        105U,
+        106U,
         process_argv,
         process_argv_count,
         &vm);

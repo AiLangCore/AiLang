@@ -47,6 +47,38 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l6e(name=isZero) {
+    Fn#std_number_f6e(params=value) {
+      Block#std_number_b6i {
+        Return#std_number_r6g { Call#std_number_c0n(target=equals) { Var#std_number_v6m(name=value) Lit#std_number_i3c(value=0) } }
+      }
+    }
+  }
+
+  Let#std_number_l6f(name=isNegative) {
+    Fn#std_number_f6f(params=value) {
+      Block#std_number_b6j {
+        Return#std_number_r6h { Call#std_number_c0o(target=lt) { Var#std_number_v6n(name=value) Lit#std_number_i3d(value=0) } }
+      }
+    }
+  }
+
+  Let#std_number_l6g(name=isPositive) {
+    Fn#std_number_f6g(params=value) {
+      Block#std_number_b6k {
+        Return#std_number_r6i { Call#std_number_c0p(target=gt) { Var#std_number_v6o(name=value) Lit#std_number_i3e(value=0) } }
+      }
+    }
+  }
+
+  Let#std_number_l6h(name=isNonNegative) {
+    Fn#std_number_f6h(params=value) {
+      Block#std_number_b6l {
+        Return#std_number_r6j { Call#std_number_c0q(target=gte) { Var#std_number_v6p(name=value) Lit#std_number_i3f(value=0) } }
+      }
+    }
+  }
+
   Let#std_number_l6a(name=lt) {
     Fn#std_number_f6a(params=a,b) {
       Block#std_number_b6a {
@@ -501,6 +533,10 @@ Program#std_number_p1 {
   Export#std_number_e4(name=inc)
   Export#std_number_e5(name=dec)
   Export#std_number_e6(name=equals)
+  Export#std_number_e6e(name=isZero)
+  Export#std_number_e6f(name=isNegative)
+  Export#std_number_e6g(name=isPositive)
+  Export#std_number_e6h(name=isNonNegative)
   Export#std_number_e6a(name=lt)
   Export#std_number_e6b(name=lte)
   Export#std_number_e6c(name=gt)

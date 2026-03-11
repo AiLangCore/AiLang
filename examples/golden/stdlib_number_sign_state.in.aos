@@ -1,0 +1,20 @@
+Program#gnumber_sign_state_p1 {
+  Import#gnumber_sign_state_i1(path="./src/std/number.aos")
+  Import#gnumber_sign_state_i2(path="./src/std/io.aos")
+
+  Call#gnumber_sign_state_c1(target=io.print) {
+    ToString#gnumber_sign_state_t1 { Call#gnumber_sign_state_c2(target=isZero) { Lit#gnumber_sign_state_i1(value=0) } }
+  }
+
+  Call#gnumber_sign_state_c3(target=io.print) {
+    ToString#gnumber_sign_state_t2 { Call#gnumber_sign_state_c4(target=isNegative) { Lit#gnumber_sign_state_i2(value=-2) } }
+  }
+
+  Call#gnumber_sign_state_c5(target=io.print) {
+    ToString#gnumber_sign_state_t3 { Call#gnumber_sign_state_c6(target=isPositive) { Lit#gnumber_sign_state_i3(value=2) } }
+  }
+
+  Call#gnumber_sign_state_c7(target=io.print) {
+    ToString#gnumber_sign_state_t4 { Call#gnumber_sign_state_c8(target=isNonNegative) { Lit#gnumber_sign_state_i4(value=-2) } }
+  }
+}

@@ -91,6 +91,214 @@ static char g_native_net_host_scratch[64];
 static int native_net_handle_close(int64_t handle);
 static void native_net_async_release_pending_bytes(NativeNetAsyncState* op);
 static int native_net_socket_would_block(void);
+static int native_net_platform_init(void);
+
+static int native_net_dns_skip_name(const uint8_t* packet, size_t packet_len, size_t* io_offset)
+{
+    size_t offset;
+    size_t jumps = 0U;
+    if (packet == NULL || io_offset == NULL) {
+        return 0;
+    }
+    offset = *io_offset;
+    while (offset < packet_len) {
+        uint8_t len = packet[offset];
+        if (len == 0U) {
+            offset += 1U;
+            *io_offset = offset;
+            return 1;
+        }
+        if ((len & 0xC0U) == 0xC0U) {
+            if (offset + 1U >= packet_len) {
+                return 0;
+            }
+            offset += 2U;
+            *io_offset = offset;
+            return 1;
+        }
+        offset += 1U;
+        if (offset + len > packet_len) {
+            return 0;
+        }
+        offset += (size_t)len;
+        jumps += 1U;
+        if (jumps > 128U) {
+            return 0;
+        }
+    }
+    return 0;
+}
+
+static int native_net_dns_encode_qname(const char* host, uint8_t* out, size_t out_cap, size_t* out_len)
+{
+    const char* cursor;
+    size_t written = 0U;
+    if (host == NULL || out == NULL || out_len == NULL) {
+        return 0;
+    }
+    cursor = host;
+    while (*cursor != '\0') {
+        const char* dot = strchr(cursor, '.');
+        size_t label_len = (dot == NULL) ? strlen(cursor) : (size_t)(dot - cursor);
+        if (label_len == 0U || label_len > 63U || written + 1U + label_len + 1U > out_cap) {
+            return 0;
+        }
+        out[written] = (uint8_t)label_len;
+        written += 1U;
+        memcpy(&out[written], cursor, label_len);
+        written += label_len;
+        if (dot == NULL) {
+            break;
+        }
+        cursor = dot + 1;
+    }
+    if (written + 1U > out_cap) {
+        return 0;
+    }
+    out[written] = 0U;
+    written += 1U;
+    *out_len = written;
+    return 1;
+}
+
+static int native_net_dns_query_ipv4_with_resolver(
+    const char* host,
+    const char* resolver_ip,
+    struct in_addr* out_addr)
+{
+    uint8_t query[512];
+    uint8_t response[512];
+    size_t qname_len = 0U;
+    size_t query_len;
+    NativeSocket socket_fd = NATIVE_INVALID_SOCKET;
+    struct sockaddr_in resolver_addr;
+    int send_rc;
+    fd_set read_set;
+    struct timeval timeout;
+    int select_rc;
+    ssize_t recv_len;
+    size_t offset;
+    uint16_t answer_count;
+    uint16_t i;
+
+    if (host == NULL || resolver_ip == NULL || out_addr == NULL) {
+        return 0;
+    }
+    if (!native_net_platform_init()) {
+        return 0;
+    }
+    memset(query, 0, sizeof(query));
+    query[0] = 0x41U;
+    query[1] = 0x49U;
+    query[2] = 0x01U;
+    query[5] = 0x01U;
+    if (!native_net_dns_encode_qname(host, &query[12], sizeof(query) - 12U, &qname_len)) {
+        return 0;
+    }
+    query_len = 12U + qname_len;
+    if (query_len + 4U > sizeof(query)) {
+        return 0;
+    }
+    query[query_len] = 0x00U;
+    query[query_len + 1U] = 0x01U;
+    query[query_len + 2U] = 0x00U;
+    query[query_len + 3U] = 0x01U;
+    query_len += 4U;
+
+    memset(&resolver_addr, 0, sizeof(resolver_addr));
+    resolver_addr.sin_family = AF_INET;
+    resolver_addr.sin_port = htons(53U);
+    if (inet_pton(AF_INET, resolver_ip, &resolver_addr.sin_addr) != 1) {
+        return 0;
+    }
+
+    socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (socket_fd == NATIVE_INVALID_SOCKET) {
+        return 0;
+    }
+    send_rc = (int)sendto(
+        socket_fd,
+        (const char*)query,
+        (int)query_len,
+        0,
+        (const struct sockaddr*)&resolver_addr,
+        (socklen_t)sizeof(resolver_addr));
+    if (send_rc < 0) {
+        native_socket_close(socket_fd);
+        return 0;
+    }
+
+    FD_ZERO(&read_set);
+    FD_SET(socket_fd, &read_set);
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 500000;
+#ifdef _WIN32
+    select_rc = select(0, &read_set, NULL, NULL, &timeout);
+#else
+    select_rc = select((int)socket_fd + 1, &read_set, NULL, NULL, &timeout);
+#endif
+    if (select_rc <= 0) {
+        native_socket_close(socket_fd);
+        return 0;
+    }
+
+    recv_len = recvfrom(socket_fd, (char*)response, sizeof(response), 0, NULL, NULL);
+    native_socket_close(socket_fd);
+    if (recv_len < 12) {
+        return 0;
+    }
+    if (response[0] != 0x41U || response[1] != 0x49U) {
+        return 0;
+    }
+    if ((response[3] & 0x0FU) != 0U) {
+        return 0;
+    }
+    answer_count = (uint16_t)(((uint16_t)response[6] << 8U) | (uint16_t)response[7]);
+    offset = 12U;
+    if (!native_net_dns_skip_name(response, (size_t)recv_len, &offset) || offset + 4U > (size_t)recv_len) {
+        return 0;
+    }
+    offset += 4U;
+    for (i = 0U; i < answer_count; i += 1U) {
+        uint16_t type;
+        uint16_t class_value;
+        uint16_t rdlength;
+        if (!native_net_dns_skip_name(response, (size_t)recv_len, &offset) || offset + 10U > (size_t)recv_len) {
+            return 0;
+        }
+        type = (uint16_t)(((uint16_t)response[offset] << 8U) | (uint16_t)response[offset + 1U]);
+        class_value = (uint16_t)(((uint16_t)response[offset + 2U] << 8U) | (uint16_t)response[offset + 3U]);
+        rdlength = (uint16_t)(((uint16_t)response[offset + 8U] << 8U) | (uint16_t)response[offset + 9U]);
+        offset += 10U;
+        if (offset + rdlength > (size_t)recv_len) {
+            return 0;
+        }
+        if (type == 1U && class_value == 1U && rdlength == 4U) {
+            memcpy(out_addr, &response[offset], 4U);
+            return 1;
+        }
+        offset += rdlength;
+    }
+    return 0;
+}
+
+static int native_net_dns_query_ipv4_fallback(const char* host, struct sockaddr_in* out_addr)
+{
+    static const char* resolvers[] = { "1.1.1.1", "8.8.8.8", "9.9.9.9" };
+    size_t i;
+    struct in_addr ipv4_addr;
+    if (host == NULL || out_addr == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < (sizeof(resolvers) / sizeof(resolvers[0])); i += 1U) {
+        if (native_net_dns_query_ipv4_with_resolver(host, resolvers[i], &ipv4_addr)) {
+            out_addr->sin_family = AF_INET;
+            out_addr->sin_addr = ipv4_addr;
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static void native_net_record_last_failure(const NativeNetAsyncState* op, const char* message)
 {
@@ -556,6 +764,10 @@ static int native_net_resolve_ipv4_detail(
             }
         }
 #endif
+        if (!passive && lookup_host != NULL && native_net_dns_query_ipv4_fallback(lookup_host, out_addr)) {
+            out_addr->sin_port = htons(port);
+            return 1;
+        }
         if (error_text != NULL && error_text_size > 0U) {
             (void)snprintf(error_text, error_text_size, "dns_failed:%s", gai_strerror(gai_result));
         }
@@ -571,6 +783,10 @@ static int native_net_resolve_ipv4_detail(
         }
     }
     freeaddrinfo(results);
+    if (!passive && lookup_host != NULL && native_net_dns_query_ipv4_fallback(lookup_host, out_addr)) {
+        out_addr->sin_port = htons(port);
+        return 1;
+    }
     if (error_text != NULL && error_text_size > 0U) {
         (void)snprintf(error_text, error_text_size, "dns_failed:no_ipv4_result");
     }

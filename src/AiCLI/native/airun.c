@@ -4781,7 +4781,7 @@ static int parse_bytecode_aos_to_program_text(
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 1U;
+    out_program->format_version = 2U;
     out_program->format_flags = 0U;
 
     p = source;
@@ -5323,7 +5323,7 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 1U;
+    out_program->format_version = 2U;
     out_program->format_flags = 0U;
 
     p = first_open + 1;
@@ -6815,7 +6815,7 @@ static int parse_simple_program_graph_to_program_file(const char* aos_path, Aivm
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 1U;
+    out_program->format_version = 2U;
     out_program->format_flags = 0U;
 
     {
@@ -7855,7 +7855,7 @@ static AIRUN_MAYBE_UNUSED int handle_bench(int argc, char** argv)
         "  Call#c1(target=io.print) { Var#v1(name=message) }\n"
         "}";
     static const char* bytecode_bench_source =
-        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) {\n"
+        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0) {\n"
         "  Const#k0(kind=string value=\"hello\")\n"
         "  Func#f1(name=main params=\"argv\" locals=\"\") {\n"
         "    Inst#i1(op=HALT)\n"
@@ -7878,7 +7878,7 @@ static AIRUN_MAYBE_UNUSED int handle_bench(int argc, char** argv)
         "  Call#c2(target=io.print) { Var#v2(name=out) }\n"
         "}";
     static const char* app_bundle_source =
-        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=1) {\n"
+        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) {\n"
         "  Const#k0(kind=int value=0)\n"
         "  Func#f_main(locals=\"argv,start\" name=main params=\"argv\") {\n"
         "    Inst#i0(a=0 op=CONST)\n"

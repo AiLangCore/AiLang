@@ -20,6 +20,9 @@ This document is an execution checklist, not a roadmap narrative.
   - `bytes_arena_pressure_count`
   - `node_arena_pressure_count`
   - `node_gc_attempts`
+- Root-attribution telemetry is emitted in debug artifacts:
+  - flat `node_root_*` counters in `state_snapshots.toml`
+  - structured `node_roots` table in `diagnostics.toml`
 - Stability checks exist (`test_memory_rc.c`, `test_memory_cycle.c`).
 - Leak/profile scripts exist:
   - `scripts/aivm-mem-leak-check.sh`
@@ -42,6 +45,7 @@ This document is an execution checklist, not a roadmap narrative.
 - String/bytes/node lifetime semantics are documented and test-backed.
 
 2. Leak Detection Is CI-Enforced
+- `airun debug profile` emits deterministic TOML (`aivm_debug_mem_v1`) and is exercised through `scripts/aivm-mem-audit.sh`.
 - Leak check runs on Linux and macOS in CI.
 - Growth threshold is enforced by gate (fail on regression).
 - Report artifacts are retained for failed runs.
@@ -64,6 +68,7 @@ This document is an execution checklist, not a roadmap narrative.
 
 6. Release Gate Integration
 - Main release gate includes memory checks.
+- Main release gate includes benchmark regression checks.
 - Gate result is reflected in parity dashboard output.
 
 ## Suggested Gate Defaults
@@ -74,6 +79,6 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Immediate Next Tasks
 
-1. Wire `scripts/aivm-mem-leak-check.sh` into CI with threshold env vars and artifact retention.
-2. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
-3. Add release-gate assertions that debug bundle memory telemetry fields remain present and stable.
+1. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
+2. Expand memory-growth audit targets beyond the single baseline parity case.
+3. Keep release-gate assertions on debug bundle memory/root-attribution telemetry fields.

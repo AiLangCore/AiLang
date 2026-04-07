@@ -12,6 +12,7 @@
 #include <direct.h>
 #include <io.h>
 #include <objbase.h>
+#include <psapi.h>
 #include <process.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -59,6 +60,7 @@ extern int kill(pid_t pid, int sig);
 #include <ImageIO/ImageIO.h>
 #include <Security/SecureTransport.h>
 #include <Security/Security.h>
+#include <mach/mach.h>
 #pragma clang diagnostic pop
 #endif
 
@@ -93,6 +95,7 @@ static int remove_file_if_exists(const char* path);
 static int run_native_fullstack_server(const char* www_dir);
 static int ensure_directory_recursive(const char* path);
 static int native_fs_dir_count_entries(const char* path, int64_t* out_count);
+static int native_get_current_rss_kb(int64_t* out_kb);
 
 #ifdef _WIN32
 typedef SOCKET NativeSocket;
@@ -2180,6 +2183,7 @@ static void print_usage(void)
         "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
+        "  debug profile <program(.aibc1|.aos|project-dir|project.aiproj)> [--iterations <n>] [--max-growth-kb <kb>] [--out <file>] [--vm=<selector>] [--no-cache] [--] [app-args...]\n"
         "  debug dns <host> [port]\n"
         "  debug disasm <program(.aibc1|.aos|project-dir|project.aiproj)> [start] [end]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
@@ -7609,6 +7613,203 @@ static int handle_debug_run_mode(
 
 static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
+    if (argc >= 4 && strcmp(argv[2], "profile") == 0) {
+        const char* program_path = NULL;
+        const char* out_path = ".tmp/aivm-mem-audit.toml";
+        char build_out_dir[PATH_MAX];
+        char built_app_path[PATH_MAX];
+        char report_dir[PATH_MAX];
+        int use_cache = 1;
+        int iterations = 20;
+        int64_t max_growth_kb = 2048;
+        int app_arg_start = -1;
+        int i;
+        int rc = 0;
+        int sample_count = 0;
+        int status_fail = 0;
+        int64_t rss_series[1024];
+        char status_text[32];
+        FILE* report = NULL;
+
+        if (argc > 1027) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Too many debug profile arguments.\" nodeId=argv)\n");
+            return 2;
+        }
+        for (i = 3; i < argc; i += 1) {
+            const char* arg = argv[i];
+            if (strcmp(arg, "--") == 0) {
+                app_arg_start = i + 1;
+                break;
+            }
+            if (strcmp(arg, "--out") == 0) {
+                if ((i + 1) >= argc) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                out_path = argv[++i];
+                continue;
+            }
+            if (strcmp(arg, "--iterations") == 0) {
+                if ((i + 1) >= argc || !parse_int(argv[i + 1], &iterations) || iterations <= 0 || iterations > 1024) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Invalid --iterations value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                i += 1;
+                continue;
+            }
+            if (strcmp(arg, "--max-growth-kb") == 0) {
+                int parsed_growth = 0;
+                if ((i + 1) >= argc || !parse_int(argv[i + 1], &parsed_growth) || parsed_growth < 0) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Invalid --max-growth-kb value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                max_growth_kb = (int64_t)parsed_growth;
+                i += 1;
+                continue;
+            }
+            if (strcmp(arg, "--no-cache") == 0) {
+                use_cache = 0;
+                continue;
+            }
+            if (starts_with(arg, "--vm=")) {
+                const char* mode = arg + 5;
+                if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
+                    return print_unsupported_vm_mode(mode);
+                }
+                continue;
+            }
+            if (program_path == NULL && arg[0] != '-') {
+                program_path = arg;
+                continue;
+            }
+            if (program_path == NULL && arg[0] == '-') {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Unsupported flag for native debug profile.\" nodeId=argv)\n");
+                return 2;
+            }
+            app_arg_start = i;
+            break;
+        }
+        if (program_path == NULL) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Missing debug profile input.\" nodeId=argv)\n");
+            return 2;
+        }
+        if (app_arg_start < 0 || app_arg_start > argc) {
+            app_arg_start = argc;
+        }
+        if (!dirname_of(out_path, report_dir, sizeof(report_dir))) {
+            if (snprintf(report_dir, sizeof(report_dir), "%s", ".") >= (int)sizeof(report_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to prepare debug profile output directory.\" nodeId=out)\n");
+                return 2;
+            }
+        }
+        if (!ensure_directory_recursive(report_dir)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to prepare debug profile output directory.\" nodeId=out)\n");
+            return 2;
+        }
+
+        if (!ends_with(program_path, ".aibc1") && !ends_with(program_path, ".aibundle")) {
+            if (!derive_build_out_dir(program_path, build_out_dir, sizeof(build_out_dir))) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Native build failed: could not derive output directory.\" nodeId=build)\n");
+                return 2;
+            }
+            if (build_input_to_aibc1(program_path, build_out_dir, built_app_path, sizeof(built_app_path), use_cache) != 1) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Native build failed: %s\" nodeId=build)\n",
+                    native_build_error());
+                return 2;
+            }
+            program_path = built_app_path;
+        }
+
+        for (i = 0; i < iterations; i += 1) {
+            int64_t rss_kb = 0;
+            rc = run_via_resolved_input(
+                program_path,
+                (const char* const*)&argv[app_arg_start],
+                (size_t)(argc - app_arg_start),
+                NULL);
+            if (rc != 0) {
+                break;
+            }
+            if (!native_get_current_rss_kb(&rss_kb)) {
+                rc = 3;
+                break;
+            }
+            rss_series[sample_count] = rss_kb;
+            sample_count += 1;
+        }
+
+        if (rc == 0 && sample_count > 0) {
+            int64_t growth_kb = rss_series[sample_count - 1] - rss_series[0];
+            if (growth_kb > max_growth_kb) {
+                status_fail = 1;
+            }
+        }
+
+        report = fopen(out_path, "wb");
+        if (report == NULL) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to write debug profile report.\" nodeId=out)\n");
+            return 2;
+        }
+        if (rc != 0) {
+            (void)snprintf(status_text, sizeof(status_text), "%s", "error");
+        } else if (status_fail) {
+            (void)snprintf(status_text, sizeof(status_text), "%s", "fail");
+        } else {
+            (void)snprintf(status_text, sizeof(status_text), "%s", "pass");
+        }
+        fprintf(report, "format = \"aivm_debug_mem_v1\"\n");
+        fprintf(report, "target = \"%s\"\n", program_path);
+        fprintf(report, "iterations = %d\n", iterations);
+        fprintf(report, "completed_iterations = %d\n", sample_count);
+        fprintf(report, "max_growth_kb_threshold = %lld\n", (long long)max_growth_kb);
+        fprintf(report, "status = \"%s\"\n", status_text);
+        fprintf(report, "run_rc = %d\n", rc);
+        if (sample_count > 0) {
+            int64_t first_rss = rss_series[0];
+            int64_t last_rss = rss_series[sample_count - 1];
+            int64_t growth_kb = last_rss - first_rss;
+            fprintf(report, "first_rss_kb = %lld\n", (long long)first_rss);
+            fprintf(report, "last_rss_kb = %lld\n", (long long)last_rss);
+            fprintf(report, "rss_growth_kb = %lld\n", (long long)growth_kb);
+            fprintf(report, "rss_series_kb = [");
+            for (i = 0; i < sample_count; i += 1) {
+                if (i > 0) {
+                    fprintf(report, ", ");
+                }
+                fprintf(report, "%lld", (long long)rss_series[i]);
+            }
+            fprintf(report, "]\n");
+        } else {
+            fprintf(report, "first_rss_kb = 0\n");
+            fprintf(report, "last_rss_kb = 0\n");
+            fprintf(report, "rss_growth_kb = 0\n");
+            fprintf(report, "rss_series_kb = []\n");
+        }
+        fclose(report);
+        if (rc != 0) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native debug profile execution failed.\" nodeId=profile)\n");
+            return 3;
+        }
+        if (status_fail) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native debug profile exceeded RSS growth threshold.\" nodeId=profile)\n");
+            return 1;
+        }
+        printf("Ok#ok1(type=string value=\"%s\")\n", out_path);
+        return 0;
+    }
     if (argc >= 4 && strcmp(argv[2], "disasm") == 0) {
         const char* input = argv[3];
         char resolved_program[PATH_MAX];
@@ -7746,7 +7947,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL, 1);
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>, debug dns <host> [port], debug disasm <program.aibc1> [start] [end]\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>, debug profile <program>, debug dns <host> [port], debug disasm <program.aibc1|program.aos> [start] [end]\" nodeId=command)\n");
     return 2;
 }
 
@@ -7813,6 +8014,53 @@ static int parse_nonnegative_int(const char* text, int* out)
     }
     *out = (int)v;
     return 1;
+}
+
+static int native_get_current_rss_kb(int64_t* out_kb)
+{
+    if (out_kb == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    {
+        PROCESS_MEMORY_COUNTERS counters;
+        if (!GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters))) {
+            return 0;
+        }
+        *out_kb = (int64_t)(counters.WorkingSetSize / 1024U);
+        return 1;
+    }
+#elif defined(__APPLE__)
+    {
+        struct mach_task_basic_info info;
+        mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+        if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &count) != KERN_SUCCESS) {
+            return 0;
+        }
+        *out_kb = (int64_t)(info.resident_size / 1024U);
+        return 1;
+    }
+#else
+    {
+        FILE* f = fopen("/proc/self/statm", "rb");
+        long rss_pages = 0L;
+        long ignored_pages = 0L;
+        long page_size = sysconf(_SC_PAGESIZE);
+        if (f == NULL) {
+            return 0;
+        }
+        if (fscanf(f, "%ld %ld", &ignored_pages, &rss_pages) != 2) {
+            fclose(f);
+            return 0;
+        }
+        fclose(f);
+        if (page_size <= 0L) {
+            return 0;
+        }
+        *out_kb = (int64_t)(((uint64_t)rss_pages * (uint64_t)page_size) / 1024U);
+        return 1;
+    }
+#endif
 }
 
 static int bench_syscall_sink(

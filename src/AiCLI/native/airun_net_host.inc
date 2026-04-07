@@ -2581,25 +2581,28 @@ static int native_syscall_net_start_op(
         worker_ctx->port = op->port;
         worker_ctx->use_tls = op->use_tls;
         (void)snprintf(worker_ctx->host, sizeof(worker_ctx->host), "%s", op->host);
-#ifdef __APPLE__
         if (native_net_resolve_ipv4_detail(op->host, (uint16_t)op->port, SOCK_STREAM, 0, &worker_ctx->resolved_addr, op->worker_error, sizeof(op->worker_error))) {
             worker_ctx->has_resolved_addr = 1;
             if (inet_ntop(AF_INET, &worker_ctx->resolved_addr.sin_addr, worker_ctx->resolved_ip, sizeof(worker_ctx->resolved_ip)) == NULL) {
                 worker_ctx->resolved_ip[0] = '\0';
             }
         } else {
+            char detail[128];
             worker_ctx->has_resolved_addr = 0;
-            if (op->worker_error[0] != '\0') {
-                char detail[128];
-                if (op->use_tls) {
-                    (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", op->worker_error);
-                } else {
-                    (void)snprintf(detail, sizeof(detail), "connect_failed:%s", op->worker_error);
-                }
+            if (op->worker_error[0] == '\0') {
+                (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", op->use_tls ? "connect_tls_failed:dns_failed" : "connect_failed:dns_failed");
+            } else if (op->use_tls) {
+                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", op->worker_error);
+                (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", detail);
+            } else {
+                (void)snprintf(detail, sizeof(detail), "connect_failed:%s", op->worker_error);
                 (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", detail);
             }
+            free(worker_ctx);
+            native_net_async_set_failure(op, op->worker_error);
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
         }
-#endif
 #ifdef _WIN32
         op->worker_thread = CreateThread(NULL, 0, native_net_async_connect_thread, worker_ctx, 0, NULL);
         if (op->worker_thread == NULL) {

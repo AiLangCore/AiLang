@@ -115,6 +115,132 @@ static int native_syscall_debug_capture_frame_end(
     return AIVM_SYSCALL_OK;
 }
 
+typedef struct {
+    size_t root_slots;
+    size_t reachable_nodes;
+    size_t reachable_attrs;
+    size_t reachable_children;
+} NativeNodeRootSummary;
+
+static void native_debug_enqueue_root_handle(
+    const AivmVm* vm,
+    int64_t handle,
+    uint8_t* live,
+    int64_t* queue,
+    size_t* queue_write,
+    NativeNodeRootSummary* summary)
+{
+    size_t idx;
+    if (vm == NULL || live == NULL || queue == NULL || queue_write == NULL || summary == NULL) {
+        return;
+    }
+    if (handle <= 0 || handle > (int64_t)vm->node_count) {
+        return;
+    }
+    summary->root_slots += 1U;
+    idx = (size_t)(handle - 1);
+    if (live[idx] != 0U || *queue_write >= AIVM_VM_NODE_CAPACITY) {
+        return;
+    }
+    live[idx] = 1U;
+    queue[*queue_write] = handle;
+    *queue_write += 1U;
+}
+
+static void native_debug_collect_root_reachability(
+    const AivmVm* vm,
+    int root_kind,
+    NativeNodeRootSummary* summary)
+{
+    uint8_t live[AIVM_VM_NODE_CAPACITY];
+    int64_t queue[AIVM_VM_NODE_CAPACITY];
+    size_t queue_read = 0U;
+    size_t queue_write = 0U;
+    size_t i;
+    if (summary == NULL) {
+        return;
+    }
+    memset(summary, 0, sizeof(*summary));
+    if (vm == NULL || vm->node_count == 0U) {
+        return;
+    }
+    memset(live, 0, sizeof(live));
+    switch (root_kind) {
+        case 0:
+            for (i = 0U; i < vm->stack_count; i += 1U) {
+                if (vm->stack[i].type == AIVM_VAL_NODE) {
+                    native_debug_enqueue_root_handle(vm, vm->stack[i].node_handle, live, queue, &queue_write, summary);
+                }
+            }
+            break;
+        case 1:
+            for (i = 0U; i < vm->locals_count; i += 1U) {
+                if (vm->locals[i].type == AIVM_VAL_NODE) {
+                    native_debug_enqueue_root_handle(vm, vm->locals[i].node_handle, live, queue, &queue_write, summary);
+                }
+            }
+            break;
+        case 2:
+            for (i = 0U; i < vm->completed_task_count; i += 1U) {
+                if (vm->completed_tasks[i].result.type == AIVM_VAL_NODE) {
+                    native_debug_enqueue_root_handle(vm, vm->completed_tasks[i].result.node_handle, live, queue, &queue_write, summary);
+                }
+            }
+            break;
+        case 3:
+            for (i = 0U; i < vm->par_value_count; i += 1U) {
+                if (vm->par_values[i].type == AIVM_VAL_NODE) {
+                    native_debug_enqueue_root_handle(vm, vm->par_values[i].node_handle, live, queue, &queue_write, summary);
+                }
+            }
+            break;
+        case 4:
+            native_debug_enqueue_root_handle(vm, vm->process_argv_node_handle, live, queue, &queue_write, summary);
+            break;
+        case 5:
+            native_debug_enqueue_root_handle(vm, vm->ui_default_window_size_node_handle, live, queue, &queue_write, summary);
+            break;
+        case 6:
+            native_debug_enqueue_root_handle(vm, vm->ui_empty_event_node_handle, live, queue, &queue_write, summary);
+            break;
+        default:
+            break;
+    }
+
+    while (queue_read < queue_write) {
+        int64_t handle = queue[queue_read];
+        const AivmNodeRecord* node;
+        size_t child_index;
+        queue_read += 1U;
+        if (handle <= 0 || handle > (int64_t)vm->node_count) {
+            continue;
+        }
+        node = &vm->nodes[(size_t)(handle - 1)];
+        summary->reachable_nodes += 1U;
+        summary->reachable_attrs += node->attr_count;
+        summary->reachable_children += node->child_count;
+        for (child_index = 0U; child_index < node->child_count; child_index += 1U) {
+            size_t child_slot = node->child_start + child_index;
+            int64_t child_handle;
+            size_t child_idx;
+            if (child_slot >= AIVM_VM_NODE_CHILD_CAPACITY) {
+                continue;
+            }
+            child_handle = vm->node_children[child_slot];
+            if (child_handle <= 0 || child_handle > (int64_t)vm->node_count) {
+                continue;
+            }
+            child_idx = (size_t)(child_handle - 1);
+            if (live[child_idx] != 0U || queue_write >= AIVM_VM_NODE_CAPACITY) {
+                continue;
+            }
+            live[child_idx] = 1U;
+            queue[queue_write] = child_handle;
+            queue_write += 1U;
+        }
+    }
+}
+
 static int write_native_debug_bundle(
     const NativeDebugOptions* options,
     const AivmProgram* program,
@@ -130,10 +256,24 @@ static int write_native_debug_bundle(
     char stack0_preview[128];
     char stack1_preview[128];
     char stack2_preview[128];
+    NativeNodeRootSummary root_stack;
+    NativeNodeRootSummary root_locals;
+    NativeNodeRootSummary root_completed_tasks;
+    NativeNodeRootSummary root_par_values;
+    NativeNodeRootSummary root_process_argv;
+    NativeNodeRootSummary root_ui_window_size;
+    NativeNodeRootSummary root_ui_empty_event;
     FILE* f;
     if (options == NULL || !options->emit_bundle || options->out_dir == NULL) {
         return 1;
     }
+    native_debug_collect_root_reachability(vm, 0, &root_stack);
+    native_debug_collect_root_reachability(vm, 1, &root_locals);
+    native_debug_collect_root_reachability(vm, 2, &root_completed_tasks);
+    native_debug_collect_root_reachability(vm, 3, &root_par_values);
+    native_debug_collect_root_reachability(vm, 4, &root_process_argv);
+    native_debug_collect_root_reachability(vm, 5, &root_ui_window_size);
+    native_debug_collect_root_reachability(vm, 6, &root_ui_empty_event);
     if (!ensure_directory_recursive(options->out_dir)) {
         return 0;
     }
@@ -251,6 +391,34 @@ static int write_native_debug_bundle(
     fprintf(f, "string_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_pressure_count));
     fprintf(f, "bytes_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_pressure_count));
     fprintf(f, "node_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_arena_pressure_count));
+    fprintf(f, "node_root_stack_slots = %llu\n", (unsigned long long)root_stack.root_slots);
+    fprintf(f, "node_root_stack_reachable_nodes = %llu\n", (unsigned long long)root_stack.reachable_nodes);
+    fprintf(f, "node_root_stack_reachable_attrs = %llu\n", (unsigned long long)root_stack.reachable_attrs);
+    fprintf(f, "node_root_stack_reachable_children = %llu\n", (unsigned long long)root_stack.reachable_children);
+    fprintf(f, "node_root_locals_slots = %llu\n", (unsigned long long)root_locals.root_slots);
+    fprintf(f, "node_root_locals_reachable_nodes = %llu\n", (unsigned long long)root_locals.reachable_nodes);
+    fprintf(f, "node_root_locals_reachable_attrs = %llu\n", (unsigned long long)root_locals.reachable_attrs);
+    fprintf(f, "node_root_locals_reachable_children = %llu\n", (unsigned long long)root_locals.reachable_children);
+    fprintf(f, "node_root_completed_tasks_slots = %llu\n", (unsigned long long)root_completed_tasks.root_slots);
+    fprintf(f, "node_root_completed_tasks_reachable_nodes = %llu\n", (unsigned long long)root_completed_tasks.reachable_nodes);
+    fprintf(f, "node_root_completed_tasks_reachable_attrs = %llu\n", (unsigned long long)root_completed_tasks.reachable_attrs);
+    fprintf(f, "node_root_completed_tasks_reachable_children = %llu\n", (unsigned long long)root_completed_tasks.reachable_children);
+    fprintf(f, "node_root_par_values_slots = %llu\n", (unsigned long long)root_par_values.root_slots);
+    fprintf(f, "node_root_par_values_reachable_nodes = %llu\n", (unsigned long long)root_par_values.reachable_nodes);
+    fprintf(f, "node_root_par_values_reachable_attrs = %llu\n", (unsigned long long)root_par_values.reachable_attrs);
+    fprintf(f, "node_root_par_values_reachable_children = %llu\n", (unsigned long long)root_par_values.reachable_children);
+    fprintf(f, "node_root_process_argv_slots = %llu\n", (unsigned long long)root_process_argv.root_slots);
+    fprintf(f, "node_root_process_argv_reachable_nodes = %llu\n", (unsigned long long)root_process_argv.reachable_nodes);
+    fprintf(f, "node_root_process_argv_reachable_attrs = %llu\n", (unsigned long long)root_process_argv.reachable_attrs);
+    fprintf(f, "node_root_process_argv_reachable_children = %llu\n", (unsigned long long)root_process_argv.reachable_children);
+    fprintf(f, "node_root_ui_window_size_slots = %llu\n", (unsigned long long)root_ui_window_size.root_slots);
+    fprintf(f, "node_root_ui_window_size_reachable_nodes = %llu\n", (unsigned long long)root_ui_window_size.reachable_nodes);
+    fprintf(f, "node_root_ui_window_size_reachable_attrs = %llu\n", (unsigned long long)root_ui_window_size.reachable_attrs);
+    fprintf(f, "node_root_ui_window_size_reachable_children = %llu\n", (unsigned long long)root_ui_window_size.reachable_children);
+    fprintf(f, "node_root_ui_empty_event_slots = %llu\n", (unsigned long long)root_ui_empty_event.root_slots);
+    fprintf(f, "node_root_ui_empty_event_reachable_nodes = %llu\n", (unsigned long long)root_ui_empty_event.reachable_nodes);
+    fprintf(f, "node_root_ui_empty_event_reachable_attrs = %llu\n", (unsigned long long)root_ui_empty_event.reachable_attrs);
+    fprintf(f, "node_root_ui_empty_event_reachable_children = %llu\n", (unsigned long long)root_ui_empty_event.reachable_children);
     fclose(f);
 
     if (!join_path(options->out_dir, "syscalls.toml", path, sizeof(path))) {
@@ -323,6 +491,35 @@ static int write_native_debug_bundle(
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_arena_pressure_count));
+    fprintf(f, "node_roots = { stack = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, locals = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, completed_tasks = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, par_values = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, process_argv = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, ui_window_size = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu }, ui_empty_event = { slots = %llu, reachable_nodes = %llu, reachable_attrs = %llu, reachable_children = %llu } }\n",
+        (unsigned long long)root_stack.root_slots,
+        (unsigned long long)root_stack.reachable_nodes,
+        (unsigned long long)root_stack.reachable_attrs,
+        (unsigned long long)root_stack.reachable_children,
+        (unsigned long long)root_locals.root_slots,
+        (unsigned long long)root_locals.reachable_nodes,
+        (unsigned long long)root_locals.reachable_attrs,
+        (unsigned long long)root_locals.reachable_children,
+        (unsigned long long)root_completed_tasks.root_slots,
+        (unsigned long long)root_completed_tasks.reachable_nodes,
+        (unsigned long long)root_completed_tasks.reachable_attrs,
+        (unsigned long long)root_completed_tasks.reachable_children,
+        (unsigned long long)root_par_values.root_slots,
+        (unsigned long long)root_par_values.reachable_nodes,
+        (unsigned long long)root_par_values.reachable_attrs,
+        (unsigned long long)root_par_values.reachable_children,
+        (unsigned long long)root_process_argv.root_slots,
+        (unsigned long long)root_process_argv.reachable_nodes,
+        (unsigned long long)root_process_argv.reachable_attrs,
+        (unsigned long long)root_process_argv.reachable_children,
+        (unsigned long long)root_ui_window_size.root_slots,
+        (unsigned long long)root_ui_window_size.reachable_nodes,
+        (unsigned long long)root_ui_window_size.reachable_attrs,
+        (unsigned long long)root_ui_window_size.reachable_children,
+        (unsigned long long)root_ui_empty_event.root_slots,
+        (unsigned long long)root_ui_empty_event.reachable_nodes,
+        (unsigned long long)root_ui_empty_event.reachable_attrs,
+        (unsigned long long)root_ui_empty_event.reachable_children);
     if (g_native_net_last_failure.valid != 0) {
         fprintf(
             f,

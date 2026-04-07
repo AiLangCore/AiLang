@@ -12,6 +12,9 @@ cd "${ROOT_DIR}"
 bash ./scripts/test-airun-debug-dns.sh
 bash ./scripts/test-airun-debug-disasm.sh
 bash ./scripts/test-airun-debug-bundle-network.sh
+./scripts/aivm-bench-gate.sh
+AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 AIVM_MEM_AUDIT_REPORT="${ROOT_DIR}/.tmp/aivm-mem-audit-ci.toml" \
+  ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 10 >/dev/null
 
 # Samples are language-level showcases: direct syscall targets are forbidden.
 if command -v rg >/dev/null 2>&1; then

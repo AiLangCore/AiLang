@@ -303,8 +303,19 @@ This file is normative for `aic run` evaluation behavior.
 - `config.toml` (policy constants)
 - `state_snapshots.toml` (live counters)
 - `diagnostics.toml` memory table (summary counters)
+- Native debug bundle root attribution is contractually present in:
+- `state_snapshots.toml` flat `node_root_*` counters for each root class
+- `diagnostics.toml` `node_roots` table for each root class
 - Telemetry includes per-arena pressure counters:
 - `node_gc_attempts`
 - `string_arena_pressure_count`
 - `bytes_arena_pressure_count`
 - `node_arena_pressure_count`
+- Root attribution classes include:
+- `stack`
+- `locals`
+- `completed_tasks`
+- `par_values`
+- `process_argv`
+- `ui_window_size`
+- `ui_empty_event`

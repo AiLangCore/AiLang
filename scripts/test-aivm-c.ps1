@@ -5,22 +5,52 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $preferredSource = Join-Path $root 'src/AiVM.Core/native'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
 $buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path $root '.tmp/aivm-c-build-native' }
+$presetFile = Join-Path $sourceDir 'CMakePresets.json'
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
 $parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $sourceDir 'tests/parity_commands_ci.txt' }
 
-$cmakeArgs = @('-S', $sourceDir, '-B', $buildDir, '-DAIVM_BUILD_SHARED=OFF')
-if ($IsWindows) {
-  $cmakeArgs += @('-G', 'Visual Studio 17 2022', '-A', 'x64')
+if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
+  if ($IsWindows) {
+    Push-Location $sourceDir
+    & cmake --preset aivm-native-windows
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & cmake --build --preset aivm-native-windows-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset aivm-native-windows-test --output-on-failure
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Pop-Location
+  } else {
+    Push-Location $sourceDir
+    & cmake --preset aivm-native-unix
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & cmake --build --preset aivm-native-unix-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset aivm-native-unix-test --output-on-failure -LE wasm
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Pop-Location
+  }
+} else {
+  $cmakeArgs = @('-S', $sourceDir, '-B', $buildDir, '-DAIVM_BUILD_SHARED=OFF')
+  if ($IsWindows) {
+    $cmakeArgs += @('-G', 'Visual Studio 17 2022', '-A', 'x64')
+  }
+
+  & cmake @cmakeArgs
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  if ($IsWindows) {
+    & cmake --build $buildDir --config Debug
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --test-dir $buildDir -C Debug --output-on-failure
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  } else {
+    & cmake --build $buildDir
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --test-dir $buildDir --output-on-failure -LE wasm
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  }
 }
 
-& cmake @cmakeArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
 if ($IsWindows) {
-  & cmake --build $buildDir --config Debug
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  & ctest --test-dir $buildDir -C Debug --output-on-failure
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   if (Get-Command cl -ErrorAction SilentlyContinue) {
     & (Join-Path $root 'scripts/build-airun.ps1')
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -28,11 +58,6 @@ if ($IsWindows) {
   } else {
     Write-Host 'Skipping tools/airun.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
   }
-} else {
-  & cmake --build $buildDir
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  & ctest --test-dir $buildDir --output-on-failure
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 $parityDir = Split-Path -Parent $parityReport

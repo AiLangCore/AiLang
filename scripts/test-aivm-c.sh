@@ -6,6 +6,7 @@ PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
 BUILD_SUFFIX="native"
 BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+PRESET_FILE="${AIVM_C_SOURCE_DIR}/CMakePresets.json"
 PARITY_REPORT="${AIVM_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt}"
 PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_SOURCE_DIR}/tests/parity_commands_ci.txt}"
 SHARED_FLAG="-DAIVM_BUILD_SHARED=OFF"
@@ -14,9 +15,17 @@ if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
 fi
 PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
-cmake --build "${BUILD_DIR}"
-ctest --test-dir "${BUILD_DIR}" --output-on-failure
+if [[ -f "${PRESET_FILE}" && "${AIVM_BUILD_SHARED:-0}" != "1" ]]; then
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix
+  cmake --build --preset aivm-native-unix-build
+  ctest --preset aivm-native-unix-test --output-on-failure -LE wasm
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
+  cmake --build "${BUILD_DIR}"
+  ctest --test-dir "${BUILD_DIR}" --output-on-failure -LE wasm
+fi
 
 if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
   AIRUN_HELP_TEXT="$("${ROOT_DIR}/tools/airun" 2>&1 || true)"

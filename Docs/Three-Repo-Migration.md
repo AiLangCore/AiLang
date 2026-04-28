@@ -84,21 +84,33 @@ Long-term rule:
 
 ## Current State
 
-As of this migration note, the working VM implementation is in:
+The native C VM has been imported into the standalone AiVM repository under:
+
+```text
+AiVM/native
+```
+
+The standalone AiVM repository now produces:
+
+```text
+aivm
+libaivm_core.a
+```
+
+The old C# AiVM runtime has been archived in:
+
+```text
+AiVM/legacy/csharp/src/AiVM
+```
+
+AiLang still contains the pre-split native source path during transition:
 
 ```text
 AiLang/src/AiVM.Core/native
 ```
 
-The standalone `AiVM` repository currently contains a C# runtime project under:
-
-```text
-AiVM/src/AiVM
-```
-
-That means the next split must move the native C VM from `AiLang` into
-`AiVM`. The old C# `AiVM` tree should be treated as legacy unless a task
-explicitly says otherwise.
+Operational AiLang scripts now prefer the sibling checkout at `../AiVM/native`
+when it exists, and fall back to the in-tree path only for transition safety.
 
 ## Migration Phases
 
@@ -111,9 +123,11 @@ explicitly says otherwise.
 
 ### Phase 2: Prepare AiVM native repository
 
-- Import `AiLang/src/AiVM.Core/native` into the `AiVM` repository.
-- Preserve history if practical by using a subtree split from `AiLang`.
-- Promote the native tree to an AiVM-native layout:
+- Done: imported `AiLang/src/AiVM.Core/native` into the `AiVM` repository with
+  subtree history preserved.
+- Done: added initial native `aivm` executable target.
+- Done: archived the legacy C# tree under `legacy/csharp`.
+- Pending: promote the native tree from `native/` to an AiVM-root layout:
 
 ```text
 AiVM/
@@ -127,16 +141,17 @@ AiVM/
 `-- README.md
 ```
 
-- Produce `aivm` as the primary executable deliverable.
+- Keep `aivm` as the primary executable deliverable.
 - Keep the embeddable C library and headers as public VM artifacts.
 
 ### Phase 3: Rewire AiLang to consume AiVM
 
-- Remove the tracked native VM implementation from AiLang after AiVM owns it.
-- Keep AiLang bootstrap tooling source-based during pre-release development.
-- Replace direct in-tree paths with one explicit dependency mechanism:
-  submodule, sibling checkout, or release artifact.
-- Run `./test.sh` in AiLang after rewiring.
+- Done: AiLang bootstrap scripts prefer the sibling `../AiVM/native` checkout.
+- Pending: remove the tracked native VM implementation from AiLang after all
+  parity fixtures and integration tests no longer require the old in-tree path.
+- Pending: choose final dependency mechanism: submodule, sibling checkout, or
+  release artifact.
+- Run `./test.sh` in AiLang after the full removal step.
 
 ### Phase 4: Clean AiLang public surface
 

@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 OUT_DIR="${AIVM_WASM_OUT_DIR:-${ROOT_DIR}/.artifacts/aivm-wasm32}"
 OUT_WASM="${OUT_DIR}/aivm-runtime-wasm32.wasm"
 OUT_WEB_JS="${OUT_DIR}/aivm-runtime-wasm32-web.mjs"
-NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
-NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-NATIVE_EXAMPLES_DIR="${ROOT_DIR}/src/AiVM.Core/native/examples"
+NATIVE_SRC_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+NATIVE_INCLUDE="${NATIVE_SRC_DIR}/include"
+NATIVE_EXAMPLES_DIR="${NATIVE_SRC_DIR}/examples"
 
 if ! command -v emcc >/dev/null 2>&1; then
   echo "emcc is required to build wasm runtime artifact" >&2

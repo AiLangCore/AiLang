@@ -2,10 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
 BUILD_SUFFIX="native"
-BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+if [[ "${AIVM_C_SOURCE_DIR}" == "${ROOT_DIR}/../AiVM/native" ]]; then
+  BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+else
+  BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+fi
 PRESET_FILE="${AIVM_C_SOURCE_DIR}/CMakePresets.json"
 PARITY_REPORT="${AIVM_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt}"
 PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_SOURCE_DIR}/tests/parity_commands_ci.txt}"

@@ -31,6 +31,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [WASM Limitations and Matrix](./Wasm-Limitations-And-Matrix.md)
 - [CLI Wrapper Contract](./CLI-Wrapper-Contract.md)
 - [AiLang vs AiVectra Boundary](./AiLang-AiVectra-Boundary.md)
+- [Three Repository Migration](./Three-Repo-Migration.md)
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
 - [Migration 0.0.1](./Migration-0.0.1.md)

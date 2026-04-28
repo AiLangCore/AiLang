@@ -23,14 +23,23 @@ Each repository owns its own source, CI, artifacts, and tags.
 
 ## Version Sources
 
-Each repository MUST contain a root `VERSION` file with only the base semantic
-version:
+AiLang and AiVectra are AiLang projects, so their base semantic versions MUST
+come from their root `project.aiproj` files:
+
+```aos
+Program#p1 {
+  Project#proj1(name="AiLang" entryFile="src/main.aos" entryExport="main" version="0.0.1")
+}
+```
+
+AiVM is a native C project and does not have an AiLang project manifest. AiVM
+therefore uses a root `VERSION` file with only the base semantic version:
 
 ```text
 0.0.1
 ```
 
-The `VERSION` file does not include prerelease or build metadata. Release
+The base version source does not include prerelease or build metadata. Release
 automation derives prerelease identifiers from Git Flow branch context and CI
 run identity.
 
@@ -199,8 +208,10 @@ ailang toolchain doctor
 
 ## Immediate Implementation Tasks
 
-1. Add root `VERSION` files to all three repositories.
-2. Make release workflows derive versions from `VERSION`.
-3. Add generated `install.toml` to release artifacts.
-4. Add `--version` output that reports component version and ABI version.
-5. Add installer validation before any global install command writes files.
+1. Add `version` to AiLang and AiVectra root `project.aiproj` files.
+2. Keep a root `VERSION` file for AiVM.
+3. Make release workflows derive versions from the component's canonical
+   version source.
+4. Add generated `install.toml` to release artifacts.
+5. Add `--version` output that reports component version and ABI version.
+6. Add installer validation before any global install command writes files.

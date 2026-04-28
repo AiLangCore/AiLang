@@ -2,17 +2,21 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION_FILE="${AILANG_VERSION_FILE:-${ROOT_DIR}/VERSION}"
+PROJECT_FILE="${AILANG_PROJECT_FILE:-${ROOT_DIR}/project.aiproj}"
 MODE="${1:---base}"
 
-if [[ ! -f "${VERSION_FILE}" ]]; then
-  echo "missing VERSION file: ${VERSION_FILE}" >&2
+if [[ ! -f "${PROJECT_FILE}" ]]; then
+  echo "missing project file: ${PROJECT_FILE}" >&2
   exit 1
 fi
 
-BASE_VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
+BASE_VERSION="$(sed -n 's/.*version="\([^"]*\)".*/\1/p' "${PROJECT_FILE}" | head -n 1)"
+if [[ -z "${BASE_VERSION}" ]]; then
+  echo "missing Project version in ${PROJECT_FILE}" >&2
+  exit 1
+fi
 if [[ ! "${BASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "invalid base version in ${VERSION_FILE}: ${BASE_VERSION}" >&2
+  echo "invalid Project version in ${PROJECT_FILE}: ${BASE_VERSION}" >&2
   exit 1
 fi
 

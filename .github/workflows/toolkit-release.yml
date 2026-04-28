@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -23,29 +25,50 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Enforce main branch
+      - name: Enforce release ref
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
-            echo "Releases can only run from main." >&2
-            exit 1
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            exit 0
           fi
+          if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "main" ]]; then
+            exit 0
+          fi
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            exit 0
+          fi
+          echo "Releases can only run from main, workflow_dispatch, or v* tags." >&2
+          exit 1
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
 
       - name: Compute version and tag
         id: version
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease)"
-          TAG="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease-tag)"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+          else
+            VERSION="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease)"
+            TAG="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease-tag)"
+          fi
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+        env:
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
 
       - name: Create and push tag
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "Release is already running from tag ${GITHUB_REF_NAME}."
+            exit 0
+          fi
           TAG="${{ steps.version.outputs.tag }}"
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
             echo "Tag ${TAG} already exists on origin."
@@ -55,6 +78,8 @@ jobs:
             git tag -a "${TAG}" -m "Release ${TAG}" "${GITHUB_SHA}"
             git push origin "${TAG}"
           fi
+        env:
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
 
   build-gate:
     name: build-gate-${{ matrix.os }}

@@ -84,6 +84,30 @@ static void native_ui_windows_set_pending_event(NativeUiWindowsSlot* slot, const
     slot->has_pending_event = 1;
 }
 
+static int native_ui_windows_is_text_vk(WPARAM vk)
+{
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) {
+        return 1;
+    }
+    switch (vk) {
+        case VK_SPACE:
+        case VK_OEM_1:
+        case VK_OEM_2:
+        case VK_OEM_3:
+        case VK_OEM_4:
+        case VK_OEM_5:
+        case VK_OEM_6:
+        case VK_OEM_7:
+        case VK_OEM_COMMA:
+        case VK_OEM_MINUS:
+        case VK_OEM_PERIOD:
+        case VK_OEM_PLUS:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 static COLORREF native_ui_windows_parse_color(const char* color, COLORREF fallback)
 {
     unsigned int red;
@@ -188,9 +212,26 @@ static LRESULT CALLBACK native_ui_windows_wndproc(HWND hwnd, UINT message, WPARA
             slot->height = HIWORD(lparam);
         } else if (message == WM_KEYDOWN) {
             NativeHostUiEvent event;
+            if (native_ui_windows_is_text_vk(wparam)) {
+                return DefWindowProcW(hwnd, message, wparam, lparam);
+            }
             native_ui_windows_set_event_type(&event, "key");
             native_ui_windows_key_name(wparam, event.key, sizeof(event.key));
             (void)snprintf(event.text, sizeof(event.text), "%s", event.key);
+            native_ui_windows_set_pending_event(slot, &event);
+        } else if (message == WM_CHAR) {
+            NativeHostUiEvent event;
+            wchar_t wide_char;
+            int written;
+            if (wparam == '\r' || wparam == '\t' || wparam == '\b' || wparam == 0x1b) {
+                return DefWindowProcW(hwnd, message, wparam, lparam);
+            }
+            native_ui_windows_set_event_type(&event, "text");
+            wide_char = (wchar_t)wparam;
+            written = WideCharToMultiByte(CP_UTF8, 0, &wide_char, 1, event.text, (int)sizeof(event.text) - 1, NULL, NULL);
+            if (written > 0) {
+                event.text[written] = '\0';
+            }
             native_ui_windows_set_pending_event(slot, &event);
         } else if (message == WM_LBUTTONDOWN) {
             NativeHostUiEvent event;

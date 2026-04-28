@@ -379,6 +379,30 @@ static void native_ui_set_text_from_event(char* out, size_t out_capacity, NSEven
     native_ui_set_string(out, out_capacity, [chars UTF8String]);
 }
 
+static int native_ui_is_text_input_event(NSEvent* event, const char* key_name, const char* text)
+{
+    NSUInteger flags;
+    if (event == nil || text == NULL || text[0] == '\0') {
+        return 0;
+    }
+    flags = [event modifierFlags];
+    if ((flags & NSEventModifierFlagControl) != 0 || (flags & NSEventModifierFlagCommand) != 0) {
+        return 0;
+    }
+    if (key_name == NULL || key_name[0] == '\0') {
+        return 1;
+    }
+    return strcmp(key_name, "enter") != 0 &&
+           strcmp(key_name, "tab") != 0 &&
+           strcmp(key_name, "backspace") != 0 &&
+           strcmp(key_name, "escape") != 0 &&
+           strcmp(key_name, "left") != 0 &&
+           strcmp(key_name, "right") != 0 &&
+           strcmp(key_name, "up") != 0 &&
+           strcmp(key_name, "down") != 0 &&
+           strcmp(key_name, "delete") != 0;
+}
+
 static int native_ui_queue_push(const NativeHostUiEvent* event)
 {
     size_t write_index;
@@ -447,9 +471,13 @@ static int native_ui_translate_event(NativeUiWindowSlot* slot, NSEvent* event, N
         case NSEventTypeKeyDown: {
             NSUInteger flags = [event modifierFlags];
             const char* key_name = native_ui_normalize_key(event);
-            native_ui_set_string(out_event->type, sizeof(out_event->type), "key");
-            native_ui_set_string(out_event->key, sizeof(out_event->key), key_name);
             native_ui_set_text_from_event(out_event->text, sizeof(out_event->text), event);
+            if (native_ui_is_text_input_event(event, key_name, out_event->text)) {
+                native_ui_set_string(out_event->type, sizeof(out_event->type), "text");
+            } else {
+                native_ui_set_string(out_event->type, sizeof(out_event->type), "key");
+                native_ui_set_string(out_event->key, sizeof(out_event->key), key_name);
+            }
             out_event->repeat = [event isARepeat] ? 1 : 0;
             out_event->modifiers =
                 ((flags & NSEventModifierFlagShift) != 0 ? 1 : 0) |

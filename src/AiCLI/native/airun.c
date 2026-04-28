@@ -188,7 +188,7 @@ static void native_net_async_maybe_finalize_worker(NativeNetAsyncState* op);
 static char g_native_open_url_test_scratch[1024];
 #endif
 
-#define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
+#define AIRUN_NATIVE_CACHE_SCHEMA "ailang-native-cache-v1"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
 
 static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
@@ -592,6 +592,19 @@ static int airun_queue_injected_key(const char* key_name, const char* text_value
     return airun_queue_injected_event(&event);
 }
 
+static int airun_queue_injected_text_event(const char* text_value)
+{
+    NativeHostUiEvent event;
+    memset(&event, 0, sizeof(event));
+    (void)snprintf(event.type, sizeof(event.type), "text");
+    event.x = -1;
+    event.y = -1;
+    if (text_value != NULL) {
+        (void)snprintf(event.text, sizeof(event.text), "%s", text_value);
+    }
+    return airun_queue_injected_event(&event);
+}
+
 static int airun_queue_injected_close(void)
 {
     NativeHostUiEvent event;
@@ -604,20 +617,13 @@ static int airun_queue_injected_close(void)
 
 static int airun_queue_injected_text(const char* text)
 {
-    size_t i = 0U;
     if (text == NULL) {
         return 0;
     }
-    while (text[i] != '\0') {
-        char key_text[2];
-        key_text[0] = text[i];
-        key_text[1] = '\0';
-        if (!airun_queue_injected_key(key_text, key_text)) {
-            return 0;
-        }
-        i += 1U;
+    if (text[0] == '\0') {
+        return 1;
     }
-    return 1;
+    return airun_queue_injected_text_event(text);
 }
 
 static int airun_queue_injected_text_at(int x, int y, const char* text)
@@ -2151,7 +2157,7 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
         return 0;
     }
 
-    n = snprintf(out_dir, out_dir_len, ".artifacts/airun-%s-%s", platform, arch);
+    n = snprintf(out_dir, out_dir_len, ".artifacts/ailang-%s-%s", platform, arch);
     return n >= 0 && (size_t)n < out_dir_len;
 }
 
@@ -4202,7 +4208,7 @@ static int run_native_compiled_program(
     airun_log_message(
         AIRUN_LOG_INFO,
         "runtime",
-        "runtime-identity name=airun-native-c abi=%u exe=%s",
+        "runtime-identity name=ailang-native-c abi=%u exe=%s",
         aivm_c_abi_version(),
         g_airun_runtime_exe_path[0] == '\0' ? "" : g_airun_runtime_exe_path);
     (void)write_native_debug_bundle(
@@ -7972,7 +7978,7 @@ static AIRUN_MAYBE_UNUSED int handle_repl(void)
             return 0;
         }
         if (strcmp(line, "version") == 0) {
-            printf("airun-native-c abi=%u\n", aivm_c_abi_version());
+            printf("ailang-native-c abi=%u\n", aivm_c_abi_version());
             continue;
         }
         if (starts_with(line, "run ")) {
@@ -9040,7 +9046,11 @@ int main(int argc, char** argv)
         file_exists(bundled_aibc1)) {
         (void)snprintf(g_airun_runtime_exe_path, sizeof(g_airun_runtime_exe_path), "%s", exe_path);
         exe_base = path_basename_ptr(exe_path);
-        if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
+        if (exe_base != NULL &&
+            strcmp(exe_base, "ailang") != 0 &&
+            strcmp(exe_base, "ailang.exe") != 0 &&
+            strcmp(exe_base, "airun") != 0 &&
+            strcmp(exe_base, "airun.exe") != 0) {
             if (join_path(exe_dir, "www", bundled_www_dir, sizeof(bundled_www_dir)) &&
                 join_path(bundled_www_dir, "index.html", bundled_www_index, sizeof(bundled_www_index)) &&
                 file_exists(bundled_www_index)) {
@@ -9067,7 +9077,7 @@ int main(int argc, char** argv)
 #ifdef AIRUN_MINIMAL_RUNTIME
         printf("aivm-runtime-native-c abi=%u\n", aivm_c_abi_version());
 #else
-        printf("airun-native-c abi=%u\n", aivm_c_abi_version());
+        printf("ailang-native-c abi=%u\n", aivm_c_abi_version());
 #endif
         return 0;
     }

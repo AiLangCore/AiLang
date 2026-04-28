@@ -82,21 +82,21 @@ jobs:
         run: |
           set -euo pipefail
           ./build.sh
-          test -x ./tools/airun
+          test -x ./tools/ailang
 
       - name: Build airun (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./build.ps1
-          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
       - name: Runtime smoke (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          ./tools/airun run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+          ./tools/ailang run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
 
       - name: Memory leak gate (Unix)
         if: runner.os != 'Windows'
@@ -121,7 +121,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & .\tools\airun.exe run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          & .\tools\ailang.exe run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
 
   package:
@@ -140,45 +140,45 @@ jobs:
             platform: linux
             arch: x64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-linux-x64
+            artifact_dir: .artifacts/ailang-linux-x64
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
             arch: arm64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-linux-arm64
+            artifact_dir: .artifacts/ailang-linux-arm64
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-osx-x64
+            artifact_dir: .artifacts/ailang-osx-x64
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: macos-14
             rid: osx-arm64
             platform: osx
             arch: arm64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-osx-arm64
+            artifact_dir: .artifacts/ailang-osx-arm64
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: windows-latest
             rid: windows-x64
             platform: windows
             arch: x64
             archive: zip
-            artifact_dir: .artifacts/airun-windows-x64
+            artifact_dir: .artifacts/ailang-windows-x64
             frontend: aos_frontend.exe
-            airun: airun.exe
+            airun: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64
           - os: windows-latest
@@ -186,9 +186,9 @@ jobs:
             platform: windows
             arch: arm64
             archive: zip
-            artifact_dir: .artifacts/airun-windows-arm64
+            artifact_dir: .artifacts/ailang-windows-arm64
             frontend: aos_frontend.exe
-            airun: airun.exe
+            airun: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64_arm64
 
@@ -280,7 +280,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
-          PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
+          PACKAGE_DIR="ailang-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
@@ -301,7 +301,7 @@ jobs:
         shell: pwsh
         run: |
           $version = '${{ needs.prepare.outputs.version }}'
-          $packageDir = "airun-$version-${{ matrix.rid }}"
+          $packageDir = "ailang-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
           Copy-Item ".\\dist\\${{ matrix.frontend }}" $packageDir
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
@@ -320,8 +320,8 @@ jobs:
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v4
         with:
-          name: airun-${{ matrix.rid }}
-          path: airun-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
+          name: ailang-${{ matrix.rid }}
+          path: ailang-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
 
   package-wasm32:
     name: package-wasm32
@@ -380,7 +380,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
-          PACKAGE_DIR="airun-${VERSION}-wasm32"
+          PACKAGE_DIR="ailang-${VERSION}-wasm32"
           mkdir -p "${PACKAGE_DIR}"
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm
@@ -400,8 +400,8 @@ jobs:
       - name: Upload wasm artifact
         uses: actions/upload-artifact@v4
         with:
-          name: airun-wasm32
-          path: airun-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
+          name: ailang-wasm32
+          path: ailang-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
 
   release:
     name: github-release
@@ -446,7 +446,7 @@ jobs:
           )
 
           for RID in "${ALL_RIDS[@]}"; do
-            PKG_DIR="airun-${VERSION}-${RID}"
+            PKG_DIR="ailang-${VERSION}-${RID}"
             TAR_PATH="./release-assets/${PKG_DIR}.tar.gz"
             ZIP_PATH="./release-assets/${PKG_DIR}.zip"
             if [[ -f "${TAR_PATH}" ]]; then
@@ -459,22 +459,22 @@ jobs:
             fi
           done
 
-          WASM_PKG="airun-${VERSION}-wasm32"
+          WASM_PKG="ailang-${VERSION}-wasm32"
           tar -xzf "./release-assets/${WASM_PKG}.tar.gz" -C ./release-assets
 
           for TARGET_RID in "${ALL_RIDS[@]}"; do
-            TARGET_PKG="airun-${VERSION}-${TARGET_RID}"
+            TARGET_PKG="ailang-${VERSION}-${TARGET_RID}"
             TARGET_DIR="./release-assets/${TARGET_PKG}"
             mkdir -p "${TARGET_DIR}/.artifacts"
 
             for SRC_RID in "${UNIX_RIDS[@]}"; do
-              mkdir -p "${TARGET_DIR}/.artifacts/airun-${SRC_RID}"
-              cp "./release-assets/airun-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime"
-              chmod +x "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime"
+              mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
+              chmod +x "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
             done
             for SRC_RID in "${WINDOWS_RIDS[@]}"; do
-              mkdir -p "${TARGET_DIR}/.artifacts/airun-${SRC_RID}"
-              cp "./release-assets/airun-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/.artifacts/airun-${SRC_RID}/aivm-runtime.exe"
+              mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime.exe"
             done
 
             mkdir -p "${TARGET_DIR}/.artifacts/aivm-wasm32"
@@ -484,12 +484,12 @@ jobs:
           done
 
           for RID in "${UNIX_RIDS[@]}"; do
-            PKG="airun-${VERSION}-${RID}"
+            PKG="ailang-${VERSION}-${RID}"
             rm -f "./release-assets/${PKG}.tar.gz"
             tar -czf "./release-assets/${PKG}.tar.gz" -C ./release-assets "${PKG}"
           done
           for RID in "${WINDOWS_RIDS[@]}"; do
-            PKG="airun-${VERSION}-${RID}"
+            PKG="ailang-${VERSION}-${RID}"
             rm -f "./release-assets/${PKG}.zip"
             (cd ./release-assets && zip -qr "${PKG}.zip" "${PKG}")
           done

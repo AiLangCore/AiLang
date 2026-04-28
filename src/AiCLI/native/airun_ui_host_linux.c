@@ -91,6 +91,28 @@ static unsigned long native_ui_linux_parse_color(const char* color, unsigned lon
     return xcolor.pixel;
 }
 
+static int native_ui_linux_is_text_key(KeySym keysym, const char* text)
+{
+    if (text == NULL || text[0] == '\0') {
+        return 0;
+    }
+    switch (keysym) {
+        case XK_Return:
+        case XK_KP_Enter:
+        case XK_Tab:
+        case XK_BackSpace:
+        case XK_Escape:
+        case XK_Left:
+        case XK_Right:
+        case XK_Up:
+        case XK_Down:
+        case XK_Delete:
+            return 0;
+        default:
+            return 1;
+    }
+}
+
 static unsigned long native_ui_linux_scale_component(uint8_t component, unsigned long mask)
 {
     unsigned long scaled = 0;
@@ -602,9 +624,13 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
             int len = XLookupString(&event.xkey, keybuf, (int)sizeof(keybuf) - 1, &keysym, NULL);
             (void)keysym;
             keybuf[(len > 0) ? len : 0] = '\0';
-            (void)snprintf(out_event->type, sizeof(out_event->type), "key");
-            (void)snprintf(out_event->key, sizeof(out_event->key), "%s", keybuf);
             (void)snprintf(out_event->text, sizeof(out_event->text), "%s", keybuf);
+            if (native_ui_linux_is_text_key(keysym, out_event->text)) {
+                (void)snprintf(out_event->type, sizeof(out_event->type), "text");
+            } else {
+                (void)snprintf(out_event->type, sizeof(out_event->type), "key");
+                (void)snprintf(out_event->key, sizeof(out_event->key), "%s", keybuf);
+            }
             out_event->modifiers = 0;
             out_event->repeat = 0;
             return 1;

@@ -12,7 +12,8 @@ NATIVE_UI_HOST_WINDOWS_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_windows.c
 NATIVE_UI_HOST_UNAVAILABLE_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
 UNAME_M="$(uname -m)"
-HOST_WRAPPER_PATH="${ROOT_DIR}/tools/airun"
+HOST_WRAPPER_PATH="${ROOT_DIR}/tools/ailang"
+HOST_COMPAT_WRAPPER_PATH="${ROOT_DIR}/tools/airun"
 
 case "${UNAME_S}" in
   Darwin) HOST_PLATFORM="osx" ;;
@@ -45,14 +46,17 @@ if [[ "${TARGET_ARCH}" != "x64" && "${TARGET_ARCH}" != "arm64" ]]; then
   exit 1
 fi
 
-OUT_DIR="${ROOT_DIR}/.artifacts/airun-${TARGET_PLATFORM}-${TARGET_ARCH}"
-AIRUN_BIN_NAME="airun"
+OUT_DIR="${ROOT_DIR}/.artifacts/ailang-${TARGET_PLATFORM}-${TARGET_ARCH}"
+AIRUN_BIN_NAME="ailang"
+AIRUN_COMPAT_BIN_NAME="airun"
 RUNTIME_BIN_NAME="aivm-runtime"
 if [[ "${TARGET_PLATFORM}" == "windows" ]]; then
-  AIRUN_BIN_NAME="airun.exe"
+  AIRUN_BIN_NAME="ailang.exe"
+  AIRUN_COMPAT_BIN_NAME="airun.exe"
   RUNTIME_BIN_NAME="aivm-runtime.exe"
 fi
 WRAPPER_PATH="${OUT_DIR}/${AIRUN_BIN_NAME}"
+COMPAT_WRAPPER_PATH="${OUT_DIR}/${AIRUN_COMPAT_BIN_NAME}"
 RUNTIME_PATH="${OUT_DIR}/${RUNTIME_BIN_NAME}"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
@@ -112,6 +116,8 @@ COMMON_SOURCES=(
   "${LD_EXTRA[@]}" \
   -o "${WRAPPER_PATH}"
 chmod +x "${WRAPPER_PATH}"
+cp "${WRAPPER_PATH}" "${COMPAT_WRAPPER_PATH}"
+chmod +x "${COMPAT_WRAPPER_PATH}"
 
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
   -I "${NATIVE_INCLUDE}" \
@@ -123,6 +129,8 @@ chmod +x "${RUNTIME_PATH}"
 if [[ "${TARGET_PLATFORM}" == "${HOST_PLATFORM}" && "${TARGET_ARCH}" == "${HOST_ARCH}" ]]; then
   cp "${WRAPPER_PATH}" "${HOST_WRAPPER_PATH}"
   chmod +x "${HOST_WRAPPER_PATH}"
+  cp "${COMPAT_WRAPPER_PATH}" "${HOST_COMPAT_WRAPPER_PATH}"
+  chmod +x "${HOST_COMPAT_WRAPPER_PATH}"
   cp "${RUNTIME_PATH}" "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
   chmod +x "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
 fi

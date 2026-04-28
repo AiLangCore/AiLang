@@ -21,44 +21,44 @@ jobs:
             platform: linux
             arch: x64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-linux-x64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-linux-x64
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
             arch: arm64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-linux-arm64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-linux-arm64
           - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-osx-x64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-osx-x64
           - os: macos-14
             rid: osx-arm64
             platform: osx
             arch: arm64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-osx-arm64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-osx-arm64
           - os: windows-latest
             rid: windows-x64
             platform: windows
             arch: x64
             frontend: aos_frontend.exe
-            airun: airun.exe
-            artifact_dir: .artifacts/airun-windows-x64
+            airun: ailang.exe
+            artifact_dir: .artifacts/ailang-windows-x64
             msvc_arch: amd64
           - os: windows-latest
             rid: windows-arm64
             platform: windows
             arch: arm64
             frontend: aos_frontend.exe
-            airun: airun.exe
-            artifact_dir: .artifacts/airun-windows-arm64
+            airun: ailang.exe
+            artifact_dir: .artifacts/ailang-windows-arm64
             msvc_arch: amd64_arm64
 
     steps:

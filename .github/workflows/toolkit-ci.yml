@@ -47,15 +47,15 @@ jobs:
         include:
           - os: ubuntu-latest
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: macos-14
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
             runtime: aivm-runtime
           - os: windows-latest
             frontend: aos_frontend.exe
-            airun: airun.exe
+            airun: ailang.exe
             runtime: aivm-runtime.exe
 
     steps:
@@ -74,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           ./build.sh
-          test -x ./tools/airun
+          test -x ./tools/ailang
 
       - name: Setup MSVC tools
         if: runner.os == 'Windows'
@@ -85,7 +85,7 @@ jobs:
         shell: pwsh
         run: |
           ./build.ps1
-          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
       - name: Build frontend parser (non-Windows)
         if: runner.os != 'Windows'
@@ -109,14 +109,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp ./tools/airun "./dist/${{ matrix.airun }}"
+          cp ./tools/ailang "./dist/${{ matrix.airun }}"
           cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
 
       - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
+          Copy-Item .\tools\ailang.exe .\dist\${{ matrix.airun }}
           Copy-Item .\tools\aivm-runtime.exe .\dist\${{ matrix.runtime }}
 
       - name: Stage compiler assets (non-Windows)

@@ -6,7 +6,8 @@ $sourcePath = Join-Path $root 'src/AiCLI/native/airun.c'
 $uiHostWindowsPath = Join-Path $root 'src/AiCLI/native/airun_ui_host_windows.c'
 $nativeInclude = Join-Path $root 'src/AiVM.Core/native/include'
 $nativeSrc = Join-Path $root 'src/AiVM.Core/native'
-$hostWrapperPath = Join-Path $root 'tools/airun.exe'
+$hostWrapperPath = Join-Path $root 'tools/ailang.exe'
+$hostCompatWrapperPath = Join-Path $root 'tools/airun.exe'
 $hostRuntimePath = Join-Path $root 'tools/aivm-runtime.exe'
 
 $targetArch = if ($env:AIVM_AIRUN_ARCH) { $env:AIVM_AIRUN_ARCH } else { 'x64' }
@@ -14,8 +15,9 @@ if ($targetArch -ne 'x64' -and $targetArch -ne 'arm64') {
   throw "unsupported AIVM_AIRUN_ARCH: $targetArch"
 }
 
-$outDir = Join-Path $root ".artifacts/airun-windows-$targetArch"
-$wrapperPath = Join-Path $outDir 'airun.exe'
+$outDir = Join-Path $root ".artifacts/ailang-windows-$targetArch"
+$wrapperPath = Join-Path $outDir 'ailang.exe'
+$compatWrapperPath = Join-Path $outDir 'airun.exe'
 $runtimePath = Join-Path $outDir 'aivm-runtime.exe'
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
@@ -44,6 +46,7 @@ $linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib')
 $clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs
 & cl @clArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item $wrapperPath $compatWrapperPath -Force
 
 $runtimeArgs = $commonArgs + @('/DAIRUN_MINIMAL_RUNTIME=1', "/Fe:$runtimePath") + $sources + $linkLibs
 & cl @runtimeArgs
@@ -53,5 +56,6 @@ Get-ChildItem -Path $root -Filter '*.obj' -ErrorAction SilentlyContinue | Remove
 
 if ($targetArch -eq 'x64') {
   Copy-Item $wrapperPath $hostWrapperPath -Force
+  Copy-Item $compatWrapperPath $hostCompatWrapperPath -Force
   Copy-Item $runtimePath $hostRuntimePath -Force
 }

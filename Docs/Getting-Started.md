@@ -21,36 +21,36 @@ Run build and verification flows with deterministic outputs.
 ```
 3. Run a program:
 ```bash
-./tools/airun run samples/cli-fetch/project.aiproj -- Fort\ Worth
+./tools/ailang run samples/cli-fetch/project.aiproj -- Fort\ Worth
 ```
 4. Scaffold a new project:
 ```bash
-./tools/airun init ./.tmp/MyApp --template cli
+./tools/ailang init ./.tmp/MyApp --template cli
 ```
 5. Build bytecode from project/source:
 ```bash
-./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
+./tools/ailang build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
 ```
 6. Publish wasm package (web default):
 ```bash
-./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./.tmp/publish-cli-fetch-wasm
+./tools/ailang publish samples/cli-fetch/project.aiproj --target wasm32 --out ./.tmp/publish-cli-fetch-wasm
 ```
 7. Run compiler driver modes:
 ```bash
-cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt
-cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt --ids
-cat examples/golden/check_missing_name.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos check
-cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos run
+cat examples/golden/fmt_basic.in.aos | ./tools/ailang run --vm=ast src/compiler/aic.aos fmt
+cat examples/golden/fmt_basic.in.aos | ./tools/ailang run --vm=ast src/compiler/aic.aos fmt --ids
+cat examples/golden/check_missing_name.in.aos | ./tools/ailang run --vm=ast src/compiler/aic.aos check
+cat examples/golden/run_var.in.aos | ./tools/ailang run --vm=ast src/compiler/aic.aos run
 ```
 
 ## Expected Output
 
-- `build.sh`: canonical tooling bootstrap entrypoint. Default target rebuilds `tools/airun`.
+- `build.sh`: canonical tooling bootstrap entrypoint. Default target rebuilds `tools/ailang`.
 - `build.sh shared`: builds the shared AiVM native library.
 - `build.sh wasm`: builds wasm runtime artifacts.
 - `build.sh all`: builds all bootstrap artifacts.
 - `test.sh`: canonical verification entrypoint. Ends with `overall DoD status: PASS` on success.
-- `airun init`: scaffolds a valid project layout with built-in templates (`cli`, `cli-args`).
+- `ailang init`: scaffolds a valid project layout with built-in templates (`cli`, `cli-args`).
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
 - `publish --target wasm32`:
@@ -65,7 +65,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 
 ## Failure Codes
 
-- `airun run`: `0` success, `2` parse/validation error, `3` runtime error.
+- `ailang run`: `0` success, `2` parse/validation error, `3` runtime error.
 - `test.sh`: nonzero if any golden fails.
 - Update-path blocking guard:
   - `VAL340` at validation-time
@@ -73,11 +73,11 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 
 ## Debugging Notes
 
-- For golden verification, prefer native `airun` execution over `dotnet .../airun.dll` because the golden harness spawns subprocesses using the current process path.
+- For golden verification, prefer native `ailang` execution over `dotnet .../airun.dll` because the golden harness spawns subprocesses using the current process path.
 - Native toolchain is C-only in active workflows; no C#/DLL fallback is required for command execution.
-- If `./tools/airun` is not usable in your environment, use the published native artifact:
+- If `./tools/ailang` is not usable in your environment, use the published native artifact:
 ```bash
-./.artifacts/airun-osx-arm64/airun run --vm=ast src/compiler/aic.aos test examples/golden
+./.artifacts/ailang-osx-arm64/ailang run --vm=ast src/compiler/aic.aos test examples/golden
 ```
 - For wasm publish/run validation, build the wasm runtime artifact first:
 ```bash

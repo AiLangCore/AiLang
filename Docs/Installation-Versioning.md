@@ -33,10 +33,11 @@ Program#p1 {
 ```
 
 AiVM is a native C project and does not have an AiLang project manifest. AiVM
-therefore uses a root `VERSION` file with only the base semantic version:
+therefore uses the CMake project declaration in `native/CMakeLists.txt` as the
+base semantic version:
 
-```text
-0.0.1
+```cmake
+project(aivm_c_core VERSION 0.0.1 LANGUAGES C)
 ```
 
 The base version source does not include prerelease or build metadata. Release
@@ -209,7 +210,7 @@ ailang toolchain doctor
 ## Immediate Implementation Tasks
 
 1. Add `version` to AiLang and AiVectra root `project.aiproj` files.
-2. Keep a root `VERSION` file for AiVM.
+2. Keep AiVM versioned from `native/CMakeLists.txt`.
 3. Make release workflows derive versions from the component's canonical
    version source.
 4. Add generated `install.toml` to release artifacts.

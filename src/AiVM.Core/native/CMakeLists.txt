@@ -9,7 +9,7 @@ option(AIVM_BUILD_SHARED "Build shared AiVM.C library for host bridge experiment
 if (MSVC)
     # AivmVm currently owns fixed-size execution arenas. Keep Windows test and
     # CLI stacks large enough until the VM arenas move behind heap-backed storage.
-    add_link_options(/STACK:16777216)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:67108864")
 endif()
 
 set(AIVM_CORE_SOURCES

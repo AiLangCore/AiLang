@@ -2,6 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AILANG_CLI="${ROOT_DIR}/tools/ailang"
+if [[ ! -x "${AILANG_CLI}" && -x "${ROOT_DIR}/tools/airun" ]]; then
+  AILANG_CLI="${ROOT_DIR}/tools/airun"
+fi
 TMP_ROOT="${ROOT_DIR}/.tmp/aivm-wasm-golden"
 TMP_DIR="${TMP_ROOT}/run-$$"
 CASES=(
@@ -3479,6 +3483,14 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ ! -x "${AILANG_CLI}" ]]; then
+  "${ROOT_DIR}/build.sh" host >/dev/null
+fi
+if [[ ! -x "${AILANG_CLI}" ]]; then
+  echo "ailang CLI is required to run wasm golden tests" >&2
+  exit 1
+fi
+
 ./build.sh wasm >/dev/null
 
 rm -rf "${TMP_DIR}"
@@ -3496,10 +3508,10 @@ for CASE_NAME in "${CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
-  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+  "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
 
   set +e
-  ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
+  "${AILANG_CLI}" run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
   native_rc=$?
   wasmtime run \
     --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
@@ -3525,10 +3537,10 @@ for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
-  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+  "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
 
   set +e
-  ./tools/airun run "${CASE_OUT}/app.aibc1" --vm=c >"${NATIVE_OUT}" 2>&1
+  "${AILANG_CLI}" run "${CASE_OUT}/app.aibc1" --vm=c >"${NATIVE_OUT}" 2>&1
   native_rc=$?
   wasmtime run \
     --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
@@ -3556,7 +3568,7 @@ for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
-  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+  "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
 
   set +e
   wasmtime run \
@@ -3583,7 +3595,7 @@ for CASE_NAME in "${MALFORMED_CASES[@]}"; do
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   CASE_ERR="${CASE_OUT}/publish.err"
   mkdir -p "${CASE_OUT}"
-  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>"${CASE_ERR}"; then
+  if "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>"${CASE_ERR}"; then
     echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic malformed-input publish failure" >&2
     exit 1
   fi
@@ -3607,27 +3619,27 @@ for CASE_NAME in "${MALFORMED_CASES[@]}"; do
   esac
 done
 
-./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
-./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
-./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
-./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
-./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"
-./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/fs-spa" >/dev/null 2>"${FS_SPA_WARN}"
-./tools/airun publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/fs-fullstack" >/dev/null 2>"${FS_FULLSTACK_WARN}"
-./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/net-spa" >/dev/null 2>"${NET_SPA_WARN}"
-./tools/airun publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/net-fullstack" >/dev/null 2>"${NET_FULLSTACK_WARN}"
-./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-cli" >/dev/null 2>"${UI_CLI_WARN}"
-./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-spa" >/dev/null 2>"${UI_SPA_WARN}"
-./tools/airun publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-fullstack" >/dev/null 2>"${UI_FULLSTACK_WARN}"
-./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-poll-spa" >/dev/null 2>"${UI_POLL_SPA_WARN}"
-./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-poll-fullstack" >/dev/null 2>"${UI_POLL_FULLSTACK_WARN}"
-./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-size-spa" >/dev/null 2>"${UI_SIZE_SPA_WARN}"
-./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-size-fullstack" >/dev/null 2>"${UI_SIZE_FULLSTACK_WARN}"
-./tools/airun publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/image-cli" >/dev/null 2>"${IMAGE_CLI_WARN}"
-./tools/airun publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/image-spa" >/dev/null 2>"${IMAGE_SPA_WARN}"
-./tools/airun publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/image-fullstack" >/dev/null 2>"${IMAGE_FULLSTACK_WARN}"
-./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-poll-cli" >/dev/null
-./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-size-cli" >/dev/null
+"${AILANG_CLI}" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
+"${AILANG_CLI}" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
+"${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
+"${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
+"${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/fs-spa" >/dev/null 2>"${FS_SPA_WARN}"
+"${AILANG_CLI}" publish "${FS_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/fs-fullstack" >/dev/null 2>"${FS_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/net-spa" >/dev/null 2>"${NET_SPA_WARN}"
+"${AILANG_CLI}" publish "${NET_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/net-fullstack" >/dev/null 2>"${NET_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-cli" >/dev/null 2>"${UI_CLI_WARN}"
+"${AILANG_CLI}" publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-spa" >/dev/null 2>"${UI_SPA_WARN}"
+"${AILANG_CLI}" publish "${UI_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-fullstack" >/dev/null 2>"${UI_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-poll-spa" >/dev/null 2>"${UI_POLL_SPA_WARN}"
+"${AILANG_CLI}" publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-poll-fullstack" >/dev/null 2>"${UI_POLL_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-size-spa" >/dev/null 2>"${UI_SIZE_SPA_WARN}"
+"${AILANG_CLI}" publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-size-fullstack" >/dev/null 2>"${UI_SIZE_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/image-cli" >/dev/null 2>"${IMAGE_CLI_WARN}"
+"${AILANG_CLI}" publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/image-spa" >/dev/null 2>"${IMAGE_SPA_WARN}"
+"${AILANG_CLI}" publish "${IMAGE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/image-fullstack" >/dev/null 2>"${IMAGE_FULLSTACK_WARN}"
+"${AILANG_CLI}" publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-poll-cli" >/dev/null
+"${AILANG_CLI}" publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-size-cli" >/dev/null
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
 echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
@@ -4079,7 +4091,7 @@ Program#p1 {
   Project#proj1(name="manifest_host_target" entryFile="src/app.aos" publishWasmFullstackHostTarget="invalid-rid")
 }
 EOF
-if ./tools/airun publish "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" --target wasm32 --wasm-profile fullstack --out "${MANIFEST_HOST_TARGET_DIR}/out" > /dev/null 2>"${MANIFEST_HOST_TARGET_ERR}"; then
+if "${AILANG_CLI}" publish "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" --target wasm32 --wasm-profile fullstack --out "${MANIFEST_HOST_TARGET_DIR}/out" > /dev/null 2>"${MANIFEST_HOST_TARGET_ERR}"; then
   echo "wasm manifest host-target mismatch: expected publish failure for invalid publishWasmFullstackHostTarget" >&2
   exit 1
 fi

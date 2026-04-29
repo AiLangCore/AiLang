@@ -544,6 +544,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
+          draft: true
           prerelease: ${{ contains(needs.prepare.outputs.tag, '-alpha') || contains(needs.prepare.outputs.tag, '-beta') || contains(needs.prepare.outputs.tag, '-rc') || contains(needs.prepare.outputs.tag, '-local') }}
           body_path: ./RELEASE_NOTES.md
           files: ./release-assets/*
+
+      - name: Publish uploaded draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release edit "${{ needs.prepare.outputs.tag }}" --draft=false

@@ -8,6 +8,10 @@ $buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Pat
 $presetFile = Join-Path $sourceDir 'CMakePresets.json'
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
 $parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $sourceDir 'tests/parity_commands_ci.txt' }
+$ctestFilterArgs = @()
+if ($env:AIVM_CTEST_EXCLUDE) {
+  $ctestFilterArgs += @('-E', $env:AIVM_CTEST_EXCLUDE)
+}
 
 if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
   if ($IsWindows) {
@@ -16,7 +20,7 @@ if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & cmake --build --preset aivm-native-windows-build
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --preset aivm-native-windows-test --output-on-failure
+    & ctest --preset aivm-native-windows-test --output-on-failure @ctestFilterArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Pop-Location
   } else {
@@ -25,7 +29,7 @@ if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & cmake --build --preset aivm-native-unix-build
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --preset aivm-native-unix-test --output-on-failure -LE wasm
+    & ctest --preset aivm-native-unix-test --output-on-failure -LE wasm @ctestFilterArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Pop-Location
   }
@@ -40,12 +44,12 @@ if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
   if ($IsWindows) {
     & cmake --build $buildDir --config Debug
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --test-dir $buildDir -C Debug --output-on-failure
+    & ctest --test-dir $buildDir -C Debug --output-on-failure @ctestFilterArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   } else {
     & cmake --build $buildDir
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --test-dir $buildDir --output-on-failure -LE wasm
+    & ctest --test-dir $buildDir --output-on-failure -LE wasm @ctestFilterArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
 }

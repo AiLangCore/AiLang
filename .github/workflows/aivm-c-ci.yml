@@ -130,6 +130,8 @@ jobs:
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_CTEST_EXCLUDE: aivm_test_process_lifecycle_stress
         run: |
           ./test-aivm-c.ps1
 

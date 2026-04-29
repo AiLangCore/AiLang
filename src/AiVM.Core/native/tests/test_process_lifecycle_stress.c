@@ -38,17 +38,24 @@ static int spawn_and_wait_zero_exit(void)
     AivmValue result;
     AivmSyscallStatus status;
     int64_t handle;
+#ifdef _WIN32
+    const char* argv_values[3] = { "/c", "exit", "0" };
+#endif
 
     aivm_program_clear(&program);
+#ifdef _WIN32
+    aivm_init_with_syscalls_and_argv(&vm, &program, NULL, 0U, argv_values, 3U);
+#else
     aivm_init_with_syscalls(&vm, &program, NULL, 0U);
+#endif
     g_native_active_vm = &vm;
 
 #ifdef _WIN32
-    spawn_args[0] = aivm_value_string("cmd /c exit 0");
+    spawn_args[0] = aivm_value_string("cmd.exe");
 #else
     spawn_args[0] = aivm_value_string("true");
 #endif
-    spawn_args[1] = aivm_value_node(0);
+    spawn_args[1] = aivm_value_node(vm.process_argv_node_handle);
     spawn_args[2] = aivm_value_string("");
     spawn_args[3] = aivm_value_node(0);
 
@@ -84,17 +91,24 @@ static int spawn_kill_wait_nonzero_exit(void)
     AivmValue result;
     AivmSyscallStatus status;
     int64_t handle;
+#ifdef _WIN32
+    const char* argv_values[2] = { "/c", "ping -n 4 127.0.0.1 >NUL" };
+#endif
 
     aivm_program_clear(&program);
+#ifdef _WIN32
+    aivm_init_with_syscalls_and_argv(&vm, &program, NULL, 0U, argv_values, 2U);
+#else
     aivm_init_with_syscalls(&vm, &program, NULL, 0U);
+#endif
     g_native_active_vm = &vm;
 
 #ifdef _WIN32
-    spawn_args[0] = aivm_value_string("cmd /c ping -n 4 127.0.0.1 >NUL");
+    spawn_args[0] = aivm_value_string("cmd.exe");
 #else
     spawn_args[0] = aivm_value_string("sleep 2");
 #endif
-    spawn_args[1] = aivm_value_node(0);
+    spawn_args[1] = aivm_value_node(vm.process_argv_node_handle);
     spawn_args[2] = aivm_value_string("");
     spawn_args[3] = aivm_value_node(0);
 
@@ -140,17 +154,24 @@ static int spawn_and_wait_nonzero_exit(void)
     AivmValue result;
     AivmSyscallStatus status;
     int64_t handle;
+#ifdef _WIN32
+    const char* argv_values[3] = { "/c", "exit", "7" };
+#endif
 
     aivm_program_clear(&program);
+#ifdef _WIN32
+    aivm_init_with_syscalls_and_argv(&vm, &program, NULL, 0U, argv_values, 3U);
+#else
     aivm_init_with_syscalls(&vm, &program, NULL, 0U);
+#endif
     g_native_active_vm = &vm;
 
 #ifdef _WIN32
-    spawn_args[0] = aivm_value_string("cmd /c exit 7");
+    spawn_args[0] = aivm_value_string("cmd.exe");
 #else
     spawn_args[0] = aivm_value_string("false");
 #endif
-    spawn_args[1] = aivm_value_node(0);
+    spawn_args[1] = aivm_value_node(vm.process_argv_node_handle);
     spawn_args[2] = aivm_value_string("");
     spawn_args[3] = aivm_value_node(0);
 

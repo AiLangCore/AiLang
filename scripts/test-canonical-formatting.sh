@@ -41,11 +41,18 @@ check_aos_parse() {
   fi
 }
 
+AOS_DIRS=()
+for candidate in examples samples src/std src/compiler src/cli templates; do
+  if [[ -d "${candidate}" ]]; then
+    AOS_DIRS+=("${candidate}")
+  fi
+done
+
 while IFS= read -r file; do
   check_text_hygiene "$file"
   check_aos_parse "$file"
 done < <(
-  find examples samples src/std src/compiler src/cli templates \
+  find "${AOS_DIRS[@]}" \
     -path '*/.tmp/*' -prune -o \
     -name '*.out.aos' -prune -o \
     -name '*.aos' -type f -print | sort
@@ -54,7 +61,7 @@ done < <(
 while IFS= read -r file; do
   check_text_hygiene "$file"
 done < <(
-  find examples samples src/std src/compiler src/cli templates \
+  find "${AOS_DIRS[@]}" \
     -path '*/.tmp/*' -prune -o \
     -name '*.out.aos' -type f -print | sort
 )
@@ -67,7 +74,7 @@ done < <(
 )
 
 expected_format='Program#p1 { Lit#l1(value=1) }'
-actual_format="$(tr -d '\n' < examples/golden/fmt_basic.out.aos)"
+actual_format="$(tr -d '\r\n' < examples/golden/fmt_basic.out.aos)"
 if [[ "${actual_format}" != "${expected_format}" ]]; then
   echo "canonical formatting check failed: examples/golden/fmt_basic.out.aos drifted" >&2
   echo "expected: ${expected_format}" >&2

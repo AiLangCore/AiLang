@@ -65,13 +65,24 @@ Verified on 2026-05-20:
 
 ## Spec Ownership Gates
 
-- [ ] AiLang owns language semantics, IL, evaluation, validation, async/task
+- [x] AiLang owns language semantics, IL, evaluation, validation, async/task
   semantics, and concurrency semantics.
-- [ ] AiVM owns runtime implementation, memory mechanics, scheduling mechanics,
+- [x] AiVM owns runtime implementation, memory mechanics, scheduling mechanics,
   event queue mechanics, and syscall dispatch.
-- [ ] AiVectra owns UI runtime semantics, vector rendering, and app runtime
+- [x] AiVectra owns UI runtime semantics, vector rendering, and app runtime
   integration.
-- [ ] Duplicate specs are removed or replaced by pointers to canonical specs.
+- [x] Duplicate specs are removed or replaced by pointers to canonical specs.
+
+Verified on 2026-05-20:
+
+- AiLang `SPEC/CONCURRENCY.md` is non-normative and points to canonical
+  semantics in `SPEC/IL.md`, `SPEC/EVAL.md`, `SPEC/VALIDATION.md`, and
+  `SPEC/BYTECODE.md`.
+- AiVM owns runtime memory/threading strategy in `SPEC/MEMORY.md` and syscall
+  contracts in `Docs/Syscalls.md`.
+- AiVectra owns UI/runtime threading in `SPEC/THREADING.md`.
+- AiVectra `SPEC/STYLE_AILANG.md` is a pointer to AiLang's canonical
+  `SPEC/STYLE_AILANG.md`, not a duplicate style contract.
 
 ## Package Ecosystem Gates
 

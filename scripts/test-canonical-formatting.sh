@@ -4,8 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend"
-if [[ ! -x "${AOS_FRONTEND}" ]]; then
+if [[ -x "${ROOT_DIR}/tools/aos_frontend" ]]; then
+  AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend"
+elif [[ -x "${ROOT_DIR}/tools/aos_frontend.exe" ]]; then
+  AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend.exe"
+else
   echo "canonical formatting check failed: missing tools/aos_frontend" >&2
   exit 1
 fi

@@ -26,6 +26,10 @@ This repository tracks the language/tooling work toward beta readiness. See
 [`BETA_READINESS.md`](BETA_READINESS.md) for current gates and
 [`ROADMAP.md`](ROADMAP.md) for the Alpha -> Beta -> RC -> 1.0 direction.
 
+Branch status: `develop` is the public default branch while beta architecture
+work is active. Release tags and GitHub prereleases are the public artifact
+source; `main` is not the current integration branch during this beta cycle.
+
 ## Architecture
 
 AiLang owns the language, compiler/toolset, core libraries, SDK contracts, and

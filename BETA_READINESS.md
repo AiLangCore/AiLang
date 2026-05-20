@@ -56,12 +56,23 @@ Verified on 2026-05-20:
 
 ## Public Coherence Gates
 
-- [ ] `develop` and `main` branch story is clear for each public repository.
-- [ ] Default branch or README status points at the current architecture.
+- [x] `develop` and `main` branch story is clear for each public repository.
+- [x] Default branch or README status points at the current architecture.
 - [x] Website install instructions match the latest published artifacts.
 - [x] GitHub release metadata matches the website version.
-- [ ] Each main repository has a short description, topics, install section,
+- [x] Each main repository has a short description, topics, install section,
   architecture summary, current status, and roadmap link.
+
+Verified on 2026-05-20:
+
+- GitHub default branches are `develop` for AiLang, AiVM, and AiVectra, and
+  `main` for the website, Codex skill, package registry, core packages, and
+  examples repositories.
+- GitHub repository descriptions and topics are present for all eight public
+  repositories.
+- Repository READMEs describe current status, branch/default-branch purpose,
+  install or usage entry points, ownership/architecture scope, and roadmap or
+  beta-readiness links.
 
 ## Spec Ownership Gates
 

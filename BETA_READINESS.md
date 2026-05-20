@@ -95,13 +95,22 @@ Verified on 2026-05-20:
 
 ## Sponsorship Gates
 
-- [ ] Public roadmap explains Alpha -> Beta -> RC -> 1.0.
-- [ ] Website explains funding goals.
-- [ ] Funding goals name concrete work: CI, release automation,
+- [x] Public roadmap explains Alpha -> Beta -> RC -> 1.0.
+- [x] Website explains funding goals.
+- [x] Funding goals name concrete work: CI, release automation,
   deterministic tests, cross-platform packaging, documentation, AiVM native
   runtime hardening, and AiVectra stabilization.
 - [x] Conference/demo path is documented: install, initialize with Codex,
   build, run, and show an AiVectra sample.
+
+Verified on 2026-05-20:
+
+- `AiLangCore.github.io/docs/roadmap.html` describes current beta status,
+  Alpha, Beta, Release Candidate, and 1.0 goals.
+- `AiLangCore.github.io/index.html` and `docs/roadmap.html` include sponsor
+  links and concrete funding targets for CI/build infrastructure, release
+  automation, deterministic tests, cross-platform packaging, documentation,
+  native AiVM hardening, and AiVectra stabilization.
 
 ## Next Beta Hardening Tasks
 

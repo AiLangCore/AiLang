@@ -8,6 +8,10 @@ if [[ -x "${ROOT_DIR}/tools/aos_frontend" ]]; then
   AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend"
 elif [[ -x "${ROOT_DIR}/tools/aos_frontend.exe" ]]; then
   AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend.exe"
+elif [[ -x "${ROOT_DIR}/dist/aos_frontend" ]]; then
+  AOS_FRONTEND="${ROOT_DIR}/dist/aos_frontend"
+elif [[ -x "${ROOT_DIR}/dist/aos_frontend.exe" ]]; then
+  AOS_FRONTEND="${ROOT_DIR}/dist/aos_frontend.exe"
 else
   echo "canonical formatting check failed: missing tools/aos_frontend" >&2
   exit 1

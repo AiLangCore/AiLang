@@ -170,6 +170,13 @@ jobs:
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs .\dist\.artifacts\aivm-wasm32\
           .\scripts\stage-sdk-docs.ps1 .\dist
 
+      - name: Deterministic golden corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/test-canonical-formatting.sh
+          ./scripts/test-golden-determinism.sh
+
       - name: Upload toolkit artifact
         uses: actions/upload-artifact@v7
         with:

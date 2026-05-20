@@ -36,7 +36,7 @@ Verified on 2026-05-20:
 
 ## Required Gates
 
-- [ ] Deterministic golden tests are stable across macOS, Linux, and Windows.
+- [x] Deterministic golden tests are stable across macOS, Linux, and Windows.
 - [x] Install flow works from a clean machine on macOS.
 - [x] Install flow works from a clean machine on Linux.
 - [x] Install flow works from a clean machine on Windows.
@@ -56,6 +56,11 @@ Verified on 2026-05-20:
 
 Verified on 2026-05-20:
 
+- `scripts/test-golden-determinism.sh` runs every top-level
+  `examples/golden/*.in.aos` case twice through the current native VM path and
+  fails on nondeterministic status or output.
+- `toolkit-ci.yml` runs the canonical formatting gate and golden determinism
+  gate on `ubuntu-latest`, `macos-14`, and `windows-latest`.
 - `scripts/test-canonical-formatting.sh` parses the public AOS corpus under
   `examples`, `samples`, `src/std`, `src/compiler`, `src/cli`, and `templates`
   with `tools/aos_frontend`.

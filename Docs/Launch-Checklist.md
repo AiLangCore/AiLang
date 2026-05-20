@@ -65,8 +65,8 @@ ailang test
 Package workflow:
 
 ```bash
-ailang packages restore
-ailang templates list
+ailang package restore
+ailang template list
 ```
 
 ## Cross-Repository Gates

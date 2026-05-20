@@ -10,6 +10,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-behavior.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
+./scripts/test-canonical-formatting.sh
 ./scripts/test-ailang-init.sh
 ./scripts/test-ailang-build-source.sh
 ./scripts/test-ailang-cli-spec.sh

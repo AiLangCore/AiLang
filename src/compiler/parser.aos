@@ -28,12 +28,12 @@ Program#parser_p1 {
           Block#parser_b6 { Lit#parser_i7(value=0) }
         }
         If#parser_if3 {
-          Eq#parser_e3 { Var#parser_v5(name=ch) Lit#parser_i8(value="	") }
+          Eq#parser_e3 { Var#parser_v5(name=ch) Lit#parser_i8(value="\t") }
           Block#parser_b7 { Return#parser_r4 { Lit#parser_i9(value=true) } }
           Block#parser_b8 { Lit#parser_i10(value=0) }
         }
         If#parser_if4 {
-          Eq#parser_e4 { Var#parser_v6(name=ch) Lit#parser_i11(value="") }
+          Eq#parser_e4 { Var#parser_v6(name=ch) Lit#parser_i11(value="\r") }
           Block#parser_b9 { Return#parser_r5 { Lit#parser_i12(value=true) } }
           Block#parser_b10 { Return#parser_r6 { Lit#parser_i13(value=false) } }
         }
@@ -261,11 +261,11 @@ Program#parser_p1 {
           Block#parser_b189 {
             If#parser_if99 {
               Eq#parser_e97 { Var#parser_v351(name=ch) Lit#parser_i288(value="t") }
-              Block#parser_b190 { Return#parser_r150 { Lit#parser_i289(value="	") } }
+              Block#parser_b190 { Return#parser_r150 { Lit#parser_i289(value="\t") } }
               Block#parser_b191 {
                 If#parser_if100 {
                   Eq#parser_e98 { Var#parser_v352(name=ch) Lit#parser_i290(value="r") }
-                  Block#parser_b192 { Return#parser_r151 { Lit#parser_i291(value="") } }
+                  Block#parser_b192 { Return#parser_r151 { Lit#parser_i291(value="\r") } }
                   Block#parser_b193 { Return#parser_r152 { Var#parser_v353(name=ch) } }
                 }
               }

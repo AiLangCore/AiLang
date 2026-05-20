@@ -50,9 +50,19 @@ Verified on 2026-05-20:
 - [x] AiVM native runtime is the runtime used by the public SDK.
 - [x] `aivm` and `aivm-debug` release artifacts exist for supported hosts.
 - [x] At least one AiVectra sample app is functional and documented.
-- [ ] Canonical formatting is stable enough for docs and samples.
+- [x] Canonical formatting is stable enough for docs and samples.
 - [x] Resource limits are documented and visible in diagnostics.
 - [x] Error code families are documented and stable for beta.
+
+Verified on 2026-05-20:
+
+- `scripts/test-canonical-formatting.sh` parses the public AOS corpus under
+  `examples`, `samples`, `src/std`, `src/compiler`, `src/cli`, and `templates`
+  with `tools/aos_frontend`.
+- The same check enforces no CRLF, tabs, or trailing whitespace in public AOS
+  files and core docs/spec Markdown.
+- The formatter fixture `examples/golden/fmt_basic.out.aos` is pinned to the
+  canonical single-line output used by docs and samples.
 
 ## Public Coherence Gates
 

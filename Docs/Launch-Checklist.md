@@ -1,101 +1,113 @@
-# AiLang Minimal Launch Checklist
+# AiLang Beta Demo and Release Checklist
 
-Updated: 2026-02-20
+Updated: 2026-05-20
 
-## Status Legend
+This checklist is the short operational gate before a conference demo, sponsor
+review, or follow-up beta release. The authoritative beta status is tracked in
+`../BETA_READINESS.md`; this file is the runbook for proving the project is in
+a presentable state.
 
-- `Green`: verified complete
-- `Yellow`: partially complete / needs final proof
-- `Red`: missing or not started
-- `Gray`: unknown (not yet verified)
+## Release State
 
-## Checklist
+- AiLang: `v0.0.1-beta.6`
+- AiVM: `v0.0.1-beta.1`
+- AiVectra: `v0.0.1-beta.1`
 
-1. Language/runtime contract freeze
-- Criteria:
-- `SPEC/IL.md`, `SPEC/EVAL.md`, `SPEC/VALIDATION.md` finalized for launch baseline.
-- Experimental areas explicitly labeled.
-- Current: `Green`
-- Notes: Freeze decision recorded in `Docs/Release-0.0.1.md`.
+All three current beta releases are GitHub prereleases. The public website
+install script defaults to the `beta` channel.
 
-2. Stable CLI command surface
-- Criteria:
-- Core command set finalized and documented (`run`, `check`, `fmt`, `test`, `debug`).
-- Help text and docs align with behavior.
-- Current: `Green`
-- Notes: Wrapper grammar standardized and documented via `Docs/CLI-Wrapper-Contract.md`.
+## Local Repository Gates
 
-3. Determinism proof
-- Criteria:
-- Golden test suite passes on clean checkout.
-- Replay/debug artifacts are byte-stable for same inputs.
-- Current: `Green`
-- Notes: full `./test.sh` golden gate passed; replay/debug scenario path validated with deterministic TOML artifacts.
+Run these from the AiLang repository root:
 
-4. Capability/security boundary
-- Criteria:
-- All effectful behavior behind explicit capabilities and `sys.*`.
-- No hidden side effects.
-- Current: `Yellow`
-- Notes: architecture enforces this direction; requires final launch audit sign-off.
+```bash
+./scripts/test-canonical-formatting.sh
+AILANG_BIN="$PWD/.artifacts/ailang-osx-arm64/ailang" ./scripts/test-golden-determinism.sh
+```
 
-5. Minimal stdlib baseline
-- Criteria:
-- Launch-approved stdlib set documented.
-- No ambiguous/incomplete APIs in launch tier.
-- Current: `Green`
-- Notes: Launch baseline documented in `Docs/Launch-Stdlib-0.0.1.md`.
+The golden determinism script is also run by Toolkit CI on Linux, macOS, and
+Windows. Local runs may use the host-specific installed or staged `ailang`
+binary by setting `AILANG_BIN`.
 
-6. Agent-grade debugging tooling
-- Criteria:
-- Non-invasive debug run with deterministic artifact bundle.
-- Replay harness from fixture file.
-- Scenario runner and compare support.
-- Current: `Green`
-- Notes: `ailang debug scenario ...` works with TOML fixtures; artifact bundle writes deterministic TOML outputs.
+Run the wider repository test when the local bootstrap binary is healthy:
 
-7. Samples and coverage
-- Criteria:
-- Canonical samples compile/run.
-- Each launch sample has at least one deterministic verification path.
-- Current: `Yellow`
-- Notes: sample/debug scenario path exists; full sample matrix verification not yet completed.
+```bash
+./test.sh
+```
 
-8. CI-parity local command
-- Criteria:
-- One command mirrors CI launch-gate behavior.
-- Current: `Green`
-- Notes: parity components validated in this pass (`./test.sh` + debug scenario run + fixture bootstrap).
+If `./test.sh` fails because the local bootstrap `tools/ailang` process is
+killed, use the Toolkit CI result as the cross-platform release gate and record
+the failure as a local bootstrap defect, not as a golden determinism failure.
 
-9. Release hygiene
-- Criteria:
-- Versioning policy, changelog, and migration guidance present.
-- Install/build steps verified on target platforms.
-- Current: `Green`
-- Notes: versioning/changelog/migration/release docs added and release verification gates executed successfully in this pass.
+## Installed SDK Gates
 
-## Verified In This Pass
+Run these from a clean shell after installing the public SDK:
 
-- `dotnet build src/AiCLI/AiCLI.csproj -v minimal -m:1 /nr:false` passed.
-- `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -v minimal -m:1 /nr:false --filter "Name~CliInvocationParsing_|Name~Cli_HelpText_ContainsCommandSectionsAndExamples|Name~VmSyscallDispatcher_DebugSyscalls_AreWired|Name~SyscallRegistry_ResolvesDebugAliases|Name~VmSyscallDispatcher_WorkerSyscalls_AreWired|Name~DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll"` passed (11 tests).
-- `./test.sh` passed (full golden gate).
-- `ailang --version` reports `version=0.0.1`.
-- Targeted tests passed:
-- `VmSyscallDispatcher_DebugSyscalls_AreWired`
-- `SyscallRegistry_ResolvesDebugAliases`
-- `VmSyscallDispatcher_WorkerSyscalls_AreWired`
-- `DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll`
-- Debug scenario run passed:
-- `ailang debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal`
-- TOML artifacts produced:
-- `config.toml`
-- `vm_trace.toml`
-- `state_snapshots.toml`
-- `syscalls.toml`
-- `events.toml`
-- `diagnostics.toml`
-- `stdout.txt`
+```bash
+curl -fsSL https://ailang.codes/install.sh | sh
+export PATH="$HOME/.ailang/bin:$PATH"
+ailang --version
+aivm --version
+aivm-debug --version
+aivectra help
+```
 
-## Open Items To Reach Launch-Ready
+Then verify the agent-centered project path:
 
-1. Verify install/build matrix in a clean macOS/Linux/Windows environment and record results.
+```bash
+ailang init DemoApp --agent codex
+cd DemoApp
+ailang build
+ailang run .
+ailang test
+```
+
+Package workflow:
+
+```bash
+ailang packages restore
+ailang templates list
+```
+
+## Cross-Repository Gates
+
+Run these from each repository root before cutting a release:
+
+```bash
+# AiVM
+./test-aivm-c.sh
+
+# AiVectra
+./scripts/test-all.sh
+
+# Website
+sh -n install.sh
+
+# AiLang examples
+./scripts/validate-examples.sh
+```
+
+## Demo Path
+
+The preferred public demo is:
+
+1. Install from `https://ailang.codes/install.sh`.
+2. Initialize an agent-ready AiLang project with `ailang init <Name> --agent codex`.
+3. Build and run it with `ailang build` and `ailang run .`.
+4. Restore a package-backed sample.
+5. Show one AiVectra sample using the same SDK toolchain.
+
+The demo should emphasize that AiVM is the native C runtime, AiLang owns the
+language/toolset/SDK, and AiVectra owns the UI library and visual runtime.
+
+## Release Notes Gate
+
+Before publishing another beta, update:
+
+- `../CHANGELOG.md`
+- `../BETA_READINESS.md`
+- Website version and install documentation when public artifacts change
+- GitHub release notes for AiLang, AiVM, and AiVectra
+
+Do not add compatibility layers for pre-1.0 beta contract changes unless they
+are explicitly requested.

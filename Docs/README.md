@@ -40,7 +40,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Migration 0.0.1](./Migration-0.0.1.md)
 - [Launch Stdlib 0.0.1](./Launch-Stdlib-0.0.1.md)
 - [Release 0.0.1](./Release-0.0.1.md)
-- [Launch Checklist](./Launch-Checklist.md)
+- [Beta Demo and Release Checklist](./Launch-Checklist.md)
 - [Self-Hosting Checklist](./Self-Hosting-Checklist.md)
 - [Concurrency Design Notes](../SPEC/CONCURRENCY.md)
 

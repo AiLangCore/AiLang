@@ -29,6 +29,11 @@ Verified on 2026-05-19:
   `ailang run`, `aivm --version`, `aivectra help`, package restore/build/run,
   and template package listing.
 
+Verified on 2026-05-20:
+
+- AiLang `v0.0.1-beta.1` has a remote git tag but no GitHub release. Leave the
+  tag as historical build evidence; no public release cleanup is required.
+
 ## Required Gates
 
 - [ ] Deterministic golden tests are stable across macOS, Linux, and Windows.
@@ -89,8 +94,8 @@ Verified on 2026-05-19:
 
 ## Next Beta Hardening Tasks
 
-1. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
-   historical failed tag or be removed manually.
+No active hardening task is currently listed here. Add new items as beta
+feedback, CI failures, or sponsor-readiness gaps are found.
 
 ## Beta Exit Rule
 

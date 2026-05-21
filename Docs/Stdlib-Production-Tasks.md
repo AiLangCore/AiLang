@@ -80,6 +80,8 @@ covered by `scripts/test-stdlib-behavior.sh`.
 
 Status: active next readiness task after package namespace/registry hardening.
 
+Canonical primitive plan: `Docs/Deterministic-Text-Bytes-Primitives.md`.
+
 1. Replace direct non-wrapper calls to deterministic string/bytes syscalls with
    baseline library calls:
    - `sys.str.substring` -> `std.str.substring`
@@ -109,9 +111,11 @@ Status: active next readiness task after package namespace/registry hardening.
    - remaining: `sys.bytes.*` direct usage only in the traced-syscall
      regression test until those syscall contracts are removed.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
-4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
+4. Add non-syscall text/bytes primitives or intrinsic nodes before removing the
+   temporary VM contracts used by `std.str` and `std.bytes`.
+5. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
    optional packages before removing those VM contracts.
-5. Do not leave alias, fallback, or compatibility syscall paths before the
+6. Do not leave alias, fallback, or compatibility syscall paths before the
    first major or minor release.
 
 ## Exit condition

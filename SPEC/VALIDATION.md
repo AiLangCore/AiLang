@@ -65,6 +65,10 @@ This file is normative for semantic validation used by `aic check` (default path
 - arguments are `(int windowHandle, int x, int y, int width, int height, string rgbaBase64)`.
 - payload is raw RGBA8 bytes encoded as base64; semantic interpretation stays in libraries.
 
+- Temporary migration note: deterministic `sys.str.*` and `sys.bytes.*`
+  contracts exist only until the equivalent `std.str`/`std.bytes` behavior can
+  be expressed through non-syscall AiLang primitives or intrinsic operations.
+
 - `sys.str.substring(text,start,length)` and `sys.str.remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
 - indexing is by Unicode scalar sequence (not bytes).
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).

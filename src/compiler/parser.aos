@@ -1,9 +1,11 @@
 Program#parser_p1 {
+  Import#parser_im1(path="../std/str.aos")
+
   Let#parser_l1(name=parse.charAt) {
     Fn#parser_f1(params=text,index) {
       Block#parser_b1 {
         Return#parser_r1 {
-          Call#parser_c1(target=sys.str.substring) {
+          Call#parser_c1(target=substring) {
             Var#parser_v1(name=text)
             Var#parser_v2(name=index)
             Lit#parser_i1(value=1)

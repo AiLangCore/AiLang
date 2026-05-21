@@ -16,14 +16,17 @@ instead of calling deterministic `sys.str.*` or `sys.bytes.*` targets directly.
 
 ## Current Temporary Dependencies
 
-`std.str` still delegates to temporary VM contracts for:
+`std.str` now uses non-syscall intrinsic nodes for:
 
 - Unicode-scalar substring
 - Unicode-scalar removal
+- UTF-8 byte count
+
+`std.str` still delegates to temporary VM contracts for:
+
 - Unicode-scalar search
 - Unicode code point construction
 - Unicode escape decoding
-- UTF-8 byte count
 
 `std.bytes` still delegates to temporary VM contracts for:
 
@@ -45,6 +48,9 @@ or intrinsic nodes for:
 - `StringScalarLength(text) -> int`
 - `StringScalarAt(text, index) -> int`
 - `StringFromCodePoint(codePoint) -> string`
+- `StringSlice(text, start, length) -> string`
+- `StringRemove(text, start, length) -> string`
+- `StringUtf8ByteCount(text) -> int`
 - `BytesLength(data) -> int`
 - `BytesAt(data, index) -> int`
 - `BytesSlice(data, start, length) -> bytes`

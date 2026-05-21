@@ -20,6 +20,9 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |
 | `Add` | none | `2` | Integer addition. |
+| `StringSlice` | none | `3` | Unicode-scalar-indexed string slice by start and length. |
+| `StringRemove` | none | `3` | Removes a Unicode-scalar-indexed range from a string. |
+| `StringUtf8ByteCount` | none | `1` | UTF-8 byte count for a string value. |
 | `StringScalarLength` | none | `1` | Unicode scalar count for a string value. |
 | `StringScalarAt` | none | `2` | Unicode scalar code point at index, or `-1` out of range. |
 | `StringFromCodePoint` | none | `1` | Construct a one-scalar string from a code point, or `""` for invalid input. |

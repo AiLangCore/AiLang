@@ -10,13 +10,7 @@ Program#std_str_p1 {
   Let#std_str_l2(name=substring) {
     Fn#std_str_f2(params=text,start,length) {
       Block#std_str_b2 {
-        Return#std_str_r2 {
-          Call#std_str_c1(target=sys.str.substring) {
-            Var#std_str_v3(name=text)
-            Var#std_str_v4(name=start)
-            Var#std_str_v5(name=length)
-          }
-        }
+        Return#std_str_r2 { StringSlice#std_str_ss1 { Var#std_str_v3(name=text) Var#std_str_v4(name=start) Var#std_str_v5(name=length) } }
       }
     }
   }
@@ -24,13 +18,7 @@ Program#std_str_p1 {
   Let#std_str_l3(name=remove) {
     Fn#std_str_f3(params=text,start,length) {
       Block#std_str_b3 {
-        Return#std_str_r3 {
-          Call#std_str_c2(target=sys.str.remove) {
-            Var#std_str_v6(name=text)
-            Var#std_str_v7(name=start)
-            Var#std_str_v8(name=length)
-          }
-        }
+        Return#std_str_r3 { StringRemove#std_str_sr1 { Var#std_str_v6(name=text) Var#std_str_v7(name=start) Var#std_str_v8(name=length) } }
       }
     }
   }
@@ -85,7 +73,7 @@ Program#std_str_p1 {
           Call#std_str_c7(target=replaceAllKnown) {
             Var#std_str_v16(name=text)
             Var#std_str_v17(name=needle)
-            Call#std_str_c8(target=sys.str.utf8ByteCount) { Var#std_str_v18(name=needle) }
+            StringUtf8ByteCount#std_str_sbc1 { Var#std_str_v18(name=needle) }
             Var#std_str_v19(name=replacement)
           }
         }
@@ -112,19 +100,11 @@ Program#std_str_p1 {
               Block#std_str_b12 { Return#std_str_r10 { Var#std_str_v25(name=text) } }
               Block#std_str_b13 {
                 Let#std_str_l11(name=prefix) {
-                  Call#std_str_c10(target=sys.str.substring) {
-                    Var#std_str_v26(name=text)
-                    Lit#std_str_i4(value=0)
-                    Var#std_str_v27(name=at)
-                  }
+                  StringSlice#std_str_ss2 { Var#std_str_v26(name=text) Lit#std_str_i4(value=0) Var#std_str_v27(name=at) }
                 }
                 Let#std_str_l12(name=suffixStart) { Add#std_str_a1 { Var#std_str_v28(name=at) Var#std_str_v29(name=needleLength) } }
                 Let#std_str_l13(name=suffix) {
-                  Call#std_str_c11(target=sys.str.substring) {
-                    Var#std_str_v30(name=text)
-                    Var#std_str_v31(name=suffixStart)
-                    Lit#std_str_i5(value=2147483647)
-                  }
+                  StringSlice#std_str_ss3 { Var#std_str_v30(name=text) Var#std_str_v31(name=suffixStart) Lit#std_str_i5(value=2147483647) }
                 }
                 Return#std_str_r11 {
                   StrConcat#std_str_s2 {
@@ -151,7 +131,7 @@ Program#std_str_p1 {
   Let#std_str_l14(name=utf8ByteCount) {
     Fn#std_str_f14(params=text) {
       Block#std_str_b14 {
-        Return#std_str_r14 { Call#std_str_c13(target=sys.str.utf8ByteCount) { Var#std_str_v38(name=text) } }
+        Return#std_str_r14 { StringUtf8ByteCount#std_str_sbc2 { Var#std_str_v38(name=text) } }
       }
     }
   }

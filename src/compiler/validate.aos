@@ -310,6 +310,21 @@ Program#p1 {
   Let#k450(name=textBytesPrimitiveArity) {
     Fn#k451(params=kind) {
       Block#k452 {
+        If#k535 {
+          Eq#k536 { Var#k537(name=kind) Lit#k538(value="StringSlice") }
+          Block#k539 { Return#k540 { Lit#k541(value=3) } }
+          Block#k542 { Lit#k543(value=0) }
+        }
+        If#k544 {
+          Eq#k545 { Var#k546(name=kind) Lit#k547(value="StringRemove") }
+          Block#k548 { Return#k549 { Lit#k550(value=3) } }
+          Block#k551 { Lit#k552(value=0) }
+        }
+        If#k553 {
+          Eq#k554 { Var#k555(name=kind) Lit#k556(value="StringUtf8ByteCount") }
+          Block#k557 { Return#k558 { Lit#k559(value=1) } }
+          Block#k560 { Lit#k561(value=0) }
+        }
         If#k453 {
           Eq#k454 { Var#k455(name=kind) Lit#k456(value="StringScalarLength") }
           Block#k457 { Return#k458 { Lit#k459(value=1) } }

@@ -1,4 +1,5 @@
 Program#cli_p1 {
+  Import#cli_im1(path="../std/str.aos")
   Export#cli_e1(name=main)
 
   Let#cli_l1(name=main) {
@@ -474,7 +475,7 @@ Program#cli_p1 {
           Block#cli_b31k1 {
             Let#cli_l31kt(name=registry) { Call#cli_c31kt(target=readTextFile) { Lit#cli_i31kt(value="templates/projects/index.toml") } }
             Let#cli_l31kn(name=needle) { StrConcat#cli_sc31k1 { Lit#cli_i31kn(value="name = \"") StrConcat#cli_sc31k2 { Var#cli_v31k(name=template) Lit#cli_i31kq(value="\"") } } }
-            Let#cli_l31kf(name=found) { Call#cli_c31kf(target=sys.str.find) { Var#cli_v31kg(name=registry) Var#cli_v31kn(name=needle) Lit#cli_i31ks(value=0) } }
+            Let#cli_l31kf(name=found) { Call#cli_c31kf(target=find) { Var#cli_v31kg(name=registry) Var#cli_v31kn(name=needle) Lit#cli_i31ks(value=0) } }
             If#cli_if31k2 {
               Eq#cli_e31k { Var#cli_v31kf(name=found) Lit#cli_i31k2(value=-1) }
               Block#cli_b31kbad { Return#cli_r31kbad { Lit#cli_i31k3(value=false) } }
@@ -630,7 +631,7 @@ Program#cli_p1 {
           Block#cli_b35ra0 { Return#cli_r35ra0 { Var#cli_v35ra1(name=text) } }
           Block#cli_b35ra1 {
             Let#cli_l35ra1(name=at) {
-              Call#cli_c35ra1(target=sys.str.find) {
+              Call#cli_c35ra1(target=find) {
                 Var#cli_v35ra2(name=text)
                 Var#cli_v35ra3(name=needle)
                 Lit#cli_i35ra1(value=0)
@@ -641,7 +642,7 @@ Program#cli_p1 {
               Block#cli_b35ra2 { Return#cli_r35ra1 { Var#cli_v35ra5(name=text) } }
               Block#cli_b35ra3 {
                 Let#cli_l35ra2(name=prefix) {
-                  Call#cli_c35ra2(target=sys.str.substring) {
+                  Call#cli_c35ra2(target=substring) {
                     Var#cli_v35ra6(name=text)
                     Lit#cli_i35ra3(value=0)
                     Var#cli_v35ra7(name=at)
@@ -649,7 +650,7 @@ Program#cli_p1 {
                 }
                 Let#cli_l35ra3(name=suffixStart) { Add#cli_add35ra1 { Var#cli_v35ra8(name=at) Var#cli_v35ra9(name=needleLength) } }
                 Let#cli_l35ra4(name=suffix) {
-                  Call#cli_c35ra3(target=sys.str.substring) {
+                  Call#cli_c35ra3(target=substring) {
                     Var#cli_v35ra10(name=text)
                     Var#cli_v35ra11(name=suffixStart)
                     Lit#cli_i35ra4(value=2147483647)
@@ -801,14 +802,14 @@ Program#cli_p1 {
           Eq#cli_eq39valid1 { Var#cli_v39valid1(name=agents) Lit#cli_i39valid1(value="all") }
           Block#cli_b39valid1 { Return#cli_r39valid1 { Lit#cli_i39valid2(value=true) } }
           Block#cli_b39valid2 {
-            Let#cli_l39valid1(name=comma) { Call#cli_c39valid1(target=sys.str.find) { Var#cli_v39valid2(name=agents) Lit#cli_i39valid3(value=",") Lit#cli_i39valid4(value=0) } }
+            Let#cli_l39valid1(name=comma) { Call#cli_c39valid1(target=find) { Var#cli_v39valid2(name=agents) Lit#cli_i39valid3(value=",") Lit#cli_i39valid4(value=0) } }
             If#cli_if39valid2 {
               Eq#cli_eq39valid2 { Var#cli_v39valid3(name=comma) Lit#cli_i39valid5(value=-1) }
               Block#cli_b39valid3 { Return#cli_r39valid2 { Call#cli_c39valid2(target=isKnownAgent) { Var#cli_v39valid4(name=agents) } } }
               Block#cli_b39valid4 {
-                Let#cli_l39valid2(name=first) { Call#cli_c39valid3(target=sys.str.substring) { Var#cli_v39valid5(name=agents) Lit#cli_i39valid6(value=0) Var#cli_v39valid6(name=comma) } }
+                Let#cli_l39valid2(name=first) { Call#cli_c39valid3(target=substring) { Var#cli_v39valid5(name=agents) Lit#cli_i39valid6(value=0) Var#cli_v39valid6(name=comma) } }
                 Let#cli_l39valid3(name=restStart) { Add#cli_add39valid1 { Var#cli_v39valid7(name=comma) Lit#cli_i39valid7(value=1) } }
-                Let#cli_l39valid4(name=rest) { Call#cli_c39valid4(target=sys.str.substring) { Var#cli_v39valid8(name=agents) Var#cli_v39valid9(name=restStart) Lit#cli_i39valid8(value=2147483647) } }
+                Let#cli_l39valid4(name=rest) { Call#cli_c39valid4(target=substring) { Var#cli_v39valid8(name=agents) Var#cli_v39valid9(name=restStart) Lit#cli_i39valid8(value=2147483647) } }
                 If#cli_if39valid3 {
                   Call#cli_c39valid5(target=isKnownAgent) { Var#cli_v39valid10(name=first) }
                   Block#cli_b39valid5 { Return#cli_r39valid3 { Call#cli_c39valid6(target=isValidAgentList) { Var#cli_v39valid11(name=rest) } } }
@@ -835,7 +836,7 @@ Program#cli_p1 {
               Block#cli_b39has6 {
                 Let#cli_l39hasn(name=normalizedAgents) { StrConcat#cli_sc39has1 { Lit#cli_i39has4(value=",") StrConcat#cli_sc39has2 { Var#cli_v39has4(name=agents) Lit#cli_i39has5(value=",") } } }
                 Let#cli_l39hask(name=needle) { StrConcat#cli_sc39has3 { Lit#cli_i39has6(value=",") StrConcat#cli_sc39has4 { Var#cli_v39has5(name=name) Lit#cli_i39has7(value=",") } } }
-                Let#cli_l39has7(name=found) { Call#cli_c39has(target=sys.str.find) { Var#cli_v39has6(name=normalizedAgents) Var#cli_v39has7(name=needle) Lit#cli_i39has8(value=0) } }
+                Let#cli_l39has7(name=found) { Call#cli_c39has(target=find) { Var#cli_v39has6(name=normalizedAgents) Var#cli_v39has7(name=needle) Lit#cli_i39has8(value=0) } }
                 If#cli_if39has7 {
                   Eq#cli_e39has7 { Var#cli_v39has8(name=found) Lit#cli_i39has9(value=-1) }
                   Block#cli_b39has7 { Return#cli_r39has3 { Lit#cli_i39has10(value=false) } }
@@ -906,18 +907,18 @@ Program#cli_p1 {
     Fn#cli_f40ga(params=text,key,needleLength) {
       Block#cli_b40ga {
         Let#cli_l40gan(name=needle) { StrConcat#cli_sc40ga1 { Var#cli_v40ga1(name=key) Lit#cli_i40ga1(value="=\"") } }
-        Let#cli_l40gaf(name=found) { Call#cli_c40ga1(target=sys.str.find) { Var#cli_v40ga2(name=text) Var#cli_v40ga3(name=needle) Lit#cli_i40ga2(value=0) } }
+        Let#cli_l40gaf(name=found) { Call#cli_c40ga1(target=find) { Var#cli_v40ga2(name=text) Var#cli_v40ga3(name=needle) Lit#cli_i40ga2(value=0) } }
         If#cli_if40ga1 {
           Eq#cli_e40ga1 { Var#cli_v40ga4(name=found) Lit#cli_i40ga3(value=-1) }
           Block#cli_b40ga1 { Return#cli_r40ga1 { Lit#cli_i40ga4(value="") } }
           Block#cli_b40ga2 {
             Let#cli_l40gas(name=valueStart) { Add#cli_a40ga1 { Var#cli_v40ga5(name=found) Var#cli_v40ga6(name=needleLength) } }
-            Let#cli_l40gar(name=rest) { Call#cli_c40ga2(target=sys.str.substring) { Var#cli_v40ga7(name=text) Var#cli_v40ga8(name=valueStart) Lit#cli_i40ga5(value=2147483647) } }
-            Let#cli_l40gae(name=valueEnd) { Call#cli_c40ga3(target=sys.str.find) { Var#cli_v40ga9(name=rest) Lit#cli_i40ga6(value="\"") Lit#cli_i40ga7(value=0) } }
+            Let#cli_l40gar(name=rest) { Call#cli_c40ga2(target=substring) { Var#cli_v40ga7(name=text) Var#cli_v40ga8(name=valueStart) Lit#cli_i40ga5(value=2147483647) } }
+            Let#cli_l40gae(name=valueEnd) { Call#cli_c40ga3(target=find) { Var#cli_v40ga9(name=rest) Lit#cli_i40ga6(value="\"") Lit#cli_i40ga7(value=0) } }
             If#cli_if40ga2 {
               Eq#cli_e40ga2 { Var#cli_v40ga10(name=valueEnd) Lit#cli_i40ga8(value=-1) }
               Block#cli_b40ga3 { Return#cli_r40ga2 { Lit#cli_i40ga9(value="") } }
-              Block#cli_b40ga4 { Return#cli_r40ga3 { Call#cli_c40ga4(target=sys.str.substring) { Var#cli_v40ga11(name=rest) Lit#cli_i40ga10(value=0) Var#cli_v40ga12(name=valueEnd) } } }
+              Block#cli_b40ga4 { Return#cli_r40ga3 { Call#cli_c40ga4(target=substring) { Var#cli_v40ga11(name=rest) Lit#cli_i40ga10(value=0) Var#cli_v40ga12(name=valueEnd) } } }
             }
           }
         }
@@ -1079,18 +1080,18 @@ Program#cli_p1 {
   Let#cli_l40gvn(name=getValueAfterNeedle) {
     Fn#cli_f40gvn(params=text,needle,needleLength) {
       Block#cli_b40gvn {
-        Let#cli_l40gvnf(name=found) { Call#cli_c40gvn1(target=sys.str.find) { Var#cli_v40gvn1(name=text) Var#cli_v40gvn2(name=needle) Lit#cli_i40gvn1(value=0) } }
+        Let#cli_l40gvnf(name=found) { Call#cli_c40gvn1(target=find) { Var#cli_v40gvn1(name=text) Var#cli_v40gvn2(name=needle) Lit#cli_i40gvn1(value=0) } }
         If#cli_if40gvn1 {
           Eq#cli_e40gvn1 { Var#cli_v40gvn3(name=found) Lit#cli_i40gvn2(value=-1) }
           Block#cli_b40gvn1 { Return#cli_r40gvn1 { Lit#cli_i40gvn3(value="") } }
           Block#cli_b40gvn2 {
             Let#cli_l40gvns(name=valueStart) { Add#cli_a40gvn1 { Var#cli_v40gvn4(name=found) Var#cli_v40gvn5(name=needleLength) } }
-            Let#cli_l40gvnr(name=rest) { Call#cli_c40gvn2(target=sys.str.substring) { Var#cli_v40gvn6(name=text) Var#cli_v40gvn7(name=valueStart) Lit#cli_i40gvn4(value=2147483647) } }
-            Let#cli_l40gvne(name=valueEnd) { Call#cli_c40gvn3(target=sys.str.find) { Var#cli_v40gvn8(name=rest) Lit#cli_i40gvn5(value="\"") Lit#cli_i40gvn6(value=0) } }
+            Let#cli_l40gvnr(name=rest) { Call#cli_c40gvn2(target=substring) { Var#cli_v40gvn6(name=text) Var#cli_v40gvn7(name=valueStart) Lit#cli_i40gvn4(value=2147483647) } }
+            Let#cli_l40gvne(name=valueEnd) { Call#cli_c40gvn3(target=find) { Var#cli_v40gvn8(name=rest) Lit#cli_i40gvn5(value="\"") Lit#cli_i40gvn6(value=0) } }
             If#cli_if40gvn2 {
               Eq#cli_e40gvn2 { Var#cli_v40gvn9(name=valueEnd) Lit#cli_i40gvn7(value=-1) }
               Block#cli_b40gvn3 { Return#cli_r40gvn2 { Lit#cli_i40gvn8(value="") } }
-              Block#cli_b40gvn4 { Return#cli_r40gvn3 { Call#cli_c40gvn4(target=sys.str.substring) { Var#cli_v40gvn10(name=rest) Lit#cli_i40gvn9(value=0) Var#cli_v40gvn11(name=valueEnd) } } }
+              Block#cli_b40gvn4 { Return#cli_r40gvn3 { Call#cli_c40gvn4(target=substring) { Var#cli_v40gvn10(name=rest) Lit#cli_i40gvn9(value=0) Var#cli_v40gvn11(name=valueEnd) } } }
             }
           }
         }
@@ -1302,7 +1303,7 @@ Program#cli_p1 {
   Let#cli_l41ib(name=isBytecodePath) {
     Fn#cli_f41ib(params=path) {
       Block#cli_b41ib {
-        Let#cli_l41ibf(name=found) { Call#cli_c41ib2(target=sys.str.find) { Var#cli_v41ib3(name=path) Lit#cli_i41ib3(value=".aibc1") Lit#cli_i41ib4(value=0) } }
+        Let#cli_l41ibf(name=found) { Call#cli_c41ib2(target=find) { Var#cli_v41ib3(name=path) Lit#cli_i41ib3(value=".aibc1") Lit#cli_i41ib4(value=0) } }
         If#cli_if41ib2 {
           Eq#cli_e41ib2 { Var#cli_v41ib4(name=found) Lit#cli_i41ib5(value=-1) }
           Block#cli_b41ib3 { Return#cli_r41ib2 { Lit#cli_i41ib6(value=false) } }
@@ -1548,7 +1549,7 @@ Program#cli_p1 {
           Eq#cli_e42psn1 { Var#cli_v42psn1(name=name) Lit#cli_i42psn1(value="") }
           Block#cli_b42psn1 { Return#cli_r42psn1 { Lit#cli_i42psn2(value="app") } }
           Block#cli_b42psn2 {
-            Let#cli_l42psnf(name=slash) { Call#cli_c42psn1(target=sys.str.find) { Var#cli_v42psn2(name=name) Lit#cli_i42psn3(value="/") Lit#cli_i42psn4(value=0) } }
+            Let#cli_l42psnf(name=slash) { Call#cli_c42psn1(target=find) { Var#cli_v42psn2(name=name) Lit#cli_i42psn3(value="/") Lit#cli_i42psn4(value=0) } }
             If#cli_if42psn2 {
               Eq#cli_e42psn2 { Var#cli_v42psnf(name=slash) Lit#cli_i42psn5(value=-1) }
               Block#cli_b42psn3 { Return#cli_r42psn2 { Var#cli_v42psn3(name=name) } }

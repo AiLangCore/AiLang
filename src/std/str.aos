@@ -148,6 +148,14 @@ Program#std_str_p1 {
     }
   }
 
+  Let#std_str_l14(name=utf8ByteCount) {
+    Fn#std_str_f14(params=text) {
+      Block#std_str_b14 {
+        Return#std_str_r14 { Call#std_str_c13(target=sys.str.utf8ByteCount) { Var#std_str_v38(name=text) } }
+      }
+    }
+  }
+
   Export#std_str_e1(name=concat)
   Export#std_str_e2(name=substring)
   Export#std_str_e3(name=remove)
@@ -156,4 +164,5 @@ Program#std_str_p1 {
   Export#std_str_e6(name=decodeUnicodeHex4)
   Export#std_str_e7(name=decodeUnicodeSurrogatePairHex4)
   Export#std_str_e8(name=replaceAll)
+  Export#std_str_e9(name=utf8ByteCount)
 }

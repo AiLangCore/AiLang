@@ -158,7 +158,8 @@ Publisher workflow:
 1. Create or update the package source repository.
 2. Add a package descriptor at `package.toml` or
    `packages/<name>/package.toml`.
-3. Put importable library source under `src/`.
+3. Put importable library source under nested domain paths in `src/`, such as
+   `src/format/`, `src/net/`, `src/media/`, or `src/ui/`.
 4. Put package templates under `templates/projects/` or `templates/files/`
    when the package exposes templates.
 5. Put package tools under the package-owned tool path once tool dispatch is
@@ -179,7 +180,7 @@ version = "0.0.1-beta.1"
 types = ["library"]
 
 [libraries.json]
-entry = "src/json.aos"
+entry = "src/format/json.aos"
 exports = ["encode", "parse", "parseNode"]
 ```
 

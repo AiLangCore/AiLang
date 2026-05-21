@@ -47,7 +47,7 @@ Program#p1 {
 Write-Utf8File (Join-Path $appDir 'src/app.aos') @'
 Program#p1 {
   Import#i1(package="ailang" path="src/std/core.aos")
-  Import#i2(package="std-json" path="src/json.aos")
+  Import#i2(package="std-json" path="src/format/json.aos")
   Export#e1(name=start)
 
   Let#l1(name=start) {

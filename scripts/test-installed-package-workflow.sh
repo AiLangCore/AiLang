@@ -37,7 +37,7 @@ AILANG_PROJECT
 cat > "${APP_DIR}/src/app.aos" <<'AILANG_SOURCE'
 Program#p1 {
   Import#i1(package="ailang" path="src/std/core.aos")
-  Import#i2(package="std-json" path="src/json.aos")
+  Import#i2(package="std-json" path="src/format/json.aos")
   Export#e1(name=start)
 
   Let#l1(name=start) {

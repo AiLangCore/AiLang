@@ -28,7 +28,6 @@ mkdir -p "${APP_DIR}/src" "${TEMPLATE_DIR}/src"
 cat > "${APP_DIR}/project.aiproj" <<'AILANG_PROJECT'
 Program#p1 {
   Project#proj1(name="package-smoke" entryFile="src/app.aos" entryExport="start" version="0.0.1-beta.1") {
-    Include#dep_ailang(name="ailang")
     Include#dep_json(name="std-json")
   }
 }
@@ -36,7 +35,7 @@ AILANG_PROJECT
 
 cat > "${APP_DIR}/src/app.aos" <<'AILANG_SOURCE'
 Program#p1 {
-  Import#i1(package="ailang" path="src/std/core.aos")
+  Import#i1(sdk="ailang" path="std/core.aos")
   Import#i2(package="std-json" path="src/format/json.aos")
   Export#e1(name=start)
 

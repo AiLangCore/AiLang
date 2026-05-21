@@ -12,7 +12,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Var` | `name` (identifier) | `0` | Reads from environment. |
 | `Lit` | `value` (`string\|number\|bool\|null\|bytes`) | `0` | Literal value node. |
 | `Call` | `target` (identifier/dotted identifier) | `0..N` | Native or user-defined call. |
-| `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. May include optional `package` for package-scoped imports. |
+| `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. May include optional `package` for restored package imports or `sdk="ailang"` for selected-SDK imports. |
 | `Export` | `name` (identifier) | `0` | Exposes one binding from current module. |
 | `Project` | `name` (string), `entryFile` (string), `entryExport` (string) | `0..N` | Project manifest node for `project.aiproj`; children must be `Include`. |
 | `Include` | `name` (string), `version` (string) | `0` | Declares project-level dependency metadata. Optional `path` declares a local development include; otherwise the package resolves through the registry and lockfile. |
@@ -156,6 +156,9 @@ The canonical non-syscall primitive node targets are `BytesLength`, `BytesAt`,
   symlink tricks after canonicalization.
 - Package resolution is not implicit during evaluation. Restore resolves package
   metadata into `ailang.lock.toml`; build and publish consume the lockfile.
+- `Import(sdk="ailang", path="...")` resolves `path` inside the selected
+  AiLang SDK. The installed SDK owns the core standard library; projects must
+  not declare `Include(name="ailang")`.
 - `Import(package="...", path="...")` resolves `path` inside the named locked
   package.
 - `Import(path="...")` without `package` resolves relative to the current

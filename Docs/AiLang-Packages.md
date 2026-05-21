@@ -317,6 +317,16 @@ The compiler resolves package imports only when the package is present in
 `project.aiproj`, pinned in `ailang.lock.toml`, and available in the local
 package cache.
 
+Core SDK imports are not packages. The selected AiLang SDK provides the
+standard library and toolchain files:
+
+```aos
+Import#i1(sdk="ailang" path="std/core.aos")
+```
+
+`Include(name="ailang")` is invalid; package restore only manages optional
+packages outside the minimum SDK.
+
 ## Reachable Output
 
 Restoring a package only makes source available. It must not cause the package

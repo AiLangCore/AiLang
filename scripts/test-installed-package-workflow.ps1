@@ -38,7 +38,6 @@ New-Item -ItemType Directory -Force (Join-Path $appDir 'src'), (Join-Path $templ
 Write-Utf8File (Join-Path $appDir 'project.aiproj') @'
 Program#p1 {
   Project#proj1(name="package-smoke" entryFile="src/app.aos" entryExport="start" version="0.0.1-beta.1") {
-    Include#dep_ailang(name="ailang")
     Include#dep_json(name="std-json")
   }
 }
@@ -46,7 +45,7 @@ Program#p1 {
 
 Write-Utf8File (Join-Path $appDir 'src/app.aos') @'
 Program#p1 {
-  Import#i1(package="ailang" path="src/std/core.aos")
+  Import#i1(sdk="ailang" path="std/core.aos")
   Import#i2(package="std-json" path="src/format/json.aos")
   Export#e1(name=start)
 

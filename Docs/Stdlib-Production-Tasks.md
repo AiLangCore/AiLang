@@ -76,6 +76,25 @@ covered by `scripts/test-stdlib-behavior.sh`.
 2. Ensure samples demonstrate the intended library surface instead of host
    internals.
 
+## Phase 5: Deterministic Syscall Migration
+
+Status: active next readiness task after package namespace/registry hardening.
+
+1. Replace direct non-wrapper calls to deterministic string/bytes syscalls with
+   baseline library calls:
+   - `sys.str.substring` -> `std.str.substring`
+   - `sys.str.remove` -> `std.str.remove`
+   - `sys.str.find` -> `std.str.find`
+   - `sys.str.utf8ByteCount` -> `std.str` surface
+   - `sys.bytes.*` -> `std.bytes.*`
+2. Move direct usage first in optional packages and samples, then AiVectra,
+   then AiLang CLI/compiler/runtime.
+3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
+4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
+   optional packages before removing those VM contracts.
+5. Do not leave alias, fallback, or compatibility syscall paths before the
+   first major or minor release.
+
 ## Exit condition
 
 This branch is complete when:
@@ -87,3 +106,4 @@ This branch is complete when:
 - `std.debug` is treated as required production surface
 - duplicate/alias stdlib surfaces are removed rather than preserved
 - `compiler.*` is no longer acting as an app-library dumping ground
+- deterministic string/bytes behavior is not exposed as host syscalls

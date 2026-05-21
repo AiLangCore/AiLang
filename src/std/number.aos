@@ -1,4 +1,6 @@
 Program#std_number_p1 {
+  Import#std_number_im1(path="./str.aos")
+
   Let#std_number_l1(name=zero) {
     Fn#std_number_f1(params=_) {
       Block#std_number_b1 {
@@ -190,7 +192,7 @@ Program#std_number_p1 {
               Add#std_number_a3e {
                 Lit#std_number_i3p(value=1)
                 Call#std_number_c0s(target=textLen) {
-                  Call#std_number_c0t(target=sys.str.remove) {
+                  Call#std_number_c0t(target=remove) {
                     Var#std_number_v6x(name=textValue)
                     Lit#std_number_i3q(value=0)
                     Lit#std_number_i3r(value=1)
@@ -208,7 +210,7 @@ Program#std_number_p1 {
     Fn#std_number_f6p(params=textValue) {
       Block#std_number_b6p {
         Return#std_number_r6ng {
-          Call#std_number_c0u(target=sys.str.substring) {
+          Call#std_number_c0u(target=substring) {
             Var#std_number_v6y(name=textValue)
             Lit#std_number_i3s(value=0)
             Lit#std_number_i3t(value=1)
@@ -222,7 +224,7 @@ Program#std_number_p1 {
     Fn#std_number_f6q(params=textValue) {
       Block#std_number_b6q {
         Return#std_number_r6nh {
-          Call#std_number_c0v(target=sys.str.remove) {
+          Call#std_number_c0v(target=remove) {
             Var#std_number_v6z(name=textValue)
             Lit#std_number_i3u(value=0)
             Lit#std_number_i3v(value=1)
@@ -610,7 +612,7 @@ Program#std_number_p1 {
     Fn#std_number_f9(params=text,index,acc) {
       Block#std_number_b29 {
         Let#std_number_l10(name=ch) {
-          Call#std_number_c1(target=sys.str.substring) {
+          Call#std_number_c1(target=substring) {
             Var#std_number_v18(name=text)
             Var#std_number_v19(name=index)
             Lit#std_number_i35(value=1)
@@ -723,7 +725,7 @@ Program#std_number_p1 {
     Fn#std_number_f13(params=text) {
       Block#std_number_b45 {
         Let#std_number_l19(name=first) {
-          Call#std_number_c7(target=sys.str.substring) {
+          Call#std_number_c7(target=substring) {
             Var#std_number_v42(name=text)
             Lit#std_number_i54(value=0)
             Lit#std_number_i55(value=1)
@@ -734,7 +736,7 @@ Program#std_number_p1 {
           Block#std_number_b46 {
             If#std_number_if18 {
               Eq#std_number_eq17 {
-                Call#std_number_c8(target=sys.str.substring) {
+                Call#std_number_c8(target=substring) {
                   Var#std_number_v44(name=text)
                   Lit#std_number_i57(value=1)
                   Lit#std_number_i58(value=1)
@@ -745,7 +747,7 @@ Program#std_number_p1 {
               Block#std_number_b48 {
                 Return#std_number_r30 {
                   Call#std_number_c9(target=isWholeString) {
-                    Call#std_number_c10(target=sys.str.substring) {
+                    Call#std_number_c10(target=substring) {
                       Var#std_number_v45(name=text)
                       Lit#std_number_i61(value=1)
                       Call#std_number_c11(target=sub) {
@@ -774,7 +776,7 @@ Program#std_number_p1 {
     Fn#std_number_f15(params=text,fallback) {
       Block#std_number_b51 {
         Let#std_number_l22(name=first) {
-          Call#std_number_c15(target=sys.str.substring) {
+          Call#std_number_c15(target=substring) {
             Var#std_number_v49(name=text)
             Lit#std_number_i63(value=0)
             Lit#std_number_i64(value=1)
@@ -784,7 +786,7 @@ Program#std_number_p1 {
           Eq#std_number_eq18 { Var#std_number_v50(name=first) Lit#std_number_i65(value="-") }
           Block#std_number_b52 {
             Let#std_number_l23(name=rest) {
-              Call#std_number_c16(target=sys.str.substring) {
+              Call#std_number_c16(target=substring) {
                 Var#std_number_v51(name=text)
                 Lit#std_number_i66(value=1)
                 Call#std_number_c17(target=sub) {

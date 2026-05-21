@@ -8,6 +8,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-conformance.sh
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-stdlib-behavior.sh
+./scripts/test-no-direct-deterministic-syscalls.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
 ./scripts/test-canonical-formatting.sh

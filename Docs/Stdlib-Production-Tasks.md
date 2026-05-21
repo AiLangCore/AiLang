@@ -103,6 +103,9 @@ Status: active next readiness task after package namespace/registry hardening.
    - done: AiLang CLI/compiler runtime and parser profiling/selfhost scripts
      now use the staged `std.bytes` surface instead of direct `sys.bytes.*`
      calls.
+   - done: `scripts/test-no-direct-deterministic-syscalls.sh` rejects new
+     direct `sys.str.*` or `sys.bytes.*` usage outside the active wrapper and
+     syscall-level regression files.
    - remaining: `sys.bytes.*` direct usage only in the traced-syscall
      regression test until those syscall contracts are removed.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.

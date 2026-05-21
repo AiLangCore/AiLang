@@ -294,7 +294,67 @@ Program#p1 {
             }
           }
         }
-        Return#k274 { Var#k300(name=stateAfterLoopControls) }
+        Let#k330(name=primitiveArity) { Call#k331(target=textBytesPrimitiveArity) { Var#k16(name=kind) } }
+        Let#k332(name=stateAfterTextBytesPrimitives) {
+          If#k333 {
+            Eq#k334 { Var#k335(name=primitiveArity) Lit#k336(value=-1) }
+            Block#k337 { Var#k338(name=stateAfterLoopControls) }
+            Block#k339 { Call#k340(target=requireChildCount) { Var#k341(name=node) Var#k342(name=stateAfterLoopControls) Var#k343(name=primitiveArity) } }
+          }
+        }
+        Return#k274 { Var#k344(name=stateAfterTextBytesPrimitives) }
+      }
+    }
+  }
+
+  Let#k450(name=textBytesPrimitiveArity) {
+    Fn#k451(params=kind) {
+      Block#k452 {
+        If#k453 {
+          Eq#k454 { Var#k455(name=kind) Lit#k456(value="StringScalarLength") }
+          Block#k457 { Return#k458 { Lit#k459(value=1) } }
+          Block#k460 { Lit#k461(value=0) }
+        }
+        If#k462 {
+          Eq#k463 { Var#k464(name=kind) Lit#k465(value="StringScalarAt") }
+          Block#k466 { Return#k467 { Lit#k468(value=2) } }
+          Block#k469 { Lit#k470(value=0) }
+        }
+        If#k471 {
+          Eq#k472 { Var#k473(name=kind) Lit#k474(value="StringFromCodePoint") }
+          Block#k475 { Return#k476 { Lit#k477(value=1) } }
+          Block#k478 { Lit#k479(value=0) }
+        }
+        If#k480 {
+          Eq#k481 { Var#k482(name=kind) Lit#k483(value="BytesLength") }
+          Block#k484 { Return#k485 { Lit#k486(value=1) } }
+          Block#k487 { Lit#k488(value=0) }
+        }
+        If#k489 {
+          Eq#k490 { Var#k491(name=kind) Lit#k492(value="BytesAt") }
+          Block#k493 { Return#k494 { Lit#k495(value=2) } }
+          Block#k496 { Lit#k497(value=0) }
+        }
+        If#k498 {
+          Eq#k499 { Var#k500(name=kind) Lit#k501(value="BytesSlice") }
+          Block#k502 { Return#k503 { Lit#k504(value=3) } }
+          Block#k505 { Lit#k506(value=0) }
+        }
+        If#k507 {
+          Eq#k508 { Var#k509(name=kind) Lit#k510(value="BytesConcat") }
+          Block#k511 { Return#k512 { Lit#k513(value=2) } }
+          Block#k514 { Lit#k515(value=0) }
+        }
+        If#k516 {
+          Eq#k517 { Var#k518(name=kind) Lit#k519(value="BytesFromUtf8String") }
+          Block#k520 { Return#k521 { Lit#k522(value=1) } }
+          Block#k523 { Lit#k524(value=0) }
+        }
+        If#k525 {
+          Eq#k526 { Var#k527(name=kind) Lit#k528(value="BytesToUtf8String") }
+          Block#k529 { Return#k530 { Lit#k531(value=1) } }
+          Block#k532 { Return#k533 { Lit#k534(value=-1) } }
+        }
       }
     }
   }

@@ -20,6 +20,15 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |
 | `Add` | none | `2` | Integer addition. |
+| `StringScalarLength` | none | `1` | Unicode scalar count for a string value. |
+| `StringScalarAt` | none | `2` | Unicode scalar code point at index, or `-1` out of range. |
+| `StringFromCodePoint` | none | `1` | Construct a one-scalar string from a code point, or `""` for invalid input. |
+| `BytesLength` | none | `1` | Byte length for a bytes value. |
+| `BytesAt` | none | `2` | Byte value (`0..255`) at index, or `-1` out of range. |
+| `BytesSlice` | none | `3` | Clamped byte slice by start and length. |
+| `BytesConcat` | none | `2` | Concatenates two bytes values. |
+| `BytesFromUtf8String` | none | `1` | UTF-8 encode string to bytes. |
+| `BytesToUtf8String` | none | `1` | UTF-8 decode bytes to string, or `""` for invalid payload. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
 | `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
 | `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |
@@ -94,6 +103,9 @@ These `sys.bytes.*` entries are temporary bootstrap contracts. The canonical
 application surface is `std.bytes`, and the beta migration direction is to move
 deterministic byte behavior to non-syscall AiLang primitives or intrinsic
 operations before removing these VM contracts.
+
+The canonical non-syscall primitive node targets are `BytesLength`, `BytesAt`,
+`BytesSlice`, `BytesConcat`, `BytesFromUtf8String`, and `BytesToUtf8String`.
 
 - `sys.bytes.length(data)` returns byte length as int.
 - `sys.bytes.at(data,index)` returns byte value (`0..255`) or `-1` when index is out of range.

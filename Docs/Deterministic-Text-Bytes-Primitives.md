@@ -55,6 +55,10 @@ or intrinsic nodes for:
 Base64 can be implemented as AiLang library code after byte indexing,
 concatenation, and string construction are available.
 
+The primitive node names are now part of the validation contract. Runtime
+execution and compiler lowering are still pending until the node behavior is
+implemented end to end.
+
 ## Removal Order
 
 1. Add the required primitive nodes or intrinsic operations to AiLang specs,

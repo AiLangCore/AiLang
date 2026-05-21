@@ -68,6 +68,10 @@ Program#p1 {
 '@
 
 ailang package restore $appDir
+$lockText = Get-Content -Raw (Join-Path $appDir 'ailang.lock.toml')
+if ($lockText -notmatch 'namespaces = \["std\.format\.json"\]') {
+  throw 'std-json namespace missing from lockfile'
+}
 $packageList = (ailang package list $appDir) -join "`n"
 if ($packageList -notmatch 'std-json') { throw 'std-json missing from package list' }
 ailang build $appDir

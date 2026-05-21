@@ -58,6 +58,7 @@ Program#p1 {
 AILANG_SOURCE
 
 ailang package restore "${APP_DIR}"
+grep -q 'namespaces = \["std.format.json"\]' "${APP_DIR}/ailang.lock.toml"
 ailang package list "${APP_DIR}" >"${TMP_ROOT}/package-list.txt"
 grep -q 'std-json' "${TMP_ROOT}/package-list.txt"
 ailang build "${APP_DIR}"

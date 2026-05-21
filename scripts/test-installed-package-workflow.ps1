@@ -74,6 +74,7 @@ if ($lockText -notmatch 'namespaces = \["std\.format\.json"\]') {
 }
 $packageList = (ailang package list $appDir) -join "`n"
 if ($packageList -notmatch 'std-json') { throw 'std-json missing from package list' }
+if ($packageList -notmatch 'namespaces=std\.format\.json') { throw 'std-json namespace missing from package list' }
 ailang build $appDir
 $packageRunOut = Join-Path $tmpRoot 'package-run.stdout.txt'
 $packageRunErr = Join-Path $tmpRoot 'package-run.stderr.txt'

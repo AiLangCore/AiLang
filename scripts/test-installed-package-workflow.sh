@@ -61,6 +61,7 @@ ailang package restore "${APP_DIR}"
 grep -q 'namespaces = \["std.format.json"\]' "${APP_DIR}/ailang.lock.toml"
 ailang package list "${APP_DIR}" >"${TMP_ROOT}/package-list.txt"
 grep -q 'std-json' "${TMP_ROOT}/package-list.txt"
+grep -q 'namespaces=std.format.json' "${TMP_ROOT}/package-list.txt"
 ailang build "${APP_DIR}"
 ailang run "${APP_DIR}" >"${TMP_ROOT}/package-run.stdout.txt" 2>"${TMP_ROOT}/package-run.stderr.txt"
 if ! grep -q 'Package smoke: "package-smoke"' "${TMP_ROOT}/package-run.stdout.txt"; then

@@ -142,6 +142,11 @@ Known alpha gaps:
 `ailang.lock.toml`, and populates the local package cache.
 
 `list` shows direct and transitive packages from the lockfile.
+When a restored package declares library namespaces, `list` includes them:
+
+```text
+std-json 0.0.1-alpha.3 namespaces=std.format.json
+```
 
 `add` and `remove` modify `project.aiproj` and then run restore. `add` uses
 the registry default version when no version is supplied.

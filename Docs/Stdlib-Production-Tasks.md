@@ -93,8 +93,10 @@ Status: active next readiness task after package namespace/registry hardening.
      now imports `std.str` instead of calling `sys.str.*` directly.
    - done: AiVectra library text helpers plus WeatherApp and
      InteractiveSvgMvp string edits now use the staged `std.str` surface.
-   - remaining: AiLang CLI/compiler/runtime direct calls and deterministic
-     bytes calls.
+   - done: AiLang CLI string helpers now import `std.str` instead of calling
+     `sys.str.*` directly.
+   - remaining: AiLang compiler/runtime direct string calls and deterministic
+     bytes calls in the CLI/compiler/runtime.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
    optional packages before removing those VM contracts.

@@ -180,6 +180,7 @@ version = "0.0.1-beta.1"
 types = ["library"]
 
 [libraries.json]
+namespace = "std.format.json"
 entry = "src/format/json.aos"
 exports = ["encode", "parse", "parseNode"]
 ```
@@ -211,6 +212,9 @@ Registry review requirements:
   `[versions."<version>"]` entry.
 - Packages that expose tools must not conflict with compiled AiLang commands,
   globally installed tools, or other local package tools.
+- Library descriptors must declare a dotted semantic namespace, such as
+  `std.format.json`. The package name remains dashed for registry identity, such
+  as `std-json`.
 
 Validation before merging a registry change:
 

@@ -42,11 +42,11 @@ are restored through package dependencies. Their source paths are nested by
 domain:
 
 ```text
-std-json        src/format/json.aos
-std-http        src/net/http.aos
-std-net         src/net/udp.aos
-std-image       src/media/image.aos
-std-ui-input    src/ui/input.aos
+std-json        std.format.json    src/format/json.aos
+std-http        std.net.http       src/net/http.aos
+std-net         std.net.udp        src/net/udp.aos
+std-image       std.media.image    src/media/image.aos
+std-ui-input    std.ui.input       src/ui/input.aos
 ```
 
 Future optional packages should follow the same shape:
@@ -68,6 +68,8 @@ std-sqlite      src/data/sqlite.aos
 - Keep host-boundary operations behind justified syscalls in AiVM and wrap them
   from AiLang libraries or packages.
 - Do not duplicate baseline modules in optional packages.
+- Optional package descriptors must declare a dotted semantic `namespace` for
+  each library entry.
 - Do not keep compatibility import paths while this project is pre-1.0. Rename
   paths completely and update callers in the same change.
 

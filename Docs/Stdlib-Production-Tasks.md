@@ -95,8 +95,9 @@ Status: active next readiness task after package namespace/registry hardening.
      InteractiveSvgMvp string edits now use the staged `std.str` surface.
    - done: AiLang CLI string helpers now import `std.str` instead of calling
      `sys.str.*` directly.
-   - remaining: AiLang compiler/runtime direct string calls and deterministic
-     bytes calls in the CLI/compiler/runtime.
+   - done: AiLang compiler parser character slicing now imports `std.str`
+     instead of calling `sys.str.*` directly.
+   - remaining: deterministic bytes calls in the CLI/compiler runtime.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
    optional packages before removing those VM contracts.

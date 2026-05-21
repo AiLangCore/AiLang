@@ -118,6 +118,22 @@ Verified on 2026-05-20:
 - [x] Tool packages expose subcommands without name conflicts.
 - [x] Library packages are referenceable by AiLang source.
 - [x] Template packages are visible through template listing.
+- [x] Curated registry metadata is validated in CI.
+- [x] First-party optional package source metadata is validated in CI.
+- [x] Restored package lockfiles record library namespaces.
+- [x] `ailang package list` displays restored library namespaces.
+- [x] Restore rejects missing package source descriptors, missing library
+  namespaces, and duplicate restored namespaces.
+
+Package items intentionally deferred beyond the current readiness pass:
+
+- transitive dependency resolution
+- semantic version ranges
+- package publish command
+- registry commit pinning in lockfiles
+- package integrity/signature verification
+- package template instantiation through `ailang package`
+- self-hosted package manager implementation in AiLang
 
 ## Sponsorship Gates
 
@@ -140,8 +156,13 @@ Verified on 2026-05-20:
 
 ## Next Beta Hardening Tasks
 
-No active hardening task is currently listed here. Add new items as beta
-feedback, CI failures, or sponsor-readiness gaps are found.
+- [ ] Return to AiVM production readiness: deterministic library migration for
+  `sys.str.*`, `sys.bytes.*`, and deterministic crypto helpers.
+- [ ] Return to AiVM memory readiness: parser/compiler scratch arenas,
+  retained-node reduction, safe-point compaction, worker-local heaps, immutable
+  messages, shared module cache, and large-object/blob storage design.
+- [ ] Keep package work limited to bug fixes and explicit beta blockers unless
+  one of the deferred package items is promoted to a release requirement.
 
 ## Beta Exit Rule
 

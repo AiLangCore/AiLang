@@ -1,12 +1,13 @@
 # AiLang Packages
 
-Status: alpha-ready implementation contract.
+Status: beta-ready package workflow with deferred ecosystem hardening.
 
-The package manager is ready for alpha use and demos. It is not yet a
-production package ecosystem. The implemented surface is intentionally small:
-direct git-backed packages from the curated registry, exact commit locks,
-project-local restore, package imports, package tool dispatch, and package
-template discovery.
+The package manager is ready for beta demos and sponsor review. It is not yet a
+full production package ecosystem. The implemented surface is intentionally
+small: direct git-backed packages from the curated registry, exact commit locks,
+project-local restore, package imports, package tool dispatch, package template
+discovery, package namespace metadata, registry validation, and package-source
+metadata validation.
 
 ## Goals
 
@@ -103,6 +104,7 @@ The lockfile records:
 - package source repository URL
 - package root within the repository
 - exact package commit
+- library namespaces declared by restored packages
 - resolved transitive dependencies
 
 Build and publish use the lockfile and local cache only. They must not fetch
@@ -112,7 +114,7 @@ run restore.
 
 ## Commands
 
-Implemented alpha package command surface:
+Implemented beta package command surface:
 
 ```bash
 ailang package restore
@@ -127,7 +129,17 @@ Planned package command surface:
 ailang package update [name]
 ```
 
-Known alpha gaps:
+Implemented hardening:
+
+- package restore validates restored source package descriptors
+- library entries must declare dotted semantic namespaces
+- restore rejects duplicate namespaces across restored packages
+- lockfiles include restored package namespaces
+- `ailang package list` displays restored package namespaces
+- the curated registry has a CI validator
+- first-party optional package source has a CI validator
+
+Deferred package ecosystem hardening:
 
 - no transitive dependency resolution
 - no semantic version ranges
@@ -224,6 +236,7 @@ Registry review requirements:
 Validation before merging a registry change:
 
 ```bash
+./scripts/validate-registry.sh
 ailang package restore <example-project>
 ailang package list <example-project>
 ailang build <example-project>
@@ -256,6 +269,24 @@ Alpha implementation note: `restore` is currently backed by an AiVM C native
 bridge helper. This is an intermediary boundary for self-hosting and native
 library wrapping, not a new VM syscall. The long-term implementation remains
 AiLang-authored package logic running on AiVM.
+
+## Readiness Triage
+
+The package workflow is considered sufficient for the current beta readiness
+pass. Remaining package ecosystem work is deferred unless a CI failure, demo
+blocker, release blocker, or sponsor-review issue promotes it.
+
+Do not continue expanding package features by default. The next readiness focus
+is AiVM production hardening and memory/runtime work:
+
+- deterministic library migration for `sys.str.*`, `sys.bytes.*`, and
+  deterministic crypto helpers
+- parser/compiler scratch arenas
+- retained parser node reduction
+- deterministic safe-point compaction
+- worker-local heaps and immutable deterministic messages
+- shared immutable module cache
+- large-object/blob storage design
 
 ## Cache
 

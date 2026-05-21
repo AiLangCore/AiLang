@@ -1,5 +1,6 @@
 Program#cli_p1 {
   Import#cli_im1(path="../std/str.aos")
+  Import#cli_im2(path="../std/bytes.aos")
   Export#cli_e1(name=main)
 
   Let#cli_l1(name=main) {
@@ -565,7 +566,7 @@ Program#cli_p1 {
         Return#cli_r45 {
           Call#cli_c45(target=sys.fs.file.write) {
             Var#cli_v45(name=path)
-            Call#cli_c46(target=sys.bytes.fromUtf8String) { Var#cli_v46(name=text) }
+            Call#cli_c46(target=bytes.fromUtf8String) { Var#cli_v46(name=text) }
           }
         }
       }
@@ -576,7 +577,7 @@ Program#cli_p1 {
     Fn#cli_f35r(params=path) {
       Block#cli_b55r {
         Return#cli_r45r {
-          Call#cli_c45r(target=sys.bytes.toUtf8String) {
+          Call#cli_c45r(target=bytes.toUtf8String) {
             Call#cli_c46r(target=sys.fs.file.read) { Var#cli_v45r(name=path) }
           }
         }
@@ -934,8 +935,8 @@ Program#cli_p1 {
         Let#cli_l40rbe(name=env) { MakeBlock#cli_mb40rb1 { Lit#cli_i40rb1(value="env") } }
         Let#cli_l40rbh(name=handle) { Call#cli_c40rb2(target=sys.process.spawn) { Var#cli_v40rb3(name=compilerPath) Var#cli_v40rb4(name=spawnArgs) Lit#cli_i40rb2(value="") Var#cli_v40rb5(name=env) } }
         Let#cli_l40rbc2(name=code) { Call#cli_c40rb3(target=sys.process.wait) { Var#cli_v40rb6(name=handle) } }
-        Let#cli_l40rbo(name=stdoutText) { Call#cli_c40rb4(target=sys.bytes.toUtf8String) { Call#cli_c40rb5(target=sys.process.stdout.read) { Var#cli_v40rb7(name=handle) } } }
-        Let#cli_l40rbs(name=stderrText) { Call#cli_c40rb6(target=sys.bytes.toUtf8String) { Call#cli_c40rb7(target=sys.process.stderr.read) { Var#cli_v40rb8(name=handle) } } }
+        Let#cli_l40rbo(name=stdoutText) { Call#cli_c40rb4(target=bytes.toUtf8String) { Call#cli_c40rb5(target=sys.process.stdout.read) { Var#cli_v40rb7(name=handle) } } }
+        Let#cli_l40rbs(name=stderrText) { Call#cli_c40rb6(target=bytes.toUtf8String) { Call#cli_c40rb7(target=sys.process.stderr.read) { Var#cli_v40rb8(name=handle) } } }
         If#cli_if40rb1 {
           Eq#cli_e40rb1 { Var#cli_v40rb9(name=code) Lit#cli_i40rb3(value=0) }
           Block#cli_b40rb1 {
@@ -1192,8 +1193,8 @@ Program#cli_p1 {
         Let#cli_l41bre(name=env) { MakeBlock#cli_mb41br1 { Lit#cli_i41br1(value="env") } }
         Let#cli_l41brh(name=handle) { Call#cli_c41br2(target=sys.process.spawn) { Var#cli_v41br3(name=compilerPath) Var#cli_v41br4(name=spawnArgs) Lit#cli_i41br2(value="") Var#cli_v41br5(name=env) } }
         Let#cli_l41brc2(name=code) { Call#cli_c41br3(target=sys.process.wait) { Var#cli_v41br6(name=handle) } }
-        Let#cli_l41bro(name=stdoutText) { Call#cli_c41br4(target=sys.bytes.toUtf8String) { Call#cli_c41br5(target=sys.process.stdout.read) { Var#cli_v41br7(name=handle) } } }
-        Let#cli_l41brs(name=stderrText) { Call#cli_c41br6(target=sys.bytes.toUtf8String) { Call#cli_c41br7(target=sys.process.stderr.read) { Var#cli_v41br8(name=handle) } } }
+        Let#cli_l41bro(name=stdoutText) { Call#cli_c41br4(target=bytes.toUtf8String) { Call#cli_c41br5(target=sys.process.stdout.read) { Var#cli_v41br7(name=handle) } } }
+        Let#cli_l41brs(name=stderrText) { Call#cli_c41br6(target=bytes.toUtf8String) { Call#cli_c41br7(target=sys.process.stderr.read) { Var#cli_v41br8(name=handle) } } }
         If#cli_if41br1 {
           Eq#cli_e41br1 { Var#cli_v41br9(name=stdoutText) Lit#cli_i41br3(value="") }
           Block#cli_b41br1 { Lit#cli_i41br4(value=0) }
@@ -1905,8 +1906,8 @@ Program#cli_p1 {
         Let#cli_l42rpe(name=env) { MakeBlock#cli_mb42rp1 { Lit#cli_i42rp1(value="env") } }
         Let#cli_l42rph(name=handle) { Call#cli_c42rp2(target=sys.process.spawn) { Var#cli_v42rp4(name=compilerPath) Var#cli_v42rp5(name=spawnArgs) Lit#cli_i42rp2(value="") Var#cli_v42rp6(name=env) } }
         Let#cli_l42rpc2(name=code) { Call#cli_c42rp3(target=sys.process.wait) { Var#cli_v42rp7(name=handle) } }
-        Let#cli_l42rpo(name=stdoutText) { Call#cli_c42rp4(target=sys.bytes.toUtf8String) { Call#cli_c42rp5(target=sys.process.stdout.read) { Var#cli_v42rp8(name=handle) } } }
-        Let#cli_l42rps(name=stderrText) { Call#cli_c42rp6(target=sys.bytes.toUtf8String) { Call#cli_c42rp7(target=sys.process.stderr.read) { Var#cli_v42rp9(name=handle) } } }
+        Let#cli_l42rpo(name=stdoutText) { Call#cli_c42rp4(target=bytes.toUtf8String) { Call#cli_c42rp5(target=sys.process.stdout.read) { Var#cli_v42rp8(name=handle) } } }
+        Let#cli_l42rps(name=stderrText) { Call#cli_c42rp6(target=bytes.toUtf8String) { Call#cli_c42rp7(target=sys.process.stderr.read) { Var#cli_v42rp9(name=handle) } } }
         If#cli_if42rp1 {
           Eq#cli_e42rp1 { Var#cli_v42rp10(name=code) Lit#cli_i42rp3(value=0) }
           Block#cli_b42rp1 {

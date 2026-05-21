@@ -30,6 +30,11 @@ The canonical module list and export surface are defined in
 `Docs/Stdlib-Baseline-Manifest.tsv`. The capability matrix is defined in
 `Docs/Stdlib-Capability-Matrix.tsv`.
 
+Modules may export dotted public names when the plain helper name would collide
+with another baseline module. For example, `std.bytes` exports
+`bytes.toUtf8String` and `bytes.concat` so it can be imported beside `std.str`
+without competing for `concat`.
+
 Do not add broad feature areas to the minimum SDK just because they are useful.
 The baseline package should contain only language/runtime essentials, small
 deterministic data helpers, and target-profile contracts that every project can

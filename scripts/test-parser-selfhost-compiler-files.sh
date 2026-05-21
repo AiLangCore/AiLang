@@ -11,6 +11,7 @@ mkdir -p "${TMP_DIR}"
 cat > "${TMP_DIR}/app.aos" <<'AOS'
 Program#test_p1 {
   Import#test_i1(path="../../src/compiler/parser.aos")
+  Import#test_i2(path="../../src/std/bytes.aos")
   Export#test_e1(name=start)
 
   Let#test_l1(name=fail) {
@@ -33,7 +34,7 @@ Program#test_p1 {
           }
         }
         Let#test_l5(name=sourceText) {
-          Call#test_c2(target=sys.bytes.toUtf8String) {
+          Call#test_c2(target=bytes.toUtf8String) {
             Call#test_c3(target=sys.fs.file.read) {
               Var#test_source_path(name=sourcePath)
             }

@@ -1,6 +1,6 @@
 schema = "ailang.package-source.v1"
 name = "ailang"
-version = "0.0.1-alpha.29"
+version = "0.0.1-alpha.30"
 types = ["library", "tool", "template"]
 
 [libraries.core]

@@ -1,4 +1,6 @@
 Program#rt_p1 {
+  Import#rt_im1(path="../std/bytes.aos")
+
   Export#rt_e1(name=runtime.start)
 
   Let#rt_l1(name=runtime.start) {
@@ -169,11 +171,11 @@ Program#rt_p1 {
             Let#rt_l9(name=rawBytes) {
               Call#rt_c8b(target=runtime_read_request_bytes) {
                 Var#rt_v11(name=conn)
-                Call#rt_c8c(target=sys.bytes.fromBase64) { Lit#rt_i9005(value="") }
+                Call#rt_c8c(target=bytes.fromBase64) { Lit#rt_i9005(value="") }
                 Lit#rt_i9004(value=16)
               }
             }
-            Let#rt_l9002(name=raw) { Call#rt_c9002(target=sys.bytes.toUtf8String) { Var#rt_v9003(name=rawBytes) } }
+            Let#rt_l9002(name=raw) { Call#rt_c9002(target=bytes.toUtf8String) { Var#rt_v9003(name=rawBytes) } }
             Let#rt_l10(name=event) { Call#rt_c9(target=runtime_make_event) { Var#rt_v12(name=raw) } }
             Let#rt_l11(name=next) { Call#rt_c10(target=runtime.dispatch) { Var#rt_v13(name=state) Var#rt_v14(name=event) } }
             Let#rt_l12(name=nextState) { Call#rt_c11(target=runtime_handle_next) { Var#rt_v15(name=next) Var#rt_v16(name=conn) Var#rt_v17(name=state) } }
@@ -204,8 +206,8 @@ Program#rt_p1 {
                 Lit#rt_i9006(value=8192)
               }
             }
-            Let#rt_l9c(name=combined) { Call#rt_c8e(target=sys.bytes.concat) { Var#rt_v11c(name=acc) Var#rt_v11d(name=chunk) } }
-            Let#rt_l9d(name=chunkLen) { Call#rt_c8f(target=sys.bytes.length) { Var#rt_v11e(name=chunk) } }
+            Let#rt_l9c(name=combined) { Call#rt_c8e(target=bytes.concat) { Var#rt_v11c(name=acc) Var#rt_v11d(name=chunk) } }
+            Let#rt_l9d(name=chunkLen) { Call#rt_c8f(target=bytes.length) { Var#rt_v11e(name=chunk) } }
             If#rt_if2c {
               Eq#rt_eq2c { Var#rt_v10c(name=chunkLen) Lit#rt_i6c(value=8192) }
               Block#rt_b6c {

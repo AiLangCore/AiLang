@@ -11,6 +11,7 @@ mkdir -p "${TMP_DIR}"
 cat > "${TMP_DIR}/app.aos" <<'AOS'
 Program#test_p1 {
   Import#test_i1(path="../../src/compiler/parser.aos")
+  Import#test_i2(path="../../src/std/bytes.aos")
   Export#test_e1(name=start)
 
   Let#test_l1(name=fail) {
@@ -234,7 +235,7 @@ Program#test_p1 {
           Block#test_b62 { Return#test_r31 { Call#test_c54(target=fail) { Lit#test_i120(value="negative int attr failed") } } }
         }
         Let#test_l23(name=realSource) {
-          Call#test_c55(target=sys.bytes.toUtf8String) {
+          Call#test_c55(target=bytes.toUtf8String) {
             Call#test_c56(target=sys.fs.file.read) {
               Lit#test_i121(value="examples/golden/run_nontrivial.in.aos")
             }
@@ -293,7 +294,7 @@ Program#test_p1 {
           Block#test_b80 { Return#test_r40 { Call#test_c66(target=fail) { Lit#test_i157(value="real quoted literal attr failed") } } }
         }
         Let#test_l31(name=loopSource) {
-          Call#test_c67(target=sys.bytes.toUtf8String) {
+          Call#test_c67(target=bytes.toUtf8String) {
             Call#test_c68(target=sys.fs.file.read) {
               Lit#test_i158(value="examples/bench/loop_compute.aos")
             }

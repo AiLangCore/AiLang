@@ -86,7 +86,8 @@ Status: active next readiness task after package namespace/registry hardening.
    - `sys.str.remove` -> `std.str.remove`
    - `sys.str.find` -> `std.str.find`
    - `sys.str.utf8ByteCount` -> `std.str` surface
-   - `sys.bytes.*` -> `std.bytes.*`
+   - `sys.bytes.*` -> dotted `std.bytes` surface such as
+     `bytes.toUtf8String`
 2. Move direct usage first in optional packages and samples, then AiVectra,
    then AiLang CLI/compiler/runtime.
    - done: optional `std-json`, `std-http`, and `std-ui-input` package source
@@ -97,7 +98,13 @@ Status: active next readiness task after package namespace/registry hardening.
      `sys.str.*` directly.
    - done: AiLang compiler parser character slicing now imports `std.str`
      instead of calling `sys.str.*` directly.
-   - remaining: deterministic bytes calls in the CLI/compiler runtime.
+   - done: `std.bytes` now exports dotted names so it can be imported beside
+     `std.str` without flat-name collisions.
+   - done: AiLang CLI/compiler runtime and parser profiling/selfhost scripts
+     now use the staged `std.bytes` surface instead of direct `sys.bytes.*`
+     calls.
+   - remaining: `sys.bytes.*` direct usage only in the traced-syscall
+     regression test until those syscall contracts are removed.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
    optional packages before removing those VM contracts.

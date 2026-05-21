@@ -15,6 +15,7 @@ mkdir -p "${TMP_DIR}" "${OUT_DIR}"
 cat > "${APP_PATH}" <<'AOS'
 Program#parser_mem_profile_p1 {
   Import#parser_mem_profile_i1(path="../../src/compiler/parser.aos")
+  Import#parser_mem_profile_i2(path="../../src/std/bytes.aos")
   Export#parser_mem_profile_e1(name=start)
 
   Let#parser_mem_profile_l1(name=start) {
@@ -22,7 +23,7 @@ Program#parser_mem_profile_p1 {
       Block#parser_mem_profile_b1 {
         Let#parser_mem_profile_l2(name=sourcePath) { ChildAt#parser_mem_profile_ca1 { Var#parser_mem_profile_v1(name=args) Lit#parser_mem_profile_i1(value=0) } }
         Let#parser_mem_profile_l3(name=sourceText) {
-          Call#parser_mem_profile_c1(target=sys.bytes.toUtf8String) {
+          Call#parser_mem_profile_c1(target=bytes.toUtf8String) {
             Call#parser_mem_profile_c2(target=sys.fs.file.read) {
               AttrValueString#parser_mem_profile_avs1 {
                 Var#parser_mem_profile_v2(name=sourcePath)

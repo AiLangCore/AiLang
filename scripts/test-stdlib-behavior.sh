@@ -239,39 +239,39 @@ Program#stdlib_behavior_bytes_p1 {
     Fn#stdlib_behavior_bytes_f1(params=args) {
       Block#stdlib_behavior_bytes_b1 {
         Let#stdlib_behavior_bytes_l2(name=data) {
-          Call#stdlib_behavior_bytes_c1(target=fromUtf8String) {
+          Call#stdlib_behavior_bytes_c1(target=bytes.fromUtf8String) {
             Lit#stdlib_behavior_bytes_i1(value="hello")
           }
         }
         Let#stdlib_behavior_bytes_l3(name=tail) {
-          Call#stdlib_behavior_bytes_c2(target=fromUtf8String) {
+          Call#stdlib_behavior_bytes_c2(target=bytes.fromUtf8String) {
             Lit#stdlib_behavior_bytes_i2(value="!")
           }
         }
         Let#stdlib_behavior_bytes_l4(name=joinedBytes) {
-          Call#stdlib_behavior_bytes_c3(target=concat) {
+          Call#stdlib_behavior_bytes_c3(target=bytes.concat) {
             Var#stdlib_behavior_bytes_v1(name=data)
             Var#stdlib_behavior_bytes_v2(name=tail)
           }
         }
         Call#stdlib_behavior_bytes_c4(target=io.print) {
           ToString#stdlib_behavior_bytes_t1 {
-            Call#stdlib_behavior_bytes_c5(target=length) {
+            Call#stdlib_behavior_bytes_c5(target=bytes.length) {
               Var#stdlib_behavior_bytes_v3(name=data)
             }
           }
         }
         Call#stdlib_behavior_bytes_c6(target=io.print) {
           ToString#stdlib_behavior_bytes_t2 {
-            Call#stdlib_behavior_bytes_c7(target=at) {
+            Call#stdlib_behavior_bytes_c7(target=bytes.at) {
               Var#stdlib_behavior_bytes_v4(name=data)
               Lit#stdlib_behavior_bytes_i3(value=1)
             }
           }
         }
         Call#stdlib_behavior_bytes_c8(target=io.print) {
-          Call#stdlib_behavior_bytes_c9(target=toUtf8String) {
-            Call#stdlib_behavior_bytes_c10(target=slice) {
+          Call#stdlib_behavior_bytes_c9(target=bytes.toUtf8String) {
+            Call#stdlib_behavior_bytes_c10(target=bytes.slice) {
               Var#stdlib_behavior_bytes_v5(name=joinedBytes)
               Lit#stdlib_behavior_bytes_i4(value=1)
               Lit#stdlib_behavior_bytes_i5(value=4)
@@ -279,13 +279,13 @@ Program#stdlib_behavior_bytes_p1 {
           }
         }
         Call#stdlib_behavior_bytes_c11(target=io.print) {
-          Call#stdlib_behavior_bytes_c12(target=toBase64) {
+          Call#stdlib_behavior_bytes_c12(target=bytes.toBase64) {
             Var#stdlib_behavior_bytes_v6(name=data)
           }
         }
         Call#stdlib_behavior_bytes_c13(target=io.print) {
-          Call#stdlib_behavior_bytes_c14(target=toUtf8String) {
-            Call#stdlib_behavior_bytes_c15(target=fromBase64) {
+          Call#stdlib_behavior_bytes_c14(target=bytes.toUtf8String) {
+            Call#stdlib_behavior_bytes_c15(target=bytes.fromBase64) {
               Lit#stdlib_behavior_bytes_i6(value="aGVsbG8=")
             }
           }
@@ -358,7 +358,7 @@ Program#stdlib_behavior_fs_p1 {
         }
         Call#stdlib_behavior_fs_c1(target=fileWrite) {
           Var#stdlib_behavior_fs_v1(name=filePath)
-          Call#stdlib_behavior_fs_c2(target=fromUtf8String) {
+          Call#stdlib_behavior_fs_c2(target=bytes.fromUtf8String) {
             Lit#stdlib_behavior_fs_s3(value="fs-ok")
           }
         }
@@ -377,7 +377,7 @@ Program#stdlib_behavior_fs_p1 {
           }
         }
         Call#stdlib_behavior_fs_c7(target=io.print) {
-          Call#stdlib_behavior_fs_c8(target=toUtf8String) {
+          Call#stdlib_behavior_fs_c8(target=bytes.toUtf8String) {
             Call#stdlib_behavior_fs_c9(target=fileRead) {
               Var#stdlib_behavior_fs_v4(name=filePath)
             }

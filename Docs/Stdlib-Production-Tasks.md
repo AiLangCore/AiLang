@@ -89,6 +89,12 @@ Status: active next readiness task after package namespace/registry hardening.
    - `sys.bytes.*` -> `std.bytes.*`
 2. Move direct usage first in optional packages and samples, then AiVectra,
    then AiLang CLI/compiler/runtime.
+   - done: optional `std-json`, `std-http`, and `std-ui-input` package source
+     now imports `std.str` instead of calling `sys.str.*` directly.
+   - done: AiVectra library text helpers plus WeatherApp and
+     InteractiveSvgMvp string edits now use the staged `std.str` surface.
+   - remaining: AiLang CLI/compiler/runtime direct calls and deterministic
+     bytes calls.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
    optional packages before removing those VM contracts.

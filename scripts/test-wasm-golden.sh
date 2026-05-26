@@ -3519,7 +3519,7 @@ for CASE_NAME in "${CASES[@]}"; do
     --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
     --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
     --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
-    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" aibc-stdin < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -3548,7 +3548,7 @@ for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
     --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
     --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
     --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
-    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" aibc-stdin < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -3577,7 +3577,7 @@ for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
     --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
     --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
     --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
-    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" aibc-stdin < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -4107,7 +4107,7 @@ wasmtime run \
   --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
   --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
   --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
-  -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
+  -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" aibc-stdin < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
 process_rc=$?
 set -e
 if [[ ${process_rc} -ne 3 ]]; then
@@ -4183,11 +4183,11 @@ if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.image.decodeToRgbaBas
   exit 1
 fi
 set +e
-wasmtime run -C cache=n "${TMP_DIR}/ui-poll-cli/wasm_profile_warn_ui_poll_event.wasm" - < "${TMP_DIR}/ui-poll-cli/app.aibc1" >"${UI_POLL_RUNTIME_OUT}" 2>&1
+wasmtime run -C cache=n "${TMP_DIR}/ui-poll-cli/wasm_profile_warn_ui_poll_event.wasm" aibc-stdin < "${TMP_DIR}/ui-poll-cli/app.aibc1" >"${UI_POLL_RUNTIME_OUT}" 2>&1
 ui_poll_runtime_rc=$?
-wasmtime run -C cache=n "${TMP_DIR}/ui-size-cli/wasm_profile_warn_ui_get_window_size.wasm" - < "${TMP_DIR}/ui-size-cli/app.aibc1" >"${UI_SIZE_RUNTIME_OUT}" 2>&1
+wasmtime run -C cache=n "${TMP_DIR}/ui-size-cli/wasm_profile_warn_ui_get_window_size.wasm" aibc-stdin < "${TMP_DIR}/ui-size-cli/app.aibc1" >"${UI_SIZE_RUNTIME_OUT}" 2>&1
 ui_size_runtime_rc=$?
-wasmtime run -C cache=n "${TMP_DIR}/image-cli/wasm_profile_warn_image_decode.wasm" - < "${TMP_DIR}/image-cli/app.aibc1" >"${IMAGE_RUNTIME_OUT}" 2>&1
+wasmtime run -C cache=n "${TMP_DIR}/image-cli/wasm_profile_warn_image_decode.wasm" aibc-stdin < "${TMP_DIR}/image-cli/app.aibc1" >"${IMAGE_RUNTIME_OUT}" 2>&1
 image_runtime_rc=$?
 set -e
 if [[ ${ui_poll_runtime_rc} -ne 3 ]]; then

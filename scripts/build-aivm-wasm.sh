@@ -31,7 +31,7 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
   -s STANDALONE_WASM=1 \
   -s FILESYSTEM=1 \
-  -s STACK_SIZE=262144 \
+  -s STACK_SIZE=2097152 \
   -o "${OUT_WASM}"
 
 emcc -O2 -std=c17 -Wall -Wextra -Werror \
@@ -53,7 +53,7 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   -s INVOKE_RUN=0 \
   -s EXPORTED_RUNTIME_METHODS=FS,callMain \
   -s ASYNCIFY \
-  -s STACK_SIZE=262144 \
+  -s STACK_SIZE=2097152 \
   -o "${OUT_WEB_JS}"
 
 echo "${OUT_WASM}"

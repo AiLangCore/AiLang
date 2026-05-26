@@ -35,6 +35,8 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `BytesConcat` | none | `2` | Concatenates two bytes values. |
 | `BytesFromUtf8String` | none | `1` | UTF-8 encode string to bytes. |
 | `BytesToUtf8String` | none | `1` | UTF-8 decode bytes to string, or `""` for invalid payload. |
+| `BytesFromBase64` | none | `1` | Strict base64 decode string to bytes; invalid payload is a runtime error. |
+| `BytesToBase64` | none | `1` | Base64 encode bytes to string. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
 | `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
 | `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |
@@ -111,7 +113,8 @@ deterministic byte behavior to non-syscall AiLang primitives or intrinsic
 operations before removing these VM contracts.
 
 The canonical non-syscall primitive node targets are `BytesLength`, `BytesAt`,
-`BytesSlice`, `BytesConcat`, `BytesFromUtf8String`, and `BytesToUtf8String`.
+`BytesSlice`, `BytesConcat`, `BytesFromUtf8String`, `BytesToUtf8String`,
+`BytesFromBase64`, and `BytesToBase64`.
 
 - `sys.bytes.length(data)` returns byte length as int.
 - `sys.bytes.at(data,index)` returns byte value (`0..255`) or `-1` when index is out of range.

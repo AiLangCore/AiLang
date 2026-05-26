@@ -40,7 +40,7 @@ Program#std_bytes_p1 {
   Let#std_bytes_l5(name=bytes.fromBase64) {
     Fn#std_bytes_f5(params=text) {
       Block#std_bytes_b5 {
-        Return#std_bytes_r5 { Call#std_bytes_c5(target=sys.bytes.fromBase64) { Var#std_bytes_v9(name=text) } }
+        Return#std_bytes_r5 { BytesFromBase64#std_bytes_bfb1 { Var#std_bytes_v9(name=text) } }
       }
     }
   }
@@ -48,7 +48,7 @@ Program#std_bytes_p1 {
   Let#std_bytes_l6(name=bytes.toBase64) {
     Fn#std_bytes_f6(params=data) {
       Block#std_bytes_b6 {
-        Return#std_bytes_r6 { Call#std_bytes_c6(target=sys.bytes.toBase64) { Var#std_bytes_v10(name=data) } }
+        Return#std_bytes_r6 { BytesToBase64#std_bytes_btb1 { Var#std_bytes_v10(name=data) } }
       }
     }
   }
@@ -56,7 +56,7 @@ Program#std_bytes_p1 {
   Let#std_bytes_l7(name=bytes.toUtf8String) {
     Fn#std_bytes_f7(params=data) {
       Block#std_bytes_b7 {
-        Return#std_bytes_r7 { Call#std_bytes_c7(target=sys.bytes.toUtf8String) { Var#std_bytes_v11(name=data) } }
+        Return#std_bytes_r7 { BytesToUtf8String#std_bytes_btus1 { Var#std_bytes_v11(name=data) } }
       }
     }
   }
@@ -64,7 +64,7 @@ Program#std_bytes_p1 {
   Let#std_bytes_l8(name=bytes.fromUtf8String) {
     Fn#std_bytes_f8(params=text) {
       Block#std_bytes_b8 {
-        Return#std_bytes_r8 { Call#std_bytes_c8(target=sys.bytes.fromUtf8String) { Var#std_bytes_v12(name=text) } }
+        Return#std_bytes_r8 { BytesFromUtf8String#std_bytes_bfus1 { Var#std_bytes_v12(name=text) } }
       }
     }
   }

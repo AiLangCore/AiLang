@@ -112,11 +112,15 @@ Canonical primitive plan: `Docs/Deterministic-Text-Bytes-Primitives.md`.
    - done: `std.bytes.length`, `std.bytes.at`, `std.bytes.slice`, and
      `std.bytes.concat` now lower through non-syscall intrinsic nodes
      (`BytesLength`, `BytesAt`, `BytesSlice`, and `BytesConcat`).
+   - done: `std.bytes.fromBase64`, `std.bytes.toBase64`,
+     `std.bytes.fromUtf8String`, and `std.bytes.toUtf8String` now lower
+     through non-syscall intrinsic nodes (`BytesFromBase64`, `BytesToBase64`,
+     `BytesFromUtf8String`, and `BytesToUtf8String`).
    - done: `scripts/test-no-direct-deterministic-syscalls.sh` rejects new
-     direct `sys.str.*` or `sys.bytes.*` usage outside the active wrapper and
-     syscall-level regression files.
-   - remaining: `std.bytes` base64 and UTF-8 conversion helpers still use
-     temporary VM syscall contracts until the next primitive/runtime pass.
+     direct `sys.str.*` or `sys.bytes.*` usage outside syscall-level
+     regression files.
+   - remaining: remove the old deterministic text/bytes syscall contracts from
+     AiVM contract tables, docs, and tests.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Add non-syscall text/bytes primitives or intrinsic nodes before removing the
    temporary VM contracts used by `std.str` and `std.bytes`.

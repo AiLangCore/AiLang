@@ -19,9 +19,9 @@ if [[ ! -s "${TMP_FILE}" ]]; then
   exit 0
 fi
 
-if rg -v '^(src/std/str\.aos|src/std/bytes\.aos|scripts/bench-syscall-abi\.sh|scripts/test-ailang-traced-syscalls\.sh):' "${TMP_FILE}" >&2; then
+if rg -v '^(scripts/bench-syscall-abi\.sh):' "${TMP_FILE}" >&2; then
   echo "deterministic syscall guard: direct sys.str.* or sys.bytes.* usage must go through std wrappers" >&2
-  echo "allowed direct files: src/std/str.aos, src/std/bytes.aos, scripts/bench-syscall-abi.sh, scripts/test-ailang-traced-syscalls.sh" >&2
+  echo "allowed direct files: scripts/bench-syscall-abi.sh" >&2
   exit 1
 fi
 

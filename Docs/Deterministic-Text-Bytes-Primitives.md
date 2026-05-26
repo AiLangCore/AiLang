@@ -31,14 +31,12 @@ instead of calling deterministic `sys.str.*` or `sys.bytes.*` targets directly.
 - byte indexing
 - byte slicing
 - byte concatenation
-
-`std.bytes` still delegates to temporary VM contracts for:
-
 - base64 encode/decode
 - UTF-8 encode/decode
 
-These are deterministic library operations. They should not remain syscalls
-after the language/runtime primitive surface can express them directly.
+`std.str` and `std.bytes` no longer delegate to deterministic `sys.str.*` or
+`sys.bytes.*` contracts. The old VM syscall contracts should be removed from
+the public syscall surface as a follow-up cleanup.
 
 ## Required Primitive Surface
 
@@ -60,13 +58,11 @@ or intrinsic nodes for:
 - `BytesConcat(left, right) -> bytes`
 - `BytesFromUtf8String(text) -> bytes`
 - `BytesToUtf8String(data) -> string`
+- `BytesFromBase64(text) -> bytes`
+- `BytesToBase64(data) -> string`
 
-Base64 can be implemented as AiLang library code after byte indexing,
-concatenation, and string construction are available.
-
-The primitive node names are now part of the validation contract. Runtime
-execution and compiler lowering are still pending until the node behavior is
-implemented end to end.
+The primitive node names are now part of the validation contract and lower to
+AiVM bytecode opcodes.
 
 ## Removal Order
 
@@ -74,11 +70,9 @@ implemented end to end.
    validation, compiler emission, and AiVM bytecode/runtime execution.
 2. Rewrite `std.str` and `std.bytes` to use those primitives instead of
    `sys.str.*` and `sys.bytes.*`.
-3. Move base64 encode/decode into AiLang library code or an optional encoding
-   package.
-4. Remove the migrated syscall contracts from AiVM contract tables, docs, and
+3. Remove the migrated syscall contracts from AiVM contract tables, docs, and
    tests.
-5. Keep regression guards in place so deterministic utility behavior cannot
+4. Keep regression guards in place so deterministic utility behavior cannot
    re-enter the syscall surface without explicit justification.
 
 Do not add compatibility aliases or dual paths while the project is pre-1.0.

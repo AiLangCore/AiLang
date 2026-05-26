@@ -277,11 +277,12 @@ This file is normative for `aic run` evaluation behavior.
 
 - Syscall-returned bytes and string payloads are materialized into VM-owned arenas before becoming observable runtime values.
 - `TO_STRING(bytes)` yields lowercase hex with `0x` prefix (`0x` for empty bytes).
-- `sys.bytes.at(data,index)` returns `-1` when `index` is out of range.
-- `sys.bytes.slice(data,start,length)` clamps start/length and never throws for range overflow.
-- `sys.bytes.fromBase64(text)` uses strict base64 validation; invalid input is syscall error.
-- `sys.bytes.fromUtf8String(text)` returns the raw UTF-8 byte sequence for the input string.
-- `sys.bytes.toUtf8String(data)` returns `""` when the payload is not valid UTF-8.
+- `BytesAt(data,index)` returns `-1` when `index` is out of range.
+- `BytesSlice(data,start,length)` clamps start/length and never throws for range overflow.
+- `BytesFromBase64(text)` uses strict base64 validation; invalid input is runtime error.
+- `BytesToBase64(data)` returns base64 text.
+- `BytesFromUtf8String(text)` returns the raw UTF-8 byte sequence for the input string.
+- `BytesToUtf8String(data)` returns `""` when the payload is not valid UTF-8.
 
 ## VM Memory + Node GC Contract
 

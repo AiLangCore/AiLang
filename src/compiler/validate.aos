@@ -383,7 +383,17 @@ Program#p1 {
         If#k525 {
           Eq#k526 { Var#k527(name=kind) Lit#k528(value="BytesToUtf8String") }
           Block#k529 { Return#k530 { Lit#k531(value=1) } }
-          Block#k532 { Return#k533 { Lit#k534(value=-1) } }
+          Block#k532 { Lit#k533(value=0) }
+        }
+        If#k590 {
+          Eq#k591 { Var#k592(name=kind) Lit#k593(value="BytesFromBase64") }
+          Block#k594 { Return#k595 { Lit#k596(value=1) } }
+          Block#k597 { Lit#k598(value=0) }
+        }
+        If#k599 {
+          Eq#k600 { Var#k601(name=kind) Lit#k602(value="BytesToBase64") }
+          Block#k603 { Return#k604 { Lit#k605(value=1) } }
+          Block#k606 { Return#k607 { Lit#k608(value=-1) } }
         }
       }
     }

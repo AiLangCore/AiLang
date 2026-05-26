@@ -10,18 +10,19 @@ mkdir -p "${TMP_DIR}"
 
 cat > "${TMP_DIR}/app.aos" <<'EOF'
 Program#p1 {
+  Import#i1(path="../../src/std/bytes.aos")
   Export#e1(name=start)
 
   Let#l1(name=start) {
     Fn#f1(params=args) {
       Block#b1 {
         Let#l2(name=bytes) {
-          Call#c1(target=sys.bytes.fromUtf8String) {
+          Call#c1(target=bytes.fromUtf8String) {
             Lit#s1(value="hello")
           }
         }
         Call#c2(target=sys.stdout.writeLine) {
-          Call#c3(target=sys.bytes.toBase64) {
+          Call#c3(target=bytes.toBase64) {
             Var#v1(name=bytes)
           }
         }
@@ -36,6 +37,6 @@ OUTPUT="$("${ROOT_DIR}/tools/ailang" debug trace run "${TMP_DIR}/app.aos" --no-c
 printf '%s\n' "${OUTPUT}"
 
 if ! printf '%s\n' "${OUTPUT}" | grep -q '^aGVsbG8=$'; then
-  echo "traced ailang regression: sys.bytes.fromUtf8String did not round-trip under debug trace" >&2
+  echo "traced ailang regression: std.bytes UTF-8/base64 helpers did not round-trip under debug trace" >&2
   exit 1
 fi

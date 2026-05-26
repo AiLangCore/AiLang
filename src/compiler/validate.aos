@@ -325,6 +325,21 @@ Program#p1 {
           Block#k557 { Return#k558 { Lit#k559(value=1) } }
           Block#k560 { Lit#k561(value=0) }
         }
+        If#k562 {
+          Eq#k563 { Var#k564(name=kind) Lit#k565(value="StringFind") }
+          Block#k566 { Return#k567 { Lit#k568(value=3) } }
+          Block#k569 { Lit#k570(value=0) }
+        }
+        If#k571 {
+          Eq#k572 { Var#k573(name=kind) Lit#k574(value="StringDecodeUnicodeHex4") }
+          Block#k575 { Return#k576 { Lit#k577(value=1) } }
+          Block#k578 { Lit#k579(value=0) }
+        }
+        If#k580 {
+          Eq#k581 { Var#k582(name=kind) Lit#k583(value="StringDecodeUnicodeSurrogatePairHex4") }
+          Block#k584 { Return#k585 { Lit#k586(value=2) } }
+          Block#k587 { Lit#k588(value=0) }
+        }
         If#k453 {
           Eq#k454 { Var#k455(name=kind) Lit#k456(value="StringScalarLength") }
           Block#k457 { Return#k458 { Lit#k459(value=1) } }

@@ -36,7 +36,10 @@ check_primitive "StringScalarAt" 2
 check_primitive "StringFromCodePoint" 1
 check_primitive "StringSlice" 3
 check_primitive "StringRemove" 3
+check_primitive "StringFind" 3
 check_primitive "StringUtf8ByteCount" 1
+check_primitive "StringDecodeUnicodeHex4" 1
+check_primitive "StringDecodeUnicodeSurrogatePairHex4" 2
 check_primitive "BytesLength" 1
 check_primitive "BytesAt" 2
 check_primitive "BytesSlice" 3

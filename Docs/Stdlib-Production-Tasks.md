@@ -105,14 +105,14 @@ Canonical primitive plan: `Docs/Deterministic-Text-Bytes-Primitives.md`.
    - done: AiLang CLI/compiler runtime and parser profiling/selfhost scripts
      now use the staged `std.bytes` surface instead of direct `sys.bytes.*`
      calls.
-   - done: `std.str.substring`, `std.str.remove`, and
-     `std.str.utf8ByteCount` now lower through non-syscall intrinsic nodes
-     (`StringSlice`, `StringRemove`, and `StringUtf8ByteCount`).
+   - done: `std.str` now lowers deterministic string helpers through
+     non-syscall intrinsic nodes (`StringSlice`, `StringRemove`,
+     `StringFind`, `StringFromCodePoint`, `StringDecodeUnicodeHex4`,
+     `StringDecodeUnicodeSurrogatePairHex4`, and `StringUtf8ByteCount`).
    - done: `scripts/test-no-direct-deterministic-syscalls.sh` rejects new
      direct `sys.str.*` or `sys.bytes.*` usage outside the active wrapper and
      syscall-level regression files.
-   - remaining: `std.str.find`, code point construction, Unicode escape
-     decoding, and `std.bytes` still use temporary VM syscall contracts until
+   - remaining: `std.bytes` still uses temporary VM syscall contracts until
      the next primitive/runtime pass.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
 4. Add non-syscall text/bytes primitives or intrinsic nodes before removing the

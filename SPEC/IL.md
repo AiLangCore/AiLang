@@ -22,10 +22,13 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Add` | none | `2` | Integer addition. |
 | `StringSlice` | none | `3` | Unicode-scalar-indexed string slice by start and length. |
 | `StringRemove` | none | `3` | Removes a Unicode-scalar-indexed range from a string. |
+| `StringFind` | none | `3` | Unicode-scalar-indexed string search by text, pattern, and start index. |
 | `StringUtf8ByteCount` | none | `1` | UTF-8 byte count for a string value. |
 | `StringScalarLength` | none | `1` | Unicode scalar count for a string value. |
 | `StringScalarAt` | none | `2` | Unicode scalar code point at index, or `-1` out of range. |
 | `StringFromCodePoint` | none | `1` | Construct a one-scalar string from a code point, or `""` for invalid input. |
+| `StringDecodeUnicodeHex4` | none | `1` | Decode exactly four hexadecimal digits to one Unicode scalar string, or `""` for invalid input. |
+| `StringDecodeUnicodeSurrogatePairHex4` | none | `2` | Decode a high/low surrogate hex pair to one Unicode scalar string, or `""` for invalid input. |
 | `BytesLength` | none | `1` | Byte length for a bytes value. |
 | `BytesAt` | none | `2` | Byte value (`0..255`) at index, or `-1` out of range. |
 | `BytesSlice` | none | `3` | Clamped byte slice by start and length. |

@@ -21,9 +21,6 @@ instead of calling deterministic `sys.str.*` or `sys.bytes.*` targets directly.
 - Unicode-scalar substring
 - Unicode-scalar removal
 - UTF-8 byte count
-
-`std.str` still delegates to temporary VM contracts for:
-
 - Unicode-scalar search
 - Unicode code point construction
 - Unicode escape decoding
@@ -50,7 +47,10 @@ or intrinsic nodes for:
 - `StringFromCodePoint(codePoint) -> string`
 - `StringSlice(text, start, length) -> string`
 - `StringRemove(text, start, length) -> string`
+- `StringFind(text, pattern, start) -> int`
 - `StringUtf8ByteCount(text) -> int`
+- `StringDecodeUnicodeHex4(hex4) -> string`
+- `StringDecodeUnicodeSurrogatePairHex4(highHex4, lowHex4) -> string`
 - `BytesLength(data) -> int`
 - `BytesAt(data, index) -> int`
 - `BytesSlice(data, start, length) -> bytes`

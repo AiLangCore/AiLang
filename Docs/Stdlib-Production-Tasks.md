@@ -117,16 +117,14 @@ Canonical primitive plan: `Docs/Deterministic-Text-Bytes-Primitives.md`.
      through non-syscall intrinsic nodes (`BytesFromBase64`, `BytesToBase64`,
      `BytesFromUtf8String`, and `BytesToUtf8String`).
    - done: `scripts/test-no-direct-deterministic-syscalls.sh` rejects new
-     direct `sys.str.*` or `sys.bytes.*` usage outside syscall-level
-     regression files.
-   - remaining: remove the old deterministic text/bytes syscall contracts from
-     AiVM contract tables, docs, and tests.
+     direct deterministic `sys.str.*`, `sys.bytes.*`, or `sys.crypto.*`
+     usage outside syscall-level regression files.
+   - done: the old deterministic text/bytes syscall contracts were removed
+     from AiVM contract tables, docs, and tests.
 3. Keep `sys.crypto.randomBytes` as host-boundary behavior.
-4. Add non-syscall text/bytes primitives or intrinsic nodes before removing the
-   temporary VM contracts used by `std.str` and `std.bytes`.
-5. Move deterministic base64/hash/HMAC helpers into AiLang libraries or
-   optional packages before removing those VM contracts.
-6. Do not leave alias, fallback, or compatibility syscall paths before the
+4. Move deterministic hash/HMAC helpers into AiLang libraries, intrinsic
+   bytecode, or optional packages before exposing public APIs for them.
+5. Do not leave alias, fallback, or compatibility syscall paths before the
    first major or minor release.
 
 ## Exit condition

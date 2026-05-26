@@ -156,7 +156,7 @@ Verified on 2026-05-20:
 
 ## Next Beta Hardening Tasks
 
-- [ ] Return to AiVM production readiness: deterministic library migration for
+- [x] Return to AiVM production readiness: deterministic library migration for
   `sys.str.*`, `sys.bytes.*`, and deterministic crypto helpers.
 - [ ] Return to AiVM memory readiness: parser/compiler scratch arenas,
   retained-node reduction, safe-point compaction, worker-local heaps, immutable

@@ -118,20 +118,16 @@ Notes:
 
 ### 7. crypto (minimal)
 
-Current status: missing.
+Current status: narrowed to host entropy only.
 
-Required minimal primitives:
+Required host-boundary primitive:
 
-- `sys.crypto.randomBytes(count:int) -> string` (byte string encoding contract to be specified)
-- `sys.crypto.sha1(text:string) -> string`
-- `sys.crypto.sha256(text:string) -> string`
-- `sys.crypto.hmacSha256(key:string, text:string) -> string`
-- `sys.crypto.base64Encode(text:string) -> string`
-- `sys.crypto.base64Decode(text:string) -> string`
+- `sys.crypto.randomBytes(count:int) -> bytes`
 
 Notes:
 
-- This is minimal protocol support, not a full cryptography library.
+- Deterministic base64, hash, and HMAC helpers belong in AiLang libraries,
+  intrinsic bytecode, or optional packages, not VM syscalls.
 
 ### 8. ui (window + frame + event)
 

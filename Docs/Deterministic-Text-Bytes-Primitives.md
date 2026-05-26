@@ -25,12 +25,15 @@ instead of calling deterministic `sys.str.*` or `sys.bytes.*` targets directly.
 - Unicode code point construction
 - Unicode escape decoding
 
-`std.bytes` still delegates to temporary VM contracts for:
+`std.bytes` now uses non-syscall intrinsic nodes for:
 
 - byte length
 - byte indexing
 - byte slicing
 - byte concatenation
+
+`std.bytes` still delegates to temporary VM contracts for:
+
 - base64 encode/decode
 - UTF-8 encode/decode
 

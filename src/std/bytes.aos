@@ -2,7 +2,7 @@ Program#std_bytes_p1 {
   Let#std_bytes_l1(name=bytes.length) {
     Fn#std_bytes_f1(params=data) {
       Block#std_bytes_b1 {
-        Return#std_bytes_r1 { Call#std_bytes_c1(target=sys.bytes.length) { Var#std_bytes_v1(name=data) } }
+        Return#std_bytes_r1 { BytesLength#std_bytes_bl1 { Var#std_bytes_v1(name=data) } }
       }
     }
   }
@@ -11,10 +11,7 @@ Program#std_bytes_p1 {
     Fn#std_bytes_f2(params=data,index) {
       Block#std_bytes_b2 {
         Return#std_bytes_r2 {
-          Call#std_bytes_c2(target=sys.bytes.at) {
-            Var#std_bytes_v2(name=data)
-            Var#std_bytes_v3(name=index)
-          }
+          BytesAt#std_bytes_ba1 { Var#std_bytes_v2(name=data) Var#std_bytes_v3(name=index) }
         }
       }
     }
@@ -24,11 +21,7 @@ Program#std_bytes_p1 {
     Fn#std_bytes_f3(params=data,start,length) {
       Block#std_bytes_b3 {
         Return#std_bytes_r3 {
-          Call#std_bytes_c3(target=sys.bytes.slice) {
-            Var#std_bytes_v4(name=data)
-            Var#std_bytes_v5(name=start)
-            Var#std_bytes_v6(name=length)
-          }
+          BytesSlice#std_bytes_bs1 { Var#std_bytes_v4(name=data) Var#std_bytes_v5(name=start) Var#std_bytes_v6(name=length) }
         }
       }
     }
@@ -38,10 +31,7 @@ Program#std_bytes_p1 {
     Fn#std_bytes_f4(params=left,right) {
       Block#std_bytes_b4 {
         Return#std_bytes_r4 {
-          Call#std_bytes_c4(target=sys.bytes.concat) {
-            Var#std_bytes_v7(name=left)
-            Var#std_bytes_v8(name=right)
-          }
+          BytesConcat#std_bytes_bc1 { Var#std_bytes_v7(name=left) Var#std_bytes_v8(name=right) }
         }
       }
     }

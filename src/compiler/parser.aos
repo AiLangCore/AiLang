@@ -887,18 +887,9 @@ Program#parser_p1 {
     Fn#parser_f17(params=node,nextIndex) {
       Block#parser_b67 {
         Return#parser_r42 {
-          AppendChild#parser_ap5 {
-            AppendAttr#parser_aa2 {
-              MakeNode#parser_mn4 {
-                Lit#parser_i83(value="ParseResult")
-                Lit#parser_i84(value="result")
-              }
-              MakeLitInt#parser_mli1 {
-                Lit#parser_i85(value="next")
-                Var#parser_v112(name=nextIndex)
-              }
-            }
+          MakePair#parser_pair_result {
             Var#parser_v113(name=node)
+            Var#parser_v112(name=nextIndex)
           }
         }
       }
@@ -909,9 +900,8 @@ Program#parser_p1 {
     Fn#parser_f18(params=result) {
       Block#parser_b68 {
         Return#parser_r43 {
-          ChildAt#parser_ca4 {
+          PairFirst#parser_pair_first {
             Var#parser_v114(name=result)
-            Lit#parser_i86(value=0)
           }
         }
       }
@@ -922,9 +912,8 @@ Program#parser_p1 {
     Fn#parser_f19(params=result) {
       Block#parser_b69 {
         Return#parser_r44 {
-          AttrValueInt#parser_avi2 {
+          PairSecond#parser_pair_second {
             Var#parser_v115(name=result)
-            Lit#parser_i87(value=0)
           }
         }
       }

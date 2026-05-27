@@ -393,7 +393,25 @@ Program#p1 {
         If#k599 {
           Eq#k600 { Var#k601(name=kind) Lit#k602(value="BytesToBase64") }
           Block#k603 { Return#k604 { Lit#k605(value=1) } }
-          Block#k606 { Return#k607 { Lit#k608(value=-1) } }
+          Block#k606 {
+            If#k609 {
+              Eq#k610 { Var#k611(name=kind) Lit#k612(value="MakePair") }
+              Block#k613 { Return#k614 { Lit#k615(value=2) } }
+              Block#k616 {
+                If#k617 {
+                  Eq#k618 { Var#k619(name=kind) Lit#k620(value="PairFirst") }
+                  Block#k621 { Return#k622 { Lit#k623(value=1) } }
+                  Block#k624 {
+                    If#k625 {
+                      Eq#k626 { Var#k627(name=kind) Lit#k628(value="PairSecond") }
+                      Block#k629 { Return#k630 { Lit#k631(value=1) } }
+                      Block#k632 { Return#k607 { Lit#k608(value=-1) } }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

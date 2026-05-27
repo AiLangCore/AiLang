@@ -127,28 +127,28 @@ Verified on 2026-05-27:
   scratch-result arena so parser metadata is not written onto returned AST
   nodes and node handles are not encoded into strings.
 - `scripts/test-parser-public-exports.sh` gates the parser boundary so
-  scratch/result implementation helpers stay private until AiVM has a proper
-  scratch value representation for `(node, nextIndex)` style results.
+  scratch/result implementation helpers stay private.
+- parser result helpers now lower to VM scratch pairs (`MakePair`,
+  `PairFirst`, `PairSecond`) for `(node, nextIndex)` style results.
+- parser memory profile for `src/compiler/format.aos` now reports
+  `node_high_water = 527` and `node_count = 197`; final reachable parsed AST
+  roots remain 177 nodes.
 
 ### Scratch Result Requirement
 
-The remaining parser `ParseResult` wrappers carry two pieces of transient
-state: the parsed node and the next token/source position. Removing those node
-allocations requires a VM/runtime representation for scratch result pairs or
-tuples.
+Parser scratch results carry two pieces of transient state: the parsed node and
+the next token/source position. They use AiVM scratch pair values rather than
+semantic AST nodes.
 
-That representation must:
+The representation must:
 
 - be deterministic and bounded by the active runtime profile
 - keep semantic AST nodes in normal node storage
 - root and remap any contained node references during safe-point compaction
-- be internal compiler/parser scratch state, not a syscall or public language
-  feature
+- stay internal compiler/parser scratch state, not a syscall or public
+  language feature
 - avoid encoding VM node handles into strings or writing parser metadata onto
   returned AST nodes
-
-Until that VM support exists, `ParseResult` nodes are intentionally retained as
-the correct explicit representation.
 
 ## Memory-Growth Audit Gate
 

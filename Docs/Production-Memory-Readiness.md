@@ -98,22 +98,22 @@ This document is an execution checklist, not a roadmap narrative.
 ## Parser Memory Finding
 
 `scripts/profile-parser-memory.sh src/compiler/format.aos` is the current
-parser-memory gate. With token scratch strings and the current AiVM
-return-boundary safe-point runtime, parsing `format.aos` reaches a high-water
-mark of `1028` node slots and compacts to `179` live nodes, reclaiming `1128`
-parser intermediates.
+parser-memory gate. With token scratch strings, scratch-pair parser results,
+and the current AiVM return-boundary safe-point runtime, parsing `format.aos`
+reaches a high-water mark of `527` node slots and compacts to `197` live
+nodes, reclaiming `330` parser intermediates.
 
 The gate now fails when final retained parser nodes exceed the configured
-budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `2048`), when parser
+budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `512`), when parser
 node high-water exceeds the configured budget
-(`AILANG_PARSER_PROFILE_MAX_NODE_HIGH_WATER`, default `4096`), or when a
+(`AILANG_PARSER_PROFILE_MAX_NODE_HIGH_WATER`, default `768`), or when a
 high-water parser run does not compact. This catches stale toolchains and
 regressions where parser intermediates remain retained or grow without a
 deterministic phase boundary.
 
-Remaining work is to reduce high-water allocation with parser/compiler scratch
-storage and shorter intermediate lifetimes. Increasing arena capacities is not
-the default fix.
+Remaining work is to continue compiler analysis scratch work and reduce
+retained final parser overhead where it is not part of the semantic AST.
+Increasing arena capacities is not the default fix.
 
 Verified on 2026-05-27:
 
@@ -122,10 +122,6 @@ Verified on 2026-05-27:
   each transient token.
 - the parser accessor API (`parse.tokenKind`, `parse.tokenValue`,
   `parse.tokenNext`) remains the parser boundary for callers.
-- parser result helpers remain internal implementation details. Removing
-  `ParseResult` wrapper allocation completely needs a real value tuple or
-  scratch-result arena so parser metadata is not written onto returned AST
-  nodes and node handles are not encoded into strings.
 - `scripts/test-parser-public-exports.sh` gates the parser boundary so
   scratch/result implementation helpers stay private.
 - parser result helpers now lower to VM scratch pairs (`MakePair`,

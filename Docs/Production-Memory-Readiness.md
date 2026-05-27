@@ -135,6 +135,9 @@ Verified on 2026-05-27:
 - parser memory profile for `src/compiler/format.aos` now reports
   `node_high_water = 527` and `node_count = 197`; final reachable parsed AST
   roots remain 177 nodes.
+- validation state now uses VM scratch pairs for the transient `(errors, ids)`
+  compiler-analysis state while keeping public diagnostics and ID records as
+  semantic nodes.
 
 ### Scratch Result Requirement
 

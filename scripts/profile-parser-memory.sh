@@ -8,6 +8,7 @@ SOURCE_PATH="${1:-src/compiler/format.aos}"
 TMP_DIR="${ROOT_DIR}/.tmp/parser-memory-profile"
 OUT_DIR="${ROOT_DIR}/.tmp/parser-memory-profile-out"
 APP_PATH="${TMP_DIR}/app.aos"
+MAX_NODE_COUNT="${AILANG_PARSER_PROFILE_MAX_NODE_COUNT:-2048}"
 
 rm -rf "${TMP_DIR}" "${OUT_DIR}"
 mkdir -p "${TMP_DIR}" "${OUT_DIR}"
@@ -49,9 +50,39 @@ set -e
 echo "parser-memory-profile status=${STATUS}"
 echo "parser-memory-profile source=${SOURCE_PATH}"
 echo "parser-memory-profile out=${OUT_DIR}"
+echo "parser-memory-profile max-node-count=${MAX_NODE_COUNT}"
 
 if [[ -f "${OUT_DIR}/diagnostics.toml" ]]; then
   rg -n "memory = |node_roots = |node_kind_counts = " "${OUT_DIR}/diagnostics.toml" || true
+  MEMORY_LINE="$(rg '^memory = ' "${OUT_DIR}/diagnostics.toml" || true)"
+  NODE_COUNT="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_count = \([0-9][0-9]*\).*/\1/p')"
+  NODE_HIGH_WATER="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_high_water = \([0-9][0-9]*\).*/\1/p')"
+  NODE_GC_COMPACTIONS="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_gc_compactions = \([0-9][0-9]*\).*/\1/p')"
+  NODE_GC_RECLAIMED="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_gc_reclaimed_nodes = \([0-9][0-9]*\).*/\1/p')"
+  if [[ -z "${NODE_COUNT}" || -z "${NODE_HIGH_WATER}" || -z "${NODE_GC_COMPACTIONS}" || -z "${NODE_GC_RECLAIMED}" ]]; then
+    echo "parser-memory-profile failed: diagnostics.toml is missing memory counters" >&2
+    exit 1
+  fi
+  echo "parser-memory-profile node-count=${NODE_COUNT}"
+  echo "parser-memory-profile node-high-water=${NODE_HIGH_WATER}"
+  echo "parser-memory-profile node-gc-compactions=${NODE_GC_COMPACTIONS}"
+  echo "parser-memory-profile node-gc-reclaimed=${NODE_GC_RECLAIMED}"
+  if (( STATUS != 0 )); then
+    echo "parser-memory-profile failed: debug run exited with ${STATUS}" >&2
+    exit "${STATUS}"
+  fi
+  if (( NODE_COUNT > MAX_NODE_COUNT )); then
+    echo "parser-memory-profile failed: node_count ${NODE_COUNT} exceeds ${MAX_NODE_COUNT}" >&2
+    exit 1
+  fi
+  if (( NODE_HIGH_WATER > MAX_NODE_COUNT && NODE_GC_COMPACTIONS == 0 )); then
+    echo "parser-memory-profile failed: high-water parser nodes were not compacted" >&2
+    exit 1
+  fi
+  echo "parser-memory-profile gate: PASS"
+else
+  echo "parser-memory-profile failed: missing ${OUT_DIR}/diagnostics.toml" >&2
+  exit 1
 fi
 
 exit 0

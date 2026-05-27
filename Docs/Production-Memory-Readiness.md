@@ -85,16 +85,24 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Immediate Next Tasks
 
-1. Fix parser intermediate retention before raising VM node limits again.
+1. Reduce parser/compiler high-water allocation before raising VM node limits
+   again.
 2. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
 3. Expand memory-growth audit targets beyond the single baseline parity case.
 4. Keep release-gate assertions on debug bundle memory/root/kind-attribution telemetry fields.
 
 ## Parser Memory Finding
 
-`scripts/profile-parser-memory.sh src/compiler/format.aos` currently reaches
-`AIVMM005` with all `16384` node slots retained from locals. The diagnostic
-bundle reports one `Block` retaining more than sixteen thousand children and a
-large `unknown` node-kind bucket. This points at parser intermediate
-representation/lifetime behavior, not a need for another arena capacity
-increase.
+`scripts/profile-parser-memory.sh src/compiler/format.aos` is the current
+parser-memory gate. With the current AiVM safe-point runtime, parsing
+`format.aos` reaches a high-water mark of `11268` node slots but compacts at
+run completion to `179` live nodes, reclaiming `11089` parser intermediates.
+
+The gate now fails when final retained parser nodes exceed the configured
+budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `2048`) or when a
+high-water parser run does not compact. This catches stale toolchains and
+regressions where parser intermediates remain retained.
+
+Remaining work is to reduce high-water allocation with parser/compiler scratch
+storage and shorter intermediate lifetimes. Increasing arena capacities is not
+the default fix.

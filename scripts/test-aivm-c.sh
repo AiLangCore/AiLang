@@ -483,12 +483,12 @@ EOF
     echo "native debug success smoke failed: expected root attribution in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_gc_attempts = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
-    echo "native debug success smoke failed: expected node_gc_attempts=0 in state_snapshots.toml" >&2
+  if ! grep -Eq "node_gc_attempts = [0-9]+" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected node_gc_attempts counter in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_gc_attempts = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
-    echo "native debug success smoke failed: expected node_gc_attempts=0 in diagnostics.toml" >&2
+  if ! grep -Eq "node_gc_attempts = [0-9]+" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected node_gc_attempts counter in diagnostics.toml" >&2
     exit 1
   fi
   if ! grep -q "node_roots = {" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then

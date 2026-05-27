@@ -122,6 +122,10 @@ Verified on 2026-05-27:
   each transient token.
 - the parser accessor API (`parse.tokenKind`, `parse.tokenValue`,
   `parse.tokenNext`) remains the parser boundary for callers.
+- parser result helpers remain internal implementation details. Removing
+  `ParseResult` wrapper allocation completely needs a real value tuple or
+  scratch-result arena so parser metadata is not written onto returned AST
+  nodes and node handles are not encoded into strings.
 
 ## Memory-Growth Audit Gate
 

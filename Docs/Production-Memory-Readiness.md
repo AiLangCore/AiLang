@@ -92,15 +92,16 @@ This document is an execution checklist, not a roadmap narrative.
    cancel/fail paths in the release gate.
 3. Add process spawning/pipe-read workloads to the memory-growth audit target
    set once those programs can run portably under `debug profile`.
-4. Add parser/compiler scratch arenas for tokenization, parse construction, and
-   compiler analysis passes.
+4. Continue parser/compiler scratch work for parse construction and compiler
+   analysis passes.
 
 ## Parser Memory Finding
 
 `scripts/profile-parser-memory.sh src/compiler/format.aos` is the current
-parser-memory gate. With the current AiVM return-boundary safe-point runtime,
-parsing `format.aos` reaches a high-water mark of `1238` node slots and
-compacts to `179` live nodes, reclaiming `11089` parser intermediates.
+parser-memory gate. With token scratch strings and the current AiVM
+return-boundary safe-point runtime, parsing `format.aos` reaches a high-water
+mark of `1028` node slots and compacts to `179` live nodes, reclaiming `1128`
+parser intermediates.
 
 The gate now fails when final retained parser nodes exceed the configured
 budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `2048`), when parser
@@ -113,6 +114,14 @@ deterministic phase boundary.
 Remaining work is to reduce high-water allocation with parser/compiler scratch
 storage and shorter intermediate lifetimes. Increasing arena capacities is not
 the default fix.
+
+Verified on 2026-05-27:
+
+- parser token scratch storage now uses encoded strings (`kind|next|value`)
+  instead of allocating a token `Block` node plus three child literal nodes for
+  each transient token.
+- the parser accessor API (`parse.tokenKind`, `parse.tokenValue`,
+  `parse.tokenNext`) remains the parser boundary for callers.
 
 ## Memory-Growth Audit Gate
 

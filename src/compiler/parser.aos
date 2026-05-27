@@ -282,15 +282,47 @@ Program#parser_p1 {
     Fn#parser_f7(params=kind,value,nextIndex) {
       Block#parser_b41 {
         Return#parser_r24 {
-          AppendChild#parser_ap1 {
-            AppendChild#parser_ap2 {
-              AppendChild#parser_ap3 {
-                MakeBlock#parser_mb1 { Lit#parser_i45(value="token") }
-                MakeLitString#parser_mls1 { Lit#parser_i46(value="kind") Var#parser_v36(name=kind) }
+          StrConcat#parser_token_sc1 {
+            Var#parser_v36(name=kind)
+            StrConcat#parser_token_sc2 {
+              Lit#parser_token_sep1(value="|")
+              StrConcat#parser_token_sc3 {
+                ToString#parser_token_ts1 { Var#parser_v38(name=nextIndex) }
+                StrConcat#parser_token_sc4 {
+                  Lit#parser_token_sep2(value="|")
+                  Var#parser_v37(name=value)
+                }
               }
-              MakeLitString#parser_mls2 { Lit#parser_i47(value="value") Var#parser_v37(name=value) }
             }
-            MakeLitInt#parser_mli1 { Lit#parser_i48(value="next") Var#parser_v38(name=nextIndex) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_token_l1(name=parse.tokenSep1) {
+    Fn#parser_token_f1(params=token) {
+      Block#parser_token_b1 {
+        Return#parser_token_r1 {
+          Call#parser_token_c1(target=find) {
+            Var#parser_token_v1(name=token)
+            Lit#parser_token_i1(value="|")
+            Lit#parser_token_i2(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_token_l2(name=parse.tokenSep2) {
+    Fn#parser_token_f2(params=token) {
+      Block#parser_token_b2 {
+        Let#parser_token_l3(name=sep1) { Call#parser_token_c2(target=parse.tokenSep1) { Var#parser_token_v2(name=token) } }
+        Return#parser_token_r2 {
+          Call#parser_token_c3(target=find) {
+            Var#parser_token_v3(name=token)
+            Lit#parser_token_i3(value="|")
+            Add#parser_token_a1 { Var#parser_token_v4(name=sep1) Lit#parser_token_i4(value=1) }
           }
         }
       }
@@ -301,9 +333,10 @@ Program#parser_p1 {
     Fn#parser_f8(params=token) {
       Block#parser_b42 {
         Return#parser_r25 {
-          AttrValueString#parser_avs1 {
-            ChildAt#parser_ca1 { Var#parser_v39(name=token) Lit#parser_i49(value=0) }
-            Lit#parser_i50(value=0)
+          Call#parser_token_c4(target=substring) {
+            Var#parser_v39(name=token)
+            Lit#parser_token_i5(value=0)
+            Call#parser_token_c5(target=parse.tokenSep1) { Var#parser_v39b(name=token) }
           }
         }
       }
@@ -314,9 +347,13 @@ Program#parser_p1 {
     Fn#parser_f9(params=token) {
       Block#parser_b43 {
         Return#parser_r26 {
-          AttrValueString#parser_avs2 {
-            ChildAt#parser_ca2 { Var#parser_v40(name=token) Lit#parser_i51(value=1) }
-            Lit#parser_i52(value=0)
+          Call#parser_token_c6(target=substring) {
+            Var#parser_v40(name=token)
+            Add#parser_token_a2 {
+              Call#parser_token_c7(target=parse.tokenSep2) { Var#parser_v40b(name=token) }
+              Lit#parser_token_i6(value=1)
+            }
+            Lit#parser_token_i7(value=2147483647)
           }
         }
       }
@@ -326,10 +363,14 @@ Program#parser_p1 {
   Let#parser_l12(name=parse.tokenNext) {
     Fn#parser_f10(params=token) {
       Block#parser_b44 {
+        Let#parser_token_l4(name=sep1) { Call#parser_token_c8(target=parse.tokenSep1) { Var#parser_v41(name=token) } }
+        Let#parser_token_l5(name=sep2) { Call#parser_token_c9(target=parse.tokenSep2) { Var#parser_v41b(name=token) } }
         Return#parser_r27 {
-          AttrValueInt#parser_avi1 {
-            ChildAt#parser_ca3 { Var#parser_v41(name=token) Lit#parser_i53(value=2) }
-            Lit#parser_i54(value=0)
+          Call#parser_token_c10(target=parse.parseIntText) {
+            Var#parser_v41c(name=token)
+            Add#parser_token_a3 { Var#parser_token_v5(name=sep1) Lit#parser_token_i8(value=1) }
+            Var#parser_token_v6(name=sep2)
+            Lit#parser_token_i9(value=0)
           }
         }
       }

@@ -340,6 +340,7 @@ jobs:
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
           chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
+          cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
           mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
@@ -370,6 +371,7 @@ jobs:
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\runtimes\$targetRid\aivm.exe"
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
+          Copy-Item .\src\std "$packageDir\std" -Recurse
           Copy-Item .\templates $packageDir -Recurse
           New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm "$packageDir\.artifacts\aivm-wasm32\"

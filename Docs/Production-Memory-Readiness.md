@@ -126,6 +126,29 @@ Verified on 2026-05-27:
   `ParseResult` wrapper allocation completely needs a real value tuple or
   scratch-result arena so parser metadata is not written onto returned AST
   nodes and node handles are not encoded into strings.
+- `scripts/test-parser-public-exports.sh` gates the parser boundary so
+  scratch/result implementation helpers stay private until AiVM has a proper
+  scratch value representation for `(node, nextIndex)` style results.
+
+### Scratch Result Requirement
+
+The remaining parser `ParseResult` wrappers carry two pieces of transient
+state: the parsed node and the next token/source position. Removing those node
+allocations requires a VM/runtime representation for scratch result pairs or
+tuples.
+
+That representation must:
+
+- be deterministic and bounded by the active runtime profile
+- keep semantic AST nodes in normal node storage
+- root and remap any contained node references during safe-point compaction
+- be internal compiler/parser scratch state, not a syscall or public language
+  feature
+- avoid encoding VM node handles into strings or writing parser metadata onto
+  returned AST nodes
+
+Until that VM support exists, `ParseResult` nodes are intentionally retained as
+the correct explicit representation.
 
 ## Memory-Growth Audit Gate
 

@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.7] - 2026-05-27
+
+### Added
+
+- Added scratch-pair parser result helpers and deterministic pair intrinsic
+  coverage.
+- Added compiler memory profile gates for `format.aos`, `validate.aos`, and
+  `aic.aos`.
+- Added parser public-export checks so scratch/result helpers stay internal.
+
+### Changed
+
+- Reworked parser tokens, parser results, validation state, and tooling
+  evaluator state to use scratch storage where possible while keeping final
+  semantic AST/value nodes in normal node storage.
+- Expanded memory-growth audit coverage for process, async, and parallel
+  cleanup workloads.
+- Moved deterministic string/byte helpers off direct `sys.*` calls and onto
+  deterministic library/intrinsic surfaces.
+
+### Notes
+
+- This is a weekly beta SDK release focused on memory hardening,
+  deterministic primitive cleanup, and production-readiness gates.
+
 ## [0.0.1-beta.2] - 2026-05-19
 
 ### Fixed

@@ -1,6 +1,6 @@
 # AiLang Beta Demo and Release Checklist
 
-Updated: 2026-05-20
+Updated: 2026-05-27
 
 This checklist is the short operational gate before a conference demo, sponsor
 review, or follow-up beta release. The authoritative beta status is tracked in
@@ -9,9 +9,9 @@ a presentable state.
 
 ## Release State
 
-- AiLang: `v0.0.1-beta.6`
-- AiVM: `v0.0.1-beta.1`
-- AiVectra: `v0.0.1-beta.1`
+- AiLang: `v0.0.1-beta.7`
+- AiVM: `v0.0.1-beta.2`
+- AiVectra: `v0.0.1-beta.2`
 
 All three current beta releases are GitHub prereleases. The public website
 install script defaults to the `beta` channel.

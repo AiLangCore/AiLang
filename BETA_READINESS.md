@@ -10,9 +10,9 @@ layers.
 
 ## Current Beta Release
 
-- AiLang: `v0.0.1-beta.6`
-- AiVM: `v0.0.1-beta.1`
-- AiVectra: `v0.0.1-beta.1`
+- AiLang: `v0.0.1-beta.7`
+- AiVM: `v0.0.1-beta.2`
+- AiVectra: `v0.0.1-beta.2`
 
 Verified on 2026-05-19:
 
@@ -33,6 +33,13 @@ Verified on 2026-05-20:
 
 - AiLang `v0.0.1-beta.1` has a remote git tag but no GitHub release. Leave the
   tag as historical build evidence; no public release cleanup is required.
+
+Verified on 2026-05-27:
+
+- Weekly beta tags target AiLang `v0.0.1-beta.7`, AiVM `v0.0.1-beta.2`, and
+  AiVectra `v0.0.1-beta.2`.
+- Local release gates passed before tagging: AiVM `./test-aivm-c.sh`, AiLang
+  `./test.sh`, and AiVectra `./scripts/test-all.sh`.
 
 ## Required Gates
 

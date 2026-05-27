@@ -28,8 +28,7 @@ AIVM_BIN="$(require_aivm_bin)"
 if AIVM_C_SOURCE_DIR="$(resolve_aivm_native_dir "${ROOT_DIR}")" && [[ -n "${AIVM_C_SOURCE_DIR}" && -d "${AIVM_C_SOURCE_DIR}" ]]; then
   ./scripts/aivm-bench-gate.sh
   ./scripts/profile-parser-memory.sh src/compiler/format.aos >/dev/null
-  AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 AIVM_MEM_AUDIT_REPORT="${ROOT_DIR}/.tmp/aivm-mem-audit-ci.toml" \
-    ./scripts/aivm-mem-audit.sh "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" 10 >/dev/null
+  AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit-ci.sh 10 >/dev/null
 else
   echo "skipping AiVM source-level bench/memory gates: set AIVM_C_SOURCE_DIR to enable"
 fi

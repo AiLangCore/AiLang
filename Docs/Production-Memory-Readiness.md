@@ -142,4 +142,4 @@ Verified on 2026-05-27:
   profile-safe fixture exists for macOS, Linux, and Windows.
 - debug bundle telemetry for memory pressure counters, root attribution, and
   node-kind attribution is asserted by the release gate through AiVM's debug
-  memory smoke test.
+  memory smoke test and AiLang's integrated native VM debug memory smoke.

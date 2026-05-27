@@ -87,7 +87,8 @@ This document is an execution checklist, not a roadmap narrative.
 
 1. Reduce parser/compiler high-water allocation before raising VM node limits
    again.
-2. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
+2. Keep deterministic async/process cleanup stress coverage focused on
+   cancel/fail paths in the release gate.
 3. Expand memory-growth audit targets beyond the single baseline parity case.
 4. Keep release-gate assertions on debug bundle memory/root/kind-attribution telemetry fields.
 

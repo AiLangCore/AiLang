@@ -37,6 +37,9 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `BytesToUtf8String` | none | `1` | UTF-8 decode bytes to string, or `""` for invalid payload. |
 | `BytesFromBase64` | none | `1` | Strict base64 decode string to bytes; invalid payload is a runtime error. |
 | `BytesToBase64` | none | `1` | Base64 encode bytes to string. |
+| `MakePair` | none | `2` | Creates an internal scratch pair for compiler/parser implementation state. Not a public semantic record. |
+| `PairFirst` | none | `1` | Reads the first value from an internal scratch pair. |
+| `PairSecond` | none | `1` | Reads the second value from an internal scratch pair. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
 | `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
 | `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |
@@ -47,6 +50,8 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `Lit(value=...)` for primitive values.
 - Primitive runtime kinds are `string`, `number`, `bool`, `null`, and `bytes`. Canonical null helpers can be provided by `src/std/null.aos`.
 - Current AiBC1 numeric execution is exact integer-only; `number` is the canonical language-facing numeric family and currently lowers to exact whole-number runtime values. Canonical language-facing helpers for this exact whole-number surface live in `src/std/number.aos`.
+- Scratch pairs are implementation values for compiler/parser internals. They
+  must not be used as a user-facing data model or serialized as AST nodes.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
 - `Task(handle=...)` for async in-flight work handles returned by async calls.

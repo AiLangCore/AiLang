@@ -60,9 +60,17 @@ or intrinsic nodes for:
 - `BytesToUtf8String(data) -> string`
 - `BytesFromBase64(text) -> bytes`
 - `BytesToBase64(data) -> string`
+- `MakePair(first, second) -> pair`
+- `PairFirst(pair) -> any`
+- `PairSecond(pair) -> any`
 
 The primitive node names are now part of the validation contract and lower to
 AiVM bytecode opcodes.
+
+`MakePair`, `PairFirst`, and `PairSecond` are internal compiler/parser scratch
+primitives. They are documented here only because they are validated intrinsic
+nodes and lower directly to VM bytecode; they are not the application-facing
+data model.
 
 ## Removal Order
 

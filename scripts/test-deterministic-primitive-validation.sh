@@ -46,5 +46,10 @@ check_primitive "BytesSlice" 3
 check_primitive "BytesConcat" 2
 check_primitive "BytesFromUtf8String" 1
 check_primitive "BytesToUtf8String" 1
+check_primitive "BytesFromBase64" 1
+check_primitive "BytesToBase64" 1
+check_primitive "MakePair" 2
+check_primitive "PairFirst" 1
+check_primitive "PairSecond" 1
 
 echo "deterministic primitive validation: PASS"

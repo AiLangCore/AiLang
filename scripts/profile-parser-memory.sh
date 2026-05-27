@@ -9,6 +9,7 @@ TMP_DIR="${ROOT_DIR}/.tmp/parser-memory-profile"
 OUT_DIR="${ROOT_DIR}/.tmp/parser-memory-profile-out"
 APP_PATH="${TMP_DIR}/app.aos"
 MAX_NODE_COUNT="${AILANG_PARSER_PROFILE_MAX_NODE_COUNT:-2048}"
+MAX_NODE_HIGH_WATER="${AILANG_PARSER_PROFILE_MAX_NODE_HIGH_WATER:-4096}"
 
 rm -rf "${TMP_DIR}" "${OUT_DIR}"
 mkdir -p "${TMP_DIR}" "${OUT_DIR}"
@@ -51,6 +52,7 @@ echo "parser-memory-profile status=${STATUS}"
 echo "parser-memory-profile source=${SOURCE_PATH}"
 echo "parser-memory-profile out=${OUT_DIR}"
 echo "parser-memory-profile max-node-count=${MAX_NODE_COUNT}"
+echo "parser-memory-profile max-node-high-water=${MAX_NODE_HIGH_WATER}"
 
 if [[ -f "${OUT_DIR}/diagnostics.toml" ]]; then
   rg -n "memory = |node_roots = |node_kind_counts = " "${OUT_DIR}/diagnostics.toml" || true
@@ -73,6 +75,10 @@ if [[ -f "${OUT_DIR}/diagnostics.toml" ]]; then
   fi
   if (( NODE_COUNT > MAX_NODE_COUNT )); then
     echo "parser-memory-profile failed: node_count ${NODE_COUNT} exceeds ${MAX_NODE_COUNT}" >&2
+    exit 1
+  fi
+  if (( NODE_HIGH_WATER > MAX_NODE_HIGH_WATER )); then
+    echo "parser-memory-profile failed: node_high_water ${NODE_HIGH_WATER} exceeds ${MAX_NODE_HIGH_WATER}" >&2
     exit 1
   fi
   if (( NODE_HIGH_WATER > MAX_NODE_COUNT && NODE_GC_COMPACTIONS == 0 )); then

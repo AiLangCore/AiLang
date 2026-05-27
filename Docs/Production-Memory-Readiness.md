@@ -94,14 +94,17 @@ This document is an execution checklist, not a roadmap narrative.
 ## Parser Memory Finding
 
 `scripts/profile-parser-memory.sh src/compiler/format.aos` is the current
-parser-memory gate. With the current AiVM safe-point runtime, parsing
-`format.aos` reaches a high-water mark of `11268` node slots but compacts at
-run completion to `179` live nodes, reclaiming `11089` parser intermediates.
+parser-memory gate. With the current AiVM return-boundary safe-point runtime,
+parsing `format.aos` reaches a high-water mark of `1238` node slots and
+compacts to `179` live nodes, reclaiming `11089` parser intermediates.
 
 The gate now fails when final retained parser nodes exceed the configured
-budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `2048`) or when a
+budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `2048`), when parser
+node high-water exceeds the configured budget
+(`AILANG_PARSER_PROFILE_MAX_NODE_HIGH_WATER`, default `4096`), or when a
 high-water parser run does not compact. This catches stale toolchains and
-regressions where parser intermediates remain retained.
+regressions where parser intermediates remain retained or grow without a
+deterministic phase boundary.
 
 Remaining work is to reduce high-water allocation with parser/compiler scratch
 storage and shorter intermediate lifetimes. Increasing arena capacities is not

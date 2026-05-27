@@ -10,6 +10,7 @@ OUT_DIR="${ROOT_DIR}/.tmp/parser-memory-profile-out"
 APP_PATH="${TMP_DIR}/app.aos"
 MAX_NODE_COUNT="${AILANG_PARSER_PROFILE_MAX_NODE_COUNT:-512}"
 MAX_NODE_HIGH_WATER="${AILANG_PARSER_PROFILE_MAX_NODE_HIGH_WATER:-768}"
+MAX_SCRATCH_PAIR_COUNT="${AILANG_PARSER_PROFILE_MAX_SCRATCH_PAIR_COUNT:-256}"
 
 rm -rf "${TMP_DIR}" "${OUT_DIR}"
 mkdir -p "${TMP_DIR}" "${OUT_DIR}"
@@ -53,20 +54,23 @@ echo "parser-memory-profile source=${SOURCE_PATH}"
 echo "parser-memory-profile out=${OUT_DIR}"
 echo "parser-memory-profile max-node-count=${MAX_NODE_COUNT}"
 echo "parser-memory-profile max-node-high-water=${MAX_NODE_HIGH_WATER}"
+echo "parser-memory-profile max-scratch-pair-count=${MAX_SCRATCH_PAIR_COUNT}"
 
 if [[ -f "${OUT_DIR}/diagnostics.toml" ]]; then
   rg -n "memory = |node_roots = |node_kind_counts = " "${OUT_DIR}/diagnostics.toml" || true
   MEMORY_LINE="$(rg '^memory = ' "${OUT_DIR}/diagnostics.toml" || true)"
   NODE_COUNT="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_count = \([0-9][0-9]*\).*/\1/p')"
   NODE_HIGH_WATER="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_high_water = \([0-9][0-9]*\).*/\1/p')"
+  SCRATCH_PAIR_COUNT="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*scratch_pair_count = \([0-9][0-9]*\).*/\1/p')"
   NODE_GC_COMPACTIONS="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_gc_compactions = \([0-9][0-9]*\).*/\1/p')"
   NODE_GC_RECLAIMED="$(printf '%s\n' "${MEMORY_LINE}" | sed -n 's/.*node_gc_reclaimed_nodes = \([0-9][0-9]*\).*/\1/p')"
-  if [[ -z "${NODE_COUNT}" || -z "${NODE_HIGH_WATER}" || -z "${NODE_GC_COMPACTIONS}" || -z "${NODE_GC_RECLAIMED}" ]]; then
+  if [[ -z "${NODE_COUNT}" || -z "${NODE_HIGH_WATER}" || -z "${SCRATCH_PAIR_COUNT}" || -z "${NODE_GC_COMPACTIONS}" || -z "${NODE_GC_RECLAIMED}" ]]; then
     echo "parser-memory-profile failed: diagnostics.toml is missing memory counters" >&2
     exit 1
   fi
   echo "parser-memory-profile node-count=${NODE_COUNT}"
   echo "parser-memory-profile node-high-water=${NODE_HIGH_WATER}"
+  echo "parser-memory-profile scratch-pair-count=${SCRATCH_PAIR_COUNT}"
   echo "parser-memory-profile node-gc-compactions=${NODE_GC_COMPACTIONS}"
   echo "parser-memory-profile node-gc-reclaimed=${NODE_GC_RECLAIMED}"
   if (( STATUS != 0 )); then
@@ -79,6 +83,10 @@ if [[ -f "${OUT_DIR}/diagnostics.toml" ]]; then
   fi
   if (( NODE_HIGH_WATER > MAX_NODE_HIGH_WATER )); then
     echo "parser-memory-profile failed: node_high_water ${NODE_HIGH_WATER} exceeds ${MAX_NODE_HIGH_WATER}" >&2
+    exit 1
+  fi
+  if (( SCRATCH_PAIR_COUNT > MAX_SCRATCH_PAIR_COUNT )); then
+    echo "parser-memory-profile failed: scratch_pair_count ${SCRATCH_PAIR_COUNT} exceeds ${MAX_SCRATCH_PAIR_COUNT}" >&2
     exit 1
   fi
   if (( NODE_HIGH_WATER > MAX_NODE_COUNT && NODE_GC_COMPACTIONS == 0 )); then

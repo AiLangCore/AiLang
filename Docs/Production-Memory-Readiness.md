@@ -22,6 +22,8 @@ This document is an execution checklist, not a roadmap narrative.
   - `bytes_arena_pressure_count`
   - `node_arena_pressure_count`
   - `node_gc_attempts`
+  - `scratch_pair_count`
+  - `scratch_pair_capacity`
 - Root-attribution telemetry is emitted in debug artifacts:
   - flat `node_root_*` counters in `state_snapshots.toml`
   - structured `node_roots` table in `diagnostics.toml`
@@ -34,6 +36,10 @@ This document is an execution checklist, not a roadmap narrative.
   - `scripts/aivm-mem-profile.sh`
   - `scripts/profile-parser-memory.sh`
   - `scripts/aivm-mem-audit-ci.sh`
+- Parser profiling gates node count, node high-water, and scratch-pair usage so
+  parser-result allocation regressions are caught before release.
+  Current `src/compiler/format.aos` baseline: `node_count=197`,
+  `node_high_water=527`, `scratch_pair_count=195`.
 - Dashboard currently reports Memory/GC pass in `Docs/AiVM-C-Parity-Status.md`.
 
 ## Production Strategy (Recommended)

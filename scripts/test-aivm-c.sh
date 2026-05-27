@@ -326,6 +326,14 @@ EOF
     echo "native debug memory smoke failed: expected node_high_water=${TMP_NATIVE_NODE_CAPACITY} in state_snapshots.toml" >&2
     exit 1
   fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_capacity" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_capacity in state_snapshots.toml" >&2
+    exit 1
+  fi
   if ! grep -q "node_gc_pressure_threshold_nodes" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
     echo "native debug memory smoke failed: gc pressure threshold missing in state_snapshots.toml" >&2
     exit 1
@@ -388,6 +396,14 @@ EOF
   fi
   if ! grep -q "node_high_water = ${TMP_NATIVE_NODE_CAPACITY}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
     echo "native debug memory smoke failed: expected node_high_water=${TMP_NATIVE_NODE_CAPACITY} in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_count=0 in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_capacity" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_capacity in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
   if ! grep -q "node_gc_allocations_since_gc = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
@@ -467,6 +483,10 @@ EOF
     echo "native debug success smoke failed: expected node_arena_pressure_count=0 in diagnostics.toml" >&2
     exit 1
   fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected scratch_pair_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
   if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
     echo "native debug success smoke failed: expected string_arena_pressure_count=0 in state_snapshots.toml" >&2
     exit 1
@@ -477,6 +497,10 @@ EOF
   fi
   if ! grep -q "node_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
     echo "native debug success smoke failed: expected node_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected scratch_pair_count=0 in state_snapshots.toml" >&2
     exit 1
   fi
   if ! grep -q "node_root_stack_slots" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then

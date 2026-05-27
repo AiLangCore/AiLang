@@ -138,6 +138,9 @@ Verified on 2026-05-27:
 - validation state now uses VM scratch pairs for the transient `(errors, ids)`
   compiler-analysis state while keeping public diagnostics and ID records as
   semantic nodes.
+- the AiLang tooling evaluator state now uses VM scratch pairs for the
+  transient `(value, env)` state while keeping values, closures, and
+  environments as semantic nodes.
 
 ### Scratch Result Requirement
 

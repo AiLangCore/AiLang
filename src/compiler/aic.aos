@@ -793,11 +793,8 @@ Program#aic_p1 {
     Fn#aic_f61(params=value,env) {
       Block#aic_b61 {
         Return#aic_r61 {
-          AppendChild#aic_ap61 {
-            AppendChild#aic_ap62 {
-              MakeBlock#aic_mb61 { Lit#aic_i61(value="state") }
-              Var#aic_v61(name=value)
-            }
+          MakePair#aic_ap61 {
+            Var#aic_v61(name=value)
             Var#aic_v62(name=env)
           }
         }
@@ -807,13 +804,13 @@ Program#aic_p1 {
 
   Let#aic_l62(name=stateValue) {
     Fn#aic_f62(params=state) {
-      Block#aic_b62 { Return#aic_r62 { ChildAt#aic_ca62 { Var#aic_v63(name=state) Lit#aic_i62(value=0) } } }
+      Block#aic_b62 { Return#aic_r62 { PairFirst#aic_ca62 { Var#aic_v63(name=state) } } }
     }
   }
 
   Let#aic_l63(name=stateEnv) {
     Fn#aic_f63(params=state) {
-      Block#aic_b63 { Return#aic_r63 { ChildAt#aic_ca63 { Var#aic_v64(name=state) Lit#aic_i63(value=1) } } }
+      Block#aic_b63 { Return#aic_r63 { PairSecond#aic_ca63 { Var#aic_v64(name=state) } } }
     }
   }
 

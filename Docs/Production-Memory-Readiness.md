@@ -36,10 +36,14 @@ This document is an execution checklist, not a roadmap narrative.
   - `scripts/aivm-mem-profile.sh`
   - `scripts/profile-parser-memory.sh`
   - `scripts/aivm-mem-audit-ci.sh`
-- Parser profiling gates node count, node high-water, and scratch-pair usage so
-  parser-result allocation regressions are caught before release.
+- Compiler memory profiling gates node count, node high-water, and scratch-pair
+  usage so parser/compiler allocation regressions are caught before release.
   Current `src/compiler/format.aos` baseline: `node_count=197`,
   `node_high_water=527`, `scratch_pair_count=195`.
+  Current `src/compiler/validate.aos` baseline: `node_count=1187`,
+  `node_high_water=1762`, `scratch_pair_count=1185`.
+  Current `src/compiler/aic.aos` baseline: `node_count=2679`,
+  `node_high_water=3220`, `scratch_pair_count=2677`.
 - Dashboard currently reports Memory/GC pass in `Docs/AiVM-C-Parity-Status.md`.
 
 ## Production Strategy (Recommended)
@@ -93,7 +97,7 @@ This document is an execution checklist, not a roadmap narrative.
 ## Immediate Next Tasks
 
 1. Reduce parser/compiler high-water allocation before raising VM node limits
-   again.
+   again, using `scripts/test-compiler-memory-profile.sh` as the release gate.
 2. Keep deterministic async/process cleanup stress coverage focused on
    cancel/fail paths in the release gate.
 3. Add process spawning/pipe-read workloads to the memory-growth audit target
@@ -103,11 +107,18 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Parser Memory Finding
 
-`scripts/profile-parser-memory.sh src/compiler/format.aos` is the current
-parser-memory gate. With token scratch strings, scratch-pair parser results,
-and the current AiVM return-boundary safe-point runtime, parsing `format.aos`
-reaches a high-water mark of `527` node slots and compacts to `197` live
-nodes, reclaiming `330` parser intermediates.
+`scripts/test-compiler-memory-profile.sh` is the current compiler-memory gate.
+It runs `scripts/profile-parser-memory.sh` against representative compiler
+sources with per-source budgets:
+
+- `src/compiler/format.aos`
+- `src/compiler/validate.aos`
+- `src/compiler/aic.aos`
+
+With token scratch strings, scratch-pair parser results, and the current AiVM
+return-boundary safe-point runtime, parsing `format.aos` reaches a high-water
+mark of `527` node slots and compacts to `197` live nodes, reclaiming `330`
+parser intermediates.
 
 The gate now fails when final retained parser nodes exceed the configured
 budget (`AILANG_PARSER_PROFILE_MAX_NODE_COUNT`, default `512`), when parser

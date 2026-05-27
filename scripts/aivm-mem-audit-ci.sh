@@ -28,6 +28,9 @@ targets=(
   "native_string_arena_source_stability.aos"
   "null_literal.aos"
   "vm_c_execute_src_quoted_numeric_string_literal.aos"
+  "vm_c_execute_src_process_syscalls_loop.aos"
+  "vm_c_execute_src_async_await_roundtrip.aos"
+  "vm_c_execute_src_par_join_cancel_roundtrip.aos"
 )
 
 mkdir -p "${REPORT_DIR}"

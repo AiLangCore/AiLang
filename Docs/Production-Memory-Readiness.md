@@ -90,8 +90,8 @@ This document is an execution checklist, not a roadmap narrative.
    again.
 2. Keep deterministic async/process cleanup stress coverage focused on
    cancel/fail paths in the release gate.
-3. Add process/syscall-heavy and async completion/cancel loops to the
-   memory-growth audit target set.
+3. Add process spawning/pipe-read workloads to the memory-growth audit target
+   set once those programs can run portably under `debug profile`.
 4. Keep release-gate assertions on debug bundle memory/root/kind-attribution telemetry fields.
 
 ## Parser Memory Finding
@@ -124,8 +124,18 @@ program. The current target set covers:
 - source string-arena stability
 - null literal/runtime value handling
 - quoted numeric string literal handling
+- process syscall loops
+- async task completion through `ASYNC_CALL`/`AWAIT`
+- parallel join/cancel cleanup through `PAR_BEGIN`/`PAR_FORK`/`PAR_JOIN`/`PAR_CANCEL`
 
 The gate writes per-target reports to `.tmp/aivm-mem-audit-ci/*.toml` and a
 tab-separated summary to `.tmp/aivm-mem-audit-ci/summary.tsv`. It honors
 `AIVM_LEAK_MAX_RSS_GROWTH_KB`, `AIVM_MEM_AUDIT_REPORT_DIR`,
 `AIVM_MEM_AUDIT_SUMMARY`, `AIVM_MEM_AUDIT_VM_MODE`, and `AIVM_C_SOURCE_DIR`.
+
+Verified on 2026-05-27:
+
+- process syscall loops, async task completion, and parallel join/cancel
+  cleanup targets are part of `scripts/aivm-mem-audit-ci.sh`.
+- direct process spawning and pipe-read loops remain deferred until a portable
+  profile-safe fixture exists for macOS, Linux, and Windows.

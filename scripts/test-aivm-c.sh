@@ -31,6 +31,10 @@ else
   ctest --test-dir "${BUILD_DIR}" --output-on-failure -LE wasm
 fi
 
+if [[ "${AIVM_RUN_DEBUG_MEMORY_SMOKE:-1}" == "1" ]]; then
+  bash "${AIVM_C_SOURCE_DIR}/tests/ctest_debug_memory_smoke.sh" "${ROOT_DIR}"
+fi
+
 if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
   AILANG_HELP_TEXT="$("${ROOT_DIR}/tools/ailang" 2>&1 || true)"
   AILANG_HAS_BUILD=0

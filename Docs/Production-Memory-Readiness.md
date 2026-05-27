@@ -92,7 +92,8 @@ This document is an execution checklist, not a roadmap narrative.
    cancel/fail paths in the release gate.
 3. Add process spawning/pipe-read workloads to the memory-growth audit target
    set once those programs can run portably under `debug profile`.
-4. Keep release-gate assertions on debug bundle memory/root/kind-attribution telemetry fields.
+4. Add parser/compiler scratch arenas for tokenization, parse construction, and
+   compiler analysis passes.
 
 ## Parser Memory Finding
 
@@ -139,3 +140,6 @@ Verified on 2026-05-27:
   cleanup targets are part of `scripts/aivm-mem-audit-ci.sh`.
 - direct process spawning and pipe-read loops remain deferred until a portable
   profile-safe fixture exists for macOS, Linux, and Windows.
+- debug bundle telemetry for memory pressure counters, root attribution, and
+  node-kind attribution is asserted by the release gate through AiVM's debug
+  memory smoke test.

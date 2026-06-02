@@ -8,7 +8,7 @@ Program#p1 {
               Var#v7(name=node)
               Call#v8(target=makeState) {
                 MakeBlock#v9 { Lit#v10(value="errs") }
-                MakeBlock#v11 { Lit#v12(value="ids") }
+                Lit#v12(value="\n")
               }
             }
           }
@@ -25,7 +25,7 @@ Program#p1 {
 
   Let#s7(name=makeIds) {
     Fn#s8(params=seed) {
-      Block#s9 { Return#s10 { MakeBlock#s11 { Var#s12(name=seed) } } }
+      Block#s9 { Return#s10 { Var#s12(name=seed) } }
     }
   }
 
@@ -597,15 +597,22 @@ Program#p1 {
     Fn#h261(params=ids,id,index) {
       Block#h262 {
         If#h263 {
-          Eq#h264 { Var#h265(name=index) ChildCount#h266 { Var#h267(name=ids) } }
-          Block#h268 { Return#h269 { Lit#h270(value=false) } }
-          Block#h271 {
-            If#h272 {
-              Eq#h273 { Call#h274(target=litValue) { ChildAt#h275 { Var#h276(name=ids) Var#h277(name=index) } } Var#h278(name=id) }
-              Block#h279 { Return#h280 { Lit#h281(value=true) } }
-              Block#h282 { Return#h283 { Call#h284(target=idExists) { Var#h285(name=ids) Var#h286(name=id) Add#h287 { Var#h288(name=index) Lit#h289(value=1) } } } }
+          Eq#h264 {
+            StringFind#h265 {
+              Var#h266(name=ids)
+              StrConcat#h267 {
+                StrConcat#h268 {
+                  Lit#h269(value="\n")
+                  Var#h270(name=id)
+                }
+                Lit#h271(value="\n")
+              }
+              Lit#h272(value=0)
             }
+            Lit#h273(value=-1)
           }
+          Block#h274 { Return#h275 { Lit#h276(value=false) } }
+          Block#h277 { Return#h278 { Lit#h279(value=true) } }
         }
       }
     }
@@ -643,9 +650,15 @@ Program#p1 {
   Let#h330(name=addId) {
     Fn#h331(params=ids,id) {
       Block#h332 {
-        Let#h333(name=index) { ChildCount#h334 { Var#h335(name=ids) } }
-        Let#h336(name=litId) { StrConcat#h337 { Lit#h338(value="id-") ToString#h339 { Var#h340(name=index) } } }
-        Return#h341 { AppendChild#h342 { Var#h343(name=ids) MakeLitString#h344 { Var#h345(name=litId) Var#h346(name=id) } } }
+        Return#h341 {
+          StrConcat#h342 {
+            StrConcat#h343 {
+              Var#h344(name=ids)
+              Var#h345(name=id)
+            }
+            Lit#h346(value="\n")
+          }
+        }
       }
     }
   }

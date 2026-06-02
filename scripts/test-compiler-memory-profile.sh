@@ -18,7 +18,7 @@ run_profile() {
 }
 
 run_profile "src/compiler/format.aos" 512 768 256
-run_profile "src/compiler/validate.aos" 1300 1900 1300
+run_profile "src/compiler/validate.aos" 1200 1800 1200
 run_profile "src/compiler/aic.aos" 3000 3600 3000
 
 echo "compiler-memory-profile: PASS"

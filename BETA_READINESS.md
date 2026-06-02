@@ -53,6 +53,10 @@ Verified on 2026-06-02:
   install smokes for exact-version and beta-channel installs.
 - AiVectra release run `26543518915` completed successfully, including SDK
   packaging and GitHub release publication.
+- AiVM `develop` now runs `AIVM_OP_ASYNC_CALL` bytecode on an isolated native
+  worker thread. `AWAIT` joins pending bytecode workers deterministically and
+  copies void/null/bool/int/string/bytes values, node graphs, and scratch pairs
+  back into the parent VM without sharing mutable semantic heaps.
 
 ## Required Gates
 
@@ -182,6 +186,10 @@ Verified on 2026-05-20:
   worker-local heap state, and compiler-analysis memory gates now cover
   validation and parser analysis paths. Full `aic.aos` analysis is available as
   an explicit stress check.
+- [x] Return to AiVM worker readiness: background bytecode execution now runs
+  in isolated native worker threads with deterministic `AWAIT` handoff and
+  frozen result copying for scalar, string/bytes, node graph, and scratch-pair
+  values.
 - [ ] Keep package work limited to bug fixes and explicit beta blockers unless
   one of the deferred package items is promoted to a release requirement.
 

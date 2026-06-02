@@ -80,17 +80,19 @@ Program#p1 {
   Let#u47(name=validateChildren) {
     Fn#u48(params=node,state,index) {
       Block#u49 {
-        If#u50 {
-          Eq#u51 { Var#u52(name=index) ChildCount#u53 { Var#u54(name=node) } }
-          Block#u55 { Var#u57(name=state) }
-          Block#u58 {
-            Call#u60(target=validateChildren) {
-              Var#u61(name=node)
-              Call#u62(target=validateNode) {
-                ChildAt#u63 { Var#u64(name=node) Var#u65(name=index) }
-                Var#u66(name=state)
+        Return#u70 {
+          If#u50 {
+            Eq#u51 { Var#u52(name=index) ChildCount#u53 { Var#u54(name=node) } }
+            Block#u55 { Var#u57(name=state) }
+            Block#u58 {
+              Call#u60(target=validateChildren) {
+                Var#u61(name=node)
+                Call#u62(target=validateNode) {
+                  ChildAt#u63 { Var#u64(name=node) Var#u65(name=index) }
+                  Var#u66(name=state)
+                }
+                Add#u67 { Var#u68(name=index) Lit#u69(value=1) }
               }
-              Add#u67 { Var#u68(name=index) Lit#u69(value=1) }
             }
           }
         }

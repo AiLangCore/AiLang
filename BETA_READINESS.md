@@ -10,7 +10,7 @@ layers.
 
 ## Current Beta Release
 
-- AiLang: `v0.0.1-beta.7`
+- AiLang: `v0.0.1-beta.8`
 - AiVM: `v0.0.1-beta.2`
 - AiVectra: `v0.0.1-beta.2`
 
@@ -40,6 +40,19 @@ Verified on 2026-05-27:
   AiVectra `v0.0.1-beta.2`.
 - Local release gates passed before tagging: AiVM `./test-aivm-c.sh`, AiLang
   `./test.sh`, and AiVectra `./scripts/test-all.sh`.
+
+Verified on 2026-06-02:
+
+- AiLang `v0.0.1-beta.8` is the current public SDK beta. It points at the same
+  release content as `v0.0.1-beta.7` and supersedes it as the successful
+  published GitHub release.
+- AiLang `v0.0.1-beta.8`, AiVM `v0.0.1-beta.2`, and AiVectra
+  `v0.0.1-beta.2` are GitHub prereleases with uploaded assets.
+- AiLang Toolkit Release run `26592173417` completed successfully, including
+  Linux, macOS, Windows, WASM package jobs, GitHub release publication, and
+  install smokes for exact-version and beta-channel installs.
+- AiVectra release run `26543518915` completed successfully, including SDK
+  packaging and GitHub release publication.
 
 ## Required Gates
 

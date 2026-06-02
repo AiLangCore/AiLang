@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.8] - 2026-05-28
+
+### Notes
+
+- Supersedes `0.0.1-beta.7` as the successful public GitHub release for the
+  same SDK content after release workflow publication was corrected.
+
 ## [0.0.1-beta.7] - 2026-05-27
 
 ### Added

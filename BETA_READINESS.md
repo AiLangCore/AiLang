@@ -179,8 +179,7 @@ Verified on 2026-05-20:
 - [x] Return to AiVM production readiness: deterministic library migration for
   `sys.str.*`, `sys.bytes.*`, and deterministic crypto helpers.
 - [ ] Return to AiVM memory readiness: continue later compiler-analysis scratch
-  storage, worker-local heap execution paths, and immutable message payload
-  validation at deterministic queue boundaries.
+  storage and worker-local heap execution paths.
 - [ ] Keep package work limited to bug fixes and explicit beta blockers unless
   one of the deferred package items is promoted to a release requirement.
 

@@ -131,6 +131,8 @@ jobs:
         shell: bash
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           set -euo pipefail
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
@@ -141,6 +143,8 @@ jobs:
         shell: pwsh
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
@@ -282,6 +286,8 @@ jobs:
         shell: bash
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           set -euo pipefail
           AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
@@ -293,6 +299,8 @@ jobs:
         shell: pwsh
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'

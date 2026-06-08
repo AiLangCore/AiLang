@@ -35,6 +35,14 @@ esac
 
 TARGET_PLATFORM="${AILANG_NATIVE_PLATFORM:-${HOST_PLATFORM}}"
 TARGET_ARCH="${AILANG_NATIVE_ARCH:-${HOST_ARCH}}"
+AILANG_DETECTED_TAG="$(git -C "${ROOT_DIR}" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+AILANG_DETECTED_VERSION="${AILANG_DETECTED_TAG#v}"
+AILANG_PROJECT_VERSION="$(sed -n 's/.*version="\([^"]*\)".*/\1/p' "${ROOT_DIR}/project.aiproj" | head -n 1)"
+AILANG_BUILD_VERSION="${AILANG_BUILD_VERSION:-${AILANG_DETECTED_VERSION:-${AILANG_PROJECT_VERSION}}}"
+AILANG_BUILD_VERSION="${AILANG_BUILD_VERSION:-local}"
+AILANG_BUILD_CHANNEL="${AILANG_BUILD_CHANNEL:-local}"
+AILANG_BUILD_COMMIT="${AILANG_BUILD_COMMIT:-$(git -C "${ROOT_DIR}" rev-parse --short=12 HEAD 2>/dev/null || true)}"
+AILANG_BUILD_COMMIT="${AILANG_BUILD_COMMIT:-unknown}"
 
 if [[ "${TARGET_PLATFORM}" != "osx" && "${TARGET_PLATFORM}" != "linux" && "${TARGET_PLATFORM}" != "windows" ]]; then
   echo "unsupported AILANG_NATIVE_PLATFORM: ${TARGET_PLATFORM}" >&2
@@ -114,7 +122,14 @@ COMMON_SOURCES=(
   "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c"
 )
 
+BUILD_METADATA_DEFINES=(
+  "-DAILANG_BUILD_VERSION=\"${AILANG_BUILD_VERSION}\""
+  "-DAILANG_BUILD_CHANNEL=\"${AILANG_BUILD_CHANNEL}\""
+  "-DAILANG_BUILD_COMMIT=\"${AILANG_BUILD_COMMIT}\""
+)
+
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
+  "${BUILD_METADATA_DEFINES[@]}" \
   -I "${NATIVE_INCLUDE}" \
   -I "${NATIVE_SRC_DIR}/ailang_cli" \
   "${COMMON_SOURCES[@]}" \
@@ -123,6 +138,7 @@ COMMON_SOURCES=(
 chmod +x "${WRAPPER_PATH}"
 
 "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
+  "${BUILD_METADATA_DEFINES[@]}" \
   -I "${NATIVE_INCLUDE}" \
   -I "${NATIVE_SRC_DIR}/ailang_cli" \
   "${COMMON_SOURCES[@]}" \

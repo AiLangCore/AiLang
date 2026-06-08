@@ -253,9 +253,27 @@ write_shim ailang ailang
 write_shim aivm aivm
 write_shim aivectra aivectra
 
+SOURCE_AILANG_VERSION="$("${AILANG_DIR}/tools/ailang" --version)"
+STAGED_AILANG_VERSION="$("${SDK_ROOT}/bin/ailang" --version)"
+if [[ "${SOURCE_AILANG_VERSION}" != "${STAGED_AILANG_VERSION}" ]]; then
+  echo "error: staged ailang version does not match rebuilt source tool" >&2
+  echo "source: ${SOURCE_AILANG_VERSION}" >&2
+  echo "staged: ${STAGED_AILANG_VERSION}" >&2
+  exit 1
+fi
+
+STAGED_AIVM_VERSION="missing"
+if [[ -x "${SDK_ROOT}/bin/aivm" ]]; then
+  STAGED_AIVM_VERSION="$("${SDK_ROOT}/bin/aivm" --version)"
+fi
+
 cat <<EOF
 Updated local AiLangCore toolchain:
   ${SDK_ROOT}
+
+Staged tools:
+  ${STAGED_AILANG_VERSION}
+  ${STAGED_AIVM_VERSION}
 
 Add this to PATH:
   export PATH="${INSTALL_ROOT}/bin:\$PATH"

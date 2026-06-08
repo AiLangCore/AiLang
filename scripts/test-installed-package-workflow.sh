@@ -87,7 +87,21 @@ AILANG_SOURCE
 
 ailang package restore "${TEMPLATE_DIR}"
 ailang package list "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-package-list.txt"
-grep -q 'aivectra' "${TMP_ROOT}/template-package-list.txt"
+if ! grep -q 'aivectra' "${TMP_ROOT}/template-package-list.txt"; then
+  echo "aivectra missing from package list" >&2
+  cat "${TMP_ROOT}/template-package-list.txt" >&2 || true
+  exit 1
+fi
+if ! grep -q 'std-app' "${TMP_ROOT}/template-package-list.txt"; then
+  echo "std-app transitive dependency missing from package list" >&2
+  cat "${TMP_ROOT}/template-package-list.txt" >&2 || true
+  exit 1
+fi
+if ! grep -q 'namespaces=std.app' "${TMP_ROOT}/template-package-list.txt"; then
+  echo "std-app namespace missing from package list" >&2
+  cat "${TMP_ROOT}/template-package-list.txt" >&2 || true
+  exit 1
+fi
 ailang template list projects "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-projects.txt"
 grep -q 'aivectra/hello-name' "${TMP_ROOT}/template-projects.txt"
 ailang template list files "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-files.txt"

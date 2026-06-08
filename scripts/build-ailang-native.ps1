@@ -21,6 +21,30 @@ if ($targetArch -ne 'x64' -and $targetArch -ne 'arm64') {
   throw "unsupported AILANG_NATIVE_ARCH: $targetArch"
 }
 
+$projectText = Get-Content -Raw (Join-Path $root 'project.aiproj')
+$projectVersion = if ($projectText -match 'version="([^"]+)"') { $Matches[1] } else { 'local' }
+$detectedTag = ''
+try {
+  $detectedTag = (& git -C $root describe --tags --abbrev=0 --match 'v[0-9]*' 2>$null).Trim()
+} catch {
+  $detectedTag = ''
+}
+$detectedVersion = if ($detectedTag.StartsWith('v')) { $detectedTag.Substring(1) } else { $detectedTag }
+$buildVersion = if ($env:AILANG_BUILD_VERSION) {
+  $env:AILANG_BUILD_VERSION
+} elseif ($detectedVersion) {
+  $detectedVersion
+} else {
+  $projectVersion
+}
+$buildChannel = if ($env:AILANG_BUILD_CHANNEL) { $env:AILANG_BUILD_CHANNEL } else { 'local' }
+$buildCommit = if ($env:AILANG_BUILD_COMMIT) {
+  $env:AILANG_BUILD_COMMIT
+} else {
+  try { (& git -C $root rev-parse --short=12 HEAD 2>$null).Trim() } catch { 'unknown' }
+}
+if (-not $buildCommit) { $buildCommit = 'unknown' }
+
 $outDir = Join-Path $root ".artifacts\ailang-windows-$targetArch"
 $wrapperPath = Join-Path $outDir 'ailang.exe'
 $runtimePath = Join-Path $outDir 'aivm-runtime.exe'
@@ -57,6 +81,9 @@ $commonArgs = @(
   '/std:c11',
   '/D_CRT_SECURE_NO_WARNINGS',
   '/DAIRUN_UI_HOST_EXTERNAL=1',
+  "/DAILANG_BUILD_VERSION=`"$buildVersion`"",
+  "/DAILANG_BUILD_CHANNEL=`"$buildChannel`"",
+  "/DAILANG_BUILD_COMMIT=`"$buildCommit`"",
   "/I$nativeInclude",
   "/I$(Join-Path $nativeSrc 'ailang_cli')"
 )

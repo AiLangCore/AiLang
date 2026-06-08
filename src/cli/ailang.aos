@@ -127,7 +127,7 @@ Program#cli_p1 {
   Let#cli_l21(name=runVersion) {
     Fn#cli_f21(params=_) {
       Block#cli_b41 {
-        Call#cli_c22(target=sys.stdout.writeLine) { Lit#cli_i33(value="ailang 0.0.1") }
+        Call#cli_c22(target=sys.stdout.writeLine) { Lit#cli_i33(value="ailang 0.0.1-beta.9") }
         Return#cli_r31 { Lit#cli_i34(value=0) }
       }
     }

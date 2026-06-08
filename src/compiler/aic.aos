@@ -1,4 +1,7 @@
 Program#aic_p1 {
+  Import#aic_im_parse(path="parser.aos")
+  Import#aic_im_fmt(path="format.aos")
+  Import#aic_im_val(path="validate.aos")
   Export#aic_e0(name=main)
 
   Let#aic_l1(name=main) {
@@ -682,6 +685,54 @@ Program#aic_p1 {
           Block#aic_b30c { Call#aic_c31b(target=io.write) { Call#aic_c32b(target=compiler.format) { Var#aic_v30d(name=parsed) } } }
         }
         Return#aic_r30
+      }
+    }
+  }
+
+  Let#aic_l30ids(name=compiler.formatIds) {
+    Fn#aic_f30ids(params=node) {
+      Block#aic_b30ids {
+        Return#aic_r30ids { Call#aic_c30ids(target=compiler.format) { Var#aic_v30ids(name=node) } }
+      }
+    }
+  }
+
+  Let#aic_l30fmt(name=compiler.format) {
+    Fn#aic_f30fmt(params=node) {
+      Block#aic_b30fmt {
+        Return#aic_r30fmt { Call#aic_c30fmt(target=format) { Var#aic_v30fmt(name=node) } }
+      }
+    }
+  }
+
+  Let#aic_l20parse(name=compiler.parse) {
+    Fn#aic_f20parse(params=text) {
+      Block#aic_b20parse {
+        Return#aic_r20parse { Call#aic_c20parse(target=parse.parseNode) { Var#aic_v20parse(name=text) } }
+      }
+    }
+  }
+
+  Let#aic_l40val(name=compiler.validate) {
+    Fn#aic_f40val(params=node) {
+      Block#aic_b40val {
+        Return#aic_r40val { Call#aic_c40val(target=validate) { Var#aic_v40val(name=node) } }
+      }
+    }
+  }
+
+  Let#aic_l40valh(name=compiler.validateHost) {
+    Fn#aic_f40valh(params=node) {
+      Block#aic_b40valh {
+        Return#aic_r40valh { Call#aic_c40valh(target=validate) { Var#aic_v40valh(name=node) } }
+      }
+    }
+  }
+
+  Let#aic_l50run(name=compiler.run) {
+    Fn#aic_f50run(params=node) {
+      Block#aic_b50run {
+        Return#aic_r50run { Call#aic_c50run(target=stateValue) { Call#aic_c50run2(target=evalNode) { Var#aic_v50run(name=node) Env#aic_env50run } } }
       }
     }
   }

@@ -102,6 +102,8 @@ Program#p1 {
 ailang package restore $templateDir
 $templatePackageList = (ailang package list $templateDir) -join "`n"
 if ($templatePackageList -notmatch 'aivectra') { throw 'aivectra missing from package list' }
+if ($templatePackageList -notmatch 'std-app') { throw 'std-app transitive dependency missing from package list' }
+if ($templatePackageList -notmatch 'namespaces=std\.app') { throw 'std-app namespace missing from package list' }
 $projectTemplates = (ailang template list projects $templateDir) -join "`n"
 if ($projectTemplates -notmatch 'aivectra/hello-name') { throw 'aivectra project template missing' }
 $fileTemplates = (ailang template list files $templateDir) -join "`n"

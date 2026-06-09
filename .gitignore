@@ -73,6 +73,7 @@ out/
 .temp/
 .cache/
 *.local.*
+config.local.toml
 scripts/qemu-lab.env
 
 ############################################

@@ -105,7 +105,37 @@ Program#stdlib_behavior_math_p1 {
             Call#stdlib_behavior_math_c8(target=negate) { Lit#stdlib_behavior_math_i7(value=-12) }
           }
         }
-        Return#stdlib_behavior_math_r1 { Lit#stdlib_behavior_math_i8(value=0) }
+        Call#stdlib_behavior_math_c9(target=io.print) {
+          ToString#stdlib_behavior_math_t5 {
+            Call#stdlib_behavior_math_c10(target=lt) { Lit#stdlib_behavior_math_i8(value=-2) Lit#stdlib_behavior_math_i9(value=1) }
+          }
+        }
+        Call#stdlib_behavior_math_c11(target=io.print) {
+          ToString#stdlib_behavior_math_t6 {
+            Call#stdlib_behavior_math_c12(target=lte) { Lit#stdlib_behavior_math_i10(value=3) Lit#stdlib_behavior_math_i11(value=3) }
+          }
+        }
+        Call#stdlib_behavior_math_c13(target=io.print) {
+          ToString#stdlib_behavior_math_t7 {
+            Call#stdlib_behavior_math_c14(target=gte) { Lit#stdlib_behavior_math_i12(value=9) Lit#stdlib_behavior_math_i13(value=4) }
+          }
+        }
+        Call#stdlib_behavior_math_c15(target=io.print) {
+          ToString#stdlib_behavior_math_t8 {
+            Call#stdlib_behavior_math_c16(target=abs) { Lit#stdlib_behavior_math_i14(value=-8) }
+          }
+        }
+        Call#stdlib_behavior_math_c17(target=io.print) {
+          ToString#stdlib_behavior_math_t9 {
+            Call#stdlib_behavior_math_c18(target=halfFloor) { Lit#stdlib_behavior_math_i15(value=9) Lit#stdlib_behavior_math_i16(value=0) }
+          }
+        }
+        Call#stdlib_behavior_math_c19(target=io.print) {
+          ToString#stdlib_behavior_math_t10 {
+            Call#stdlib_behavior_math_c20(target=subAbs) { Lit#stdlib_behavior_math_i17(value=3) Lit#stdlib_behavior_math_i18(value=10) }
+          }
+        }
+        Return#stdlib_behavior_math_r1 { Lit#stdlib_behavior_math_i19(value=0) }
       }
     }
   }
@@ -539,6 +569,12 @@ MATH_EXPECTED='5
 -7
 -12
 12
+true
+true
+true
+8
+4
+7
 Ok#ok1(type=int value=0)'
 
 if [[ "${MATH_OUT}" != "${MATH_EXPECTED}" ]]; then

@@ -5,7 +5,7 @@ src/std/str.aos	concat,substring,remove,find,fromCodePoint,decodeUnicodeHex4,dec
 src/std/bytes.aos	bytes.length,bytes.at,bytes.slice,bytes.concat,bytes.fromBase64,bytes.toBase64,bytes.toUtf8String,bytes.fromUtf8String
 src/std/null.aos	value,isNull,isNotNull,coalesce
 src/std/number.aos	zero,one,add,inc,dec,sub,mul,equals,isZero,isNegative,isPositive,isNonNegative,lt,lte,gt,gte,toString,negate,abs,sign,min,max,clamp,betweenInclusive,digitValue,isWholeString,parseWholeOr,isSignedWholeString,isNumberString,parseNumberOr
-src/std/math.aos	add,sub,mul,negate
+src/std/math.aos	abs,add,gte,halfFloor,lt,lte,mul,negate,sub,subAbs
 src/std/system.aos	platform,arch,osVersion,runtime,openDefault,openUrl
 src/std/process.aos	args,cwd,envGet,spawn,wait,poll,kill,stdoutRead,stderrRead,exit
 src/std/fs.aos	fileRead,fileWrite,fileExists,fileDelete,dirCreate,dirList,dirDelete,pathExists,pathStat

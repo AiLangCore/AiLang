@@ -52,8 +52,105 @@ Program#std_math_p1 {
     }
   }
 
+  Let#std_math_l5(name=lt) {
+    Fn#std_math_f5(params=a,b) {
+      Block#std_math_b5 {
+        Return#std_math_r5 {
+          Call#std_math_c5(target=lt) {
+            Var#std_math_v8(name=a)
+            Var#std_math_v9(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l6(name=lte) {
+    Fn#std_math_f6(params=a,b) {
+      Block#std_math_b6 {
+        Return#std_math_r6 {
+          Call#std_math_c6(target=lte) {
+            Var#std_math_v10(name=a)
+            Var#std_math_v11(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l7(name=gte) {
+    Fn#std_math_f7(params=a,b) {
+      Block#std_math_b7 {
+        Return#std_math_r7 {
+          Call#std_math_c7(target=gte) {
+            Var#std_math_v12(name=a)
+            Var#std_math_v13(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l8(name=abs) {
+    Fn#std_math_f8(params=value) {
+      Block#std_math_b8 {
+        Return#std_math_r8 {
+          Call#std_math_c8(target=abs) {
+            Var#std_math_v14(name=value)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l9(name=halfFloor) {
+    Fn#std_math_f9(params=value,acc) {
+      Block#std_math_b9 {
+        If#std_math_if1 {
+          Eq#std_math_eq1 { Var#std_math_v15(name=value) Lit#std_math_i1(value=0) }
+          Block#std_math_b10 { Return#std_math_r9 { Var#std_math_v16(name=acc) } }
+          Block#std_math_b11 {
+            If#std_math_if2 {
+              Eq#std_math_eq2 { Var#std_math_v17(name=value) Lit#std_math_i2(value=1) }
+              Block#std_math_b12 { Return#std_math_r10 { Var#std_math_v18(name=acc) } }
+              Block#std_math_b13 {
+                Return#std_math_r11 {
+                  Call#std_math_c9(target=halfFloor) {
+                    Add#std_math_a1 { Var#std_math_v19(name=value) Lit#std_math_i3(value=-2) }
+                    Add#std_math_a2 { Var#std_math_v20(name=acc) Lit#std_math_i4(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l10(name=subAbs) {
+    Fn#std_math_f10(params=a,b) {
+      Block#std_math_b14 {
+        Return#std_math_r12 {
+          Call#std_math_c10(target=abs) {
+            Call#std_math_c11(target=sub) {
+              Var#std_math_v21(name=a)
+              Var#std_math_v22(name=b)
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#std_math_e1(name=add)
   Export#std_math_e2(name=sub)
   Export#std_math_e3(name=mul)
   Export#std_math_e4(name=negate)
+  Export#std_math_e5(name=lt)
+  Export#std_math_e6(name=lte)
+  Export#std_math_e7(name=gte)
+  Export#std_math_e8(name=abs)
+  Export#std_math_e9(name=halfFloor)
+  Export#std_math_e10(name=subAbs)
 }

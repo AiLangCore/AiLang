@@ -14,6 +14,20 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - Human verification is exception-only. If agents repeatedly need a human to confirm what the runtime or UI shows, treat that as a tooling gap to be closed.
 - Agent-visible debug artifacts should match user-visible reality under the same build, runtime, input, and target conditions.
 
+## Module Discipline
+
+- Agents must prefer creating focused semantic `.aos` modules over expanding
+  large facade, host, runtime, CLI, or sample files. Do not create or continue
+  "blob" files.
+- Host/runtime changes must remain mechanical and must not introduce language,
+  library, UI, package, parsing, validation, formatting, or application
+  semantics. Deterministic semantic behavior belongs in AiLang `.aos` modules,
+  specs, or packages.
+- Keep entry/facade files thin. When a file owns several concepts, split by
+  semantic ownership before adding more behavior.
+- Native/bootstrap code in this repository is temporary or boundary code only;
+  do not grow it with behavior that can be expressed in AiLang.
+
 ## Non-negotiable constraints
 
 - NO external libraries or NuGet packages.

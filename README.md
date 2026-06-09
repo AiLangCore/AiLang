@@ -6,7 +6,8 @@ AiLang is an AI-first language/runtime project using AI-Optimized Syntax (AOS) a
 
 This root README is human-oriented.
 For agent-focused operating docs, use `Docs/README.md`.
-For the AiVM repository extraction workflow, use `Docs/AiVM-Repo-Split.md`.
+For the archived AiVM repository extraction workflow, use
+`Docs/Archive/2026-beta/AiVM-Repo-Split.md`.
 For contributor setup and verification, use [CONTRIBUTING.md](CONTRIBUTING.md).
 For curated public examples, use
 [AiLangCore/ailang-examples](https://github.com/AiLangCore/ailang-examples).

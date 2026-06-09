@@ -1,7 +1,7 @@
 # Stdlib Production Tasks
 
 This branch exists to turn the baseline in
-`Docs/Launch-Stdlib-0.0.1.md` into an enforced repo contract.
+`Docs/Archive/2026-beta/Launch-Stdlib-0.0.1.md` into an enforced repo contract.
 
 ## Phase 1: Namespace cleanup
 

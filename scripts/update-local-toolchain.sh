@@ -109,6 +109,23 @@ ROOT="\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)"
 find_project_toolchain() {
   dir="\$(pwd)"
   while :; do
+    if [ -f "\$dir/config.local.toml" ]; then
+      selected="\$(awk '
+        /^[[:space:]]*\[toolchain\][[:space:]]*$/ { in_toolchain = 1; next }
+        /^[[:space:]]*\[/ { in_toolchain = 0 }
+        in_toolchain && /^[[:space:]]*version[[:space:]]*=/ {
+          value = \$0
+          sub(/^[^=]*=[[:space:]]*/, "", value)
+          gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", value)
+          print value
+          exit
+        }
+      ' "\$dir/config.local.toml")"
+      if [ -n "\$selected" ]; then
+        printf '%s\n' "\$selected"
+        return 0
+      fi
+    fi
     if [ -f "\$dir/ailang-toolchain.toml" ]; then
       sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "\$dir/ailang-toolchain.toml" | head -n 1
       return 0
@@ -194,7 +211,11 @@ copy_if_exists "${AILANG_DIR}/Docs" "${TMP_ROOT}/sdk/AiLangDocs"
 
 if [[ "${BUILD_WASM}" == "1" || ( "${BUILD_WASM}" == "auto" && -n "$(command -v emcc || true)" ) ]]; then
   echo "building AiLang wasm runtime artifacts..."
-  (cd "${AILANG_DIR}" && ./build.sh wasm)
+  if [[ -d "${AIVM_DIR}/native" ]]; then
+    (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/native" ./build.sh wasm)
+  else
+    (cd "${AILANG_DIR}" && ./build.sh wasm)
+  fi
   mkdir -p "${TMP_ROOT}/.artifacts/aivm-wasm32"
   copy_if_exists "${AILANG_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm" "${TMP_ROOT}/.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm"
   copy_if_exists "${AILANG_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm" "${TMP_ROOT}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"

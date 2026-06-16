@@ -167,14 +167,15 @@ export default async function createRuntime() {
     },
     print: null,
     printErr: null,
-    callMain(argv) {
-      globalThis.__aivmCallMainArgv = argv.slice();
+    async ccall(name, returnType, argTypes, args, options) {
+      globalThis.__aivmCcall = { name, returnType, argTypes, args, options };
       if (typeof this.print === "function") {
         this.print("main-ok");
       }
       if (typeof this.printErr === "function") {
         this.printErr("main-err");
       }
+      return 0;
     }
   };
 }
@@ -281,10 +282,13 @@ if (!globalThis.__aivmWriteFile ||
     globalThis.__aivmWriteFile.size <= 0) {
   throw new Error('runtime writeFile wiring mismatch');
 }
-if (!globalThis.__aivmCallMainArgv ||
-    globalThis.__aivmCallMainArgv.length !== 1 ||
-    globalThis.__aivmCallMainArgv[0] !== '/app.aibc1') {
-  throw new Error('runtime callMain argv mismatch');
+if (!globalThis.__aivmCcall ||
+    globalThis.__aivmCcall.name !== 'aivm_web_run_app' ||
+    globalThis.__aivmCcall.returnType !== 'number' ||
+    globalThis.__aivmCcall.argTypes.length !== 0 ||
+    globalThis.__aivmCcall.args.length !== 0 ||
+    globalThis.__aivmCcall.options?.async !== true) {
+  throw new Error('runtime ccall wiring mismatch');
 }
 if (!logs.includes('main-ok')) {
   throw new Error('runtime print mirror mismatch');
@@ -324,7 +328,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -448,6 +452,17 @@ globalThis.document = {
     return id === 'output' ? outputNode : null;
   },
   createElement(tag) {
+    if (String(tag) === 'canvas') {
+      return {
+        getContext(kind) {
+          if (kind !== '2d') return null;
+          return {
+            font: '',
+            measureText(text) { return { width: String(text ?? '').length * 7.25 }; }
+          };
+        }
+      };
+    }
     return makeNode(tag);
   },
   createElementNS(_ns, tag) {
@@ -482,6 +497,7 @@ if (globalThis.__aivmUiGetWindowWidth(999) !== -1 || globalThis.__aivmUiGetWindo
 if (globalThis.__aivmUiBeginFrame(999) !== -1 ||
     globalThis.__aivmUiDrawRect(999, 0, 0, 1, 1, '#000') !== -1 ||
     globalThis.__aivmUiDrawText(999, 0, 0, 'x', '#000', 12) !== -1 ||
+    globalThis.__aivmUiMeasureText(999, 'x', 12) !== -1 ||
     globalThis.__aivmUiDrawLine(999, 0, 0, 1, 1, '#000', 1) !== -1 ||
     globalThis.__aivmUiDrawEllipse(999, 0, 0, 2, 2, '#000') !== -1 ||
     globalThis.__aivmUiDrawPath(999, 'M0 0 L1 1', '#000', 1) !== -1 ||
@@ -515,6 +531,9 @@ if (globalThis.__aivmUiCreateWindow(0, 'bad', 100, 50) !== -1 ||
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');
 }
+if (globalThis.__aivmUiMeasureText(1, 'abcd', 12) !== 29) {
+  throw new Error('ui measureText result mismatch');
+}
 if (globalThis.__aivmUiCreateWindow(1, 'T-duplicate', 200, 120) !== 0) {
   throw new Error('ui duplicate createWindow should be deterministic success');
 }
@@ -525,6 +544,7 @@ if (body.children.length < 1 || body.children[0].children.length < 2) {
   throw new Error('ui createWindow did not create expected host/svg structure');
 }
 const svg = body.children[0].children[1];
+const host = body.children[0];
 if (typeof svg.listenerCount !== 'function' || typeof svg.emit !== 'function') {
   throw new Error('ui test harness node is missing listener inspection hooks');
 }
@@ -559,6 +579,7 @@ if (globalThis.__aivmUiPollEventType(1) !== 0 ||
     globalThis.__aivmUiPollEventRepeat(1) !== 0) {
   throw new Error('ui repeated none-event polling should remain deterministic');
 }
+host.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
 svg.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
 if (globalThis.window.emit('resize', {}) !== 1) {
   throw new Error('ui resize listener dispatch mismatch');
@@ -571,10 +592,10 @@ if (resizedW !== 121 || resizedH !== 76) {
 if (svg.listenerCount('pointerdown') !== 1 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
   throw new Error('ui pointer-first listener registration mismatch');
 }
-if (svg.listenerCount('keydown') !== 1 || svg.listenerCount('keyup') !== 1) {
+if (svg.listenerCount('keydown') !== 1 || svg.listenerCount('keyup') !== 0) {
   throw new Error('ui key listener registration mismatch');
 }
-if (svg.emit('pointerdown', { offsetX: 7, offsetY: 9, target: { getAttribute: () => 'p0' } }) !== 1) {
+if (svg.emit('pointerdown', { clientX: 7, clientY: 9, target: { getAttribute: () => 'p0' } }) !== 1) {
   throw new Error('ui pointerdown listener dispatch mismatch');
 }
 if (globalThis.__aivmUiPollEventType(1) !== 2) {
@@ -593,12 +614,15 @@ if (body.children.length < 2 || body.children[1].children.length < 2) {
   throw new Error('ui touch-fallback host/svg structure mismatch');
 }
 const svg2 = body.children[1].children[1];
+const host2 = body.children[1];
 if (svg2.listenerCount('pointerdown') !== 0 || svg2.listenerCount('click') !== 1 || svg2.listenerCount('touchstart') !== 1) {
   throw new Error('ui touch-fallback listener registration mismatch');
 }
 if (globalThis.window.listenerCount('resize') !== 2) {
   throw new Error('ui multi-window resize listener registration mismatch');
 }
+host2.setBoundingRect({ left: 10, top: 20, width: 80, height: 40 });
+host.setBoundingRect({ left: 0, top: 0, width: 133, height: 88 });
 svg2.setBoundingRect({ left: 10, top: 20, width: 80, height: 40 });
 svg.setBoundingRect({ left: 0, top: 0, width: 133, height: 88 });
 if (globalThis.window.emit('resize', {}) !== 2) {
@@ -654,8 +678,8 @@ if (globalThis.__aivmUiPollEventType(2) !== 2 ||
   throw new Error('ui click-fallback client-coord payload mismatch');
 }
 if (svg2.emit('click', {
-  offsetX: 21,
-  offsetY: 22,
+  clientX: 31,
+  clientY: 42,
   target: { getAttribute: () => 'c2' }
 }) !== 1) {
   throw new Error('ui click-fallback listener dispatch mismatch');
@@ -712,6 +736,7 @@ if (globalThis.window.listenerCount('resize') !== 1) {
 if (globalThis.window.emit('resize', {}) !== 1) {
   throw new Error('ui single-window resize dispatch mismatch after closing second window');
 }
+host.setBoundingRect({ left: 0, top: 0, width: 141, height: 91 });
 svg.setBoundingRect({ left: 0, top: 0, width: 141, height: 91 });
 if (globalThis.window.emit('resize', {}) !== 1) {
   throw new Error('ui single-window resize update dispatch mismatch');
@@ -725,23 +750,11 @@ if (globalThis.__aivmUiGetWindowWidth(2) !== -1 || globalThis.__aivmUiGetWindowH
 if (svg2.listenerCount('click') !== 0 || svg2.listenerCount('touchstart') !== 0) {
   throw new Error('ui touch-fallback listeners were not removed on close');
 }
-if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 1) {
-  throw new Error('ui keyup listener dispatch mismatch');
+if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 0) {
+  throw new Error('ui keyup must not emit a duplicate semantic key event');
 }
-if (globalThis.__aivmUiPollEventType(1) !== 3) {
-  throw new Error('ui keyup event type mismatch');
-}
-if (globalThis.__aivmUiPollEventKey(1) !== 'enter') {
-  throw new Error('ui keyup event key mismatch');
-}
-if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0') {
-  throw new Error('ui keyup focus target routing mismatch');
-}
-if (globalThis.__aivmUiPollEventModifiers(1) !== 'ctrl') {
-  throw new Error('ui keyup event modifiers mismatch');
-}
-if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
-  throw new Error('ui keyup event repeat mismatch');
+if (globalThis.__aivmUiPollEventType(1) !== 0) {
+  throw new Error('ui keyup unexpectedly queued a semantic event');
 }
 if (svg.emit('blur', {}) !== 1) {
   throw new Error('ui blur listener dispatch mismatch');
@@ -837,7 +850,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -898,7 +911,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -956,7 +969,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1133,7 +1146,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1264,7 +1277,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1407,7 +1420,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1499,7 +1512,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1625,7 +1638,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1746,7 +1759,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1850,7 +1863,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -1971,7 +1984,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2088,7 +2101,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2220,7 +2233,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2307,7 +2320,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2458,7 +2471,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2617,7 +2630,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2763,7 +2776,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -2909,7 +2922,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -3055,7 +3068,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -3201,7 +3214,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -3348,7 +3361,7 @@ export default async function createRuntime() {
     FS: { writeFile() {} },
     print: null,
     printErr: null,
-    callMain() {}
+    ccall() { return 0; }
   };
 }
 EOF
@@ -3651,6 +3664,11 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
   exit 1
 fi
+if ! contains_fixed 'name="viewport"' "${PUBLISH_SPA_DIR}/index.html" ||
+   ! contains_fixed '[data-aivm-window-id] { width: 100%; height: 100%;' "${PUBLISH_SPA_DIR}/index.html"; then
+  echo "wasm profile mismatch: spa publish did not emit viewport-sized ui surface styles" >&2
+  exit 1
+fi
 if ! contains_fixed 'AIVM_REMOTE_MODE' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit remote mode switch in main.js" >&2
   exit 1
@@ -3711,8 +3729,18 @@ if ! contains_fixed 'focusedTargetId' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit deterministic ui focus routing state" >&2
   exit 1
 fi
-if ! contains_fixed "addEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js"; then
-  echo "wasm profile mismatch: spa publish did not emit ui keyup listener mapping" >&2
+if ! contains_fixed 'dominant-baseline="text-before-edge"' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit top-edge text alignment" >&2
+  exit 1
+fi
+if ! contains_fixed "host.getBoundingClientRect()" "${PUBLISH_SPA_DIR}/main.js" ||
+   ! contains_fixed "const minLogicalWidth = Math.min(640" "${PUBLISH_SPA_DIR}/main.js" ||
+   ! contains_fixed "svg.setAttribute('preserveAspectRatio', 'none')" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit fluid host sizing" >&2
+  exit 1
+fi
+if contains_fixed "addEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish emitted duplicate ui keyup semantic mapping" >&2
   exit 1
 fi
 if ! contains_fixed "addEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js"; then
@@ -3739,7 +3767,7 @@ if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_SPA_DIR}/main.js";
   echo "wasm profile mismatch: spa publish did not emit ui resize cleanup hook in main.js" >&2
   exit 1
 fi
-if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit full ui input listener cleanup hooks in main.js" >&2
   exit 1
 fi
@@ -3880,8 +3908,8 @@ if ! contains_fixed 'focusedTargetId' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; th
   echo "wasm profile mismatch: fullstack publish did not emit deterministic ui focus routing state" >&2
   exit 1
 fi
-if ! contains_fixed "addEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
-  echo "wasm profile mismatch: fullstack publish did not emit ui keyup listener mapping" >&2
+if contains_fixed "addEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish emitted duplicate ui keyup semantic mapping" >&2
   exit 1
 fi
 if ! contains_fixed "addEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
@@ -3908,7 +3936,7 @@ if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www
   echo "wasm profile mismatch: fullstack publish did not emit ui resize cleanup hook in www/main.js" >&2
   exit 1
 fi
-if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit full ui input listener cleanup hooks in www/main.js" >&2
   exit 1
 fi

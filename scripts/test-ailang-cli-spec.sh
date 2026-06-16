@@ -56,7 +56,7 @@ HELP_PROJECT_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help projec
 printf '%s\n' "${HELP_PROJECT_OUT}" | rg -q 'Usage: ailang project version <project-dir>'
 
 VERSION_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" --version)"
-printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang 0\.0\.1-beta\.9$'
+printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang 0\.0\.1-beta\.10$'
 
 TEMPLATE_LIST_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list)"
 printf '%s\n' "${TEMPLATE_LIST_OUT}" | rg -q 'name = "cli"'

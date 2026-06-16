@@ -51,7 +51,7 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   -s EXPORT_ES6=1 \
   -s ENVIRONMENT=web \
   -s INVOKE_RUN=0 \
-  -s EXPORTED_RUNTIME_METHODS=FS,callMain \
+  -s EXPORTED_RUNTIME_METHODS=FS,ccall \
   -s ASYNCIFY \
   -s STACK_SIZE=2097152 \
   -o "${OUT_WEB_JS}"

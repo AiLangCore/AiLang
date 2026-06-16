@@ -17,6 +17,9 @@ sdkRoot = "/Users/example/.ailang/local"
 packageRegistry = "/Users/example/RiderProjects/AiLangCore/ailang-packages"
 installRoot = "/Users/example/.ailang"
 
+[toolchain]
+version = "local"
+
 [packages.aivectra]
 path = "/Users/example/RiderProjects/AiLangCore/AiVectra"
 
@@ -29,6 +32,8 @@ Top-level keys:
 - `sdkRoot`: root used for `Import(sdk="ailang" path="...")`.
 - `packageRegistry`: package registry checkout used by package commands.
 - `installRoot`: AiLang install root used for installed tools and registries.
+- `[toolchain].version`: installed toolchain selected by the stable command
+  shims. The special value `local` selects `~/.ailang/local`.
 
 Package sections:
 

@@ -91,6 +91,41 @@ Program#std_math_p1 {
     }
   }
 
+  Let(name=gt) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Call(target=lt) {
+            Var(name=b)
+            Var(name=a)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=eq) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Eq { Var(name=a) Var(name=b) }
+        }
+      }
+    }
+  }
+
+  Let(name=neq) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Eq { Var(name=a) Var(name=b) }
+          Block { Return { Lit(value=0) } }
+          Block { Return { Lit(value=1) } }
+        }
+      }
+    }
+  }
+
   Let#std_math_l8(name=abs) {
     Fn#std_math_f8(params=value) {
       Block#std_math_b8 {
@@ -128,6 +163,26 @@ Program#std_math_p1 {
     }
   }
 
+  Let(name=divFloor) {
+    Fn(params=value,step,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=step) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=divFloor) {
+                Call(target=sub) { Var(name=value) Var(name=step) }
+                Var(name=step)
+                Add { Var(name=acc) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_math_l10(name=subAbs) {
     Fn#std_math_f10(params=a,b) {
       Block#std_math_b14 {
@@ -143,6 +198,48 @@ Program#std_math_p1 {
     }
   }
 
+  Let(name=min) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Var(name=a) } }
+          Block { Return { Var(name=b) } }
+        }
+      }
+    }
+  }
+
+  Let(name=max) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Var(name=b) } }
+          Block { Return { Var(name=a) } }
+        }
+      }
+    }
+  }
+
+  Let(name=clamp) {
+    Fn(params=value,low,high) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=low) }
+          Block { Return { Var(name=low) } }
+          Block {
+            If {
+              Call(target=gt) { Var(name=value) Var(name=high) }
+              Block { Return { Var(name=high) } }
+              Block { Return { Var(name=value) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#std_math_e1(name=add)
   Export#std_math_e2(name=sub)
   Export#std_math_e3(name=mul)
@@ -150,7 +247,14 @@ Program#std_math_p1 {
   Export#std_math_e5(name=lt)
   Export#std_math_e6(name=lte)
   Export#std_math_e7(name=gte)
+  Export(name=gt)
+  Export(name=eq)
+  Export(name=neq)
   Export#std_math_e8(name=abs)
   Export#std_math_e9(name=halfFloor)
+  Export(name=divFloor)
   Export#std_math_e10(name=subAbs)
+  Export(name=min)
+  Export(name=max)
+  Export(name=clamp)
 }

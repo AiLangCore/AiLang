@@ -31,6 +31,22 @@ Program#std_system_p1 {
     }
   }
 
+  Let#std_system_l7(name=runtimeTarget) {
+    Fn#std_system_f7(params=_) {
+      Block#std_system_b7 {
+        Return#std_system_r7 { Call#std_system_c7(target=sys.runtime.target) }
+      }
+    }
+  }
+
+  Let#std_system_l8(name=runtimePlatform) {
+    Fn#std_system_f8(params=_) {
+      Block#std_system_b8 {
+        Return#std_system_r8 { Call#std_system_c8(target=sys.runtime.platform) }
+      }
+    }
+  }
+
   Let#std_system_l5(name=openDefault) {
     Fn#std_system_f5(params=target) {
       Block#std_system_b5 {
@@ -51,6 +67,8 @@ Program#std_system_p1 {
   Export#std_system_e2(name=arch)
   Export#std_system_e3(name=osVersion)
   Export#std_system_e4(name=runtime)
+  Export#std_system_e7(name=runtimeTarget)
+  Export#std_system_e8(name=runtimePlatform)
   Export#std_system_e5(name=openDefault)
   Export#std_system_e6(name=openUrl)
 }

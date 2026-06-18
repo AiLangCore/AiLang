@@ -6,7 +6,7 @@ src/std/bytes.aos	native	native	native	native	Pure deterministic bytes, base64, 
 src/std/null.aos	native	native	native	native	Pure deterministic null helpers.
 src/std/number.aos	native	native	native	native	Pure deterministic integer helpers, comparison, formatting, and parsing.
 src/std/math.aos	native	native	native	native	Pure deterministic integer arithmetic helpers; division and modulo are deferred until the numeric error/result contract is settled.
-src/std/system.aos	partial	partial	blocked	blocked	Metadata exports are broadly available; openDefault/openUrl remain host-only and are not browser baseline capabilities.
+src/std/system.aos	partial	partial	blocked	blocked	Platform, architecture, runtime, runtimeTarget, and runtimePlatform metadata are broadly available; openDefault/openUrl remain host-only and are not browser baseline capabilities.
 src/std/process.aos	native	host-dependent	blocked	partial	Native host process control exists; browser targets do not expose process lifecycle.
 src/std/fs.aos	native	host-dependent	blocked	partial	Native host filesystem exists; browser targets require explicit remote or host-side adapters.
 src/std/time.aos	native	host-dependent	profile-defined	profile-defined	Time access exists but target policy differs and browser behavior must remain explicit and deterministic.

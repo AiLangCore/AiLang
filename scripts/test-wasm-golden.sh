@@ -500,7 +500,7 @@ if (globalThis.__aivmUiBeginFrame(999) !== -1 ||
     globalThis.__aivmUiMeasureText(999, 'x', 12) !== -1 ||
     globalThis.__aivmUiDrawLine(999, 0, 0, 1, 1, '#000', 1) !== -1 ||
     globalThis.__aivmUiDrawEllipse(999, 0, 0, 2, 2, '#000') !== -1 ||
-    globalThis.__aivmUiDrawPath(999, 'M0 0 L1 1', '#000', 1) !== -1 ||
+    globalThis.__aivmUiDrawPath(999, 'M0 0 L1 1', 'none', '#000', 1) !== -1 ||
     globalThis.__aivmUiDrawImage(999, 0, 0, 1, 1, 'x') !== -1 ||
     globalThis.__aivmUiEndFrame(999) !== -1 ||
     globalThis.__aivmUiPresent(999) !== -1 ||

@@ -153,7 +153,7 @@ Expected in report:
 4. Task-tooling parity edge case presence:
 
 ```bash
-rg -n "parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)" ../AiVM/src/tests/parity_commands_portable.txt
+rg -n "parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)" ../AiVM/tests/golden/parity_commands_portable.txt
 ```
 
 Expected:

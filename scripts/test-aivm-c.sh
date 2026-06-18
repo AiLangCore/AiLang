@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+AIVM_C_REPO_DIR="$(cd "${AIVM_C_SOURCE_DIR}/.." && pwd)"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_REPO_DIR}/tests}"
 BUILD_SUFFIX="native"
 if [[ "${AIVM_C_SOURCE_DIR}" == "${ROOT_DIR}/../AiVM/src" ]]; then
   BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
@@ -12,7 +14,7 @@ else
 fi
 PRESET_FILE="${AIVM_C_SOURCE_DIR}/CMakePresets.json"
 PARITY_REPORT="${AIVM_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt}"
-PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_SOURCE_DIR}/tests/parity_commands_ci.txt}"
+PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_TESTS_DIR}/golden/parity_commands_ci.txt}"
 SHARED_FLAG="-DAIVM_BUILD_SHARED=OFF"
 if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
   SHARED_FLAG="-DAIVM_BUILD_SHARED=ON"
@@ -42,10 +44,10 @@ if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
     AILANG_HAS_CLEAN=1
   fi
 
-  "${ROOT_DIR}/tools/ailang" run "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
+  "${ROOT_DIR}/tools/ailang" run "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
   TMP_NATIVE_PUBLISH_DIR="${ROOT_DIR}/.tmp/aivm-c-native-publish-smoke"
   rm -rf "${TMP_NATIVE_PUBLISH_DIR}"
-  "${ROOT_DIR}/tools/ailang" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
+  "${ROOT_DIR}/tools/ailang" publish "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
   if [[ ! -f "${TMP_NATIVE_PUBLISH_DIR}/app.aibc1" ]]; then
     echo "native publish smoke failed: app.aibc1 was not produced" >&2
     exit 1
@@ -576,17 +578,17 @@ if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
 
   run_task_edge_case \
     "await_edge_invalid" \
-    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
-    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
     "3"
   run_task_edge_case \
     "par_join_edge_invalid" \
-    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
-    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
     "3"
   run_task_edge_case \
     "par_cancel_edge_noop" \
-    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
     "" \
     "0"
 
@@ -603,7 +605,7 @@ fi
 
 if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
   leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"
-  leak_target="${AIVM_LEAK_CHECK_TARGET:-${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos}"
+  leak_target="${AIVM_LEAK_CHECK_TARGET:-${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos}"
   AIVM_LEAK_MAX_GROWTH_KB="${AIVM_LEAK_MAX_GROWTH_KB:-2048}" \
     "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" "${leak_target}" "${leak_iterations}" >/dev/null
 fi

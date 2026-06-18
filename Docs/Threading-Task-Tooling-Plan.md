@@ -12,13 +12,13 @@ Completion snapshot (2026-03-05):
 
 Primary completion evidence:
 
-- `../AiVM/src/tests/syscalls/test_syscall_contracts.c`
-- `../AiVM/src/tests/syscalls/test_syscall.c`
-- `../AiVM/src/tests/vm/test_runtime.c`
-- `../AiVM/src/tests/vm/test_vm_determinism.c`
-- `../AiVM/src/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
-- `../AiVM/src/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
-- `../AiVM/src/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
+- `../AiVM/tests/unit/syscalls/test_syscall_contracts.c`
+- `../AiVM/tests/integration/syscalls/test_syscall.c`
+- `../AiVM/tests/unit/vm/test_runtime.c`
+- `../AiVM/tests/unit/vm/test_vm_determinism.c`
+- `../AiVM/tests/golden/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
+- `../AiVM/tests/golden/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
+- `../AiVM/tests/golden/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
 - `./test-aivm-c.sh`
 - `scripts/aivm-parity-dashboard.sh`
 - `Docs/SyscallCoverageSummary.md`
@@ -77,7 +77,7 @@ Tasks:
 Validation commands:
 - `./test.sh`
 - `./scripts/test-c-vm.sh`
-- `rg -n "PAR_JOIN|AWAIT|task|owner" ../AiVM/src ../AiVM/src/tests -S`
+- `rg -n "PAR_JOIN|AWAIT|task|owner" ../AiVM/src ../AiVM/tests -S`
 
 ## Milestone M3: Worker Bridge and Host Tooling (No UI Runtime Work)
 
@@ -85,10 +85,10 @@ Goal: Ensure host-side worker tooling contracts are available for both high-conc
 
 Tasks:
 1. Finalize `sys.worker_*` contract behavior and return typing tests.
-   - Targets: `../AiVM/src/sys/aivm_syscall_contracts.c`, `../AiVM/src/tests/syscalls/test_syscall_contracts.c`
+   - Targets: `../AiVM/src/sys/aivm_syscall_contracts.c`, `../AiVM/tests/unit/syscalls/test_syscall_contracts.c`
    - DoD: contract table and tests cover arity/type/return for start/poll/result/error/cancel.
 2. Add deterministic polling/result terminal-state test matrix.
-   - Targets: `../AiVM/src/tests/syscalls/test_syscall.c`, `../AiVM/src/tests/vm/test_runtime.c`
+   - Targets: `../AiVM/tests/integration/syscalls/test_syscall.c`, `../AiVM/tests/unit/vm/test_runtime.c`
    - DoD: pending/completed/failed/canceled/unknown-handle paths are validated.
 3. Add host readiness adapter interfaces for external event enqueue/drain.
    - Targets: `../AiVM/src/include/aivm_runtime.h`, `../AiVM/src/aivm_runtime.c`
@@ -108,10 +108,10 @@ Goal: Provide local tooling to validate 1000+ concurrent host operations and det
 
 Tasks:
 1. Add local stress harness for high in-flight operation simulation.
-   - Targets: `../AiVM/src/tests/vm/test_runtime.c`, `../AiVM/src/tests/vm/test_vm_determinism.c`
+   - Targets: `../AiVM/tests/unit/vm/test_runtime.c`, `../AiVM/tests/unit/vm/test_vm_determinism.c`
    - DoD: local test simulates 1000+ operation handles with deterministic completion merge checks.
 2. Add parity cases for async/par edge ordering and cancellation.
-   - Targets: `../AiVM/src/tests/parity_cases/*`, `../AiVM/src/tests/parity_commands*.txt`
+   - Targets: `../AiVM/tests/golden/parity_cases/*`, `../AiVM/tests/golden/parity_commands*.txt`
    - DoD: parity suite includes representative await/join/cancel ordering cases.
 3. Add local dashboard/check workflow for task tooling readiness.
    - Targets: `scripts/aivm-parity-dashboard.sh`, `Docs/AiVM-C-Parity-Status.md`

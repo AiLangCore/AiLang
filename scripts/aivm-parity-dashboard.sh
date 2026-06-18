@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
-AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_SOURCE_DIR}/tests}"
+AIVM_C_REPO_DIR="$(cd "${AIVM_C_SOURCE_DIR}/.." && pwd)"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_REPO_DIR}/tests}"
 REPORT_PATH="${1:-${ROOT_DIR}/Docs/AiVM-C-Parity-Status.md}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-parity-dashboard"
 BUILD_SUFFIX="native"
@@ -22,7 +23,7 @@ fi
 REQUIRE_SAMPLES="${AIVM_DOD_REQUIRE_SAMPLES:-0}"
 REQUIRE_MEMORY="${AIVM_DOD_REQUIRE_MEMORY:-0}"
 REQUIRE_ZERO_CSHARP="${AIVM_DOD_REQUIRE_ZERO_CSHARP:-0}"
-TASK_TOOLING_MANIFEST="${AIVM_TASK_TOOLING_MANIFEST:-${AIVM_C_TESTS_DIR}/parity_commands_portable.txt}"
+TASK_TOOLING_MANIFEST="${AIVM_TASK_TOOLING_MANIFEST:-${AIVM_C_TESTS_DIR}/golden/parity_commands_portable.txt}"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -116,7 +117,7 @@ ENTRY_SERVE_STATUS="PASS"
 ENTRY_SERVE_DETAILS="serve is intentionally out-of-scope for native runtime surface"
 
 set +e
-./tools/ailang run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
+./tools/ailang run "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
 entry_bytecode_rc=$?
 ./tools/ailang run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
 entry_bundle_rc=$?
@@ -220,7 +221,7 @@ fi
 
 # Benchmark gate (required only when RUN_BENCH=1).
 BENCH_GATE_STATUS="PENDING"
-BENCH_BASELINE_FILE="${AIVM_C_TESTS_DIR}/compiler_runtime_bench_baseline.tsv"
+BENCH_BASELINE_FILE="${AIVM_C_TESTS_DIR}/stress/compiler_runtime_bench_baseline.tsv"
 BENCH_RUN_STATUS="not-run"
 BENCH_BASELINE_STATUS="missing"
 BENCH_THRESHOLD_STATUS="not-evaluated"
@@ -329,8 +330,8 @@ RC_TEST_PRESENT="no"
 CYCLE_TEST_PRESENT="no"
 LEAK_SCRIPT_PRESENT="no"
 PROFILE_SCRIPT_PRESENT="no"
-if [[ -f "${AIVM_C_TESTS_DIR}/test_memory_rc.c" ]]; then RC_TEST_PRESENT="yes"; fi
-if [[ -f "${AIVM_C_TESTS_DIR}/test_memory_cycle.c" ]]; then CYCLE_TEST_PRESENT="yes"; fi
+if [[ -f "${AIVM_C_TESTS_DIR}/unit/memory/test_memory_rc.c" ]]; then RC_TEST_PRESENT="yes"; fi
+if [[ -f "${AIVM_C_TESTS_DIR}/unit/memory/test_memory_cycle.c" ]]; then CYCLE_TEST_PRESENT="yes"; fi
 if [[ -x "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" ]]; then LEAK_SCRIPT_PRESENT="yes"; fi
 if [[ -x "${ROOT_DIR}/scripts/aivm-mem-profile.sh" ]]; then PROFILE_SCRIPT_PRESENT="yes"; fi
 if [[ "${RC_TEST_PRESENT}" == "yes" &&

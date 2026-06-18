@@ -4,11 +4,12 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $preferredSource = Join-Path (Split-Path $root -Parent) 'AiVM/src'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
+$repoDir = Split-Path $sourceDir -Parent
 $buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path (Split-Path $root -Parent) 'AiVM/.tmp/aivm-c-build-native' }
-$aivmTests = Join-Path $sourceDir 'tests'
+$aivmTests = if ($env:AIVM_C_TESTS_DIR) { $env:AIVM_C_TESTS_DIR } else { Join-Path $repoDir 'tests' }
 $presetFile = Join-Path $sourceDir 'CMakePresets.json'
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
-$parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $sourceDir 'tests/parity_commands_ci.txt' }
+$parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $aivmTests 'golden/parity_commands_ci.txt' }
 $ctestFilterArgs = @()
 if ($env:AIVM_CTEST_EXCLUDE) {
   $ctestFilterArgs += @('-E', $env:AIVM_CTEST_EXCLUDE)
@@ -75,11 +76,11 @@ if (-not (Test-Path $parityDir)) {
 
 if ($IsWindows) {
   if (Test-Path (Join-Path $root 'tools/ailang.exe')) {
-    & (Join-Path $root 'tools/ailang.exe') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') run (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/ailang.exe') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') publish (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params.exe'))) { throw 'native publish smoke failed: app executable missing' }
@@ -111,11 +112,11 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   }
 } else {
   if (Test-Path (Join-Path $root 'tools/ailang')) {
-    & (Join-Path $root 'tools/ailang') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+    & (Join-Path $root 'tools/ailang') run (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/ailang') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang') publish (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params'))) { throw 'native publish smoke failed: app executable missing' }
@@ -162,7 +163,7 @@ if ($env:AIVM_MEM_LEAK_GATE -eq '1') {
     Write-Host 'AIVM_MEM_LEAK_GATE is not implemented on Windows yet.'
   } else {
     $leakIterations = if ($env:AIVM_LEAK_CHECK_ITERATIONS) { $env:AIVM_LEAK_CHECK_ITERATIONS } else { '50' }
-    $leakTarget = if ($env:AIVM_LEAK_CHECK_TARGET) { $env:AIVM_LEAK_CHECK_TARGET } else { Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos' }
+    $leakTarget = if ($env:AIVM_LEAK_CHECK_TARGET) { $env:AIVM_LEAK_CHECK_TARGET } else { Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos' }
     if (-not $env:AIVM_LEAK_MAX_GROWTH_KB) { $env:AIVM_LEAK_MAX_GROWTH_KB = '2048' }
     & (Join-Path $root 'scripts/aivm-mem-leak-check.sh') $leakTarget $leakIterations | Out-Null
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

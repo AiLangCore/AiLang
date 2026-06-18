@@ -20,7 +20,9 @@ if ! [[ "${MAX_GROWTH_KB}" =~ ^-?[0-9]+$ ]]; then
 fi
 
 AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
-PARITY_DIR="${AIVM_C_SOURCE_DIR}/tests/parity_cases"
+AIVM_C_REPO_DIR="$(cd "${AIVM_C_SOURCE_DIR}/.." && pwd)"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_REPO_DIR}/tests}"
+PARITY_DIR="${AIVM_C_TESTS_DIR}/golden/parity_cases"
 
 targets=(
   "vm_c_execute_src_main_params.aos"

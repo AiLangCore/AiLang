@@ -9,7 +9,7 @@
   - syscall implementations live under `../AiVM/src/sys/`
   - remote transport code lives under `../AiVM/src/remote/`
   - native launcher/host adapter code lives under `../AiVM/src/ailang_cli/`
-  - native tests live under `../AiVM/src/tests/`
+  - native tests live under `../AiVM/tests/`
 - `src/compiler`: AiLang-authored compiler/runtime scripts such as `aic.aos`, `format.aos`, and `validate.aos`
 - `src/std`: stdlib AOS modules
 
@@ -34,7 +34,7 @@
 
 - Debug/bundle CLI flow: `../AiVM/src/ailang_cli/ailang.c`
 - Debug host/bundle emission: `../AiVM/src/ailang_cli/airun_debug_host.inc`
-- Native parity/debug/memory tests: `../AiVM/src/tests/`
+- Native parity/debug/memory tests: `../AiVM/tests/`
 - Golden fixtures and publish fixtures: `examples/golden/`
 
 ## Samples

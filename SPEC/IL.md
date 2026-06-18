@@ -19,7 +19,13 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `If` | none | `2..3` | Condition, then-branch, optional else-branch. |
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |
-| `Add` | none | `2` | Integer addition. |
+| `Add` | none | `2` | Numeric addition over the `number` family. |
+| `Sub` | none | `2` | Numeric subtraction over the `number` family. |
+| `Mul` | none | `2` | Numeric multiplication over the `number` family. |
+| `Div` | none | `2` | Numeric division over the `number` family; non-even division may produce a fractional number. |
+| `Mod` | none | `2` | Numeric remainder over the `number` family. |
+| `Pow` | none | `2` | Numeric exponentiation over the `number` family. |
+| `Lt` | none | `2` | Numeric less-than over the `number` family. |
 | `StringSlice` | none | `3` | Unicode-scalar-indexed string slice by start and length. |
 | `StringRemove` | none | `3` | Removes a Unicode-scalar-indexed range from a string. |
 | `StringFind` | none | `3` | Unicode-scalar-indexed string search by text, pattern, and start index. |
@@ -49,7 +55,11 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - Runtime values are represented as nodes:
 - `Lit(value=...)` for primitive values.
 - Primitive runtime kinds are `string`, `number`, `bool`, `null`, and `bytes`. Canonical null helpers can be provided by `src/std/null.aos`.
-- Current AiBC1 numeric execution is exact integer-only; `number` is the canonical language-facing numeric family and currently lowers to exact whole-number runtime values. Canonical language-facing helpers for this exact whole-number surface live in `src/std/number.aos`.
+- `number` is the canonical language-facing numeric family. It represents both
+  integral and fractional values; implementations may keep integral payloads in
+  a compact integer representation, but equality and arithmetic operate through
+  the single `number` contract. Canonical language-facing helpers live in
+  `src/std/number.aos`.
 - Scratch pairs are implementation values for compiler/parser internals. They
   must not be used as a user-facing data model or serialized as AST nodes.
 - `Block#void` as the canonical void value.

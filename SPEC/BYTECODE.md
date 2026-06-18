@@ -38,7 +38,10 @@ Each `Const` child represents one constant.
 - compiler emits constants in deterministic first-seen order for the canonical walk
 
 `kind=node` uses canonical AOS text encoding of exactly one node value.
-`kind=number` is the canonical language-facing exact numeric family and currently encodes the same exact whole-number payload as `kind=int`.
+`kind=number` is the canonical language-facing numeric family and can encode
+fractional payloads. `kind=int` remains available for compact integral constants
+and host-boundary values that require integer payloads; bytecode runtimes must
+compare and operate on both through the same numeric contract.
 
 ## Function Table
 
@@ -59,7 +62,7 @@ Each `Inst` has required `op` and optional operands `a`, `b`, `s`.
 - control flow: `JUMP`, `JUMP_IF_FALSE`, `RETURN`
 - calls: `CALL`, `CALL_SYS`, `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`
 - structured concurrency: `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
-- primitive ops: `EQ`, `ADD_INT`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
+- primitive ops: `EQ`, `ADD_INT`, `SUB_NUM`, `MUL_NUM`, `DIV_NUM`, `MOD_NUM`, `POW_NUM`, `LT_NUM`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
 - node ops: `NODE_KIND`, `NODE_ID`, `ATTR_COUNT`, `ATTR_KEY`, `ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`, `CHILD_COUNT`, `CHILD_AT`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_STRING`, `MAKE_LIT_INT`, `MAKE_NODE`, `MAKE_FIELD_STRING`, `MAKE_MAP`
 - async/structured concurrency ops: `ASYNC_CALL`, `AWAIT`, `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 

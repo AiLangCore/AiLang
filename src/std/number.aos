@@ -1,5 +1,6 @@
 Program#std_number_p1 {
   Import#std_number_im1(path="./str.aos")
+  Import#std_number_im2(path="./core.aos")
 
   Let#std_number_l1(name=zero) {
     Fn#std_number_f1(params=_) {
@@ -83,9 +84,9 @@ Program#std_number_p1 {
     Fn#std_number_f5c(params=a,b) {
       Block#std_number_b5g {
         Return#std_number_r5e {
-          Add#std_number_a5e {
+          Sub#std_number_sub1 {
             Var#std_number_v4i(name=a)
-            Call#std_number_c5c(target=negate) { Var#std_number_v4j(name=b) }
+            Var#std_number_v4j(name=b)
           }
         }
       }
@@ -115,37 +116,12 @@ Program#std_number_p1 {
   Let#std_number_l5e(name=mul) {
     Fn#std_number_f5e(params=a,b) {
       Block#std_number_b5k {
-        If#std_number_if5d {
-          Call#std_number_c5e(target=lt) { Var#std_number_v4q(name=b) Lit#std_number_i4i0(value=0) }
-          Block#std_number_b5l {
-            Return#std_number_r5h {
-              Call#std_number_c5f(target=negate) {
-                Call#std_number_c5g(target=mulPositiveLoop) {
-                  Var#std_number_v4r(name=a)
-                  Call#std_number_c5h(target=negate) { Var#std_number_v4s(name=b) }
-                  Lit#std_number_i4j0(value=0)
-                }
-              }
-            }
-          }
-          Block#std_number_b5m {
-            Return#std_number_r5i {
-              Call#std_number_c5i(target=mulPositiveLoop) {
-                Var#std_number_v4t(name=a)
-                Var#std_number_v4u(name=b)
-                Lit#std_number_i4k0(value=0)
-              }
-            }
+        Return#std_number_r5i {
+          Mul#std_number_mul1 {
+            Var#std_number_v4t(name=a)
+            Var#std_number_v4u(name=b)
           }
         }
-      }
-    }
-  }
-
-  Let#std_number_l6(name=equals) {
-    Fn#std_number_f6(params=a,b) {
-      Block#std_number_b6 {
-        Return#std_number_r6 { Eq#std_number_e1 { Var#std_number_v5(name=a) Var#std_number_v6(name=b) } }
       }
     }
   }
@@ -349,45 +325,10 @@ Program#std_number_p1 {
   Let#std_number_l6a(name=lt) {
     Fn#std_number_f6a(params=a,b) {
       Block#std_number_b6a {
-        If#std_number_iflt0 {
-          Eq#std_number_eqlt0 { Var#std_number_v6a(name=a) Var#std_number_v6b(name=b) }
-          Block#std_number_b6ua { Return#std_number_r6a { Lit#std_number_i3aa(value=false) } }
-          Block#std_number_b6ub {
-            Let#std_number_l6y(name=aText) { ToString#std_number_t1a { Var#std_number_v6av(name=a) } }
-            Let#std_number_l6z(name=bText) { ToString#std_number_t1b { Var#std_number_v6aw(name=b) } }
-            Let#std_number_l6aa(name=aNegative) { Call#std_number_c1k(target=isNegativeText) { Var#std_number_v6ax(name=aText) } }
-            Let#std_number_l6ab(name=bNegative) { Call#std_number_c1l(target=isNegativeText) { Var#std_number_v6ay(name=bText) } }
-            If#std_number_iflt1a {
-              Var#std_number_v6az(name=aNegative)
-              Block#std_number_b6uc {
-                If#std_number_iflt1b {
-                  Var#std_number_v6ba(name=bNegative)
-                  Block#std_number_b6ud {
-                    Return#std_number_r6aq {
-                      Call#std_number_c1m(target=positiveTextLt) {
-                        Call#std_number_c1n(target=absText) { Var#std_number_v6bb(name=bText) }
-                        Call#std_number_c1o(target=absText) { Var#std_number_v6bc(name=aText) }
-                      }
-                    }
-                  }
-                  Block#std_number_b6ue { Return#std_number_r6ar { Lit#std_number_i3ab(value=true) } }
-                }
-              }
-              Block#std_number_b6uf {
-                If#std_number_iflt1c {
-                  Var#std_number_v6bd(name=bNegative)
-                  Block#std_number_b6ug { Return#std_number_r6as { Lit#std_number_i3ac(value=false) } }
-                  Block#std_number_b6uh {
-                    Return#std_number_r6at {
-                      Call#std_number_c1p(target=positiveTextLt) {
-                        Call#std_number_c1q(target=absText) { Var#std_number_v6be(name=aText) }
-                        Call#std_number_c1r(target=absText) { Var#std_number_v6bf(name=bText) }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+        Return#std_number_r6a {
+          Lt#std_number_lt1 {
+            Var#std_number_v6a(name=a)
+            Var#std_number_v6b(name=b)
           }
         }
       }
@@ -437,23 +378,10 @@ Program#std_number_p1 {
   Let#std_number_l7a(name=negate) {
     Fn#std_number_f7a(params=value) {
       Block#std_number_b7a {
-        If#std_number_if7a {
-          Call#std_number_c7a(target=lt) { Var#std_number_v7a(name=value) Lit#std_number_i4a(value=0) }
-          Block#std_number_b7a1 {
-            Return#std_number_r7a1 {
-              Call#std_number_c7b(target=negNegativeLoop) {
-                Var#std_number_v7b0(name=value)
-                Lit#std_number_i4b(value=0)
-              }
-            }
-          }
-          Block#std_number_b7a2 {
-            Return#std_number_r7a2 {
-              Call#std_number_c7c(target=negPositiveLoop) {
-                Var#std_number_v7c0(name=value)
-                Lit#std_number_i4c(value=0)
-              }
-            }
+        Return#std_number_r7a1 {
+          Sub#std_number_sub2 {
+            Lit#std_number_i4a(value=0)
+            Var#std_number_v7a(name=value)
           }
         }
       }
@@ -536,18 +464,167 @@ Program#std_number_p1 {
   Let#std_number_l7h(name=betweenInclusive) {
     Fn#std_number_f7g(params=value,minimum,maximum) {
       Block#std_number_b7q {
-        Return#std_number_r7l {
-          Eq#std_number_eq0a {
-            Call#std_number_c0g(target=clamp) {
-              Var#std_number_v7s(name=value)
-              Var#std_number_v7t(name=minimum)
-              Var#std_number_v7u(name=maximum)
+        If#std_number_if7h {
+          Call#std_number_c0g(target=gte) {
+            Var#std_number_v7s(name=value)
+            Var#std_number_v7t(name=minimum)
+          }
+          Block#std_number_b7qa {
+            Return#std_number_r7l {
+              Call#std_number_c0h(target=lte) {
+                Var#std_number_v7u(name=value)
+                Var#std_number_v7v(name=maximum)
+              }
             }
-            Var#std_number_v7v(name=value)
+          }
+          Block#std_number_b7qb { Return#std_number_r7la { Lit#std_number_i7h(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7i(name=betweenExclusive) {
+    Fn#std_number_f7i(params=value,minimum,maximum) {
+      Block#std_number_b7r {
+        If#std_number_if7i {
+          Call#std_number_c7i(target=gt) { Var#std_number_v7w(name=value) Var#std_number_v7x(name=minimum) }
+          Block#std_number_b7s { Return#std_number_r7m { Call#std_number_c7j(target=lt) { Var#std_number_v7y(name=value) Var#std_number_v7z(name=maximum) } } }
+          Block#std_number_b7t { Return#std_number_r7n { Lit#std_number_i7i(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7j(name=compare) {
+    Fn#std_number_f7j(params=a,b) {
+      Block#std_number_b7u {
+        If#std_number_if7j {
+          Call#std_number_c7k(target=lt) { Var#std_number_v7aa(name=a) Var#std_number_v7ab(name=b) }
+          Block#std_number_b7v { Return#std_number_r7o { Lit#std_number_i7j(value=-1) } }
+          Block#std_number_b7w {
+            If#std_number_if7k {
+              Call#std_number_c7l(target=gt) { Var#std_number_v7ac(name=a) Var#std_number_v7ad(name=b) }
+              Block#std_number_b7x { Return#std_number_r7p { Lit#std_number_i7k(value=1) } }
+              Block#std_number_b7y { Return#std_number_r7q { Lit#std_number_i7l(value=0) } }
+            }
           }
         }
       }
     }
+  }
+
+  Let#std_number_l7k(name=divPositiveLoop) {
+    Fn#std_number_f7k(params=value,step,acc) {
+      Block#std_number_b7z {
+        If#std_number_if7l {
+          Call#std_number_c7m(target=lt) { Var#std_number_v7ae(name=value) Var#std_number_v7af(name=step) }
+          Block#std_number_b7aa { Return#std_number_r7r { Var#std_number_v7ag(name=acc) } }
+          Block#std_number_b7ab {
+            Return#std_number_r7s {
+              Call#std_number_c7n(target=divPositiveLoop) {
+                Call#std_number_c7o(target=sub) { Var#std_number_v7ah(name=value) Var#std_number_v7ai(name=step) }
+                Var#std_number_v7aj(name=step)
+                Add#std_number_a7a { Var#std_number_v7ak(name=acc) Lit#std_number_i7m(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7l(name=modPositiveLoop) {
+    Fn#std_number_f7l(params=value,step) {
+      Block#std_number_b7ac {
+        If#std_number_if7m {
+          Call#std_number_c7p(target=lt) { Var#std_number_v7al(name=value) Var#std_number_v7am(name=step) }
+          Block#std_number_b7ad { Return#std_number_r7t { Var#std_number_v7an(name=value) } }
+          Block#std_number_b7ae {
+            Return#std_number_r7u {
+              Call#std_number_c7q(target=modPositiveLoop) {
+                Call#std_number_c7r(target=sub) { Var#std_number_v7ao(name=value) Var#std_number_v7ap(name=step) }
+                Var#std_number_v7aq(name=step)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7m(name=div) {
+    Fn#std_number_f7m(params=a,b) {
+      Block#std_number_b7af {
+        Return#std_number_r7v {
+          Div#std_number_div1 {
+            Var#std_number_v7ar(name=a)
+            Var#std_number_v7as(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7o(name=mod) {
+    Fn#std_number_f7n(params=a,b) {
+      Block#std_number_b7ak {
+        Return#std_number_r7y {
+          Mod#std_number_mod1 {
+            Var#std_number_v7ay(name=a)
+            Var#std_number_v7az(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7q(name=powPositiveLoop) {
+    Fn#std_number_f7o(params=base,exponent,acc) {
+      Block#std_number_b7ap {
+        If#std_number_if7r {
+          Eq#std_number_eq7c { Var#std_number_v7be(name=exponent) Lit#std_number_i7q(value=0) }
+          Block#std_number_b7aq { Return#std_number_r7ab { Var#std_number_v7bf(name=acc) } }
+          Block#std_number_b7ar {
+            Return#std_number_r7ac {
+              Call#std_number_c7af(target=powPositiveLoop) {
+                Var#std_number_v7bg(name=base)
+                Add#std_number_a7b { Var#std_number_v7bh(name=exponent) Lit#std_number_i7r(value=-1) }
+                Call#std_number_c7ag(target=mul) { Var#std_number_v7bi(name=acc) Var#std_number_v7bj(name=base) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7r(name=pow) {
+    Fn#std_number_f7p(params=base,exponent) {
+      Block#std_number_b7as {
+        Return#std_number_r7ad {
+          Pow#std_number_pow1 {
+            Var#std_number_v7bk(name=base)
+            Var#std_number_v7bl(name=exponent)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7s(name=floor) {
+    Fn#std_number_f7q(params=value) { Block#std_number_b7av { Return#std_number_r7af { Var#std_number_v7bn(name=value) } } }
+  }
+
+  Let#std_number_l7t(name=ceil) {
+    Fn#std_number_f7r(params=value) { Block#std_number_b7aw { Return#std_number_r7ag { Var#std_number_v7bo(name=value) } } }
+  }
+
+  Let#std_number_l7u(name=round) {
+    Fn#std_number_f7s(params=value) { Block#std_number_b7ax { Return#std_number_r7ah { Var#std_number_v7bp(name=value) } } }
+  }
+
+  Let#std_number_l7v(name=truncate) {
+    Fn#std_number_f7t(params=value) { Block#std_number_b7ay { Return#std_number_r7ai { Var#std_number_v7bq(name=value) } } }
   }
 
 
@@ -836,7 +913,9 @@ Program#std_number_p1 {
   Export#std_number_e5(name=dec)
   Export#std_number_e5a(name=sub)
   Export#std_number_e5b(name=mul)
-  Export#std_number_e6(name=equals)
+  Export#std_number_e5c(name=div)
+  Export#std_number_e5d(name=mod)
+  Export#std_number_e5e(name=pow)
   Export#std_number_e6e(name=isZero)
   Export#std_number_e6f(name=isNegative)
   Export#std_number_e6g(name=isPositive)
@@ -845,6 +924,7 @@ Program#std_number_p1 {
   Export#std_number_e6b(name=lte)
   Export#std_number_e6c(name=gt)
   Export#std_number_e6d(name=gte)
+  Export#std_number_e6i(name=compare)
   Export#std_number_e7(name=toString)
   Export#std_number_e7a(name=negate)
   Export#std_number_e7b(name=abs)
@@ -853,6 +933,11 @@ Program#std_number_p1 {
   Export#std_number_e7e(name=max)
   Export#std_number_e7f(name=clamp)
   Export#std_number_e7g(name=betweenInclusive)
+  Export#std_number_e7h(name=betweenExclusive)
+  Export#std_number_e7i(name=floor)
+  Export#std_number_e7j(name=ceil)
+  Export#std_number_e7k(name=round)
+  Export#std_number_e7l(name=truncate)
   Export#std_number_e8(name=digitValue)
   Export#std_number_e9(name=isWholeString)
   Export#std_number_e10(name=parseWholeOr)

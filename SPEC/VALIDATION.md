@@ -28,7 +28,9 @@ This file is normative for semantic validation used by `aic check` (default path
 - `Include.name` and `Include.version` are required strings.
 - `Include.path`, when present, must be a relative string path for local
   development includes.
-- Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`, `Loop=1`, `Break=0`, `Continue=0`).
+- Child arity must match node contract (for example `Let=1`, `Var=0`,
+  `Eq=2`, numeric primitives `Add/Sub/Mul/Div/Mod/Pow/Lt=2`, `If=2..3`,
+  `Loop=1`, `Break=0`, `Continue=0`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).
 - `Await` must have exactly one child (`VAL167`).
@@ -36,9 +38,20 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Type/Capability Rules
 
-- Validation enforces primitive compatibility for core operators (`Eq`, `Add`, `StrConcat`, etc.).
+- Validation enforces primitive compatibility for core operators (`Eq`,
+  numeric primitives, `StrConcat`, etc.).
 - Capability calls are permission-gated (`VAL040` family).
 - Unknown call targets are rejected unless resolved as user-defined functions.
+- Equality declarations are language-owned declarations, never host-owned
+  registrations.
+- Equality dispatch declarations must use fully qualified type identity.
+- Duplicate `Equality(leftType,rightType,handler)` declarations are validation
+  errors.
+- Equality handlers must resolve to AiLang functions, be pure, and return
+  `std.Bool`.
+- Built-in RC-1 equality handlers cover `std.Number`, `std.String`, `std.Bool`,
+  and `std.Null`; future package/user handlers must participate in the same
+  deterministic collection path.
 
 ## UI Event Payload Rules
 

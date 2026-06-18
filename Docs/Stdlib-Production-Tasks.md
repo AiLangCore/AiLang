@@ -34,6 +34,7 @@ covered by `scripts/test-stdlib-behavior.sh`.
    - `std.str`
    - `std.bytes`
    - `std.null`
+   - `std.bool`
    - `std.number`
    - `std.math`
    - `std.io`
@@ -68,6 +69,9 @@ covered by `scripts/test-stdlib-behavior.sh`.
    - result-node contract consistency
 3. Review `std.fs.aos`, `std.process.aos`, and `std.time.aos` for surface
    minimality and consistency beyond first-pass behavior coverage.
+4. Add compiler/runtime numeric support for decimal or floating-point values
+   before documenting `Number` as more than exact whole-number arithmetic.
+   Current `std.number.div` is deterministic integer division.
 
 ## Phase 4: Sample adoption
 

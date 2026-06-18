@@ -26,10 +26,31 @@ This file is normative for `aic run` evaluation behavior.
 - `Loop`: repeatedly evaluate body until exited with `Break`.
 - `Break`: valid only inside `Loop`; exits nearest loop.
 - `Continue`: valid only inside `Loop`; skips to next nearest-loop iteration.
-- `Eq`: evaluate both sides, then compare by primitive type and value.
+- `Eq`: evaluate both sides, then compare by primitive type and value. Integral
+  and fractional `number` payloads compare through numeric value, so `2` and
+  `2.0` are equal.
+- Public equality is `std.core.equals(a,b)`. Stdlib code and packages should use
+  `equals` instead of exposing module-local equality aliases.
+- RC-1 built-in equality handlers cover `std.Number`, `std.String`,
+  `std.Bool`, and `std.Null` through the primitive `Eq` substrate.
+- Future type-specific equality must be declared in AiLang as deterministic
+  `Equality(leftType,rightType,handler)` declarations. Handlers are pure,
+  return `std.Bool`, and are collected/validated deterministically; the host
+  must not register semantic equality handlers.
+- Fully qualified type identity is required for equality dispatch, for example
+  `std.Number`, `std.String`, `std.Bool`, `std.Null`, and package/user types
+  such as `user.Money`.
+- Values with different fully qualified types compare false unless an explicit
+  validated equality declaration allows the pair.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
-- `Add`: evaluate both sides, both must be exact whole-number literals.
-- The current canonical stdlib surface for these exact whole-number operations is `src/std/number.aos`.
+- `Add`, `Sub`, `Mul`, `Div`, `Mod`, `Pow`: evaluate both sides; both must be
+  numeric values in the `number` family. Integral inputs may produce integral
+  results when exact, while operations such as `Div(7,2)` produce fractional
+  values. Division and modulo by zero fail deterministically.
+- `Lt`: evaluate both sides; both must be numeric values in the `number` family;
+  returns `true` when the first value is numerically less than the second.
+- The canonical stdlib surface for language-facing numeric operations is
+  `src/std/number.aos`.
 - `bytes` values are first-class runtime values and participate in equality by length+byte-content.
 - `null` is a first-class runtime value distinct from `void`.
 - `null` equality is value-stable and can back generic coalesce-style stdlib helpers.

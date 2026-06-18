@@ -1,11 +1,12 @@
 # module_path	native_host	wasm_cli	wasm_spa	wasm_fullstack	notes
-src/std/core.aos	native	native	native	native	Pure deterministic result and node helpers.
+src/std/core.aos	native	native	native	native	Pure deterministic equality, result, and node helpers.
 src/std/io.aos	native	native	native	native	Stdout/stderr output is profile-mapped, but the module surface is available on every supported target.
 src/std/str.aos	native	native	native	native	Pure deterministic string helpers.
 src/std/bytes.aos	native	native	native	native	Pure deterministic bytes, base64, and UTF-8 helpers.
 src/std/null.aos	native	native	native	native	Pure deterministic null helpers.
-src/std/number.aos	native	native	native	native	Pure deterministic integer helpers, comparison, formatting, and parsing.
-src/std/math.aos	native	native	native	native	Pure deterministic integer arithmetic helpers; division and modulo are deferred until the numeric error/result contract is settled.
+src/std/bool.aos	native	native	native	native	Pure deterministic boolean helpers.
+src/std/number.aos	native	native	native	native	Pure deterministic exact whole-number helpers, comparison, integer division/modulo/power, formatting, and parsing.
+src/std/math.aos	native	native	native	native	Pure deterministic higher-level integer math helpers. Primitive arithmetic and comparison live in std.number.
 src/std/system.aos	partial	partial	blocked	blocked	Platform, architecture, runtime, runtimeTarget, and runtimePlatform metadata are broadly available; openDefault/openUrl remain host-only and are not browser baseline capabilities.
 src/std/process.aos	native	host-dependent	blocked	partial	Native host process control exists; browser targets do not expose process lifecycle.
 src/std/fs.aos	native	host-dependent	blocked	partial	Native host filesystem exists; browser targets require explicit remote or host-side adapters.

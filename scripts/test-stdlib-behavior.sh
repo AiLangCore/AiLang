@@ -13,6 +13,8 @@ Program#stdlib_behavior_number_p1 {
   Import#stdlib_behavior_number_i1(path="../../src/std/number.aos")
   Import#stdlib_behavior_number_i2(path="../../src/std/null.aos")
   Import#stdlib_behavior_number_i3(path="../../src/std/io.aos")
+  Import#stdlib_behavior_number_i4(path="../../src/std/core.aos")
+  Import#stdlib_behavior_number_i5(path="../../src/std/bool.aos")
   Export#stdlib_behavior_number_e1(name=start)
 
   Let#stdlib_behavior_number_l1(name=start) {
@@ -69,6 +71,82 @@ Program#stdlib_behavior_number_p1 {
             Lit#stdlib_behavior_number_i17(value="fallback")
           }
         }
+        Call#stdlib_behavior_number_c30(target=io.print) {
+          Call#stdlib_behavior_number_c31(target=toString) {
+            Call#stdlib_behavior_number_c32(target=div) { Lit#stdlib_behavior_number_i19(value=7) Lit#stdlib_behavior_number_i20(value=2) }
+          }
+        }
+        Call#stdlib_behavior_number_c33(target=io.print) {
+          Call#stdlib_behavior_number_c34(target=toString) {
+            Call#stdlib_behavior_number_c35(target=mod) { Lit#stdlib_behavior_number_i21(value=7) Lit#stdlib_behavior_number_i22(value=2) }
+          }
+        }
+        Call#stdlib_behavior_number_c36(target=io.print) {
+          Call#stdlib_behavior_number_c37(target=toString) {
+            Call#stdlib_behavior_number_c38(target=pow) { Lit#stdlib_behavior_number_i23(value=2) Lit#stdlib_behavior_number_i24(value=3) }
+          }
+        }
+        Call#stdlib_behavior_number_c39(target=io.print) {
+          Call#stdlib_behavior_number_c40(target=toString) {
+            Call#stdlib_behavior_number_c41(target=compare) { Lit#stdlib_behavior_number_i25(value=1) Lit#stdlib_behavior_number_i26(value=2) }
+          }
+        }
+        Call#stdlib_behavior_number_c42(target=io.print) {
+          Call#stdlib_behavior_number_c43(target=toString) {
+            Call#stdlib_behavior_number_c44(target=compare) { Lit#stdlib_behavior_number_i27(value=2) Lit#stdlib_behavior_number_i28(value=2) }
+          }
+        }
+        Call#stdlib_behavior_number_c45(target=io.print) {
+          Call#stdlib_behavior_number_c46(target=toString) {
+            Call#stdlib_behavior_number_c47(target=compare) { Lit#stdlib_behavior_number_i29(value=3) Lit#stdlib_behavior_number_i30(value=2) }
+          }
+        }
+        Call#stdlib_behavior_number_c48(target=io.print) {
+          ToString#stdlib_behavior_number_t2 {
+            Call#stdlib_behavior_number_c49(target=betweenInclusive) { Lit#stdlib_behavior_number_i31(value=2) Lit#stdlib_behavior_number_i32(value=1) Lit#stdlib_behavior_number_i33(value=3) }
+          }
+        }
+        Call#stdlib_behavior_number_c50(target=io.print) {
+          ToString#stdlib_behavior_number_t3 {
+            Call#stdlib_behavior_number_c51(target=betweenExclusive) { Lit#stdlib_behavior_number_i34(value=2) Lit#stdlib_behavior_number_i35(value=1) Lit#stdlib_behavior_number_i36(value=3) }
+          }
+        }
+        Call#stdlib_behavior_number_c52(target=io.print) {
+          Call#stdlib_behavior_number_c53(target=toString) {
+            Call#stdlib_behavior_number_c54(target=div) { Lit#stdlib_behavior_number_i37(value=6) Lit#stdlib_behavior_number_i38(value=3) }
+          }
+        }
+        Call#stdlib_behavior_number_c55(target=io.print) {
+          Call#stdlib_behavior_number_c56(target=toString) {
+            Call#stdlib_behavior_number_c57(target=pow) { Lit#stdlib_behavior_number_i39(value=5) Lit#stdlib_behavior_number_i40(value=0) }
+          }
+        }
+        Call#stdlib_behavior_number_c58(target=io.print) {
+          Call#stdlib_behavior_number_c59(target=toString) {
+            Call#stdlib_behavior_number_c60(target=pow) { Lit#stdlib_behavior_number_i41(value=2) Lit#stdlib_behavior_number_i42(value=1) }
+          }
+        }
+        Call#stdlib_behavior_number_c61(target=io.print) { ToString#stdlib_behavior_number_t4 { Call#stdlib_behavior_number_c62(target=lt) { Lit#stdlib_behavior_number_i43(value=1) Lit#stdlib_behavior_number_i44(value=2) } } }
+        Call#stdlib_behavior_number_c63(target=io.print) { ToString#stdlib_behavior_number_t5 { Call#stdlib_behavior_number_c64(target=lt) { Lit#stdlib_behavior_number_i45(value=2) Lit#stdlib_behavior_number_i46(value=1) } } }
+        Call#stdlib_behavior_number_c65(target=io.print) { ToString#stdlib_behavior_number_t6 { Call#stdlib_behavior_number_c66(target=lte) { Lit#stdlib_behavior_number_i47(value=2) Lit#stdlib_behavior_number_i48(value=2) } } }
+        Call#stdlib_behavior_number_c67(target=io.print) { ToString#stdlib_behavior_number_t7 { Call#stdlib_behavior_number_c68(target=lte) { Lit#stdlib_behavior_number_i49(value=1) Lit#stdlib_behavior_number_i50(value=2) } } }
+        Call#stdlib_behavior_number_c69(target=io.print) { ToString#stdlib_behavior_number_t8 { Call#stdlib_behavior_number_c70(target=gt) { Lit#stdlib_behavior_number_i51(value=3) Lit#stdlib_behavior_number_i52(value=2) } } }
+        Call#stdlib_behavior_number_c71(target=io.print) { ToString#stdlib_behavior_number_t9 { Call#stdlib_behavior_number_c72(target=gt) { Lit#stdlib_behavior_number_i53(value=2) Lit#stdlib_behavior_number_i54(value=3) } } }
+        Call#stdlib_behavior_number_c73(target=io.print) { ToString#stdlib_behavior_number_t10 { Call#stdlib_behavior_number_c74(target=gte) { Lit#stdlib_behavior_number_i55(value=2) Lit#stdlib_behavior_number_i56(value=2) } } }
+        Call#stdlib_behavior_number_c75(target=io.print) { ToString#stdlib_behavior_number_t11 { Call#stdlib_behavior_number_c76(target=gte) { Lit#stdlib_behavior_number_i57(value=3) Lit#stdlib_behavior_number_i58(value=2) } } }
+        Call#stdlib_behavior_number_c77(target=io.print) { ToString#stdlib_behavior_number_t12 { Call#stdlib_behavior_number_c78(target=betweenInclusive) { Lit#stdlib_behavior_number_i59(value=1) Lit#stdlib_behavior_number_i60(value=1) Lit#stdlib_behavior_number_i61(value=3) } } }
+        Call#stdlib_behavior_number_c79(target=io.print) { ToString#stdlib_behavior_number_t13 { Call#stdlib_behavior_number_c80(target=betweenInclusive) { Lit#stdlib_behavior_number_i62(value=3) Lit#stdlib_behavior_number_i63(value=1) Lit#stdlib_behavior_number_i64(value=3) } } }
+        Call#stdlib_behavior_number_c81(target=io.print) { ToString#stdlib_behavior_number_t14 { Call#stdlib_behavior_number_c82(target=betweenExclusive) { Lit#stdlib_behavior_number_i65(value=1) Lit#stdlib_behavior_number_i66(value=1) Lit#stdlib_behavior_number_i67(value=3) } } }
+        Call#stdlib_behavior_number_c83(target=io.print) { ToString#stdlib_behavior_number_t15 { Call#stdlib_behavior_number_c84(target=betweenExclusive) { Lit#stdlib_behavior_number_i68(value=3) Lit#stdlib_behavior_number_i69(value=1) Lit#stdlib_behavior_number_i70(value=3) } } }
+        Call#stdlib_behavior_number_c85(target=io.print) { ToString#stdlib_behavior_number_t16 { Call#stdlib_behavior_number_c86(target=not) { Call#stdlib_behavior_number_c87(target=equals) { Lit#stdlib_behavior_number_i71(value=2) Lit#stdlib_behavior_number_i72(value=2) } } } }
+        Call#stdlib_behavior_number_c88(target=io.print) { ToString#stdlib_behavior_number_t17 { Call#stdlib_behavior_number_c89(target=not) { Call#stdlib_behavior_number_c90(target=equals) { Lit#stdlib_behavior_number_i73(value=2) Lit#stdlib_behavior_number_i74(value=3) } } } }
+        Call#stdlib_behavior_number_c91(target=io.print) { ToString#stdlib_behavior_number_t18 { Call#stdlib_behavior_number_c92(target=xor) { Call#stdlib_behavior_number_c93(target=lt) { Lit#stdlib_behavior_number_i75(value=1) Lit#stdlib_behavior_number_i76(value=2) } Call#stdlib_behavior_number_c94(target=gt) { Lit#stdlib_behavior_number_i77(value=1) Lit#stdlib_behavior_number_i78(value=2) } } } }
+        Call#stdlib_behavior_number_c95(target=io.print) { Call#stdlib_behavior_number_c96(target=toString) { Call#stdlib_behavior_number_c97(target=add) { Lit#stdlib_behavior_number_i79(value=1.5) Lit#stdlib_behavior_number_i80(value=2) } } }
+        Call#stdlib_behavior_number_c98(target=io.print) { Call#stdlib_behavior_number_c99(target=toString) { Call#stdlib_behavior_number_c100(target=sub) { Lit#stdlib_behavior_number_i81(value=5.5) Lit#stdlib_behavior_number_i82(value=2) } } }
+        Call#stdlib_behavior_number_c101(target=io.print) { Call#stdlib_behavior_number_c102(target=toString) { Call#stdlib_behavior_number_c103(target=mul) { Lit#stdlib_behavior_number_i83(value=1.5) Lit#stdlib_behavior_number_i84(value=2) } } }
+        Call#stdlib_behavior_number_c104(target=io.print) { Call#stdlib_behavior_number_c105(target=toString) { Call#stdlib_behavior_number_c106(target=mod) { Lit#stdlib_behavior_number_i85(value=7.5) Lit#stdlib_behavior_number_i86(value=2) } } }
+        Call#stdlib_behavior_number_c107(target=io.print) { ToString#stdlib_behavior_number_t19 { Call#stdlib_behavior_number_c108(target=lt) { Lit#stdlib_behavior_number_i87(value=1.5) Lit#stdlib_behavior_number_i88(value=2) } } }
+        Call#stdlib_behavior_number_c109(target=io.print) { ToString#stdlib_behavior_number_t20 { Call#stdlib_behavior_number_c110(target=equals) { Lit#stdlib_behavior_number_i89(value=2) Lit#stdlib_behavior_number_i90(value=2.0) } } }
         Return#stdlib_behavior_number_r1 { Lit#stdlib_behavior_number_i18(value=0) }
       }
     }
@@ -87,55 +165,50 @@ Program#stdlib_behavior_math_p1 {
       Block#stdlib_behavior_math_b1 {
         Call#stdlib_behavior_math_c1(target=io.print) {
           ToString#stdlib_behavior_math_t1 {
-            Call#stdlib_behavior_math_c2(target=add) { Lit#stdlib_behavior_math_i1(value=2) Lit#stdlib_behavior_math_i2(value=3) }
+            Call#stdlib_behavior_math_c2(target=halfFloor) { Lit#stdlib_behavior_math_i1(value=9) Lit#stdlib_behavior_math_i2(value=0) }
           }
         }
         Call#stdlib_behavior_math_c3(target=io.print) {
           ToString#stdlib_behavior_math_t2 {
-            Call#stdlib_behavior_math_c4(target=sub) { Lit#stdlib_behavior_math_i3(value=2) Lit#stdlib_behavior_math_i4(value=9) }
+            Call#stdlib_behavior_math_c4(target=divFloor) { Lit#stdlib_behavior_math_i3(value=10) Lit#stdlib_behavior_math_i4(value=3) Lit#stdlib_behavior_math_i4a(value=0) }
           }
         }
         Call#stdlib_behavior_math_c5(target=io.print) {
           ToString#stdlib_behavior_math_t3 {
-            Call#stdlib_behavior_math_c6(target=mul) { Lit#stdlib_behavior_math_i5(value=-3) Lit#stdlib_behavior_math_i6(value=4) }
-          }
-        }
-        Call#stdlib_behavior_math_c7(target=io.print) {
-          ToString#stdlib_behavior_math_t4 {
-            Call#stdlib_behavior_math_c8(target=negate) { Lit#stdlib_behavior_math_i7(value=-12) }
-          }
-        }
-        Call#stdlib_behavior_math_c9(target=io.print) {
-          ToString#stdlib_behavior_math_t5 {
-            Call#stdlib_behavior_math_c10(target=lt) { Lit#stdlib_behavior_math_i8(value=-2) Lit#stdlib_behavior_math_i9(value=1) }
-          }
-        }
-        Call#stdlib_behavior_math_c11(target=io.print) {
-          ToString#stdlib_behavior_math_t6 {
-            Call#stdlib_behavior_math_c12(target=lte) { Lit#stdlib_behavior_math_i10(value=3) Lit#stdlib_behavior_math_i11(value=3) }
-          }
-        }
-        Call#stdlib_behavior_math_c13(target=io.print) {
-          ToString#stdlib_behavior_math_t7 {
-            Call#stdlib_behavior_math_c14(target=gte) { Lit#stdlib_behavior_math_i12(value=9) Lit#stdlib_behavior_math_i13(value=4) }
-          }
-        }
-        Call#stdlib_behavior_math_c15(target=io.print) {
-          ToString#stdlib_behavior_math_t8 {
-            Call#stdlib_behavior_math_c16(target=abs) { Lit#stdlib_behavior_math_i14(value=-8) }
-          }
-        }
-        Call#stdlib_behavior_math_c17(target=io.print) {
-          ToString#stdlib_behavior_math_t9 {
-            Call#stdlib_behavior_math_c18(target=halfFloor) { Lit#stdlib_behavior_math_i15(value=9) Lit#stdlib_behavior_math_i16(value=0) }
-          }
-        }
-        Call#stdlib_behavior_math_c19(target=io.print) {
-          ToString#stdlib_behavior_math_t10 {
-            Call#stdlib_behavior_math_c20(target=subAbs) { Lit#stdlib_behavior_math_i17(value=3) Lit#stdlib_behavior_math_i18(value=10) }
+            Call#stdlib_behavior_math_c6(target=subAbs) { Lit#stdlib_behavior_math_i5(value=3) Lit#stdlib_behavior_math_i6(value=10) }
           }
         }
         Return#stdlib_behavior_math_r1 { Lit#stdlib_behavior_math_i19(value=0) }
+      }
+    }
+  }
+}
+AOS
+
+cat > "${TMP_DIR}/bool.aos" <<'AOS'
+Program#stdlib_behavior_bool_p1 {
+  Import#stdlib_behavior_bool_i1(path="../../src/std/bool.aos")
+  Import#stdlib_behavior_bool_i2(path="../../src/std/io.aos")
+  Export#stdlib_behavior_bool_e1(name=start)
+
+  Let#stdlib_behavior_bool_l1(name=start) {
+    Fn#stdlib_behavior_bool_f1(params=args) {
+      Block#stdlib_behavior_bool_b1 {
+        Call#stdlib_behavior_bool_c1(target=io.print) { ToString#stdlib_behavior_bool_t1 { Call#stdlib_behavior_bool_c2(target=not) { Lit#stdlib_behavior_bool_i1(value=true) } } }
+        Call#stdlib_behavior_bool_c3(target=io.print) { ToString#stdlib_behavior_bool_t2 { Call#stdlib_behavior_bool_c4(target=not) { Lit#stdlib_behavior_bool_i2(value=false) } } }
+        Call#stdlib_behavior_bool_c5(target=io.print) { ToString#stdlib_behavior_bool_t3 { Call#stdlib_behavior_bool_c6(target=and) { Lit#stdlib_behavior_bool_i3(value=true) Lit#stdlib_behavior_bool_i4(value=true) } } }
+        Call#stdlib_behavior_bool_c7(target=io.print) { ToString#stdlib_behavior_bool_t4 { Call#stdlib_behavior_bool_c8(target=and) { Lit#stdlib_behavior_bool_i5(value=true) Lit#stdlib_behavior_bool_i6(value=false) } } }
+        Call#stdlib_behavior_bool_c9(target=io.print) { ToString#stdlib_behavior_bool_t5 { Call#stdlib_behavior_bool_c10(target=and) { Lit#stdlib_behavior_bool_i7(value=false) Lit#stdlib_behavior_bool_i8(value=true) } } }
+        Call#stdlib_behavior_bool_c11(target=io.print) { ToString#stdlib_behavior_bool_t6 { Call#stdlib_behavior_bool_c12(target=and) { Lit#stdlib_behavior_bool_i9(value=false) Lit#stdlib_behavior_bool_i10(value=false) } } }
+        Call#stdlib_behavior_bool_c13(target=io.print) { ToString#stdlib_behavior_bool_t7 { Call#stdlib_behavior_bool_c14(target=or) { Lit#stdlib_behavior_bool_i11(value=true) Lit#stdlib_behavior_bool_i12(value=true) } } }
+        Call#stdlib_behavior_bool_c15(target=io.print) { ToString#stdlib_behavior_bool_t8 { Call#stdlib_behavior_bool_c16(target=or) { Lit#stdlib_behavior_bool_i13(value=true) Lit#stdlib_behavior_bool_i14(value=false) } } }
+        Call#stdlib_behavior_bool_c17(target=io.print) { ToString#stdlib_behavior_bool_t9 { Call#stdlib_behavior_bool_c18(target=or) { Lit#stdlib_behavior_bool_i15(value=false) Lit#stdlib_behavior_bool_i16(value=true) } } }
+        Call#stdlib_behavior_bool_c19(target=io.print) { ToString#stdlib_behavior_bool_t10 { Call#stdlib_behavior_bool_c20(target=or) { Lit#stdlib_behavior_bool_i17(value=false) Lit#stdlib_behavior_bool_i18(value=false) } } }
+        Call#stdlib_behavior_bool_c21(target=io.print) { ToString#stdlib_behavior_bool_t11 { Call#stdlib_behavior_bool_c22(target=xor) { Lit#stdlib_behavior_bool_i19(value=true) Lit#stdlib_behavior_bool_i20(value=true) } } }
+        Call#stdlib_behavior_bool_c23(target=io.print) { ToString#stdlib_behavior_bool_t12 { Call#stdlib_behavior_bool_c24(target=xor) { Lit#stdlib_behavior_bool_i21(value=true) Lit#stdlib_behavior_bool_i22(value=false) } } }
+        Call#stdlib_behavior_bool_c25(target=io.print) { ToString#stdlib_behavior_bool_t13 { Call#stdlib_behavior_bool_c26(target=xor) { Lit#stdlib_behavior_bool_i23(value=false) Lit#stdlib_behavior_bool_i24(value=true) } } }
+        Call#stdlib_behavior_bool_c27(target=io.print) { ToString#stdlib_behavior_bool_t14 { Call#stdlib_behavior_bool_c28(target=xor) { Lit#stdlib_behavior_bool_i25(value=false) Lit#stdlib_behavior_bool_i26(value=false) } } }
+        Return#stdlib_behavior_bool_r1 { Lit#stdlib_behavior_bool_i13(value=0) }
       }
     }
   }
@@ -250,6 +323,51 @@ Program#stdlib_behavior_core_str_p1 {
         Call#stdlib_behavior_core_str_c30(target=io.print) {
           Call#stdlib_behavior_core_str_c31(target=fromCodePoint) {
             Lit#stdlib_behavior_core_str_i26(value=65)
+          }
+        }
+        Call#stdlib_behavior_core_str_c32(target=io.print) {
+          ToString#stdlib_behavior_core_str_t4 {
+            Call#stdlib_behavior_core_str_c33(target=equals) { Lit#stdlib_behavior_core_str_i27(value=1) Lit#stdlib_behavior_core_str_i28(value=1) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c34(target=io.print) {
+          ToString#stdlib_behavior_core_str_t5 {
+            Call#stdlib_behavior_core_str_c35(target=equals) { Lit#stdlib_behavior_core_str_i29(value=1) Lit#stdlib_behavior_core_str_i30(value=2) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c36(target=io.print) {
+          ToString#stdlib_behavior_core_str_t6 {
+            Call#stdlib_behavior_core_str_c37(target=equals) { Lit#stdlib_behavior_core_str_i32(value="a") Lit#stdlib_behavior_core_str_i33(value="a") }
+          }
+        }
+        Call#stdlib_behavior_core_str_c38(target=io.print) {
+          ToString#stdlib_behavior_core_str_t7 {
+            Call#stdlib_behavior_core_str_c39(target=equals) { Lit#stdlib_behavior_core_str_i34(value="a") Lit#stdlib_behavior_core_str_i35(value="b") }
+          }
+        }
+        Call#stdlib_behavior_core_str_c40(target=io.print) {
+          ToString#stdlib_behavior_core_str_t8 {
+            Call#stdlib_behavior_core_str_c41(target=equals) { Lit#stdlib_behavior_core_str_i36(value=true) Lit#stdlib_behavior_core_str_i37(value=true) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c42(target=io.print) {
+          ToString#stdlib_behavior_core_str_t9 {
+            Call#stdlib_behavior_core_str_c43(target=equals) { Lit#stdlib_behavior_core_str_i38(value=true) Lit#stdlib_behavior_core_str_i39(value=false) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c44(target=io.print) {
+          ToString#stdlib_behavior_core_str_t10 {
+            Call#stdlib_behavior_core_str_c45(target=equals) { Lit#stdlib_behavior_core_str_i40(value=null) Lit#stdlib_behavior_core_str_i41(value=null) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c46(target=io.print) {
+          ToString#stdlib_behavior_core_str_t11 {
+            Call#stdlib_behavior_core_str_c47(target=equals) { Lit#stdlib_behavior_core_str_i42(value="string") Lit#stdlib_behavior_core_str_i43(value=null) }
+          }
+        }
+        Call#stdlib_behavior_core_str_c48(target=io.print) {
+          ToString#stdlib_behavior_core_str_t12 {
+            Call#stdlib_behavior_core_str_c49(target=equals) { Lit#stdlib_behavior_core_str_i44(value=1) Lit#stdlib_behavior_core_str_i45(value="1") }
           }
         }
         Return#stdlib_behavior_core_str_r1 { Lit#stdlib_behavior_core_str_i31(value=0) }
@@ -553,6 +671,38 @@ true
 -42
 7
 fallback
+3.5
+1
+8
+-1
+0
+1
+true
+true
+2
+1
+2
+true
+false
+true
+true
+true
+false
+true
+true
+true
+true
+false
+false
+false
+true
+true
+3.5
+3.5
+3
+1.5
+true
+true
 Ok#ok1(type=int value=0)'
 
 if [[ "${NUMBER_NULL_OUT}" != "${NUMBER_NULL_EXPECTED}" ]]; then
@@ -565,15 +715,8 @@ if [[ "${NUMBER_NULL_OUT}" != "${NUMBER_NULL_EXPECTED}" ]]; then
 fi
 
 MATH_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_DIR}/math.aos")"
-MATH_EXPECTED='5
--7
--12
-12
-true
-true
-true
-8
-4
+MATH_EXPECTED='4
+3
 7
 Ok#ok1(type=int value=0)'
 
@@ -583,6 +726,32 @@ if [[ "${MATH_OUT}" != "${MATH_EXPECTED}" ]]; then
   printf '%s\n' "${MATH_EXPECTED}" >&2
   echo "actual:" >&2
   printf '%s\n' "${MATH_OUT}" >&2
+  exit 1
+fi
+
+BOOL_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_DIR}/bool.aos")"
+BOOL_EXPECTED='false
+true
+true
+false
+false
+false
+true
+true
+true
+false
+false
+true
+true
+false
+Ok#ok1(type=int value=0)'
+
+if [[ "${BOOL_OUT}" != "${BOOL_EXPECTED}" ]]; then
+  echo "stdlib bool behavior mismatch" >&2
+  echo "expected:" >&2
+  printf '%s\n' "${BOOL_EXPECTED}" >&2
+  echo "actual:" >&2
+  printf '%s\n' "${BOOL_OUT}" >&2
   exit 1
 fi
 
@@ -599,6 +768,15 @@ abef
 2
 one cat one cat
 A
+true
+false
+true
+false
+true
+false
+true
+false
+false
 Ok#ok1(type=int value=0)'
 
 if [[ "${CORE_STR_OUT}" != "${CORE_STR_EXPECTED}" ]]; then

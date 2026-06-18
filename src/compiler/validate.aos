@@ -404,7 +404,43 @@ Program#p1 {
                     If#k625 {
                       Eq#k626 { Var#k627(name=kind) Lit#k628(value="PairSecond") }
                       Block#k629 { Return#k630 { Lit#k631(value=1) } }
-                      Block#k632 { Return#k607 { Lit#k608(value=-1) } }
+                      Block#k632 {
+                        If#k633 {
+                          Eq#k634 { Var#k635(name=kind) Lit#k636(value="Sub") }
+                          Block#k637 { Return#k638 { Lit#k639(value=2) } }
+                          Block#k640 {
+                            If#k641 {
+                              Eq#k642 { Var#k643(name=kind) Lit#k644(value="Mul") }
+                              Block#k645 { Return#k646 { Lit#k647(value=2) } }
+                              Block#k648 {
+                                If#k649 {
+                                  Eq#k650 { Var#k651(name=kind) Lit#k652(value="Div") }
+                                  Block#k653 { Return#k654 { Lit#k655(value=2) } }
+                                  Block#k656 {
+                                    If#k657 {
+                                      Eq#k658 { Var#k659(name=kind) Lit#k660(value="Mod") }
+                                      Block#k661 { Return#k662 { Lit#k663(value=2) } }
+                                      Block#k664 {
+                                        If#k665 {
+                                          Eq#k666 { Var#k667(name=kind) Lit#k668(value="Pow") }
+                                          Block#k669 { Return#k670 { Lit#k671(value=2) } }
+                                          Block#k672 {
+                                            If#k673 {
+                                              Eq#k674 { Var#k675(name=kind) Lit#k676(value="Lt") }
+                                              Block#k677 { Return#k678 { Lit#k679(value=2) } }
+                                              Block#k680 { Return#k607 { Lit#k608(value=-1) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }

@@ -1,0 +1,66 @@
+Program#std_bool_p1 {
+  Let#std_bool_l1(name=not) {
+    Fn#std_bool_f1(params=value) {
+      Block#std_bool_b1 {
+        If#std_bool_if1 {
+          Var#std_bool_v1(name=value)
+          Block#std_bool_b2 { Return#std_bool_r1 { Lit#std_bool_i1(value=false) } }
+          Block#std_bool_b3 { Return#std_bool_r2 { Lit#std_bool_i2(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#std_bool_l2(name=and) {
+    Fn#std_bool_f2(params=a,b) {
+      Block#std_bool_b4 {
+        If#std_bool_if2 {
+          Var#std_bool_v2(name=a)
+          Block#std_bool_b5 {
+            If#std_bool_if3 {
+              Var#std_bool_v3(name=b)
+              Block#std_bool_b6 { Return#std_bool_r3 { Lit#std_bool_i3(value=true) } }
+              Block#std_bool_b7 { Return#std_bool_r4 { Lit#std_bool_i4(value=false) } }
+            }
+          }
+          Block#std_bool_b8 { Return#std_bool_r5 { Lit#std_bool_i5(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#std_bool_l3(name=or) {
+    Fn#std_bool_f3(params=a,b) {
+      Block#std_bool_b9 {
+        If#std_bool_if4 {
+          Var#std_bool_v4(name=a)
+          Block#std_bool_b10 { Return#std_bool_r6 { Lit#std_bool_i6(value=true) } }
+          Block#std_bool_b11 {
+            If#std_bool_if5 {
+              Var#std_bool_v5(name=b)
+              Block#std_bool_b12 { Return#std_bool_r7 { Lit#std_bool_i7(value=true) } }
+              Block#std_bool_b13 { Return#std_bool_r8 { Lit#std_bool_i8(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_bool_l4(name=xor) {
+    Fn#std_bool_f4(params=a,b) {
+      Block#std_bool_b14 {
+        If#std_bool_if6 {
+          Var#std_bool_v6(name=a)
+          Block#std_bool_b15 { Return#std_bool_r9 { Call#std_bool_c1(target=not) { Var#std_bool_v7(name=b) } } }
+          Block#std_bool_b16 { Return#std_bool_r10 { Var#std_bool_v8(name=b) } }
+        }
+      }
+    }
+  }
+
+  Export#std_bool_e1(name=not)
+  Export#std_bool_e2(name=and)
+  Export#std_bool_e3(name=or)
+  Export#std_bool_e4(name=xor)
+}

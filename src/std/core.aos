@@ -1,4 +1,14 @@
 Program#std_core_p1 {
+  Let#std_core_l0(name=equals) {
+    Fn#std_core_f0(params=a,b) {
+      Block#std_core_b0 {
+        Return#std_core_r0 {
+          Eq#std_core_eq0 { Var#std_core_v0a(name=a) Var#std_core_v0b(name=b) }
+        }
+      }
+    }
+  }
+
   Let#std_core_l1(name=assert) {
     Fn#std_core_f1(params=condition,code,message) {
       Block#std_core_b1 {
@@ -907,6 +917,7 @@ Program#std_core_p1 {
     }
   }
 
+  Export#std_core_e0(name=equals)
   Export#std_core_e1(name=assert)
   Export#std_core_e2(name=resultOkString)
   Export#std_core_e14(name=resultOkInt)

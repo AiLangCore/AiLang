@@ -7,13 +7,14 @@ to behave like a production programming language.
 
 | Area | Module | Required for baseline | Why it exists | Immediate need |
 |---|---|---:|---|---|
-| Core results/assertions | `std.core` | Yes | Shared result nodes, assertions, basic structural helpers | Keep and harden as common foundation |
+| Core results/assertions/equality | `std.core` | Yes | Shared equality, result nodes, assertions, basic structural helpers | Keep and harden as common foundation |
 | Console IO | `std.io` | Yes | Normal stdout/stderr output without direct `sys.*` use | Keep stdout/stderr minimal and portable |
 | Strings | `std.str` | Yes | Deterministic text operations | Keep as canonical text helper surface |
 | Bytes | `std.bytes` | Yes | Binary payload handling for files, network, encoding | Keep and test heavily |
 | Null | `std.null` | Yes | Standard null construction, checks, and coalescing | Keep small and deterministic |
-| Numbers | `std.number` | Yes | Integer helpers, comparison, parsing, formatting, and ranges | Keep integer-first until numeric error policy is settled |
-| Math | `std.math` | Yes | Minimal arithmetic helpers and future numeric growth point | Current baseline is add/sub/mul/negate; defer div/mod |
+| Booleans | `std.bool` | Yes | Standard boolean combinators | Keep small and deterministic |
+| Numbers | `std.number` | Yes | Exact whole-number helpers, comparison, parsing, formatting, ranges, integer div/mod/pow | Keep integer-first until decimal/float policy is settled |
+| Math | `std.math` | Yes | Higher-level numeric helpers | Keep primitive arithmetic and comparison in `std.number` |
 | System metadata | `std.system` | Yes | Platform, arch, runtime identity | Keep as single canonical system surface |
 | Process | `std.process` | Yes | Args, env, cwd, child process control | Keep minimal and capability-bound |
 | Filesystem | `std.fs` | Yes | File and path operations for real apps/tools | Keep minimal, deterministic, capability-bound |
@@ -47,7 +48,9 @@ to behave like a production programming language.
 | Debugging | `std.debug` | Production-safe diagnostics: mode, logging, assertions |
 | Core helpers | `std.core` | Results, assertions, and shared structural helpers |
 | Console IO | `std.io` | Standard input/output helpers |
-| Math | `std.math` | Numeric helpers |
+| Booleans | `std.bool` | Boolean helpers |
+| Numbers | `std.number` | Primitive exact whole-number helpers |
+| Math | `std.math` | Higher-level numeric helpers |
 
 ## Shared parser internals
 
@@ -76,7 +79,7 @@ to behave like a production programming language.
 | Is `std.debug` baseline? | Yes, but limited to mode, logging, and assertions |
 | Are capture/replay/artifact APIs baseline? | No, they belong to debug/profile tooling or optional packages |
 | Are `std.null` and `std.number` baseline? | Yes |
-| Are division and modulo baseline? | No, not until numeric failure/result semantics are specified |
+| Are division and modulo baseline? | Yes for exact whole-number integer operations. Decimal/float behavior remains future work. |
 | Is `std.ui_input` baseline? | No, it belongs in an optional package or AiVectra |
 | Are `std.http`, `std.json`, `std.net`, and `std.image` baseline? | No, they belong in optional packages |
 | Is `std.platform` baseline? | No |

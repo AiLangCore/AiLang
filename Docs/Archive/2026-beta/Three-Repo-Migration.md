@@ -101,11 +101,7 @@ aivm
 libaivm_core.a
 ```
 
-The old C# AiVM runtime has been archived in:
-
-```text
-AiVM/legacy/csharp/src/AiVM
-```
+The old C# AiVM runtime has been removed from AiVM.
 
 AiLang no longer owns the pre-split native source path. Operational AiLang
 scripts consume the sibling checkout at `../AiVM/src` by default, or the path
@@ -125,17 +121,17 @@ provided through `AIVM_C_SOURCE_DIR`.
 - Done: imported `AiLang/src/AiVM.Core/native` into the `AiVM` repository with
   subtree history preserved.
 - Done: added initial native `aivm` executable target.
-- Done: archived the legacy C# tree under `legacy/csharp`.
-- Pending: promote the native tree from `native/` to an AiVM-root layout:
+- Done: removed the legacy C# tree.
+- Done: promoted the native tree to the standard AiVM `src/` layout:
 
 ```text
 AiVM/
-+-- include/
 +-- src/
-+-- tests/
-+-- examples/
-+-- CMakeLists.txt
-+-- CMakePresets.json
++-- src/include/
++-- src/tests/
++-- src/examples/
++-- src/CMakeLists.txt
++-- src/CMakePresets.json
 +-- scripts/
 `-- README.md
 ```

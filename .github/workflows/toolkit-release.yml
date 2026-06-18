@@ -130,7 +130,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
           AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
           AILANG_BUILD_CHANNEL: beta
         run: |
@@ -285,7 +285,7 @@ jobs:
         if: matrix.platform != 'windows'
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
           AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
           AILANG_BUILD_CHANNEL: beta
         run: |
@@ -433,7 +433,7 @@ jobs:
       - name: Build wasm runtime artifact
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           ./build.sh wasm
@@ -441,7 +441,7 @@ jobs:
       - name: Stage host tools for wasm golden tests
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           AILANG_NATIVE_PLATFORM=linux \
@@ -458,7 +458,7 @@ jobs:
       - name: Wasm golden smoke
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           chmod +x ./scripts/test-wasm-golden.sh

@@ -30,12 +30,12 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 
 ## Files of Interest
 
-- `../AiVM/native/aivm_vm.c`
-- `../AiVM/native/include/aivm_vm.h`
-- `../AiVM/native/ailang_cli/ailang.c`
-- `../AiVM/native/tests/test_vm_core.c`
-- `../AiVM/native/tests/test_vm_ops.c`
-- `../AiVM/native/tests/test_process_lifecycle_stress.c`
+- `../AiVM/src/aivm_vm.c`
+- `../AiVM/src/include/aivm_vm.h`
+- `../AiVM/src/ailang_cli/ailang.c`
+- `../AiVM/src/tests/test_vm_core.c`
+- `../AiVM/src/tests/test_vm_ops.c`
+- `../AiVM/src/tests/test_process_lifecycle_stress.c`
 - `./test-aivm-c.sh`
 - `.github/workflows/aivm-c-ci.yml`
 - `.github/workflows/main-release-gate.yml`

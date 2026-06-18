@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$preferredSource = Join-Path (Split-Path $root -Parent) 'AiVM/native'
+$preferredSource = Join-Path (Split-Path $root -Parent) 'AiVM/src'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
 $buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path (Split-Path $root -Parent) 'AiVM/.tmp/aivm-c-build-native' }
 $aivmTests = Join-Path $sourceDir 'tests'

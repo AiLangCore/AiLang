@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
 BUILD_SUFFIX="native"
-if [[ "${AIVM_C_SOURCE_DIR}" == "${ROOT_DIR}/../AiVM/native" ]]; then
+if [[ "${AIVM_C_SOURCE_DIR}" == "${ROOT_DIR}/../AiVM/src" ]]; then
   BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
 else
   BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"

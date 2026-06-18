@@ -56,7 +56,7 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
   - AST/IR structures
   - validator and deterministic language semantics
   - no direct syscall, network, file, or process operations
-- `../AiVM/native` is VM-only:
+- `../AiVM/src` is VM-only:
   - AiBC1 loading/execution
   - deterministic state transition engine
   - syscall dispatch boundary only (`sys.*`)

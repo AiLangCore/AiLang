@@ -188,14 +188,14 @@ if [[ -d "${AIVM_DIR}" ]]; then
   copy_if_exists "${AIVM_BUILD_DIR}/aivm" "${TMP_ROOT}/runtimes/${RID}/aivm"
   copy_if_exists "${AIVM_BUILD_DIR}/aivm" "${TMP_ROOT}/runtimes/host/aivm"
   copy_if_exists "${AIVM_BUILD_DIR}/libaivm_core.a" "${TMP_ROOT}/lib/libaivm_core.a"
-  copy_if_exists "${AIVM_DIR}/native/include" "${TMP_ROOT}/include/aivm"
+  copy_if_exists "${AIVM_DIR}/src/include" "${TMP_ROOT}/include/aivm"
 else
   echo "warning: AiVM checkout not found: ${AIVM_DIR}" >&2
 fi
 
 echo "building AiLang from ${AILANG_DIR}..."
-if [[ -d "${AIVM_DIR}/native" ]]; then
-  (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/native" ./build.sh host)
+if [[ -d "${AIVM_DIR}/src" ]]; then
+  (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/src" ./build.sh host)
 else
   (cd "${AILANG_DIR}" && ./build.sh host)
 fi
@@ -211,8 +211,8 @@ copy_if_exists "${AILANG_DIR}/Docs" "${TMP_ROOT}/sdk/AiLangDocs"
 
 if [[ "${BUILD_WASM}" == "1" || ( "${BUILD_WASM}" == "auto" && -n "$(command -v emcc || true)" ) ]]; then
   echo "building AiLang wasm runtime artifacts..."
-  if [[ -d "${AIVM_DIR}/native" ]]; then
-    (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/native" ./build.sh wasm)
+  if [[ -d "${AIVM_DIR}/src" ]]; then
+    (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/src" ./build.sh wasm)
   else
     (cd "${AILANG_DIR}" && ./build.sh wasm)
   fi

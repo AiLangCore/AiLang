@@ -91,7 +91,7 @@ Long-term rule:
 The native C VM has been imported into the standalone AiVM repository under:
 
 ```text
-AiVM/native
+AiVM/src
 ```
 
 The standalone AiVM repository now produces:
@@ -108,7 +108,7 @@ AiVM/legacy/csharp/src/AiVM
 ```
 
 AiLang no longer owns the pre-split native source path. Operational AiLang
-scripts consume the sibling checkout at `../AiVM/native` by default, or the path
+scripts consume the sibling checkout at `../AiVM/src` by default, or the path
 provided through `AIVM_C_SOURCE_DIR`.
 
 ## Migration Phases
@@ -145,7 +145,7 @@ AiVM/
 
 ### Phase 3: Rewire AiLang to consume AiVM
 
-- Done: AiLang bootstrap scripts consume the sibling `../AiVM/native` checkout.
+- Done: AiLang bootstrap scripts consume the sibling `../AiVM/src` checkout.
 - Done: removed the tracked native VM implementation from AiLang.
 - Pending: choose final dependency mechanism: submodule, sibling checkout, or
   release artifact.

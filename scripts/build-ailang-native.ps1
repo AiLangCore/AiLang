@@ -4,8 +4,8 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $nativeSrc = if ($env:AIVM_C_SOURCE_DIR) {
   $env:AIVM_C_SOURCE_DIR
-} elseif (Test-Path (Join-Path $root '..\AiVM\native')) {
-  (Resolve-Path (Join-Path $root '..\AiVM\native')).Path
+} elseif (Test-Path (Join-Path $root '..\AiVM\src')) {
+  (Resolve-Path (Join-Path $root '..\AiVM\src')).Path
 } else {
   throw 'AiVM native source not found. Set AIVM_C_SOURCE_DIR or place AiVM next to AiLang.'
 }

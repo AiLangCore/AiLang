@@ -35,9 +35,9 @@ jobs:
             AIVM_LEAK_CHECK_ITERATIONS=50 \
             AIVM_LEAK_MAX_GROWTH_KB=2048 \
             AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
-            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./test-aivm-c.sh
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./test-aivm-c.sh
           else
-            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./test-aivm-c.sh
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./test-aivm-c.sh
           fi
 
       - name: Verify bytes host syscall test (Unix)
@@ -46,13 +46,13 @@ jobs:
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
-        run: AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./scripts/aivm-c-perf-smoke.sh 10
+        run: AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./scripts/aivm-c-perf-smoke.sh 10
 
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
         run: |
           ./build.sh
-          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./scripts/aivm-bench-gate.sh
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./scripts/aivm-bench-gate.sh
 
       - name: Setup Emscripten (Linux)
         if: runner.os == 'Linux'
@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
           {
             echo "### AiLang DoD Dashboard (Linux)"
             echo

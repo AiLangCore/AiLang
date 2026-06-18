@@ -1,7 +1,7 @@
 # AiVM Repository Split
 
 Status: historical split note. The native C VM has been imported into the
-standalone AiVM repository under `AiVM/native`; use
+standalone AiVM repository under `AiVM/src`; use
 `Docs/Three-Repo-Migration.md` for current migration status.
 
 This document defines the workflow for extracting `AiVM.Core` from this monorepo into `git@github.com:AiLangCore/AiVM.git` while preserving commit history.

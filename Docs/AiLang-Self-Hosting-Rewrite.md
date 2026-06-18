@@ -86,7 +86,7 @@ Current bootstrap status:
 The migrated C launcher is temporarily parked in:
 
 ```text
-../AiVM/native/ailang_cli
+../AiVM/src/ailang_cli
 ```
 
 ## Rewrite Sequence

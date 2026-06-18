@@ -33,7 +33,7 @@ Program#p1 {
 ```
 
 AiVM is a native C project and does not have an AiLang project manifest. AiVM
-therefore uses the CMake project declaration in `native/CMakeLists.txt` as the
+therefore uses the CMake project declaration in `src/CMakeLists.txt` as the
 base semantic version:
 
 ```cmake
@@ -307,14 +307,14 @@ ailang toolchain doctor
 - AiLang source-level VM tests may use `AIVM_C_SOURCE_DIR`, but this is an
   explicit VM-development mode.
 - Sibling checkout fallback is disabled by default. During migration, set
-  `AILANG_ALLOW_SIBLING_AIVM_SOURCE=1` to use `../AiVM/native`.
+  `AILANG_ALLOW_SIBLING_AIVM_SOURCE=1` to use `../AiVM/src`.
 - AiVectra is an AiLang project. It should depend on an installed `ailang`
   toolchain, not on AiVM internals.
 
 ## Immediate Implementation Tasks
 
 1. Add `version` to AiLang and AiVectra root `project.aiproj` files.
-2. Keep AiVM versioned from `native/CMakeLists.txt`.
+2. Keep AiVM versioned from `src/CMakeLists.txt`.
 3. Make release workflows derive versions from the component's canonical
    version source.
 4. Add generated `install.toml` to release artifacts.

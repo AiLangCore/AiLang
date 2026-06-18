@@ -8,7 +8,7 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Current Baseline
 
-- VM memory is deterministic and bounded by explicit capacities in `../AiVM/native/include/aivm_vm.h`.
+- VM memory is deterministic and bounded by explicit capacities in `../AiVM/src/include/aivm_vm.h`.
 - Large VM regions are heap-backed inside AiVM instead of embedded directly in
   the `AivmVm` struct.
 - Node graph memory uses deterministic tracing compaction with fixed policy:

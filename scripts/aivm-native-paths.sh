@@ -3,7 +3,7 @@
 resolve_aivm_native_dir() {
   local root_dir="$1"
   local explicit_dir="${AIVM_C_SOURCE_DIR:-}"
-  local sibling_dir="${root_dir}/../AiVM/native"
+  local sibling_dir="${root_dir}/../AiVM/src"
 
   if [[ -n "${explicit_dir}" ]]; then
     printf '%s\n' "${explicit_dir}"
@@ -23,7 +23,7 @@ require_aivm_native_dir() {
   if [[ -z "${native_dir}" || ! -d "${native_dir}" ]]; then
     echo "AiVM native source directory is not configured." >&2
     echo "Set AIVM_C_SOURCE_DIR for source-level VM tests." >&2
-    echo "For workspace migration only, set AILANG_ALLOW_SIBLING_AIVM_SOURCE=1 to use ../AiVM/native." >&2
+    echo "For workspace migration only, set AILANG_ALLOW_SIBLING_AIVM_SOURCE=1 to use ../AiVM/src." >&2
     return 1
   fi
   printf '%s\n' "${native_dir}"

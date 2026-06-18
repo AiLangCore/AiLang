@@ -34,7 +34,7 @@ jobs:
       - name: Build wasm runtime artifact
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           ./build.sh wasm
@@ -97,7 +97,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh

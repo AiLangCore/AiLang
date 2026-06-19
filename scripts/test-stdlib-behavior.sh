@@ -674,6 +674,36 @@ Program#stdlib_behavior_time_p1 {
             Lit#stdlib_behavior_time_i8(value=3)
           }
         }
+        Call#stdlib_behavior_time_c16(target=io.print) {
+          Call#stdlib_behavior_time_c17(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i9(value=20623)
+            Lit#stdlib_behavior_time_i10(value=0)
+          }
+        }
+        Call#stdlib_behavior_time_c18(target=io.print) {
+          Call#stdlib_behavior_time_c19(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i11(value=20623)
+            Lit#stdlib_behavior_time_i12(value=1)
+          }
+        }
+        Call#stdlib_behavior_time_c20(target=io.print) {
+          Call#stdlib_behavior_time_c21(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i13(value=20623)
+            Lit#stdlib_behavior_time_i14(value=2)
+          }
+        }
+        Call#stdlib_behavior_time_c22(target=io.print) {
+          Call#stdlib_behavior_time_c23(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i15(value=20623)
+            Lit#stdlib_behavior_time_i16(value=3)
+          }
+        }
+        Call#stdlib_behavior_time_c24(target=io.print) {
+          Call#stdlib_behavior_time_c25(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i17(value=20623)
+            Lit#stdlib_behavior_time_i18(value=4)
+          }
+        }
         Return#stdlib_behavior_time_r1 { Lit#stdlib_behavior_time_i2(value=0) }
       }
     }
@@ -908,6 +938,11 @@ true
 0
 Tomorrow
 Sunday
+Today
+Tomorrow
+Sunday
+Monday
+Tuesday
 Ok#ok1(type=int value=0)'
 
 if [[ "${TIME_OUT}" != "${TIME_EXPECTED}" ]]; then

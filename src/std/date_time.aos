@@ -1,0 +1,78 @@
+Program {
+  Import(path="./number.aos")
+  Import(path="./time.aos")
+
+  Export(name=localDayIndexFromUnixMs)
+  Export(name=currentLocalDayIndex)
+  Export(name=weekdayIndexFromDayIndex)
+  Export(name=weekdayName)
+  Export(name=relativeDayLabelFromBaseDayIndex)
+
+  Let(name=localDayIndexFromUnixMs) {
+    Fn(params=unixMs,offsetMinutes) {
+      Block {
+        Return {
+          Call(target=div) {
+            Add {
+              Var(name=unixMs)
+              Call(target=mul) { Var(name=offsetMinutes) Lit(value=60000) }
+            }
+            Lit(value=86400000)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=currentLocalDayIndex) {
+    Fn(params=_) {
+      Block {
+        Let(name=unixMs) { Call(target=nowUnixMs) { Lit(value=0) } }
+        Return {
+          Call(target=localDayIndexFromUnixMs) {
+            Var(name=unixMs)
+            Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=weekdayIndexFromDayIndex) {
+    Fn(params=dayIndex) {
+      Block {
+        Return { Call(target=mod) { Add { Var(name=dayIndex) Lit(value=4) } Lit(value=7) } }
+      }
+    }
+  }
+
+  Let(name=weekdayName) {
+    Fn(params=weekdayIndex) {
+      Block {
+        If { Eq { Var(name=weekdayIndex) Lit(value=0) } Block { Return { Lit(value="Sunday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=1) } Block { Return { Lit(value="Monday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=2) } Block { Return { Lit(value="Tuesday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=3) } Block { Return { Lit(value="Wednesday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=4) } Block { Return { Lit(value="Thursday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=5) } Block { Return { Lit(value="Friday") } } Block { Lit(value=0) } }
+        Return { Lit(value="Saturday") }
+      }
+    }
+  }
+
+  Let(name=relativeDayLabelFromBaseDayIndex) {
+    Fn(params=baseDayIndex,dayOffset) {
+      Block {
+        If { Eq { Var(name=dayOffset) Lit(value=0) } Block { Return { Lit(value="Today") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=dayOffset) Lit(value=1) } Block { Return { Lit(value="Tomorrow") } } Block { Lit(value=0) } }
+        Return {
+          Call(target=weekdayName) {
+            Call(target=weekdayIndexFromDayIndex) {
+              Add { Var(name=baseDayIndex) Var(name=dayOffset) }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -617,6 +617,7 @@ cat > "${TMP_DIR}/time.aos" <<'AOS'
 Program#stdlib_behavior_time_p1 {
   Import#stdlib_behavior_time_i1(path="../../src/std/time.aos")
   Import#stdlib_behavior_time_i2(path="../../src/std/io.aos")
+  Import#stdlib_behavior_time_i3(path="../../src/std/date_time.aos")
   Export#stdlib_behavior_time_e1(name=start)
 
   Let#stdlib_behavior_time_l1(name=start) {
@@ -651,6 +652,26 @@ Program#stdlib_behavior_time_p1 {
             Call#stdlib_behavior_time_c9(target=timeIsUtc) {
               Var#stdlib_behavior_time_v4(name=utc)
             }
+          }
+        }
+        Call#stdlib_behavior_time_c10(target=io.print) {
+          ToString#stdlib_behavior_time_t4 {
+            Call#stdlib_behavior_time_c11(target=localDayIndexFromUnixMs) {
+              Lit#stdlib_behavior_time_i3(value=0)
+              Lit#stdlib_behavior_time_i4(value=0)
+            }
+          }
+        }
+        Call#stdlib_behavior_time_c12(target=io.print) {
+          Call#stdlib_behavior_time_c13(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i5(value=0)
+            Lit#stdlib_behavior_time_i6(value=1)
+          }
+        }
+        Call#stdlib_behavior_time_c14(target=io.print) {
+          Call#stdlib_behavior_time_c15(target=relativeDayLabelFromBaseDayIndex) {
+            Lit#stdlib_behavior_time_i7(value=0)
+            Lit#stdlib_behavior_time_i8(value=3)
           }
         }
         Return#stdlib_behavior_time_r1 { Lit#stdlib_behavior_time_i2(value=0) }
@@ -884,6 +905,9 @@ TIME_EXPECTED='12345
 UTC
 0
 true
+0
+Tomorrow
+Sunday
 Ok#ok1(type=int value=0)'
 
 if [[ "${TIME_OUT}" != "${TIME_EXPECTED}" ]]; then

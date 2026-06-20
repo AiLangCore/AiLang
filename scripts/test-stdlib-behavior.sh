@@ -704,6 +704,19 @@ Program#stdlib_behavior_time_p1 {
             Lit#stdlib_behavior_time_i18(value=4)
           }
         }
+        Call#stdlib_behavior_time_c26(target=io.print) {
+          ToString#stdlib_behavior_time_t5 {
+            Call#stdlib_behavior_time_c27(target=dayIndexFromIsoDate) {
+              Lit#stdlib_behavior_time_s5(value="2026-06-19")
+            }
+          }
+        }
+        Call#stdlib_behavior_time_c28(target=io.print) {
+          Call#stdlib_behavior_time_c29(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_s6(value="2026-06-19")
+            Lit#stdlib_behavior_time_s7(value="2026-06-21")
+          }
+        }
         Return#stdlib_behavior_time_r1 { Lit#stdlib_behavior_time_i2(value=0) }
       }
     }
@@ -943,6 +956,8 @@ Tomorrow
 Sunday
 Monday
 Tuesday
+20623
+Sunday
 Ok#ok1(type=int value=0)'
 
 if [[ "${TIME_OUT}" != "${TIME_EXPECTED}" ]]; then

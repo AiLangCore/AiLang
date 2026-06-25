@@ -1,0 +1,188 @@
+Program#cli_targets_p1 {
+  Export#cli_targets_e1(name=isPackageTarget)
+  Export#cli_targets_e2(name=targetPackageName)
+  Export#cli_targets_e3(name=targetDefaultRunner)
+  Export#cli_targets_e4(name=targetSupportsArtifactType)
+  Export#cli_targets_e5(name=targetRequiredTool)
+  Export#cli_targets_e6(name=targetRequiredCommand)
+  Export#cli_targets_e7(name=targetMissingRequirementDiagnostic)
+  Export#cli_targets_e8(name=resolveTargetRunner)
+
+  Let#cli_targets_l1(name=isPackageTarget) {
+    Fn#cli_targets_f1(params=target) {
+      Block#cli_targets_b1 {
+        If#cli_targets_if1 {
+          Eq#cli_targets_eq1 { Var#cli_targets_v1(name=target) Lit#cli_targets_i1(value="aios-service") }
+          Block#cli_targets_b2 { Return#cli_targets_r1 { Lit#cli_targets_i2(value=true) } }
+          Block#cli_targets_b3 { Return#cli_targets_r2 { Eq#cli_targets_eq2 { Var#cli_targets_v2(name=target) Lit#cli_targets_i3(value="aios-gui") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l2(name=targetPackageName) {
+    Fn#cli_targets_f2(params=target) {
+      Block#cli_targets_b4 {
+        If#cli_targets_if2 {
+          Eq#cli_targets_eq3 { Var#cli_targets_v3(name=target) Lit#cli_targets_i4(value="aios-service") }
+          Block#cli_targets_b5 { Return#cli_targets_r3 { Lit#cli_targets_i5(value="target-aios-service") } }
+          Block#cli_targets_b6 {
+            If#cli_targets_if3 {
+              Eq#cli_targets_eq4 { Var#cli_targets_v4(name=target) Lit#cli_targets_i6(value="aios-gui") }
+              Block#cli_targets_b7 { Return#cli_targets_r4 { Lit#cli_targets_i7(value="target-aios-gui") } }
+              Block#cli_targets_b8 { Return#cli_targets_r5 { Lit#cli_targets_i8(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l3(name=targetDefaultRunner) {
+    Fn#cli_targets_f3(params=target) {
+      Block#cli_targets_b9 {
+        If#cli_targets_if4 {
+          Call#cli_targets_c1(target=isPackageTarget) { Var#cli_targets_v5(name=target) }
+          Block#cli_targets_b10 { Return#cli_targets_r6 { Lit#cli_targets_i9(value="qemu") } }
+          Block#cli_targets_b11 { Return#cli_targets_r7 { Lit#cli_targets_i10(value="") } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l4(name=targetSupportsArtifactType) {
+    Fn#cli_targets_f4(params=target,artifactType) {
+      Block#cli_targets_b12 {
+        If#cli_targets_if5 {
+          Eq#cli_targets_eq5 { Var#cli_targets_v6(name=target) Lit#cli_targets_i11(value="aios-service") }
+          Block#cli_targets_b13 { Return#cli_targets_r8 { Call#cli_targets_c2(target=serviceSupportsArtifactType) { Var#cli_targets_v7(name=artifactType) } } }
+          Block#cli_targets_b14 {
+            If#cli_targets_if6 {
+              Eq#cli_targets_eq6 { Var#cli_targets_v8(name=target) Lit#cli_targets_i12(value="aios-gui") }
+              Block#cli_targets_b15 { Return#cli_targets_r9 { Call#cli_targets_c3(target=guiSupportsArtifactType) { Var#cli_targets_v9(name=artifactType) } } }
+              Block#cli_targets_b16 { Return#cli_targets_r10 { Lit#cli_targets_i13(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l5(name=serviceSupportsArtifactType) {
+    Fn#cli_targets_f5(params=artifactType) {
+      Block#cli_targets_b17 {
+        If#cli_targets_if7 {
+          Eq#cli_targets_eq7 { Var#cli_targets_v10(name=artifactType) Lit#cli_targets_i14(value="img") }
+          Block#cli_targets_b18 { Return#cli_targets_r11 { Lit#cli_targets_i15(value=true) } }
+          Block#cli_targets_b19 {
+            If#cli_targets_if8 {
+              Eq#cli_targets_eq8 { Var#cli_targets_v11(name=artifactType) Lit#cli_targets_i16(value="initramfs") }
+              Block#cli_targets_b20 { Return#cli_targets_r12 { Lit#cli_targets_i17(value=true) } }
+              Block#cli_targets_b21 { Return#cli_targets_r13 { Eq#cli_targets_eq9 { Var#cli_targets_v12(name=artifactType) Lit#cli_targets_i18(value="oci") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l6(name=guiSupportsArtifactType) {
+    Fn#cli_targets_f6(params=artifactType) {
+      Block#cli_targets_b22 {
+        If#cli_targets_if9 {
+          Eq#cli_targets_eq10 { Var#cli_targets_v13(name=artifactType) Lit#cli_targets_i19(value="img") }
+          Block#cli_targets_b23 { Return#cli_targets_r14 { Lit#cli_targets_i20(value=true) } }
+          Block#cli_targets_b24 { Return#cli_targets_r15 { Eq#cli_targets_eq11 { Var#cli_targets_v14(name=artifactType) Lit#cli_targets_i21(value="initramfs") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l7(name=targetRequiredTool) {
+    Fn#cli_targets_f7(params=target,operation) {
+      Block#cli_targets_b25 {
+        If#cli_targets_if10 {
+          Call#cli_targets_c4(target=targetRequiresQemu) { Var#cli_targets_v15(name=target) Var#cli_targets_v16(name=operation) }
+          Block#cli_targets_b26 { Return#cli_targets_r16 { Lit#cli_targets_i22(value="qemu") } }
+          Block#cli_targets_b27 { Return#cli_targets_r17 { Lit#cli_targets_i23(value="") } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l8(name=targetRequiredCommand) {
+    Fn#cli_targets_f8(params=target,operation) {
+      Block#cli_targets_b28 {
+        If#cli_targets_if11 {
+          Call#cli_targets_c5(target=targetRequiresQemu) { Var#cli_targets_v17(name=target) Var#cli_targets_v18(name=operation) }
+          Block#cli_targets_b29 { Return#cli_targets_r18 { Lit#cli_targets_i24(value="qemu-system-x86_64") } }
+          Block#cli_targets_b30 { Return#cli_targets_r19 { Lit#cli_targets_i25(value="") } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l9(name=targetRequiresQemu) {
+    Fn#cli_targets_f9(params=target,operation) {
+      Block#cli_targets_b31 {
+        If#cli_targets_if12 {
+          Call#cli_targets_c6(target=isPackageTarget) { Var#cli_targets_v19(name=target) }
+          Block#cli_targets_b32 {
+            If#cli_targets_if13 {
+              Eq#cli_targets_eq12 { Var#cli_targets_v20(name=operation) Lit#cli_targets_i26(value="run") }
+              Block#cli_targets_b33 { Return#cli_targets_r20 { Lit#cli_targets_i27(value=true) } }
+              Block#cli_targets_b34 { Return#cli_targets_r21 { Eq#cli_targets_eq13 { Var#cli_targets_v21(name=operation) Lit#cli_targets_i28(value="test") } } }
+            }
+          }
+          Block#cli_targets_b35 { Return#cli_targets_r22 { Lit#cli_targets_i29(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l10(name=resolveTargetRunner) {
+    Fn#cli_targets_f10(params=target,requestedRunner) {
+      Block#cli_targets_b36 {
+        If#cli_targets_if14 {
+          Eq#cli_targets_eq14 { Var#cli_targets_v22(name=requestedRunner) Lit#cli_targets_i30(value="") }
+          Block#cli_targets_b37 { Return#cli_targets_r23 { Call#cli_targets_c7(target=targetDefaultRunner) { Var#cli_targets_v23(name=target) } } }
+          Block#cli_targets_b38 { Return#cli_targets_r24 { Var#cli_targets_v24(name=requestedRunner) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l11(name=targetMissingRequirementDiagnostic) {
+    Fn#cli_targets_f11(params=packageName,target,operation,requirement,command) {
+      Block#cli_targets_b39 {
+        Return#cli_targets_r25 {
+          StrConcat#cli_targets_sc1 {
+            Lit#cli_targets_i31(value="AILANG-PKG-REQ001: ")
+            StrConcat#cli_targets_sc2 {
+              Var#cli_targets_v25(name=packageName)
+              StrConcat#cli_targets_sc3 {
+                Lit#cli_targets_i32(value=" requires ")
+                StrConcat#cli_targets_sc4 {
+                  Var#cli_targets_v26(name=requirement)
+                  StrConcat#cli_targets_sc5 {
+                    Lit#cli_targets_i33(value=" for ")
+                    StrConcat#cli_targets_sc6 {
+                      Var#cli_targets_v27(name=operation)
+                      StrConcat#cli_targets_sc7 {
+                        Lit#cli_targets_i34(value=".\nMissing command: ")
+                        StrConcat#cli_targets_sc8 {
+                          Var#cli_targets_v28(name=command)
+                          Lit#cli_targets_i35(value="\n\nInstall:\n  macOS: brew install qemu\n  Linux: Install qemu-system with the distro package manager.\n  Windows: winget install SoftwareFreedomConservancy.QEMU")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

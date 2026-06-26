@@ -1,0 +1,49 @@
+Program#cli_doctor_p1 {
+  Import#cli_doctor_im1(path="target_packages.aos")
+
+  Export#cli_doctor_e1(name=runDoctor)
+
+  Let#cli_l_runDoctor(name=runDoctor) {
+    Fn#cli_f_runDoctor(params=args) {
+      Block#cli_b_runDoctor {
+        Let#cli_l_rd1(name=path) { Call#cli_c_rd1(target=readArg) { Var#cli_v_rd1(name=args) Lit#cli_i_rd1(value=1) } }
+        Let#cli_l_rd2(name=target) { Call#cli_c_rd2(target=readOption) { Var#cli_v_rd2(name=args) Lit#cli_i_rd2(value=2) Lit#cli_i_rd3(value="--target") Lit#cli_i_rd4(value="") } }
+        If#cli_if_rd1 {
+          Eq#cli_e_rd1 { Var#cli_v_rd3(name=target) Lit#cli_i_rd5(value="") }
+          Block#cli_b_rd1 {
+            Call#cli_c_rd3(target=sys.stdout.writeLine) { Lit#cli_i_rd6(value="Usage: ailang doctor <project-dir> --target <target>") }
+            Return#cli_r_rd1 { Lit#cli_i_rd7(value=1) }
+          }
+          Block#cli_b_rd2 {
+            Let#cli_l_rd3(name=tool) { Call#cli_c_rd4(target=targetRequiredTool) { Var#cli_v_rd4(name=target) Lit#cli_i_rd8(value="run") } }
+            If#cli_if_rd2 {
+              Eq#cli_e_rd2 { Var#cli_v_rd5(name=tool) Lit#cli_i_rd9(value="") }
+              Block#cli_b_rd3 {
+                Call#cli_c_rd5(target=sys.stdout.writeLine) { Lit#cli_i_rd10(value="Ok#ok1(type=string value=\"doctor-check-ok\")") }
+                Return#cli_r_rd2 { Lit#cli_i_rd11(value=0) }
+              }
+              Block#cli_b_rd4 {
+                Let#cli_l_rd4(name=command) { Call#cli_c_rd6(target=targetRequiredCommand) { Var#cli_v_rd6(name=target) Lit#cli_i_rd12(value="run") } }
+                Let#cli_l_rd5(name=packageName) { Call#cli_c_rd7(target=targetPackageName) { Var#cli_v_rd7(name=target) Var#cli_v_rd8(name=path) } }
+                Let#cli_l_rd6(name=handle) { Call#cli_c_rd8(target=sys.process.spawn) { Lit#cli_i_rd13(value="which") MakeBlock#cli_mb_rd1 { MakeLitString#cli_mls_rd1 { Lit#cli_i_rd14(value="arg0") Var#cli_v_rd9(name=command) } } Lit#cli_i_rd15(value="") MakeBlock#cli_mb_rd2 {} } }
+                Let#cli_l_rd7(name=code) { Call#cli_c_rd9(target=sys.process.wait) { Var#cli_v_rd10(name=handle) } }
+                If#cli_if_rd3 {
+                  Eq#cli_e_rd3 { Var#cli_v_rd11(name=code) Lit#cli_i_rd16(value=0) }
+                  Block#cli_b_rd5 {
+                    Call#cli_c_rd10(target=sys.stdout.writeLine) { Lit#cli_i_rd17(value="Ok#ok1(type=string value=\"doctor-check-ok\")") }
+                    Return#cli_r_rd3 { Lit#cli_i_rd18(value=0) }
+                  }
+                  Block#cli_b_rd6 {
+                    Let#cli_l_rd8(name=message) { Call#cli_c_rd11(target=targetMissingRequirementDiagnostic) { Var#cli_v_rd12(name=packageName) Var#cli_v_rd13(name=target) Lit#cli_i_rd19(value="run") Var#cli_v_rd14(name=tool) Var#cli_v_rd15(name=command) } }
+                    Call#cli_c_rd12(target=sys.stdout.writeLine) { Var#cli_v_rd16(name=message) }
+                    Return#cli_r_rd4 { Lit#cli_i_rd20(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

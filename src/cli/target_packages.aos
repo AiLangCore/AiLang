@@ -1,4 +1,7 @@
 Program#cli_targets_p1 {
+  Import#cli_im1(path="../std/str.aos")
+  Import#cli_im2(path="../std/bytes.aos")
+
   Export#cli_targets_e1(name=isPackageTarget)
   Export#cli_targets_e2(name=targetPackageName)
   Export#cli_targets_e3(name=targetDefaultRunner)
@@ -9,132 +12,267 @@ Program#cli_targets_p1 {
   Export#cli_targets_e8(name=resolveTargetRunner)
 
   Let#cli_targets_l1(name=isPackageTarget) {
-    Fn#cli_targets_f1(params=target) {
+    Fn#cli_targets_f1(params=target,projectPath) {
       Block#cli_targets_b1 {
+        Let#cli_targets_l1_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc1 { Var#cli_targets_v1(name=projectPath) Lit#cli_targets_i1(value="/ailang.lock.toml") } }
         If#cli_targets_if1 {
-          Eq#cli_targets_eq1 { Var#cli_targets_v1(name=target) Lit#cli_targets_i1(value="aios-service") }
-          Block#cli_targets_b2 { Return#cli_targets_r1 { Lit#cli_targets_i2(value=true) } }
-          Block#cli_targets_b3 { Return#cli_targets_r2 { Eq#cli_targets_eq2 { Var#cli_targets_v2(name=target) Lit#cli_targets_i3(value="aios-gui") } } }
+          Call#cli_targets_c1(target=sys.fs.path.exists) { Var#cli_targets_v2(name=lockfilePath) }
+          Block#cli_targets_b2 {
+            Let#cli_targets_l1_lockfileText(name=lockfileText) { Call#cli_targets_c2(target=readTextFile) { Var#cli_targets_v3(name=lockfilePath) } }
+            Return#cli_targets_r1 { Call#cli_targets_c3(target=hasTarget) { Var#cli_targets_v4(name=lockfileText) Var#cli_targets_v5(name=target) } }
+          }
+          Block#cli_targets_b3 { Return#cli_targets_r2 { Lit#cli_targets_i2(value=false) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l2(name=targetPackageName) {
-    Fn#cli_targets_f2(params=target) {
-      Block#cli_targets_b4 {
-        If#cli_targets_if2 {
-          Eq#cli_targets_eq3 { Var#cli_targets_v3(name=target) Lit#cli_targets_i4(value="aios-service") }
-          Block#cli_targets_b5 { Return#cli_targets_r3 { Lit#cli_targets_i5(value="target-aios-service") } }
-          Block#cli_targets_b6 {
-            If#cli_targets_if3 {
-              Eq#cli_targets_eq4 { Var#cli_targets_v4(name=target) Lit#cli_targets_i6(value="aios-gui") }
-              Block#cli_targets_b7 { Return#cli_targets_r4 { Lit#cli_targets_i7(value="target-aios-gui") } }
-              Block#cli_targets_b8 { Return#cli_targets_r5 { Lit#cli_targets_i8(value="") } }
+  Let#cli_targets_l_hasTarget(name=hasTarget) {
+    Fn#cli_targets_f_hasTarget(params=text,target) {
+      Block#cli_targets_b_hasTarget {
+        Let#cli_targets_l_ht1(name=targetSection) { Call#cli_targets_c_ht1(target=findTargetSection) { Var#cli_targets_v_ht1(name=text) Var#cli_targets_v_ht2(name=target) } }
+        If#cli_targets_if_ht1 {
+          Eq#cli_targets_eq_ht1 { Var#cli_targets_v_ht3(name=targetSection) Lit#cli_targets_i_ht2(value="") }
+          Block#cli_targets_b_ht1 { Return#cli_targets_r_ht1 { Lit#cli_targets_i_ht3(value=false) } }
+          Block#cli_targets_b_ht2 { Return#cli_targets_r_ht3 { Lit#cli_targets_i_ht8(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l_findTargetSection(name=findTargetSection) {
+    Fn#cli_targets_f_findTargetSection(params=text,target) {
+      Block#cli_targets_b_findTargetSection {
+        Let#cli_targets_l_fts1(name=needle) { StrConcat#cli_targets_sc_fts1 { Lit#cli_targets_i_fts1(value="id = \"") Var#cli_targets_v_fts1(name=target) Lit#cli_targets_i_fts2(value="\"") } }
+        Let#cli_targets_l_fts2(name=aliasNeedle) { StrConcat#cli_targets_sc_fts2 { Lit#cli_targets_i_fts3(value="\"") Var#cli_targets_v_fts2(name=target) Lit#cli_targets_i_fts4(value="\"") } }
+        Let#cli_targets_l_fts3(name=section) { Call#cli_targets_c_fts1(target=findTargetSectionFrom) { Var#cli_targets_v_fts3(name=text) Var#cli_targets_v_fts4(name=needle) Var#cli_targets_v_fts5(name=aliasNeedle) Lit#cli_targets_i_fts5(value=0) } }
+        Return#cli_targets_r_fts1 { Var#cli_targets_v_fts6(name=section) }
+      }
+    }
+  }
+
+  Let#cli_targets_l_findTargetSectionFrom(name=findTargetSectionFrom) {
+    Fn#cli_targets_f_findTargetSectionFrom(params=text,needle,aliasNeedle,startIndex) {
+      Block#cli_targets_b_findTargetSectionFrom {
+        Let#cli_targets_l_ftsf1(name=start) { Call#cli_targets_c_ftsf1(target=find) { Var#cli_targets_v_ftsf1(name=text) Lit#cli_targets_i_ftsf1(value="[[target]]") Var#cli_targets_v_ftsf2(name=startIndex) } }
+        If#cli_targets_if_ftsf1 {
+          Eq#cli_targets_eq_ftsf1 { Var#cli_targets_v_ftsf3(name=start) Lit#cli_targets_i_ftsf2(value=-1) }
+          Block#cli_targets_b_ftsf1 { Return#cli_targets_r_ftsf1 { Lit#cli_targets_i_ftsf3(value="") } }
+          Block#cli_targets_b_ftsf2 {
+            Let#cli_targets_l_ftsf2(name=rest) { Call#cli_targets_c_ftsf2(target=substring) { Var#cli_targets_v_ftsf4(name=text) Var#cli_targets_v_ftsf5(name=start) Lit#cli_targets_i_ftsf4(value=2147483647) } }
+            Let#cli_targets_l_ftsf3(name=end) { Call#cli_targets_c_ftsf3(target=find) { Var#cli_targets_v_ftsf6(name=rest) Lit#cli_targets_i_ftsf5(value="\n[[") Lit#cli_targets_i_ftsf6(value=1) } }
+            Let#cli_targets_l_ftsf4(name=section) {
+              If#cli_targets_if_ftsf2 {
+                Eq#cli_targets_eq_ftsf2 { Var#cli_targets_v_ftsf7(name=end) Lit#cli_targets_i_ftsf7(value=-1) }
+                Block#cli_targets_b_ftsf3 { Return#cli_targets_r_ftsf2 { Var#cli_targets_v_ftsf8(name=rest) } }
+                Block#cli_targets_b_ftsf4 { Return#cli_targets_r_ftsf3 { Call#cli_targets_c_ftsf4(target=substring) { Var#cli_targets_v_ftsf9(name=rest) Lit#cli_targets_i_ftsf8(value=0) Var#cli_targets_v_ftsf10(name=end) } } }
+              }
+            }
+            If#cli_targets_if_ftsf3 {
+              Call#cli_targets_c_ftsf5(target=targetSectionMatches) { Var#cli_targets_v_ftsf11(name=section) Var#cli_targets_v_ftsf12(name=needle) Var#cli_targets_v_ftsf13(name=aliasNeedle) }
+              Block#cli_targets_b_ftsf5 { Return#cli_targets_r_ftsf4 { Var#cli_targets_v_ftsf14(name=section) } }
+              Block#cli_targets_b_ftsf6 {
+                Return#cli_targets_r_ftsf5 {
+                  Call#cli_targets_c_ftsf6(target=findTargetSectionFrom) {
+                    Var#cli_targets_v_ftsf15(name=text)
+                    Var#cli_targets_v_ftsf16(name=needle)
+                    Var#cli_targets_v_ftsf17(name=aliasNeedle)
+                    Add#cli_targets_a_ftsf1 { Var#cli_targets_v_ftsf18(name=start) Lit#cli_targets_i_ftsf9(value=10) }
+                  }
+                }
+              }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l_targetSectionMatches(name=targetSectionMatches) {
+    Fn#cli_targets_f_targetSectionMatches(params=section,needle,aliasNeedle) {
+      Block#cli_targets_b_targetSectionMatches {
+        If#cli_targets_if_tsm1 {
+          Call#cli_targets_c_tsm1(target=contains) { Var#cli_targets_v_tsm1(name=section) Var#cli_targets_v_tsm2(name=needle) }
+          Block#cli_targets_b_tsm1 { Return#cli_targets_r_tsm1 { Lit#cli_targets_i_tsm1(value=true) } }
+          Block#cli_targets_b_tsm2 {
+            Return#cli_targets_r_tsm2 {
+              Call#cli_targets_c_tsm2(target=contains) {
+                Call#cli_targets_c_tsm3(target=getValue) { Var#cli_targets_v_tsm3(name=section) Lit#cli_targets_i_tsm2(value="aliases") }
+                Var#cli_targets_v_tsm4(name=aliasNeedle)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l_findSection(name=findSection) {
+    Fn#cli_targets_f_findSection(params=text,sectionName) {
+      Block#cli_targets_b_findSection {
+        Let#cli_targets_l_fs1(name=start) { Call#cli_targets_c_fs1(target=find) { Var#cli_targets_v_fs1(name=text) Var#cli_targets_v_fs2(name=sectionName) Lit#cli_targets_i_fs1(value=0) } }
+        If#cli_targets_if_fs1 {
+          Eq#cli_targets_eq_fs1 { Var#cli_targets_v_fs3(name=start) Lit#cli_targets_i_fs2(value=-1) }
+          Block#cli_targets_b_fs1 { Return#cli_targets_r_fs1 { Lit#cli_targets_i_fs3(value="") } }
+          Block#cli_targets_b_fs2 {
+            Let#cli_targets_l_fs2(name=rest) { Call#cli_targets_c_fs2(target=substring) { Var#cli_targets_v_fs4(name=text) Var#cli_targets_v_fs5(name=start) Lit#cli_targets_i_fs4(value=2147483647) } }
+            Let#cli_targets_l_fs3(name=end) { Call#cli_targets_c_fs3(target=find) { Var#cli_targets_v_fs6(name=rest) Lit#cli_targets_i_fs5(value="\n[") Lit#cli_targets_i_fs6(value=1) } }
+            If#cli_targets_if_fs2 {
+              Eq#cli_targets_eq_fs2 { Var#cli_targets_v_fs7(name=end) Lit#cli_targets_i_fs7(value=-1) }
+              Block#cli_targets_b_fs3 { Return#cli_targets_r_fs2 { Var#cli_targets_v_fs8(name=rest) } }
+              Block#cli_targets_b_fs4 { Return#cli_targets_r_fs3 { Call#cli_targets_c_fs4(target=substring) { Var#cli_targets_v_fs9(name=rest) Lit#cli_targets_i_fs8(value=0) Var#cli_targets_v_fs10(name=end) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l_getValue(name=getValue) {
+    Fn#cli_targets_f_getValue(params=text,key) {
+      Block#cli_targets_b_getValue {
+        Let#cli_targets_l_gv1(name=keyStart) { Call#cli_targets_c_gv1(target=find) { Var#cli_targets_v_gv1(name=text) StrConcat#cli_targets_sc_gv1 { Var#cli_targets_v_gv2(name=key) Lit#cli_targets_i_gv1(value=" = ") } Lit#cli_targets_i_gv2(value=0) } }
+        If#cli_targets_if_gv1 {
+          Eq#cli_targets_eq_gv1 { Var#cli_targets_v_gv3(name=keyStart) Lit#cli_targets_i_gv3(value=-1) }
+          Block#cli_targets_b_gv1 { Return#cli_targets_r_gv1 { Lit#cli_targets_i_gv4(value="") } }
+          Block#cli_targets_b_gv2 {
+            Let#cli_targets_l_gv2(name=valueStart) { Add#cli_targets_a_gv1 { Var#cli_targets_v_gv4(name=keyStart) Call#cli_targets_c_gv2(target=len) { Var#cli_targets_v_gv5(name=key) } Lit#cli_targets_i_gv5(value=3) } }
+            Let#cli_targets_l_gv3(name=rest) { Call#cli_targets_c_gv3(target=substring) { Var#cli_targets_v_gv6(name=text) Var#cli_targets_v_gv7(name=valueStart) Lit#cli_targets_i_gv6(value=2147483647) } }
+            Let#cli_targets_l_gv4(name=valueEnd) { Call#cli_targets_c_gv4(target=find) { Var#cli_targets_v_gv8(name=rest) Lit#cli_targets_i_gv7(value="\n") Lit#cli_targets_i_gv8(value=0) } }
+            If#cli_targets_if_gv2 {
+              Eq#cli_targets_eq_gv2 { Var#cli_targets_v_gv9(name=valueEnd) Lit#cli_targets_i_gv9(value=-1) }
+              Block#cli_targets_b_gv3 { Return#cli_targets_r_gv2 { Var#cli_targets_v_gv10(name=rest) } }
+              Block#cli_targets_b_gv4 { Return#cli_targets_r_gv3 { Call#cli_targets_c_gv5(target=substring) { Var#cli_targets_v_gv11(name=rest) Lit#cli_targets_i_gv10(value=0) Var#cli_targets_v_gv12(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l35r(name=readTextFile) {
+    Fn#cli_f35r(params=path) {
+      Block#cli_b55r {
+        Return#cli_r45r {
+          Call#cli_c45r(target=bytes.toUtf8String) {
+            Call#cli_c46r(target=sys.fs.file.read) { Var#cli_v45r(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l_len(name=len) {
+    Fn#cli_f_len(params=text) {
+      Block#cli_b_len {
+        Return#cli_r_len { Call#cli_c_len(target=str.len) { Var#cli_v_len(name=text) } }
+      }
+    }
+  }
+
+  Let#cli_targets_l2(name=targetPackageName) {
+    Fn#cli_targets_f2(params=target,projectPath) {
+      Block#cli_targets_b4 {
+        Let#cli_targets_l2_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc2 { Var#cli_targets_v6(name=projectPath) Lit#cli_targets_i3(value="/ailang.lock.toml") } }
+        If#cli_targets_if2 {
+          Call#cli_targets_c4(target=sys.fs.path.exists) { Var#cli_targets_v7(name=lockfilePath) }
+          Block#cli_targets_b5 {
+            Let#cli_targets_l2_lockfileText(name=lockfileText) { Call#cli_targets_c5(target=readTextFile) { Var#cli_targets_v8(name=lockfilePath) } }
+            Let#cli_targets_l2_targetSection(name=targetSection) { Call#cli_targets_c6(target=findTargetSection) { Var#cli_targets_v9(name=lockfileText) Var#cli_targets_v10(name=target) } }
+            Return#cli_targets_r3 { Call#cli_targets_c7(target=getValue) { Var#cli_targets_v11(name=targetSection) Lit#cli_targets_i6(value="package") } }
+          }
+          Block#cli_targets_b6 { Return#cli_targets_r4 { Lit#cli_targets_i7(value="") } }
         }
       }
     }
   }
 
   Let#cli_targets_l3(name=targetDefaultRunner) {
-    Fn#cli_targets_f3(params=target) {
+    Fn#cli_targets_f3(params=target,projectPath) {
       Block#cli_targets_b9 {
+        Let#cli_targets_l3_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc4 { Var#cli_targets_v12(name=projectPath) Lit#cli_targets_i8(value="/ailang.lock.toml") } }
         If#cli_targets_if4 {
-          Call#cli_targets_c1(target=isPackageTarget) { Var#cli_targets_v5(name=target) }
-          Block#cli_targets_b10 { Return#cli_targets_r6 { Lit#cli_targets_i9(value="qemu") } }
-          Block#cli_targets_b11 { Return#cli_targets_r7 { Lit#cli_targets_i10(value="") } }
+          Call#cli_targets_c8(target=sys.fs.path.exists) { Var#cli_targets_v13(name=lockfilePath) }
+          Block#cli_targets_b10 {
+            Let#cli_targets_l3_lockfileText(name=lockfileText) { Call#cli_targets_c9(target=readTextFile) { Var#cli_targets_v14(name=lockfilePath) } }
+            Let#cli_targets_l3_targetSection(name=targetSection) { Call#cli_targets_c10(target=findTargetSection) { Var#cli_targets_v15(name=lockfileText) Var#cli_targets_v16(name=target) } }
+            Return#cli_targets_r6 { Call#cli_targets_c11(target=getValue) { Var#cli_targets_v17(name=targetSection) Lit#cli_targets_i11(value="defaultRunner") } }
+          }
+          Block#cli_targets_b11 { Return#cli_targets_r7 { Lit#cli_targets_i12(value="") } }
         }
       }
     }
   }
 
   Let#cli_targets_l4(name=targetSupportsArtifactType) {
-    Fn#cli_targets_f4(params=target,artifactType) {
+    Fn#cli_f4(params=target,artifactType,projectPath) {
       Block#cli_targets_b12 {
+        Let#cli_targets_l4_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc6 { Var#cli_targets_v18(name=projectPath) Lit#cli_targets_i13(value="/ailang.lock.toml") } }
         If#cli_targets_if5 {
-          Eq#cli_targets_eq5 { Var#cli_targets_v6(name=target) Lit#cli_targets_i11(value="aios-service") }
-          Block#cli_targets_b13 { Return#cli_targets_r8 { Call#cli_targets_c2(target=serviceSupportsArtifactType) { Var#cli_targets_v7(name=artifactType) } } }
-          Block#cli_targets_b14 {
-            If#cli_targets_if6 {
-              Eq#cli_targets_eq6 { Var#cli_targets_v8(name=target) Lit#cli_targets_i12(value="aios-gui") }
-              Block#cli_targets_b15 { Return#cli_targets_r9 { Call#cli_targets_c3(target=guiSupportsArtifactType) { Var#cli_targets_v9(name=artifactType) } } }
-              Block#cli_targets_b16 { Return#cli_targets_r10 { Lit#cli_targets_i13(value=false) } }
-            }
+          Call#cli_targets_c12(target=sys.fs.path.exists) { Var#cli_targets_v19(name=lockfilePath) }
+          Block#cli_targets_b13 {
+            Let#cli_targets_l4_lockfileText(name=lockfileText) { Call#cli_targets_c13(target=readTextFile) { Var#cli_targets_v20(name=lockfilePath) } }
+            Let#cli_targets_l4_targetSection(name=targetSection) { Call#cli_targets_c14(target=findTargetSection) { Var#cli_targets_v21(name=lockfileText) Var#cli_targets_v22(name=target) } }
+            Let#cli_targets_l4_artifactTypes(name=artifactTypes) { Call#cli_targets_c15(target=getValue) { Var#cli_targets_v23(name=targetSection) Lit#cli_targets_i16(value="artifactTypes") } }
+            Return#cli_targets_r8 { Call#cli_targets_c16(target=contains) { Var#cli_targets_v24(name=artifactTypes) Var#cli_targets_v25(name=artifactType) } }
           }
+          Block#cli_targets_b14 { Return#cli_targets_r9 { Lit#cli_targets_i17(value=false) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l5(name=serviceSupportsArtifactType) {
-    Fn#cli_targets_f5(params=artifactType) {
-      Block#cli_targets_b17 {
-        If#cli_targets_if7 {
-          Eq#cli_targets_eq7 { Var#cli_targets_v10(name=artifactType) Lit#cli_targets_i14(value="img") }
-          Block#cli_targets_b18 { Return#cli_targets_r11 { Lit#cli_targets_i15(value=true) } }
-          Block#cli_targets_b19 {
-            If#cli_targets_if8 {
-              Eq#cli_targets_eq8 { Var#cli_targets_v11(name=artifactType) Lit#cli_targets_i16(value="initramfs") }
-              Block#cli_targets_b20 { Return#cli_targets_r12 { Lit#cli_targets_i17(value=true) } }
-              Block#cli_targets_b21 { Return#cli_targets_r13 { Eq#cli_targets_eq9 { Var#cli_targets_v12(name=artifactType) Lit#cli_targets_i18(value="oci") } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#cli_targets_l6(name=guiSupportsArtifactType) {
-    Fn#cli_targets_f6(params=artifactType) {
-      Block#cli_targets_b22 {
-        If#cli_targets_if9 {
-          Eq#cli_targets_eq10 { Var#cli_targets_v13(name=artifactType) Lit#cli_targets_i19(value="img") }
-          Block#cli_targets_b23 { Return#cli_targets_r14 { Lit#cli_targets_i20(value=true) } }
-          Block#cli_targets_b24 { Return#cli_targets_r15 { Eq#cli_targets_eq11 { Var#cli_targets_v14(name=artifactType) Lit#cli_targets_i21(value="initramfs") } } }
+  Let#cli_targets_l_contains(name=contains) {
+    Fn#cli_targets_f_contains(params=text,value) {
+      Block#cli_targets_b_contains {
+        Let#cli_targets_l_c1(name=found) { Call#cli_targets_c_c1(target=find) { Var#cli_targets_v_c1(name=text) Var#cli_targets_v_c2(name=value) Lit#cli_targets_i_c1(value=0) } }
+        If#cli_targets_if_c1 {
+          Eq#cli_targets_eq_c1 { Var#cli_targets_v_c3(name=found) Lit#cli_targets_i_c2(value=-1) }
+          Block#cli_targets_b_c1 { Return#cli_targets_r_c1 { Lit#cli_targets_i_c3(value=false) } }
+          Block#cli_targets_b_c2 { Return#cli_targets_r_c2 { Lit#cli_targets_i_c4(value=true) } }
         }
       }
     }
   }
 
   Let#cli_targets_l7(name=targetRequiredTool) {
-    Fn#cli_targets_f7(params=target,operation) {
+    Fn#cli_targets_f7(params=target,operation,projectPath) {
       Block#cli_targets_b25 {
+        Let#cli_targets_l7_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc8 { Var#cli_targets_v26(name=projectPath) Lit#cli_targets_i18(value="/ailang.lock.toml") } }
         If#cli_targets_if10 {
-          Call#cli_targets_c4(target=targetRequiresQemu) { Var#cli_targets_v15(name=target) Var#cli_targets_v16(name=operation) }
-          Block#cli_targets_b26 { Return#cli_targets_r16 { Lit#cli_targets_i22(value="qemu") } }
-          Block#cli_targets_b27 { Return#cli_targets_r17 { Lit#cli_targets_i23(value="") } }
+          Call#cli_targets_c17(target=sys.fs.path.exists) { Var#cli_targets_v27(name=lockfilePath) }
+          Block#cli_targets_b26 {
+            Let#cli_targets_l7_lockfileText(name=lockfileText) { Call#cli_targets_c18(target=readTextFile) { Var#cli_targets_v28(name=lockfilePath) } }
+            Let#cli_targets_l7_packageSection(name=packageSection) { Call#cli_targets_c19(target=findTargetSection) { Var#cli_targets_v29(name=lockfileText) Var#cli_targets_v30(name=target) } }
+            Let#cli_targets_l7_requiredFor(name=requiredFor) { Call#cli_targets_c20(target=getValue) { Var#cli_targets_v31(name=packageSection) Lit#cli_targets_i21(value="runTools") } }
+            If#cli_targets_if11 {
+              Eq#cli_targets_eq_req1 { Var#cli_targets_v33(name=operation) Lit#cli_targets_i22a(value="publish") }
+              Block#cli_targets_b27 { Return#cli_targets_r16 { Call#cli_targets_c22(target=getValue) { Var#cli_targets_v34(name=packageSection) Lit#cli_targets_i22(value="publishTools") } } }
+              Block#cli_targets_b28 { Return#cli_targets_r17 { Call#cli_targets_c23a(target=getValue) { Var#cli_targets_v35a(name=packageSection) Lit#cli_targets_i23(value="runTools") } } }
+            }
+          }
+          Block#cli_targets_b29 { Return#cli_targets_r18 { Lit#cli_targets_i24(value="") } }
         }
       }
     }
   }
 
   Let#cli_targets_l8(name=targetRequiredCommand) {
-    Fn#cli_targets_f8(params=target,operation) {
-      Block#cli_targets_b28 {
-        If#cli_targets_if11 {
-          Call#cli_targets_c5(target=targetRequiresQemu) { Var#cli_targets_v17(name=target) Var#cli_targets_v18(name=operation) }
-          Block#cli_targets_b29 { Return#cli_targets_r18 { Lit#cli_targets_i24(value="qemu-system-x86_64") } }
-          Block#cli_targets_b30 { Return#cli_targets_r19 { Lit#cli_targets_i25(value="") } }
-        }
-      }
-    }
-  }
-
-  Let#cli_targets_l9(name=targetRequiresQemu) {
-    Fn#cli_targets_f9(params=target,operation) {
-      Block#cli_targets_b31 {
+    Fn#cli_targets_f8(params=target,operation,projectPath) {
+      Block#cli_targets_b30 {
+        Let#cli_targets_l8_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc10 { Var#cli_targets_v35(name=projectPath) Lit#cli_targets_i25(value="/ailang.lock.toml") } }
         If#cli_targets_if12 {
-          Call#cli_targets_c6(target=isPackageTarget) { Var#cli_targets_v19(name=target) }
-          Block#cli_targets_b32 {
-            If#cli_targets_if13 {
-              Eq#cli_targets_eq12 { Var#cli_targets_v20(name=operation) Lit#cli_targets_i26(value="run") }
-              Block#cli_targets_b33 { Return#cli_targets_r20 { Lit#cli_targets_i27(value=true) } }
-              Block#cli_targets_b34 { Return#cli_targets_r21 { Eq#cli_targets_eq13 { Var#cli_targets_v21(name=operation) Lit#cli_targets_i28(value="test") } } }
+          Call#cli_targets_c23(target=sys.fs.path.exists) { Var#cli_targets_v36(name=lockfilePath) }
+          Block#cli_targets_b31 {
+            Let#cli_targets_l8_lockfileText(name=lockfileText) { Call#cli_targets_c24(target=readTextFile) { Var#cli_targets_v37(name=lockfilePath) } }
+            Let#cli_targets_l8_packageSection(name=packageSection) { Call#cli_targets_c25(target=findTargetSection) { Var#cli_targets_v38(name=lockfileText) Var#cli_targets_v39(name=target) } }
+            If#cli_targets_if_cmd1 {
+              Eq#cli_targets_eq_cmd1 { Var#cli_targets_v40(name=operation) Lit#cli_targets_i28a(value="publish") }
+              Block#cli_targets_b_cmd1 { Return#cli_targets_r19 { Call#cli_targets_c26(target=getValue) { Var#cli_targets_v41(name=packageSection) Lit#cli_targets_i28(value="publishTools") } } }
+              Block#cli_targets_b_cmd2 { Return#cli_targets_r20a { Call#cli_targets_c27(target=getValue) { Var#cli_targets_v42(name=packageSection) Lit#cli_targets_i29a(value="runTools") } } }
             }
           }
-          Block#cli_targets_b35 { Return#cli_targets_r22 { Lit#cli_targets_i29(value=false) } }
+          Block#cli_targets_b32 { Return#cli_targets_r20 { Lit#cli_targets_i29(value="") } }
         }
       }
     }

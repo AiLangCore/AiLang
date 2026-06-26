@@ -1,0 +1,21 @@
+Program#cli_targets_ext_p1 {
+  Import#cli_im1(path="target_packages.aos")
+
+  Export#cli_targets_ext_e1(name=publishPackageTarget)
+
+  Let#cli_targets_ext_l1(name=publishPackageTarget) {
+    Fn#cli_targets_ext_f1(params=path,target,outDir,mode,kind,projectName,projectVersion,entryFile,entryExport,type) {
+      Block#cli_targets_ext_b1 {
+        If#cli_targets_ext_if1 {
+          Call#cli_targets_ext_c1(target=targetSupportsArtifactType) { Var#cli_targets_ext_v1(name=target) Var#cli_targets_ext_v2(name=type) Var#cli_targets_ext_v3(name=path) }
+          Block#cli_targets_ext_b2 {
+            Return#cli_r42pa2 { Call#cli_c42pa4(target=publishPosixSelfContained) { Var#cli_v42pa12(name=path) Var#cli_v42pa13(name=target) Var#cli_v42pa14(name=outDir) Var#cli_v42pa15(name=mode) Var#cli_v42pa16(name=projectName) Var#cli_v42pa17(name=projectVersion) Var#cli_v42pa18(name=entryFile) Var#cli_v42pa19(name=entryExport) Var#cli_v42pa20(name=type) } }
+          }
+          Block#cli_targets_ext_b3 {
+            Return#cli_r42pa_pkg_type_bad { Call#cli_c42pa_pkg_type_bad(target=buildError) { Lit#cli_i42pa_pkg_type_bad1(value="AILANG021") Lit#cli_i42pa_pkg_type_bad2(value="Unsupported artifact type for target.") Lit#cli_i42pa_pkg_type_bad3(value="publish") } }
+          }
+        }
+      }
+    }
+  }
+}

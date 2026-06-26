@@ -174,11 +174,26 @@ copy_if_exists() {
   fi
 }
 
+write_private_command_shim() {
+  local name="$1"
+  local path="${TMP_ROOT}/libexec/ailang/commands/${name}"
+  mkdir -p "$(dirname "${path}")"
+  cat > "${path}" <<EOF
+#!/usr/bin/env sh
+set -eu
+SDK_ROOT="\$(CDPATH= cd -- "\$(dirname -- "\$0")/../../.." && pwd)"
+export AILANG_SDK_ROOT="\$SDK_ROOT"
+export AILANG_COMMAND_NAME="${name}"
+exec "\$SDK_ROOT/bin/ailang" "${name}" "\$@"
+EOF
+  chmod +x "${path}"
+}
+
 RID="$(detect_rid)"
 TMP_ROOT="${SDK_ROOT}.tmp.$$"
 
 rm -rf "${TMP_ROOT}"
-mkdir -p "${TMP_ROOT}/bin" "${TMP_ROOT}/lib" "${TMP_ROOT}/include" "${TMP_ROOT}/sdk" "${TMP_ROOT}/compiler" "${TMP_ROOT}/std" "${TMP_ROOT}/sys" "${TMP_ROOT}/manifests" "${TMP_ROOT}/runtimes" "${TMP_ROOT}/.artifacts"
+mkdir -p "${TMP_ROOT}/bin" "${TMP_ROOT}/lib" "${TMP_ROOT}/include" "${TMP_ROOT}/sdk" "${TMP_ROOT}/compiler" "${TMP_ROOT}/std" "${TMP_ROOT}/sys" "${TMP_ROOT}/manifests" "${TMP_ROOT}/runtimes" "${TMP_ROOT}/libexec/ailang/commands" "${TMP_ROOT}/.artifacts"
 
 echo "building AiVM from ${AIVM_DIR}..."
 if [[ -d "${AIVM_DIR}" ]]; then
@@ -203,11 +218,20 @@ fi
 copy_if_exists "${AILANG_DIR}/tools/ailang" "${TMP_ROOT}/bin/ailang"
 copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/tools/aos_frontend" "${TMP_ROOT}/bin/aos_frontend"
+copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-x64/aivm-runtime"
+copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-x64/aivectra"
+copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-arm64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-arm64/aivm-runtime"
+copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-arm64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-arm64/aivectra"
 copy_if_exists "${AILANG_DIR}/src/compiler/." "${TMP_ROOT}/compiler/"
 copy_if_exists "${AILANG_DIR}/src/std/." "${TMP_ROOT}/std/"
 copy_if_exists "${AILANG_DIR}/src/std/." "${TMP_ROOT}/sys/"
 copy_if_exists "${AILANG_DIR}/templates" "${TMP_ROOT}/templates"
 copy_if_exists "${AILANG_DIR}/Docs" "${TMP_ROOT}/sdk/AiLangDocs"
+copy_if_exists "${AILANG_DIR}/manifests/commands.toml" "${TMP_ROOT}/manifests/commands.toml"
+
+for command_name in init template agent build run publish package test clean doctor; do
+  write_private_command_shim "${command_name}"
+done
 
 if [[ "${BUILD_WASM}" == "1" || ( "${BUILD_WASM}" == "auto" && -n "$(command -v emcc || true)" ) ]]; then
   echo "building AiLang wasm runtime artifacts..."
@@ -236,6 +260,8 @@ fi
 
 find "${TMP_ROOT}/bin" -maxdepth 1 -type f -exec chmod +x {} +
 find "${TMP_ROOT}/runtimes" -type f -name 'aivm' -exec chmod +x {} +
+find "${TMP_ROOT}/runtimes" -type f -name 'aivm-runtime' -exec chmod +x {} +
+find "${TMP_ROOT}/runtimes" -type f -name 'aivectra' -exec chmod +x {} +
 
 if [[ ! -x "${TMP_ROOT}/bin/ailang" ]]; then
   echo "error: local toolchain is missing ailang" >&2

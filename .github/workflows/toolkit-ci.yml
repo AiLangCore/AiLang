@@ -107,7 +107,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1

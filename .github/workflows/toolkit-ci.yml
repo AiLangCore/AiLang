@@ -188,3 +188,37 @@ jobs:
         with:
           name: toolkit-${{ matrix.os }}
           path: ./dist
+
+  publish-release:
+    name: publish-release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-toolkit
+    permissions:
+      contents: write
+    steps:
+      - name: Download toolkit artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: toolkit-*
+          path: ./release-artifacts
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./release-assets
+          for artifact_dir in ./release-artifacts/toolkit-*; do
+            test -d "$artifact_dir"
+            artifact_name="$(basename "$artifact_dir")"
+            (cd "$artifact_dir" && zip -r "../../release-assets/${artifact_name}.zip" .)
+          done
+          (cd ./release-assets && sha256sum *.zip > SHA256SUMS.txt)
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./release-assets/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true

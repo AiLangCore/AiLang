@@ -189,6 +189,7 @@ schema = "ailang.aios.base.v1"
 aiosVersion = "0.0.1-alpha.1"
 target = "aios-gui"
 arch = "x86_64"
+libc = "glibc"
 kernel = "bzImage"
 initramfs = "rootfs.cpio.gz"
 kernelHash = "..."
@@ -325,6 +326,12 @@ AIOS_AIVECTRA_BIN=/path/to/linux/aivectra \
 
 If the base is missing, the target package must fail deterministically with a
 command that builds the required base.
+
+The current AiOS GUI `x86_64` base uses glibc because the staged SDK Linux x64
+runtime artifacts are dynamically linked against glibc. A future musl/static
+runtime profile may add a separate base/runtime pairing, but target packages
+must fail deterministically when the base libc and runtime loader requirements
+do not match.
 
 ## Non-Goals
 

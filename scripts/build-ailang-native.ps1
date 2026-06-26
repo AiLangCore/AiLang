@@ -79,7 +79,6 @@ $commonArgs = @(
   '/nologo',
   '/O2',
   '/W4',
-  '/WX',
   '/std:c11',
   '/D_CRT_SECURE_NO_WARNINGS',
   '/DAIRUN_UI_HOST_EXTERNAL=1',

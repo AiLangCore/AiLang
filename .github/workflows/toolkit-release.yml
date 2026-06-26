@@ -351,6 +351,9 @@ jobs:
           cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
+          if [[ -x "./${{ matrix.artifact_dir }}/aivectra-framebuffer" ]]; then
+            cp "./${{ matrix.artifact_dir }}/aivectra-framebuffer" "${PACKAGE_DIR}/"
+          fi
           mkdir -p "${PACKAGE_DIR}/bin"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/bin/ailang"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm-runtime"
@@ -359,7 +362,12 @@ jobs:
           chmod +x "${PACKAGE_DIR}/bin/aos_frontend"
           mkdir -p "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
-          chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
+          if [[ -x "./${{ matrix.artifact_dir }}/aivectra-framebuffer" ]]; then
+            cp "./${{ matrix.artifact_dir }}/aivectra-framebuffer" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
+          else
+            cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
+          fi
+          chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
@@ -586,7 +594,12 @@ jobs:
               chmod +x "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
               mkdir -p "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}"
               cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm"
-              chmod +x "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm"
+              if [[ -x "./release-assets/ailang-${VERSION}-${SRC_RID}/aivectra-framebuffer" ]]; then
+                cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivectra-framebuffer" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
+              else
+                cp "./release-assets/ailang-${VERSION}-${SRC_RID}/ailang" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
+              fi
+              chmod +x "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
             done
             for SRC_RID in "${WINDOWS_RIDS[@]}"; do
               TARGET_RUNTIME_RID="$(target_rid "${SRC_RID}")"

@@ -143,6 +143,9 @@ jobs:
           set -euo pipefail
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
+          if [ -x ./.artifacts/ailang-linux-x64/aivectra-framebuffer ]; then
+            cp ./.artifacts/ailang-linux-x64/aivectra-framebuffer ./dist/aivectra-framebuffer
+          fi
 
       - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'

@@ -315,6 +315,10 @@ runtimes/linux-arm64/aivm-runtime
 runtimes/linux-arm64/aivectra
 ```
 
+For AiOS GUI, the `aivectra` runtime slot is a framebuffer host that draws
+directly to `/dev/fb0`. Generic Linux desktop runtimes may use X11 separately;
+AiOS does not require X11, Wayland, or a shell-owned desktop session.
+
 If the required runtime is not in the SDK, the caller may provide explicit
 paths:
 

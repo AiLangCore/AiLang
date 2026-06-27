@@ -83,21 +83,25 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
+  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
+  LD_EXTRA+=(-lssl -lcrypto)
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-    LD_EXTRA=(-lX11)
+    LD_EXTRA+=(-lX11)
   fi
   if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
+  LD_EXTRA+=(-lssl -lcrypto)
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-    LD_EXTRA=(-lX11)
+    LD_EXTRA+=(-lX11)
   fi
 elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_WINDOWS_SRC}"
@@ -173,6 +177,7 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
     "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
     "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c" \
     "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c" \
+    "${LD_EXTRA[@]}" \
     -o "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
   chmod +x "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
 fi

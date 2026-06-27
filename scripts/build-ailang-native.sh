@@ -73,6 +73,23 @@ CC_BIN="cc"
 CC_EXTRA=()
 LD_EXTRA=()
 UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
+
+configure_linux_tls() {
+  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
+  case "${AILANG_LINUX_OPENSSL_LINK:-static}" in
+    static)
+      LD_EXTRA+=(-Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl -pthread)
+      ;;
+    dynamic)
+      LD_EXTRA+=(-lssl -lcrypto)
+      ;;
+    *)
+      echo "unsupported AILANG_LINUX_OPENSSL_LINK: ${AILANG_LINUX_OPENSSL_LINK}" >&2
+      exit 1
+      ;;
+  esac
+}
+
 if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   CC_BIN="clang"
   if [[ "${TARGET_ARCH}" == "x64" ]]; then
@@ -83,8 +100,7 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
-  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
-  LD_EXTRA+=(-lssl -lcrypto)
+  configure_linux_tls
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
@@ -95,8 +111,7 @@ elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOS
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
-  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
-  LD_EXTRA+=(-lssl -lcrypto)
+  configure_linux_tls
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then

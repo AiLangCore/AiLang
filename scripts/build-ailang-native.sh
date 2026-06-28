@@ -8,6 +8,7 @@ SOURCE_PATH="${NATIVE_SRC_DIR}/ailang_cli/ailang.c"
 NATIVE_INCLUDE="${NATIVE_SRC_DIR}/include"
 NATIVE_UI_HOST_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_macos.m"
 NATIVE_UI_HOST_LINUX_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_linux.c"
+NATIVE_UI_HOST_FRAMEBUFFER_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_framebuffer.c"
 NATIVE_UI_HOST_WINDOWS_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_windows.c"
 NATIVE_UI_HOST_UNAVAILABLE_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
@@ -62,12 +63,13 @@ if [[ "${TARGET_PLATFORM}" == "windows" ]]; then
 fi
 WRAPPER_PATH="${OUT_DIR}/${AILANG_BIN_NAME}"
 RUNTIME_PATH="${OUT_DIR}/${RUNTIME_BIN_NAME}"
+AIOS_FRAMEBUFFER_RUNTIME_PATH="${OUT_DIR}/aivectra-framebuffer"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
 
 mkdir -p "${OUT_DIR}"
 
-CC_BIN="cc"
+CC_BIN="${CC:-cc}"
 CC_EXTRA=()
 LD_EXTRA=()
 UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
@@ -80,16 +82,20 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   fi
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
-elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
-  if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
+elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" ]]; then
+  if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
+    UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
+  elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
     LD_EXTRA=(-lX11)
   fi
-  if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+  if [[ "${CC_BIN}" == "cc" ]] && command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
-  if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
+  if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
+    UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
+  elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
     LD_EXTRA=(-lX11)
   fi
@@ -145,6 +151,32 @@ chmod +x "${WRAPPER_PATH}"
   "${LD_EXTRA[@]}" \
   -o "${RUNTIME_PATH}"
 chmod +x "${RUNTIME_PATH}"
+
+if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
+    "${BUILD_METADATA_DEFINES[@]}" \
+    -I "${NATIVE_INCLUDE}" \
+    -I "${NATIVE_SRC_DIR}/ailang_cli" \
+    "${SOURCE_PATH}" \
+    "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" \
+    "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
+    "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
+    "${NATIVE_SRC_DIR}/aivm_types.c" \
+    "${NATIVE_SRC_DIR}/aivm_vm.c" \
+    "${NATIVE_SRC_DIR}/aivm_program.c" \
+    "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
+    "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
+    "${NATIVE_SRC_DIR}/aivm_parity.c" \
+    "${NATIVE_SRC_DIR}/aivm_runtime.c" \
+    "${NATIVE_SRC_DIR}/aivm_c_api.c" \
+    "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
+    "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
+    "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c" \
+    "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c" \
+    "${LD_EXTRA[@]}" \
+    -o "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
+  chmod +x "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
+fi
 
 if [[ "${TARGET_PLATFORM}" == "${HOST_PLATFORM}" && "${TARGET_ARCH}" == "${HOST_ARCH}" ]]; then
   mkdir -p "${ROOT_DIR}/tools"

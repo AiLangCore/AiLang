@@ -73,6 +73,12 @@ CC_BIN="${CC:-cc}"
 CC_EXTRA=()
 LD_EXTRA=()
 UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
+
+configure_linux_tls() {
+  CC_EXTRA+=(-DAIRUN_NATIVE_TLS_OPENSSL=1)
+  LD_EXTRA+=(-lssl -lcrypto)
+}
+
 if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   CC_BIN="clang"
   if [[ "${TARGET_ARCH}" == "x64" ]]; then
@@ -83,21 +89,23 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" ]]; then
+  configure_linux_tls
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-    LD_EXTRA=(-lX11)
+    LD_EXTRA+=(-lX11)
   fi
   if [[ "${CC_BIN}" == "cc" ]] && command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  configure_linux_tls
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-    LD_EXTRA=(-lX11)
+    LD_EXTRA+=(-lX11)
   fi
 elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_WINDOWS_SRC}"

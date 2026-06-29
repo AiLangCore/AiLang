@@ -218,12 +218,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ] && ! grep -q '^Architectures:' /etc/apt/sources.list.d/ubuntu.sources; then
+            sudo sed -i '/^Signed-By:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
           sudo dpkg --add-architecture arm64
+          . /etc/os-release
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources >/dev/null
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports
+          Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-backports ${VERSION_CODENAME}-security
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
           sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu \
             libc6-dev-arm64-cross \
-            libssl-dev:arm64
+            libssl-dev:arm64 \
+            zlib1g-dev:arm64
 
       - name: Stage AiLang Linux ARM64 tools
         shell: bash

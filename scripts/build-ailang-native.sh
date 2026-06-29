@@ -9,6 +9,7 @@ NATIVE_INCLUDE="${NATIVE_SRC_DIR}/include"
 NATIVE_UI_HOST_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_macos.m"
 NATIVE_UI_HOST_LINUX_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_linux.c"
 NATIVE_UI_HOST_FRAMEBUFFER_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_framebuffer.c"
+NATIVE_UI_HOST_AIOS_DRM_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_aios_drm.c"
 NATIVE_UI_HOST_WINDOWS_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_windows.c"
 NATIVE_UI_HOST_UNAVAILABLE_SRC="${NATIVE_SRC_DIR}/ailang_cli/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
@@ -136,6 +137,10 @@ COMMON_SOURCES=(
   "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c"
 )
 
+if [[ "${TARGET_PLATFORM}" == "linux" && "${UI_HOST_SRC}" == "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" ]]; then
+  COMMON_SOURCES+=("${NATIVE_UI_HOST_AIOS_DRM_SRC}")
+fi
+
 BUILD_METADATA_DEFINES=(
   "-DAILANG_BUILD_VERSION=\"${AILANG_BUILD_VERSION}\""
   "-DAILANG_BUILD_CHANNEL=\"${AILANG_BUILD_CHANNEL}\""
@@ -167,6 +172,7 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
     -I "${NATIVE_SRC_DIR}/ailang_cli" \
     "${SOURCE_PATH}" \
     "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" \
+    "${NATIVE_UI_HOST_AIOS_DRM_SRC}" \
     "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
     "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
     "${NATIVE_SRC_DIR}/aivm_types.c" \

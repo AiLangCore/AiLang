@@ -69,7 +69,7 @@ AIOS_FRAMEBUFFER_RUNTIME_PATH="${OUT_DIR}/aivectra-framebuffer"
 
 mkdir -p "${OUT_DIR}"
 
-CC_BIN="cc"
+CC_BIN="${CC:-cc}"
 CC_EXTRA=()
 LD_EXTRA=()
 UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
@@ -99,16 +99,31 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   fi
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
-elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
+elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" ]]; then
   configure_linux_tls
+
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
     LD_EXTRA+=(-lX11)
   fi
-  if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+  if [[ -n "${CC:-}" ]] && command -v "${CC_BIN}" >/dev/null 2>&1; then
+    :
+  elif [[ "${HOST_PLATFORM}" == "linux" && "${HOST_ARCH}" == "arm64" ]] && command -v "${CC_BIN}" >/dev/null 2>&1; then
+    :
+  elif command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
+  elif command -v zig >/dev/null 2>&1; then
+    CC_BIN="zig cc -target aarch64-linux-gnu"
+  elif [[ "${AILANG_NATIVE_USE_QEMU:-1}" == "1" ]]; then
+    echo "No native Linux ARM64 compiler found."
+    echo "Launching QEMU builder..."
+    exec "${ROOT_DIR}/scripts/build-ailang-qemu.sh" "$@"
+  else
+    echo "Unable to build linux-arm64."
+    echo "No compiler or QEMU builder available."
+    exit 1
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
   configure_linux_tls
@@ -195,6 +210,44 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
     "${LD_EXTRA[@]}" \
     -o "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
   chmod +x "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
+fi
+
+verify_linux_artifact() {
+  local artifact_path="$1"
+  local artifact_name="$2"
+
+  if [[ "${TARGET_PLATFORM}" != "linux" ]]; then
+    return 0
+  fi
+  if command -v file >/dev/null 2>&1; then
+    local artifact_info
+    artifact_info="$(file "${artifact_path}")"
+    case "${TARGET_ARCH}" in
+      arm64)
+        if [[ "${artifact_info}" != *"ARM aarch64"* ]]; then
+          echo "${artifact_name} has wrong architecture for linux-arm64: ${artifact_info}" >&2
+          exit 1
+        fi
+        ;;
+      x64)
+        if [[ "${artifact_info}" != *"x86-64"* ]]; then
+          echo "${artifact_name} has wrong architecture for linux-x64: ${artifact_info}" >&2
+          exit 1
+        fi
+        ;;
+    esac
+  fi
+  if command -v strings >/dev/null 2>&1 &&
+     strings "${artifact_path}" | grep -Fq "connect_tls_failed:tls_unsupported"; then
+    echo "${artifact_name} was built without native TLS support." >&2
+    exit 1
+  fi
+}
+
+verify_linux_artifact "${WRAPPER_PATH}" "${AILANG_BIN_NAME}"
+verify_linux_artifact "${RUNTIME_PATH}" "${RUNTIME_BIN_NAME}"
+if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  verify_linux_artifact "${AIOS_FRAMEBUFFER_RUNTIME_PATH}" "aivectra-framebuffer"
 fi
 
 if [[ "${TARGET_PLATFORM}" == "${HOST_PLATFORM}" && "${TARGET_ARCH}" == "${HOST_ARCH}" ]]; then

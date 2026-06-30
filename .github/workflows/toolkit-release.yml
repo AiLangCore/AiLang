@@ -683,7 +683,7 @@ jobs:
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release delete "${TAG}" --yes
           fi
-          args=(release create "${TAG}" --verify-tag --latest=false --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
+          args=(release create "${TAG}" --draft --verify-tag --latest=false --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
           if [[ "${PRERELEASE}" == "true" ]]; then
             args+=(--prerelease)
           fi
@@ -694,6 +694,11 @@ jobs:
           fi
           args+=("${release_files[@]}")
           gh "${args[@]}"
+          publish_args=(release edit "${TAG}" --draft=false --verify-tag --tag "${TAG}" --title "${TAG}")
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            publish_args+=(--prerelease)
+          fi
+          gh "${publish_args[@]}"
 
   install-smoke-unix:
     name: install-smoke-${{ matrix.os }}

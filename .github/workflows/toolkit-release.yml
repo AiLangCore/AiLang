@@ -683,7 +683,7 @@ jobs:
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release delete "${TAG}" --yes
           fi
-          args=(release create "${TAG}" --notes-file ./RELEASE_NOTES.md)
+          args=(release create "${TAG}" --verify-tag --latest=false --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
           if [[ "${PRERELEASE}" == "true" ]]; then
             args+=(--prerelease)
           fi

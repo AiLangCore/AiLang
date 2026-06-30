@@ -1,5 +1,6 @@
 Program {
   Import(path="./number.aos")
+  Import(path="./str.aos")
   Import(path="./time.aos")
 
   Export(name=localDayIndexFromUnixMs)
@@ -7,6 +8,8 @@ Program {
   Export(name=weekdayIndexFromDayIndex)
   Export(name=weekdayName)
   Export(name=relativeDayLabelFromBaseDayIndex)
+  Export(name=dayIndexFromIsoDate)
+  Export(name=relativeDayLabelFromIsoDate)
 
   Let(name=localDayIndexFromUnixMs) {
     Fn(params=unixMs,offsetMinutes) {
@@ -70,6 +73,127 @@ Program {
             Call(target=weekdayIndexFromDayIndex) {
               Add { Var(name=baseDayIndex) Var(name=dayOffset) }
             }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=wholeDiv) {
+    Fn(params=value,divisor) {
+      Block {
+        Return {
+          Call(target=div) {
+            Call(target=sub) {
+              Var(name=value)
+              Call(target=mod) { Var(name=value) Var(name=divisor) }
+            }
+            Var(name=divisor)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=dayIndexFromCivilDate) {
+    Fn(params=year,month,day) {
+      Block {
+        Let(name=adjustedYear) {
+          If {
+            Call(target=lte) { Var(name=month) Lit(value=2) }
+            Block { Call(target=sub) { Var(name=year) Lit(value=1) } }
+            Block { Var(name=year) }
+          }
+        }
+        Let(name=era) { Call(target=wholeDiv) { Var(name=adjustedYear) Lit(value=400) } }
+        Let(name=yearOfEra) {
+          Call(target=sub) {
+            Var(name=adjustedYear)
+            Call(target=mul) { Var(name=era) Lit(value=400) }
+          }
+        }
+        Let(name=monthPrime) {
+          If {
+            Call(target=gt) { Var(name=month) Lit(value=2) }
+            Block { Call(target=sub) { Var(name=month) Lit(value=3) } }
+            Block { Add { Var(name=month) Lit(value=9) } }
+          }
+        }
+        Let(name=dayOfYear) {
+          Add {
+            Call(target=wholeDiv) {
+              Add {
+                Call(target=mul) { Lit(value=153) Var(name=monthPrime) }
+                Lit(value=2)
+              }
+              Lit(value=5)
+            }
+            Call(target=sub) { Var(name=day) Lit(value=1) }
+          }
+        }
+        Let(name=dayOfEra) {
+          Add {
+            Add {
+              Add {
+                Call(target=mul) { Var(name=yearOfEra) Lit(value=365) }
+                Call(target=wholeDiv) { Var(name=yearOfEra) Lit(value=4) }
+              }
+              Call(target=mul) {
+                Call(target=wholeDiv) { Var(name=yearOfEra) Lit(value=100) }
+                Lit(value=-1)
+              }
+            }
+            Var(name=dayOfYear)
+          }
+        }
+        Return {
+          Call(target=sub) {
+            Add {
+              Call(target=mul) { Var(name=era) Lit(value=146097) }
+              Var(name=dayOfEra)
+            }
+            Lit(value=719468)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=dayIndexFromIsoDate) {
+    Fn(params=isoDate) {
+      Block {
+        Let(name=year) {
+          Call(target=parseWholeOr) {
+            Call(target=substring) { Var(name=isoDate) Lit(value=0) Lit(value=4) }
+            Lit(value=1970)
+          }
+        }
+        Let(name=month) {
+          Call(target=parseWholeOr) {
+            Call(target=substring) { Var(name=isoDate) Lit(value=5) Lit(value=2) }
+            Lit(value=1)
+          }
+        }
+        Let(name=day) {
+          Call(target=parseWholeOr) {
+            Call(target=substring) { Var(name=isoDate) Lit(value=8) Lit(value=2) }
+            Lit(value=1)
+          }
+        }
+        Return { Call(target=dayIndexFromCivilDate) { Var(name=year) Var(name=month) Var(name=day) } }
+      }
+    }
+  }
+
+  Let(name=relativeDayLabelFromIsoDate) {
+    Fn(params=baseIsoDate,isoDate) {
+      Block {
+        Let(name=baseDayIndex) { Call(target=dayIndexFromIsoDate) { Var(name=baseIsoDate) } }
+        Let(name=dayIndex) { Call(target=dayIndexFromIsoDate) { Var(name=isoDate) } }
+        Return {
+          Call(target=relativeDayLabelFromBaseDayIndex) {
+            Var(name=baseDayIndex)
+            Call(target=sub) { Var(name=dayIndex) Var(name=baseDayIndex) }
           }
         }
       }

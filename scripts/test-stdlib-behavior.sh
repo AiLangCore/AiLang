@@ -704,6 +704,36 @@ Program#stdlib_behavior_time_p1 {
             Lit#stdlib_behavior_time_i18(value=4)
           }
         }
+        Call#stdlib_behavior_time_c26(target=io.print) {
+          Call#stdlib_behavior_time_c27(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_i19(value="2026-06-19")
+            Lit#stdlib_behavior_time_i20(value="2026-06-19")
+          }
+        }
+        Call#stdlib_behavior_time_c28(target=io.print) {
+          Call#stdlib_behavior_time_c29(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_i21(value="2026-06-19")
+            Lit#stdlib_behavior_time_i22(value="2026-06-20")
+          }
+        }
+        Call#stdlib_behavior_time_c30(target=io.print) {
+          Call#stdlib_behavior_time_c31(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_i23(value="2026-06-19")
+            Lit#stdlib_behavior_time_i24(value="2026-06-21")
+          }
+        }
+        Call#stdlib_behavior_time_c32(target=io.print) {
+          Call#stdlib_behavior_time_c33(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_i25(value="2026-06-19")
+            Lit#stdlib_behavior_time_i26(value="2026-06-22")
+          }
+        }
+        Call#stdlib_behavior_time_c34(target=io.print) {
+          Call#stdlib_behavior_time_c35(target=relativeDayLabelFromIsoDate) {
+            Lit#stdlib_behavior_time_i27(value="2026-06-19")
+            Lit#stdlib_behavior_time_i28(value="2026-06-23")
+          }
+        }
         Return#stdlib_behavior_time_r1 { Lit#stdlib_behavior_time_i2(value=0) }
       }
     }
@@ -938,6 +968,11 @@ true
 0
 Tomorrow
 Sunday
+Today
+Tomorrow
+Sunday
+Monday
+Tuesday
 Today
 Tomorrow
 Sunday

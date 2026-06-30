@@ -692,8 +692,8 @@ jobs:
             echo "No release asset files found." >&2
             exit 1
           fi
+          args+=("${release_files[@]}")
           gh "${args[@]}"
-          gh release upload "${TAG}" "${release_files[@]}"
 
   install-smoke-unix:
     name: install-smoke-${{ matrix.os }}

@@ -2,7 +2,15 @@
 
 Status: proposed package contract for target-owned build, publish, and run behavior.
 
-Target packages let optional packages declare build/run/publish targets without moving target-specific behavior into the core compiler, VM, or minimum SDK. They are intended for targets such as `aios-service`, `aios-gui`, hardware devices, emulator-backed profiles, and future platform bundles.
+Target packages let optional packages declare build/run/publish targets without
+moving target-specific behavior into the core compiler, VM, or minimum SDK.
+They are intended for official platform targets, emulator-backed profiles, and
+future device or platform bundles.
+
+Official target package source lives in separate target repositories as
+described in `Docs/Official-Target-Repositories.md`. During beta migration,
+some target packages may still live under `ailang-core-packages`; that is a
+staging state, not final ownership.
 
 ## Package Type
 
@@ -137,10 +145,15 @@ for the source package descriptor.
 
 ## AiOS Targets
 
-The first target package candidates are:
+The first AiOS target package candidates are:
 
 - `target-aios-service`: headless microservice image.
 - `target-aios-gui`: AiVectra visual shell image.
+
+These currently exist under `ailang-core-packages` while the target system is
+being hardened. Final ownership moves to `ailang-target-aios`, where profiles
+such as `qemu`, `rpi`, `pi3bplus`, `pi4`, and `pi5` live under the same target
+repository instead of becoming separate repositories.
 
 `aios-service` is the headless server target. It is intended for tiny
 cloud/service appliances:
@@ -315,9 +328,10 @@ runtimes/linux-arm64/aivm-runtime
 runtimes/linux-arm64/aivectra
 ```
 
-For AiOS GUI, the `aivectra` runtime slot is a framebuffer host that draws
-directly to `/dev/fb0`. Generic Linux desktop runtimes may use X11 separately;
-AiOS does not require X11, Wayland, or a shell-owned desktop session.
+For AiOS GUI, the `aivectra` runtime slot is an AiOS host that may use DRM/KMS
+or framebuffer fallback. Generic Linux desktop runtimes may use X11 or another
+desktop backend separately; AiOS does not require X11, Wayland, or a shell-owned
+desktop session.
 
 If the required runtime is not in the SDK, the caller may provide explicit
 paths:
@@ -339,7 +353,9 @@ do not match.
 
 ## Non-Goals
 
-- Target packages do not make AiOS a separate repo by default.
 - Target packages do not move AiVM runtime semantics into package metadata.
 - Target packages do not automatically install host tools.
 - Target packages do not permit build/publish to fetch dependencies outside restore.
+- Hardware-specific APIs such as GPIO, I2C, SPI, camera, touch, Bluetooth, or
+  location are not target semantics. They belong in optional capability
+  packages that consume target-provided capabilities.

@@ -2,7 +2,7 @@
 
 Status: proposed CLI contract for package-provided targets.
 
-This document defines how `ailang run`, `ailang publish`, and `ailang doctor` should consume target packages.
+This document defines how `ailang run`, `ailang publish`, `ailang flash`, and `ailang doctor` consume target packages.
 
 `ailang` is the public dispatcher. The target contract is owned by private SDK
 commands under `libexec/ailang/commands`, not by the dispatcher and not by
@@ -15,6 +15,9 @@ AiVM.
 - **Runner**: how `ailang run` executes the target locally, such as `native`, `browser`, `qemu`, `docker`, or `device`.
 
 Targets describe artifact compatibility. Runners describe local execution.
+Target packages are resolved dynamically from built-in SDK metadata and restored
+package lockfile metadata. Platform target behavior belongs in target
+repositories, not in the generic dispatcher.
 
 ## Command Shape
 
@@ -22,6 +25,7 @@ Targets describe artifact compatibility. Runners describe local execution.
 ailang publish <project-dir> --target <target-id> [--type <artifact-type>] [--out <dir>]
 ailang publish <project-dir> --target <target-id> [--target-version <version>]
 ailang run <project-dir> --target <target-id> [--runner <runner-id>] [--target-version <version>] [args...]
+ailang flash <project-dir> --target <target-id> [--target-version <version>]
 ailang doctor [--target <target-id>]
 ```
 
@@ -87,6 +91,13 @@ For versioned targets, `--target-version` is passed to the target package. The
 dispatcher treats it as opaque metadata; AiOS target packages interpret it as
 `aiosVersion` and use it to select the cached base image.
 
+## `ailang flash`
+
+`flash` deploys an already built or freshly published artifact to a target-owned
+device, emulator storage surface, board, or browser/device profile. The generic
+CLI only resolves the target package and forwards options. The target package
+owns device discovery, image validation, flashing, and diagnostics.
+
 ## Deterministic Missing Requirement Diagnostic
 
 ```text
@@ -117,3 +128,19 @@ The diagnostic must include:
 5. Add external tool probing for `[requirements.tools.*]`.
 6. Fail deterministically when a selected target is unavailable or a required tool is missing.
 7. Keep existing built-in target behavior working without requiring target packages.
+
+## Official Target Repository Migration
+
+Official targets are moving to separate repositories:
+
+```text
+ailang-target-windows
+ailang-target-macos
+ailang-target-linux
+ailang-target-wasm
+ailang-target-aios
+```
+
+The dispatcher contract does not change when target source moves. Registry
+records point at the new repositories, restore records target metadata in
+`ailang.lock.toml`, and command resolution remains package-driven.

@@ -102,7 +102,6 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" ]]; then
   configure_linux_tls
-
   if [[ "${AILANG_LINUX_UI_BACKEND:-}" == "framebuffer" ]]; then
     UI_HOST_SRC="${NATIVE_UI_HOST_FRAMEBUFFER_SRC}"
   elif [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then

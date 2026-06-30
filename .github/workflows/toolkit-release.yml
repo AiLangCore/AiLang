@@ -316,7 +316,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
           AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
           AILANG_BUILD_CHANNEL: beta
         run: |

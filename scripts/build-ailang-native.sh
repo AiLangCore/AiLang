@@ -65,6 +65,7 @@ fi
 WRAPPER_PATH="${OUT_DIR}/${AILANG_BIN_NAME}"
 RUNTIME_PATH="${OUT_DIR}/${RUNTIME_BIN_NAME}"
 AIOS_FRAMEBUFFER_RUNTIME_PATH="${OUT_DIR}/aivectra-framebuffer"
+AIVECTRA_X11_RUNTIME_PATH="${OUT_DIR}/aivectra-x11"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
 
@@ -191,6 +192,33 @@ chmod +x "${WRAPPER_PATH}"
 chmod +x "${RUNTIME_PATH}"
 
 if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" && "${AILANG_LINUX_UI_BACKEND:-}" != "framebuffer" ]]; then
+    "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
+      "${BUILD_METADATA_DEFINES[@]}" \
+      -I "${NATIVE_INCLUDE}" \
+      -I "${NATIVE_SRC_DIR}/ailang_cli" \
+      "${SOURCE_PATH}" \
+      "${NATIVE_UI_HOST_LINUX_SRC}" \
+      "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
+      "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
+      "${NATIVE_SRC_DIR}/aivm_types.c" \
+      "${NATIVE_SRC_DIR}/aivm_vm.c" \
+      "${NATIVE_SRC_DIR}/aivm_program.c" \
+      "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
+      "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
+      "${NATIVE_SRC_DIR}/aivm_parity.c" \
+      "${NATIVE_SRC_DIR}/aivm_runtime.c" \
+      "${NATIVE_SRC_DIR}/aivm_c_api.c" \
+      "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
+      "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
+      "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c" \
+      "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c" \
+      "${LD_EXTRA[@]}" \
+      -lX11 \
+      -o "${AIVECTRA_X11_RUNTIME_PATH}"
+    chmod +x "${AIVECTRA_X11_RUNTIME_PATH}"
+  fi
+
   "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
     "${BUILD_METADATA_DEFINES[@]}" \
     -I "${NATIVE_INCLUDE}" \
@@ -252,6 +280,9 @@ verify_linux_artifact() {
 verify_linux_artifact "${WRAPPER_PATH}" "${AILANG_BIN_NAME}"
 verify_linux_artifact "${RUNTIME_PATH}" "${RUNTIME_BIN_NAME}"
 if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
+  if [[ -f "${AIVECTRA_X11_RUNTIME_PATH}" ]]; then
+    verify_linux_artifact "${AIVECTRA_X11_RUNTIME_PATH}" "aivectra-x11"
+  fi
   verify_linux_artifact "${AIOS_FRAMEBUFFER_RUNTIME_PATH}" "aivectra-framebuffer"
 fi
 

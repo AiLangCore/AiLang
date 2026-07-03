@@ -37,6 +37,7 @@ runtime = "aivm"
 profile = "linux-shellless-posix"
 defaultRunner = "qemu"
 artifactTypes = ["img", "initramfs", "oci"]
+hostAbi = 1
 ```
 
 Required fields:
@@ -45,6 +46,7 @@ Required fields:
 - `runtime`: runtime family, such as `aivm`.
 - `profile`: host/runtime capability profile.
 - `artifactTypes`: supported publish artifacts.
+- `hostAbi`: AiVM Host ABI version required by this target package.
 
 Optional fields:
 
@@ -135,6 +137,7 @@ id = "aios-service"
 aliases = ["service-image"]
 defaultRunner = "qemu"
 artifactTypes = ["img", "initramfs", "oci"]
+hostAbi = 1
 runTools = ["qemu-system-x86_64"]
 publishTools = []
 ```
@@ -142,6 +145,11 @@ publishTools = []
 Lockfile target metadata is command-owned cache data. It is used by `run`,
 `publish`, and `doctor` after `ailang package restore`; it is not a substitute
 for the source package descriptor.
+
+The generic dispatcher must fail before invoking a target tool when the
+restored `hostAbi` does not match the installed AiVM Host ABI. Target packages
+may add platform-specific checks in their `doctor` tools, but ABI compatibility
+is part of the generic target dispatch contract.
 
 ## AiOS Targets
 

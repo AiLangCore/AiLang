@@ -105,6 +105,17 @@ AiVM remains platform neutral. Host libraries bind the VM to platform IO,
 windowing, storage, process, network, time, and device capabilities through
 explicit host ABI and syscall contract surfaces.
 
+Each target package descriptor must declare the AiVM Host ABI it requires:
+
+```toml
+[targets.<id>]
+hostAbi = 1
+```
+
+The generic CLI records this in `ailang.lock.toml` during restore and rejects
+target dispatch before invoking target-owned tools when the installed VM Host
+ABI does not match.
+
 ## CLI Behavior
 
 The public CLI remains generic:

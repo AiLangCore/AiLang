@@ -17,14 +17,17 @@ compiler path.
    - done: `ailang.lock.toml`
    - done: local project package cache
    - done: package imports resolvable by compiler
+   - done: exact package-to-package dependency restoration
    - done: package tool conflict checks
    - done: package templates discoverable by `ailang template`
    - done: AiVectra library/tool/template package surface
+   - done: target package metadata restored into `ailang.lock.toml`
+   - done: target package Host ABI compatibility is enforced before target
+     tool dispatch
+   - done: lockfiles record registry commit pins for restored packages
    - not done: package update
-   - not done: transitive dependency resolution
    - not done: semver range resolution
    - not done: package publish workflow
-   - not done: lockfile registry commit pinning
    - not done: package integrity/signature verification
    - temporary C bridge wrappers are isolated behind the AiVM native bridge
      while the AiLang implementation is not available yet
@@ -112,15 +115,22 @@ compiler path.
 
 8. Bootstrap handoff
    - build current compiler with bootstrap path
-   - build compiler with self-hosted compiler
+   - done: remove direct compiler facade calls from `src/compiler/aic.aos`
+     (`compiler.test`, generated publish-program `compiler.run`, and direct
+     `compiler.parse`/`compiler.format` bridge calls)
+   - done: `src/compiler/aic.aos` emits standalone bytecode with the native
+     bootstrap compiler
+   - build compiler with the self-hosted compiler
    - compare deterministic outputs where possible
    - switch normal `ailang build` to self-hosted compiler
    - leave native/compiler fallback out of normal paths
 
 ## Current First Milestone
 
-The current milestone is package manager + package import resolution because
-every later self-hosted phase needs the same project graph:
+The package manager and package import resolution are now sufficient for the
+self-hosting path. The current active milestone is linker/object-output work:
+recursive imports, deterministic cycle diagnostics, `obj/` intermediate output,
+and `bin/` final output.
 
 ```bash
 ailang package list
@@ -128,11 +138,12 @@ ailang package restore
 ailang build .
 ```
 
-The package manager must support three package item types:
+The package manager supports the package item types needed by the current SDK:
 
 - `library`: importable AiLang source.
 - `tool`: executable command or project tool.
 - `template`: project or file template surfaced by `ailang template`.
+- `target`: publish/run/doctor/flash metadata and target-owned tools.
 
 If a package tool name conflicts with an existing compiled command, globally
 installed tool, or locally installed package tool, restore/install must fail.

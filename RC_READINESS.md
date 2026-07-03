@@ -10,12 +10,16 @@ explicit release-blocking decisions.
 
 ## Current Position
 
-- Current public SDK beta: `v0.0.1-beta.8`
+- Current public SDK beta line: `v0.0.1-beta.*`
+- Current local SDK build observed during target-package work:
+  `0.0.1-beta.22`
 - Current branch for integration work: `develop`
 - AiLang owns the language specs, compiler/toolset, core libraries, SDK,
   project templates, package workflow, and public examples.
 - AiVM is the native runtime path used by the public SDK.
 - AiVectra is an AiLang package/UI SDK dependency, not part of AiLang core.
+- Official platform targets are now separate target packages and repositories;
+  the generic CLI dispatches restored targets from `ailang.lock.toml`.
 
 ## Already Strong Beta
 
@@ -29,6 +33,10 @@ explicit release-blocking decisions.
 - [x] Native AiVM is the public runtime path.
 - [x] Package restore works from the curated registry.
 - [x] Package command conflicts are rejected deterministically.
+- [x] Package target metadata is restored into `ailang.lock.toml`.
+- [x] Package target dispatch enforces restored AiVM Host ABI metadata before
+  invoking target-owned tools.
+- [x] Official target packages exist for AiOS, Linux, macOS, WASM, and Windows.
 - [x] Specs have clear ownership across AiLang, AiVM, and AiVectra.
 - [x] Public roadmap and sponsorship messaging exist.
 
@@ -43,7 +51,7 @@ explicit release-blocking decisions.
 - [ ] Promote source-graph and import-heavy project compilation from
   deterministic unsupported cases to a supported baseline, or explicitly
   document the unsupported shapes as non-RC blockers.
-- [ ] Decide which deferred package items are required before RC.
+- [ ] Decide which remaining deferred package items are required before RC.
 - [ ] Confirm docs and samples use only supported public behavior.
 - [ ] Add release-blocking issue labels or milestones so RC scope does not
   drift.
@@ -54,10 +62,12 @@ These beta-deferred items need an RC decision. They do not all need to be
 implemented before RC, but each must be implemented or explicitly deferred with
 a reason.
 
-- [ ] Transitive dependency resolution.
+- [x] Exact package-to-package dependency restoration.
 - [ ] Semantic version ranges.
 - [ ] Package publish command.
-- [ ] Registry commit pinning in lockfiles.
+- [x] Registry commit pinning in lockfiles for restored packages.
+- [x] Package target metadata in lockfiles.
+- [x] Package target Host ABI compatibility enforcement.
 - [ ] Package integrity/signature verification.
 - [ ] Package template instantiation through `ailang package`.
 - [ ] Self-hosted package manager implementation in AiLang.

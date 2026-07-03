@@ -10,9 +10,8 @@ layers.
 
 ## Current Beta Release
 
-- AiLang: `v0.0.1-beta.8`
-- AiVM: `v0.0.1-beta.2`
-- AiVectra: `v0.0.1-beta.2`
+The project is on the `0.0.1-beta.*` release line. Verify the exact current
+published tags before cutting a new beta or RC candidate.
 
 Verified on 2026-05-19:
 
@@ -69,8 +68,13 @@ Verified on 2026-06-02:
 - [x] `ailang run` works from an installed SDK.
 - [x] `ailang test` exists for project-local beta tests.
 - [x] Package restore works from the curated package registry.
+- [x] Package-to-package dependency restore works for exact versions.
 - [x] Package restore rejects tool command conflicts deterministically.
 - [x] Package publishing flow is documented.
+- [x] Official target packages restore target metadata into
+  `ailang.lock.toml`.
+- [x] Package target dispatch enforces AiVM Host ABI compatibility before
+  invoking target-owned tools.
 - [x] AiVM native runtime is the runtime used by the public SDK.
 - [x] `aivm` and `aivm-debug` release artifacts exist for supported hosts.
 - [x] At least one AiVectra sample app is functional and documented.
@@ -151,10 +155,8 @@ Verified on 2026-05-20:
 
 Package items intentionally deferred beyond the current readiness pass:
 
-- transitive dependency resolution
 - semantic version ranges
 - package publish command
-- registry commit pinning in lockfiles
 - package integrity/signature verification
 - package template instantiation through `ailang package`
 - self-hosted package manager implementation in AiLang
@@ -190,8 +192,12 @@ Verified on 2026-05-20:
   in isolated native worker threads with deterministic `AWAIT` handoff and
   frozen result copying for scalar, string/bytes, node graph, and scratch-pair
   values.
-- [ ] Keep package work limited to bug fixes and explicit beta blockers unless
-  one of the deferred package items is promoted to a release requirement.
+- [x] Keep target package split coherent: official AiOS, Linux, macOS, WASM,
+  and Windows target packages declare `hostAbi = 1`, and the registry points at
+  those revisions.
+- [ ] Keep additional package work limited to bug fixes and explicit beta/RC
+  blockers unless one of the deferred package items is promoted to a release
+  requirement.
 
 ## Beta Exit Rule
 

@@ -13,6 +13,8 @@ language semantics, a tiny native VM, and a vector UI/runtime SDK.
   management, diagnostics, and embeddable VM library.
 - AiVectra owns the vector UI SDK, scene graph semantics, app runtime
   integration, and UI samples.
+- Official platform targets own target-specific publish/run/doctor/flash
+  behavior through separate target packages and repositories.
 
 The public runtime direction is the native C AiVM. Legacy runtime paths are
 bootstrap or archive material only unless explicitly marked otherwise.
@@ -52,6 +54,8 @@ Minimum beta outcomes:
 - native AiVM artifacts are released for supported hosts
 - `ailang init/build/run` works from installed SDKs
 - package restore works and is documented
+- official target packages restore into `ailang.lock.toml` and enforce AiVM
+  Host ABI compatibility before target-owned tools run
 - public specs have clear ownership
 - resource limits and error codes are stable enough for beta
 - at least one AiVectra sample app is functional and documented

@@ -1,0 +1,206 @@
+Program#resolver_p1 {
+  Export#resolver_e1(name=resolve.findFirstUndeclaredPackageImport)
+  Export#resolver_e2(name=resolve.projectHasInclude)
+  Export#resolver_e3(name=resolve.findFirstImportPath)
+  Export#resolver_e4(name=resolve.findImportNodeIdByPath)
+
+  Let#resolver_l1(name=resolve.findFirstUndeclaredPackageImport) {
+    Fn#resolver_f1(params=program,projectNode,index) {
+      Block#resolver_b1 {
+        If#resolver_if1 {
+          Eq#resolver_e1a { Var#resolver_v1(name=index) ChildCount#resolver_cc1 { Var#resolver_v2(name=program) } }
+          Block#resolver_b2 { Return#resolver_r1 { Lit#resolver_i1(value="") } }
+          Block#resolver_b3 {
+            Let#resolver_l2(name=child) { ChildAt#resolver_ca1 { Var#resolver_v3(name=program) Var#resolver_v4(name=index) } }
+            If#resolver_if2 {
+              Eq#resolver_e2a { NodeKind#resolver_nk1 { Var#resolver_v5(name=child) } Lit#resolver_i2(value="Import") }
+              Block#resolver_b4 {
+                Let#resolver_l3(name=packageName) { Call#resolver_c1(target=resolve.getAttr) { Var#resolver_v6(name=child) Lit#resolver_i3(value="package") Lit#resolver_i4(value=0) } }
+                If#resolver_if3 {
+                  Eq#resolver_e3a { Var#resolver_v7(name=packageName) Lit#resolver_i5(value="") }
+                  Block#resolver_b5 {
+                    Return#resolver_r2 {
+                      Call#resolver_c2(target=resolve.findFirstUndeclaredPackageImport) {
+                        Var#resolver_v8(name=program)
+                        Var#resolver_v9(name=projectNode)
+                        Add#resolver_a1 { Var#resolver_v10(name=index) Lit#resolver_i6(value=1) }
+                      }
+                    }
+                  }
+                  Block#resolver_b6 {
+                    If#resolver_if4 {
+                      Call#resolver_c3(target=resolve.projectHasInclude) {
+                        Var#resolver_v11(name=projectNode)
+                        Var#resolver_v12(name=packageName)
+                        Lit#resolver_i7(value=0)
+                      }
+                      Block#resolver_b7 {
+                        Return#resolver_r3 {
+                          Call#resolver_c4(target=resolve.findFirstUndeclaredPackageImport) {
+                            Var#resolver_v13(name=program)
+                            Var#resolver_v14(name=projectNode)
+                            Add#resolver_a2 { Var#resolver_v15(name=index) Lit#resolver_i8(value=1) }
+                          }
+                        }
+                      }
+                      Block#resolver_b8 { Return#resolver_r4 { NodeId#resolver_nid1 { Var#resolver_v16(name=child) } } }
+                    }
+                  }
+                }
+              }
+              Block#resolver_b9 {
+                Return#resolver_r5 {
+                  Call#resolver_c5(target=resolve.findFirstUndeclaredPackageImport) {
+                    Var#resolver_v17(name=program)
+                    Var#resolver_v18(name=projectNode)
+                    Add#resolver_a3 { Var#resolver_v19(name=index) Lit#resolver_i9(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#resolver_l4(name=resolve.projectHasInclude) {
+    Fn#resolver_f2(params=projectNode,packageName,index) {
+      Block#resolver_b10 {
+        If#resolver_if5 {
+          Eq#resolver_e4a { Var#resolver_v20(name=index) ChildCount#resolver_cc2 { Var#resolver_v21(name=projectNode) } }
+          Block#resolver_b11 { Return#resolver_r6 { Lit#resolver_i10(value=false) } }
+          Block#resolver_b12 {
+            Let#resolver_l5(name=child) { ChildAt#resolver_ca2 { Var#resolver_v22(name=projectNode) Var#resolver_v23(name=index) } }
+            If#resolver_if6 {
+              Eq#resolver_e5a { NodeKind#resolver_nk2 { Var#resolver_v24(name=child) } Lit#resolver_i11(value="Include") }
+              Block#resolver_b13 {
+                If#resolver_if7 {
+                  Eq#resolver_e6a {
+                    Call#resolver_c6(target=resolve.getAttr) { Var#resolver_v25(name=child) Lit#resolver_i12(value="name") Lit#resolver_i13(value=0) }
+                    Var#resolver_v26(name=packageName)
+                  }
+                  Block#resolver_b14 { Return#resolver_r7 { Lit#resolver_i14(value=true) } }
+                  Block#resolver_b15 {
+                    Return#resolver_r8 {
+                      Call#resolver_c7(target=resolve.projectHasInclude) {
+                        Var#resolver_v27(name=projectNode)
+                        Var#resolver_v28(name=packageName)
+                        Add#resolver_a4 { Var#resolver_v29(name=index) Lit#resolver_i15(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#resolver_b16 {
+                Return#resolver_r9 {
+                  Call#resolver_c8(target=resolve.projectHasInclude) {
+                    Var#resolver_v30(name=projectNode)
+                    Var#resolver_v31(name=packageName)
+                    Add#resolver_a5 { Var#resolver_v32(name=index) Lit#resolver_i16(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#resolver_l6(name=resolve.getAttr) {
+    Fn#resolver_f3(params=node,key,index) {
+      Block#resolver_b17 {
+        If#resolver_if8 {
+          Eq#resolver_e7a { Var#resolver_v33(name=index) AttrCount#resolver_ac1 { Var#resolver_v34(name=node) } }
+          Block#resolver_b18 { Return#resolver_r10 { Lit#resolver_i17(value="") } }
+          Block#resolver_b19 {
+            If#resolver_if9 {
+              Eq#resolver_e8a { AttrKey#resolver_ak1 { Var#resolver_v35(name=node) Var#resolver_v36(name=index) } Var#resolver_v37(name=key) }
+              Block#resolver_b20 { Return#resolver_r11 { AttrValueString#resolver_avs1 { Var#resolver_v38(name=node) Var#resolver_v39(name=index) } } }
+              Block#resolver_b21 {
+                Return#resolver_r12 {
+                  Call#resolver_c9(target=resolve.getAttr) {
+                    Var#resolver_v40(name=node)
+                    Var#resolver_v41(name=key)
+                    Add#resolver_a6 { Var#resolver_v42(name=index) Lit#resolver_i18(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#resolver_l7(name=resolve.findFirstImportPath) {
+    Fn#resolver_f4(params=program,index) {
+      Block#resolver_b22 {
+        If#resolver_if10 {
+          Eq#resolver_e9a { Var#resolver_v43(name=index) ChildCount#resolver_cc3 { Var#resolver_v44(name=program) } }
+          Block#resolver_b23 { Return#resolver_r13 { Lit#resolver_i19(value="") } }
+          Block#resolver_b24 {
+            Let#resolver_l8(name=child) { ChildAt#resolver_ca3 { Var#resolver_v45(name=program) Var#resolver_v46(name=index) } }
+            If#resolver_if11 {
+              Eq#resolver_e10a { NodeKind#resolver_nk3 { Var#resolver_v47(name=child) } Lit#resolver_i20(value="Import") }
+              Block#resolver_b25 { Return#resolver_r14 { Call#resolver_c10(target=resolve.getAttr) { Var#resolver_v48(name=child) Lit#resolver_i21(value="path") Lit#resolver_i22(value=0) } } }
+              Block#resolver_b26 {
+                Return#resolver_r15 {
+                  Call#resolver_c11(target=resolve.findFirstImportPath) {
+                    Var#resolver_v49(name=program)
+                    Add#resolver_a7 { Var#resolver_v50(name=index) Lit#resolver_i23(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#resolver_l9(name=resolve.findImportNodeIdByPath) {
+    Fn#resolver_f5(params=program,path,index) {
+      Block#resolver_b27 {
+        If#resolver_if12 {
+          Eq#resolver_e11a { Var#resolver_v51(name=index) ChildCount#resolver_cc4 { Var#resolver_v52(name=program) } }
+          Block#resolver_b28 { Return#resolver_r16 { Lit#resolver_i24(value="") } }
+          Block#resolver_b29 {
+            Let#resolver_l10(name=child) { ChildAt#resolver_ca4 { Var#resolver_v53(name=program) Var#resolver_v54(name=index) } }
+            If#resolver_if13 {
+              Eq#resolver_e12a { NodeKind#resolver_nk4 { Var#resolver_v55(name=child) } Lit#resolver_i25(value="Import") }
+              Block#resolver_b30 {
+                If#resolver_if14 {
+                  Eq#resolver_e13a {
+                    Call#resolver_c12(target=resolve.getAttr) { Var#resolver_v56(name=child) Lit#resolver_i26(value="path") Lit#resolver_i27(value=0) }
+                    Var#resolver_v57(name=path)
+                  }
+                  Block#resolver_b31 { Return#resolver_r17 { NodeId#resolver_nid2 { Var#resolver_v58(name=child) } } }
+                  Block#resolver_b32 {
+                    Return#resolver_r18 {
+                      Call#resolver_c13(target=resolve.findImportNodeIdByPath) {
+                        Var#resolver_v59(name=program)
+                        Var#resolver_v60(name=path)
+                        Add#resolver_a8 { Var#resolver_v61(name=index) Lit#resolver_i28(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#resolver_b33 {
+                Return#resolver_r19 {
+                  Call#resolver_c14(target=resolve.findImportNodeIdByPath) {
+                    Var#resolver_v62(name=program)
+                    Var#resolver_v63(name=path)
+                    Add#resolver_a9 { Var#resolver_v64(name=index) Lit#resolver_i29(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

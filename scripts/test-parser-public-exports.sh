@@ -27,6 +27,7 @@ sed -n 's/.*Export#[^)]*(name=\([^)]*\)).*/\1/p' "${PARSER}" | sort > "${ACTUAL}
   printf '%s\n' parse.parseEmptyNode
   printf '%s\n' parse.parseIntText
   printf '%s\n' parse.parseIntToken
+  printf '%s\n' parse.parseDocument
   printf '%s\n' parse.parseNode
   printf '%s\n' parse.parseNodeWithNameAttr
   printf '%s\n' parse.parseProgramWithOneChild

@@ -1,0 +1,155 @@
+Program#value_p1 {
+  Export#value_e1(name=value.toString)
+  Export#value_e2(name=value.makeStringLit)
+  Export#value_e3(name=value.makeBoolLit)
+  Export#value_e4(name=value.makeIntLit)
+  Export#value_e5(name=value.emitOkFromValue)
+
+  Let#value_l1(name=value.toString) {
+    Fn#value_f1(params=value) {
+      Block#value_b1 {
+        If#value_if1 {
+          Eq#value_eq1 { NodeKind#value_nk1 { Var#value_v1(name=value) } Lit#value_i1(value="Lit") }
+          Block#value_b2 {
+            Let#value_l2(name=k) { AttrValueKind#value_avk1 { Var#value_v2(name=value) Lit#value_i2(value=0) } }
+            If#value_if2 {
+              Eq#value_eq2 { Var#value_v3(name=k) Lit#value_i3(value="string") }
+              Block#value_b3 { Return#value_r1 { AttrValueString#value_avs1 { Var#value_v4(name=value) Lit#value_i4(value=0) } } }
+              Block#value_b4 {
+                If#value_if3 {
+                  Eq#value_eq3 { Var#value_v5(name=k) Lit#value_i5(value="int") }
+                  Block#value_b5 { Return#value_r2 { ToString#value_ts1 { AttrValueInt#value_avi1 { Var#value_v6(name=value) Lit#value_i6(value=0) } } } }
+                  Block#value_b6 {
+                    If#value_if4 {
+                      AttrValueBool#value_avb1 { Var#value_v7(name=value) Lit#value_i7(value=0) }
+                      Block#value_b7 { Return#value_r3 { Lit#value_i8(value="true") } }
+                      Block#value_b8 { Return#value_r4 { Lit#value_i9(value="false") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#value_b9 {
+            If#value_if5 {
+              Eq#value_eq4 { NodeKind#value_nk2 { Var#value_v8(name=value) } Lit#value_i10(value="Err") }
+              Block#value_b10 {
+                Return#value_r5 {
+                  StrConcat#value_sc_err1 {
+                    Lit#value_i_err1(value="Err#")
+                    NodeId#value_nid_err1 { Var#value_v9(name=value) }
+                  }
+                }
+              }
+              Block#value_b11 { Return#value_r6 { Lit#value_i11(value="value") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#value_l3(name=value.makeStringLit) {
+    Fn#value_f2(params=env,text) {
+      Block#value_b12 {
+        Let#value_l4(name=i) { ChildCount#value_cc1 { Var#value_v10(name=env) } }
+        Let#value_l5(name=id) { StrConcat#value_sc1 { Lit#value_i12(value="s") ToString#value_ts2 { Var#value_v11(name=i) } } }
+        Return#value_r7 { MakeLitString#value_mls1 { Var#value_v12(name=id) Var#value_v13(name=text) } }
+      }
+    }
+  }
+
+  Let#value_l6(name=value.makeBoolLit) {
+    Fn#value_f3(params=b) {
+      Block#value_b13 {
+        Let#value_l7(name=id) {
+          If#value_if6 {
+            Var#value_v14(name=b)
+            Block#value_b14 { Lit#value_i13(value="b1") }
+            Block#value_b15 { Lit#value_i14(value="b0") }
+          }
+        }
+        Return#value_r8 {
+          MakeLitBool#value_mlb1 {
+            Var#value_v15(name=id)
+            Var#value_v16(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#value_l8(name=value.makeIntLit) {
+    Fn#value_f4(params=n) {
+      Block#value_b16 {
+        Return#value_r9 {
+          MakeLitInt#value_mli1 {
+            Lit#value_i16(value="i")
+            Var#value_v17(name=n)
+          }
+        }
+      }
+    }
+  }
+
+  Let#value_l11(name=value.emitOkFromValue) {
+    Fn#value_f5(params=value) {
+      Block#value_b17 {
+        If#value_if7 {
+          Eq#value_eq5 { NodeKind#value_nk3 { Var#value_v19(name=value) } Lit#value_i19(value="Lit") }
+          Block#value_b18 {
+            Let#value_l12(name=k) { AttrValueKind#value_avk2 { Var#value_v20(name=value) Lit#value_i20(value=0) } }
+            If#value_if8 {
+              Eq#value_eq6 { Var#value_v21(name=k) Lit#value_i21(value="string") }
+              Block#value_b19 {
+                Call#value_c5(target=io.write) {
+                  StrConcat#value_sc4 {
+                    Lit#value_i22(value="Ok#ok0(type=string value=\"")
+                    StrConcat#value_sc5 {
+                      StrEscape#value_se1 { AttrValueString#value_avs2 { Var#value_v22(name=value) Lit#value_i23(value=0) } }
+                      Lit#value_i24(value="\")")
+                    }
+                  }
+                }
+                Return#value_r10
+              }
+              Block#value_b20 {
+                If#value_if9 {
+                  Eq#value_eq7 { Var#value_v23(name=k) Lit#value_i25(value="int") }
+                  Block#value_b21 {
+                    Call#value_c6(target=io.write) {
+                      StrConcat#value_sc6 {
+                        Lit#value_i26(value="Ok#ok0(type=int value=")
+                        StrConcat#value_sc7 {
+                          ToString#value_ts4 { AttrValueInt#value_avi2 { Var#value_v24(name=value) Lit#value_i27(value=0) } }
+                          Lit#value_i28(value=")")
+                        }
+                      }
+                    }
+                    Return#value_r11
+                  }
+                  Block#value_b22 {
+                    If#value_if10 {
+                      AttrValueBool#value_avb2 { Var#value_v25(name=value) Lit#value_i29(value=0) }
+                      Block#value_b23 { Call#value_c7(target=io.write) { Lit#value_i30(value="Ok#ok0(type=bool value=true)") } }
+                      Block#value_b24 { Call#value_c8(target=io.write) { Lit#value_i31(value="Ok#ok0(type=bool value=false)") } }
+                    }
+                    Return#value_r12
+                  }
+                }
+              }
+            }
+          }
+          Block#value_b25 {
+            If#value_if11 {
+              Eq#value_eq8 { NodeId#value_nid1 { Var#value_v26(name=value) } Lit#value_i32(value="void") }
+              Block#value_b26 { Call#value_c9(target=io.write) { Lit#value_i33(value="Ok#ok0(type=void)") } }
+              Block#value_b27 { Call#value_c10(target=io.write) { Lit#value_i34(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
+            }
+            Return#value_r13
+          }
+        }
+      }
+    }
+  }
+}

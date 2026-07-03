@@ -356,6 +356,23 @@ jobs:
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
+      - name: Stage bytecode CLI payload (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/libexec/ailang/cli
+          ./tools/ailang build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
+          test -f ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Stage bytecode CLI payload (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist\libexec\ailang\cli | Out-Null
+          .\tools\ailang.exe build .\src\cli\ailang.aos --out .\dist\libexec\ailang\cli --no-cache | Out-Null
+          if (-not (Test-Path .\dist\libexec\ailang\cli\app.aibc1)) { throw 'missing bytecode CLI payload' }
+
       - name: Pack release artifact (Unix)
         if: matrix.platform != 'windows'
         shell: bash
@@ -387,6 +404,9 @@ jobs:
           fi
           chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
+          mkdir -p "${PACKAGE_DIR}/libexec/ailang"
+          cp -R ./dist/libexec/ailang/cli "${PACKAGE_DIR}/libexec/ailang/cli"
+          test -f "${PACKAGE_DIR}/libexec/ailang/cli/app.aibc1"
           cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
           mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
@@ -418,6 +438,9 @@ jobs:
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\runtimes\$targetRid\aivm.exe"
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
+          New-Item -ItemType Directory -Force "$packageDir\libexec\ailang" | Out-Null
+          Copy-Item .\dist\libexec\ailang\cli "$packageDir\libexec\ailang\cli" -Recurse
+          if (-not (Test-Path "$packageDir\libexec\ailang\cli\app.aibc1")) { throw 'missing bytecode CLI payload' }
           Copy-Item .\src\std "$packageDir\std" -Recurse
           Copy-Item .\templates $packageDir -Recurse
           New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null

@@ -31,20 +31,62 @@ compiler path.
 
 2. Parser in AiLang: next active milestone
    - parse `.aos` into canonical IL nodes
-   - deterministic IDs
-   - deterministic diagnostics
-   - reduce temporary token/result node retention
+   - done: parser accepts canonical no-ID nodes such as `Program { ... }`,
+     `Import(path="...")`, and `Lit(value=...)`
+   - done: parser self-host tests cover `src/compiler/*.aos`
+   - done: parser self-host tests cover `src/std/*.aos`
+   - done: malformed attribute lists produce deterministic parser `Err` nodes
+     instead of recursing through invalid tokens
+   - done: no-ID nodes receive deterministic parser-generated IDs based on
+     node kind and source position
+   - done: child-list syntax failures produce deterministic parser `Err` nodes
+     for invalid child starts and missing closing braces
+   - done: explicit-ID bare nodes stop after the ID token instead of consuming
+     the parent closing brace
+   - done: malformed explicit-ID syntax produces deterministic parser `Err`
+     nodes when `#` is not followed by an ID token
+   - done: malformed attribute keys produce deterministic parser `Err` nodes
+     when an attribute does not start with a name token
+   - done: `parse.parseDocument` rejects trailing tokens after the root node
+     and source-file parser sweeps use document-level parsing
+   - done: `compiler.parse` uses `parse.parseDocument`, with regression
+     coverage for trailing input at the compiler boundary
+   - expand deterministic diagnostics across all malformed syntax cases
+   - continue reducing temporary token/result node retention
    - keep `scripts/profile-parser-memory.sh` green enough to parse compiler
      source files without `AIVMM005`
 
 3. Validator in AiLang
    - enforce IL contracts
-   - enforce project/package manifest contracts
+   - done: unsupported IL node kinds produce deterministic `VAL004`
+     diagnostics instead of silently validating
+   - done: parser `Err` nodes passed directly to `compiler.validate` are
+     rejected by the validator boundary
+   - done: `Project` manifests may contain `Include` children without failing
+     child-count validation
+   - done: non-`Include` `Project` children produce deterministic `VAL096`
+     diagnostics
+   - done: `Include` nodes require `name` and `version`
+   - done: `Include.path`, when present, must be a non-empty relative path
+   - enforce remaining project/package manifest contracts
    - enforce syscall discipline
 
 4. Resolver in AiLang
-   - relative imports
+   - done: resolver owns package import manifest checks in `src/compiler/resolve.aos`
+   - done: resolver owns relative import lookup helpers in `src/compiler/resolve.aos`
+   - done: simple import cycle detection lives in `src/compiler/module_graph.aos`
+   - done: project manifest detection and default manifest generation live in
+     `src/compiler/project.aos`
+   - done: project template content and template selection helpers live in
+     `src/compiler/template.aos`
+   - done: publish bundle text builders live in `src/compiler/bundle.aos`
+   - done: bootstrap filesystem helpers for project creation live in
+     `src/compiler/bootstrap_io.aos`
+   - done: runtime value/literal formatting helpers live in
+     `src/compiler/value.aos`
    - package imports through lockfile/cache
+   - done: package imports require matching `Project` manifest `Include`
+     declarations before bootstrap compilation
    - circular import diagnostics
    - stable module graph
 

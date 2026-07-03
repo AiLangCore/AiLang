@@ -274,19 +274,26 @@ Program#p1 {
             Block#k284 { Var#k285(name=stateAfter) }
           }
         }
+        Let#k286(name=stateAfterInclude) {
+          If#k287 {
+            Eq#k288 { Var#k16(name=kind) Lit#k289(value="Include") }
+            Block#k290 { Call#k291(target=requireIncludeShape) { Var#k292(name=node) Var#k293(name=stateAfterProject) } }
+            Block#k294 { Var#k295(name=stateAfterProject) }
+          }
+        }
         Let#k300(name=stateAfterLoopControls) {
           If#k301 {
             Eq#k302 { Var#k16(name=kind) Lit#k303(value="Loop") }
-            Block#k304 { Call#k305(target=requireChildCount) { Var#k306(name=node) Var#k307(name=stateAfterProject) Lit#k308(value=1) } }
+            Block#k304 { Call#k305(target=requireChildCount) { Var#k306(name=node) Var#k307(name=stateAfterInclude) Lit#k308(value=1) } }
             Block#k309 {
               If#k310 {
                 Eq#k311 { Var#k16(name=kind) Lit#k312(value="Break") }
-                Block#k313 { Call#k314(target=requireChildCount) { Var#k315(name=node) Var#k316(name=stateAfterProject) Lit#k317(value=0) } }
+                Block#k313 { Call#k314(target=requireChildCount) { Var#k315(name=node) Var#k316(name=stateAfterInclude) Lit#k317(value=0) } }
                 Block#k318 {
                   If#k319 {
                     Eq#k320 { Var#k16(name=kind) Lit#k321(value="Continue") }
-                    Block#k322 { Call#k323(target=requireChildCount) { Var#k324(name=node) Var#k325(name=stateAfterProject) Lit#k326(value=0) } }
-                    Block#k327 { Var#k328(name=stateAfterProject) }
+                    Block#k322 { Call#k323(target=requireChildCount) { Var#k324(name=node) Var#k325(name=stateAfterInclude) Lit#k326(value=0) } }
+                    Block#k327 { Var#k328(name=stateAfterInclude) }
                   }
                 }
               }
@@ -301,7 +308,72 @@ Program#p1 {
             Block#k339 { Call#k340(target=requireChildCount) { Var#k341(name=node) Var#k342(name=stateAfterLoopControls) Var#k343(name=primitiveArity) } }
           }
         }
-        Return#k274 { Var#k344(name=stateAfterTextBytesPrimitives) }
+        Let#k345(name=stateAfterUnknownKind) {
+          If#k346 {
+            Eq#k347 { Var#k348(name=primitiveArity) Lit#k349(value=-1) }
+            Block#k350 {
+              If#k351 {
+                Call#k352(target=isKnownBaseKind) { Var#k353(name=kind) }
+                Block#k354 { Var#k355(name=stateAfterTextBytesPrimitives) }
+                Block#k356 {
+                  Call#k357(target=addErrForNode) {
+                    Var#k358(name=stateAfterTextBytesPrimitives)
+                    Lit#k359(value="VAL004")
+                    Call#k360(target=unknownKindMessage) { Var#k361(name=kind) }
+                    Var#k362(name=node)
+                  }
+                }
+              }
+            }
+            Block#k363 { Var#k364(name=stateAfterTextBytesPrimitives) }
+          }
+        }
+        Return#k274 { Var#k344(name=stateAfterUnknownKind) }
+      }
+    }
+  }
+
+  Let#k370(name=knownBaseKindText) {
+    Fn#k371(params=_) {
+      Block#k372 {
+        Return#k373 {
+          Lit#k374(value="|Program|Let|Var|Lit|Call|If|Block|Return|Fn|Eq|Add|ToString|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|Import|Export|Project|Include|Loop|Break|Continue|")
+        }
+      }
+    }
+  }
+
+  Let#k380(name=isKnownBaseKind) {
+    Fn#k381(params=kind) {
+      Block#k382 {
+        If#k383 {
+          Eq#k384 {
+            StringFind#k385 {
+              Call#k386(target=knownBaseKindText) { Lit#k387(value=0) }
+              StrConcat#k388 {
+                StrConcat#k389 { Lit#k390(value="|") Var#k391(name=kind) }
+                Lit#k392(value="|")
+              }
+              Lit#k393(value=0)
+            }
+            Lit#k394(value=-1)
+          }
+          Block#k395 { Return#k396 { Lit#k397(value=false) } }
+          Block#k398 { Return#k399 { Lit#k400(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#k410(name=unknownKindMessage) {
+    Fn#k411(params=kind) {
+      Block#k412 {
+        Return#k413 {
+          StrConcat#k414 {
+            StrConcat#k415 { Lit#k416(value="Unsupported node kind '") Var#k417(name=kind) }
+            Lit#k418(value="'.")
+          }
+        }
       }
     }
   }
@@ -704,14 +776,118 @@ Program#p1 {
   Let#p1000(name=requireProjectShape) {
     Fn#p1001(params=node,state) {
       Block#p1002 {
-        Let#p1003(name=s1) { Call#p1004(target=requireAttrAndChildren) { Var#p1005(name=node) Var#p1006(name=state) Lit#p1007(value="name") Lit#p1008(value=0) } }
+        Let#p1003(name=s1) { Call#p1004(target=requireAttr) { Var#p1005(name=node) Var#p1006(name=state) Lit#p1007(value="name") } }
         Let#p1009(name=s2) { Call#p1010(target=requireAttr) { Var#p1011(name=node) Var#p1012(name=s1) Lit#p1013(value="entryFile") } }
         Let#p1014(name=s3) { Call#p1015(target=requireAttr) { Var#p1016(name=node) Var#p1017(name=s2) Lit#p1018(value="entryExport") } }
-        Return#p1019 {
+        Let#p1019(name=s4) {
           If#p1020 {
             Eq#p1021 { Call#p1022(target=getAttrOrEmpty) { Var#p1023(name=node) Lit#p1024(value="entryExport") Lit#p1025(value=0) } Lit#p1026(value="") }
             Block#p1027 { Call#p1028(target=addErrForNode) { Var#p1029(name=s3) Lit#p1030(value="VAL095") Lit#p1031(value="Project entryExport must be non-empty.") Var#p1032(name=node) } }
             Block#p1033 { Var#p1034(name=s3) }
+          }
+        }
+        Return#p1066 { Call#p1067(target=requireProjectChildren) { Var#p1068(name=node) Var#p1069(name=s4) Lit#p1070(value=0) } }
+      }
+    }
+  }
+
+  Let#p1071(name=requireProjectChildren) {
+    Fn#p1072(params=node,state,index) {
+      Block#p1073 {
+        If#p1074 {
+          Eq#p1075 { Var#p1076(name=index) ChildCount#p1077 { Var#p1078(name=node) } }
+          Block#p1079 { Return#p1080 { Var#p1081(name=state) } }
+          Block#p1082 {
+            Let#p1083(name=child) { ChildAt#p1084 { Var#p1085(name=node) Var#p1086(name=index) } }
+            Let#p1087(name=stateAfterChild) {
+              If#p1088 {
+                Eq#p1089 { NodeKind#p1090 { Var#p1091(name=child) } Lit#p1092(value="Include") }
+                Block#p1093 { Var#p1094(name=state) }
+                Block#p1095 {
+                  Call#p1096(target=addErrForNode) {
+                    Var#p1097(name=state)
+                    Lit#p1098(value="VAL096")
+                    Lit#p1099(value="Project children must be Include nodes.")
+                    Var#p1100(name=child)
+                  }
+                }
+              }
+            }
+            Return#p1101 {
+              Call#p1102(target=requireProjectChildren) {
+                Var#p1103(name=node)
+                Var#p1104(name=stateAfterChild)
+                Add#p1105 { Var#p1106(name=index) Lit#p1107(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#p1110(name=requireIncludeShape) {
+    Fn#p1111(params=node,state) {
+      Block#p1112 {
+        Let#p1113(name=s1) { Call#p1114(target=requireAttrAndChildren) { Var#p1115(name=node) Var#p1116(name=state) Lit#p1117(value="name") Lit#p1118(value=0) } }
+        Let#p1119(name=s2) { Call#p1120(target=requireAttr) { Var#p1121(name=node) Var#p1122(name=s1) Lit#p1123(value="version") } }
+        Return#p1124 { Call#p1125(target=requireIncludePath) { Var#p1126(name=node) Var#p1127(name=s2) } }
+      }
+    }
+  }
+
+  Let#p1130(name=requireIncludePath) {
+    Fn#p1131(params=node,state) {
+      Block#p1132 {
+        If#p1133 {
+          Call#p1134(target=hasAttr) { Var#p1135(name=node) Lit#p1136(value="path") Lit#p1137(value=0) }
+          Block#p1138 {
+            Let#p1139(name=path) { Call#p1140(target=getAttrOrEmpty) { Var#p1141(name=node) Lit#p1142(value="path") Lit#p1143(value=0) } }
+            If#p1144 {
+              Call#p1145(target=isRelativePathText) { Var#p1146(name=path) }
+              Block#p1147 { Return#p1148 { Var#p1149(name=state) } }
+              Block#p1150 {
+                Return#p1151 {
+                  Call#p1152(target=addErrForNode) {
+                    Var#p1153(name=state)
+                    Lit#p1154(value="VAL097")
+                    Lit#p1155(value="Include.path must be a non-empty relative path.")
+                    Var#p1156(name=node)
+                  }
+                }
+              }
+            }
+          }
+          Block#p1157 { Return#p1158 { Var#p1159(name=state) } }
+        }
+      }
+    }
+  }
+
+  Let#p1160(name=isRelativePathText) {
+    Fn#p1161(params=path) {
+      Block#p1162 {
+        If#p1163 {
+          Eq#p1164 { Var#p1165(name=path) Lit#p1166(value="") }
+          Block#p1167 { Return#p1168 { Lit#p1169(value=false) } }
+          Block#p1170 {
+            If#p1171 {
+              Eq#p1172 {
+                StringSlice#p1173 { Var#p1174(name=path) Lit#p1175(value=0) Lit#p1176(value=1) }
+                Lit#p1177(value="/")
+              }
+              Block#p1178 { Return#p1179 { Lit#p1180(value=false) } }
+              Block#p1181 {
+                If#p1182 {
+                  Eq#p1183 {
+                    StringFind#p1184 { Var#p1185(name=path) Lit#p1186(value=":") Lit#p1187(value=0) }
+                    Lit#p1188(value=-1)
+                  }
+                  Block#p1189 { Return#p1190 { Lit#p1191(value=true) } }
+                  Block#p1192 { Return#p1193 { Lit#p1194(value=false) } }
+                }
+              }
+            }
           }
         }
       }

@@ -14,6 +14,17 @@ cd "${ROOT_DIR}"
 ./scripts/test-parser-public-exports.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
+./scripts/test-parser-selfhost-stdlib-files.sh
+./scripts/test-compiler-document-parse.sh
+./scripts/test-project-manifest-module.sh
+./scripts/test-template-module.sh
+./scripts/test-bundle-module.sh
+./scripts/test-bootstrap-io-module.sh
+./scripts/test-value-module.sh
+./scripts/test-validator-unknown-kind.sh
+./scripts/test-validator-project-manifest.sh
+./scripts/test-resolver-package-imports.sh
+./scripts/test-module-graph-cycle.sh
 ./scripts/test-canonical-formatting.sh
 ./scripts/test-golden-determinism.sh
 ./scripts/test-ailang-init.sh

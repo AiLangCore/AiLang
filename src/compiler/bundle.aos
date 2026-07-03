@@ -1,0 +1,101 @@
+Program#bundle_p1 {
+  Export#bundle_e1(name=bundle.buildSingleModuleBundleText)
+  Export#bundle_e2(name=bundle.buildTwoModuleBundleText)
+  Export#bundle_e3(name=bundle.buildPublishProgramText)
+
+  Let#bundle_l1(name=bundle.buildSingleModuleBundleText) {
+    Fn#bundle_f1(params=projectName,entryFile,entryExport) {
+      Block#bundle_b1 {
+        Return#bundle_r1 {
+          StrConcat#bundle_s1 {
+            Lit#bundle_i1(value="Bundle#b1(entryExport=\"")
+            StrConcat#bundle_s2 {
+              StrEscape#bundle_se1 { Var#bundle_v1(name=entryExport) }
+              StrConcat#bundle_s3 {
+                Lit#bundle_i2(value="\" entryFile=\"")
+                StrConcat#bundle_s4 {
+                  StrEscape#bundle_se2 { Var#bundle_v2(name=entryFile) }
+                  StrConcat#bundle_s5 {
+                    Lit#bundle_i3(value="\" name=\"")
+                    StrConcat#bundle_s6 {
+                      StrEscape#bundle_se3 { Var#bundle_v3(name=projectName) }
+                      StrConcat#bundle_s7 {
+                        Lit#bundle_i4(value="\") { Module#m0(path=\"")
+                        StrConcat#bundle_s8 {
+                          StrEscape#bundle_se4 { Var#bundle_v4(name=entryFile) }
+                          Lit#bundle_i5(value="\") }")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bundle_l2(name=bundle.buildTwoModuleBundleText) {
+    Fn#bundle_f2(params=projectName,entryFile,entryExport,firstImport) {
+      Block#bundle_b2 {
+        Return#bundle_r2 {
+          StrConcat#bundle_s9 {
+            Lit#bundle_i6(value="Bundle#b1(entryExport=\"")
+            StrConcat#bundle_s10 {
+              StrEscape#bundle_se5 { Var#bundle_v5(name=entryExport) }
+              StrConcat#bundle_s11 {
+                Lit#bundle_i7(value="\" entryFile=\"")
+                StrConcat#bundle_s12 {
+                  StrEscape#bundle_se6 { Var#bundle_v6(name=entryFile) }
+                  StrConcat#bundle_s13 {
+                    Lit#bundle_i8(value="\" name=\"")
+                    StrConcat#bundle_s14 {
+                      StrEscape#bundle_se7 { Var#bundle_v7(name=projectName) }
+                      StrConcat#bundle_s15 {
+                        Lit#bundle_i9(value="\") { Module#m0(path=\"")
+                        StrConcat#bundle_s16 {
+                          StrEscape#bundle_se8 { Var#bundle_v8(name=entryFile) }
+                          StrConcat#bundle_s17 {
+                            Lit#bundle_i10(value="\") Module#m1(path=\"")
+                            StrConcat#bundle_s18 {
+                              StrEscape#bundle_se9 { Var#bundle_v9(name=firstImport) }
+                              Lit#bundle_i11(value="\") }")
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bundle_l3(name=bundle.buildPublishProgramText) {
+    Fn#bundle_f3(params=bundleText,projectName) {
+      Block#bundle_b3 {
+        Return#bundle_r3 {
+          StrConcat#bundle_s19 {
+            Lit#bundle_i12(value="Program#pubp1 { Call#pubc1(target=compiler.publish) { ")
+            StrConcat#bundle_s20 {
+              Var#bundle_v10(name=bundleText)
+              StrConcat#bundle_s21 {
+                Lit#bundle_i13(value=" Lit#pubv1(value=\"")
+                StrConcat#bundle_s22 {
+                  StrEscape#bundle_se10 { Var#bundle_v11(name=projectName) }
+                  Lit#bundle_i14(value="\") } }")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

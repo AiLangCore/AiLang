@@ -107,6 +107,42 @@ The migrated C launcher is temporarily parked in:
 6. Delete native command-policy code from AiVM after the bytecode CLI owns the
    command surface.
 
+## Completion Checklist
+
+Fully self-hosted means the installed `ailang` command starts by running
+AiLang-authored bytecode on `aivm`. The native code may still provide VM
+execution, SDK discovery, process launch, file/network/UI syscalls, and native
+bridge loading, but it must not own language/tooling policy.
+
+- [ ] Build and publish `src/cli/ailang.aos` as the installed CLI bytecode
+  payload during SDK staging.
+  - [x] Local SDK staging builds `libexec/ailang/cli/app.aibc1`.
+  - [x] Release SDK staging includes the same bytecode CLI payload.
+- [ ] Replace the native launcher command dispatcher with a minimal bootstrap
+  path: locate SDK, locate CLI bytecode, invoke `aivm`, forward argv/env, and
+  return the bytecode program exit code.
+- [ ] Keep `aivm` executable behavior independent from `ailang` command
+  behavior. `aivm` should execute bytecode/bundles and expose debug/profile
+  runtime switches only.
+- [ ] Move package manager command policy into AiLang source. Native bridge
+  package helpers may remain as host adapters until package restore/list are
+  implemented in AiLang.
+- [ ] Move target/package discovery and command invocation policy into AiLang
+  source. Target tools remain package-owned and may invoke native tools through
+  explicit process syscalls.
+- [ ] Move publish layout decisions into AiLang source. Native target runners
+  and host libraries remain target-owned mechanical adapters.
+- [ ] Rework `build`, `run`, and `publish` so source/project inputs compile
+  through AiLang-authored compiler bytecode instead of the native bootstrap
+  compiler path.
+- [ ] Rewrite `tools/aos_frontend.c` in AiLang and remove it from normal SDK
+  staging once canonical parsing/formatting no longer depends on that binary.
+- [ ] Add release-gating tests that execute the installed `ailang` command
+  through the bytecode CLI for `--version`, `help`, `init`, `template`, `agent`,
+  `build`, `run`, `publish`, `clean`, `project version`, and `package restore`.
+- [ ] Remove native command-policy files from `../AiVM/src/ailang_cli` after
+  the bytecode CLI owns the command surface and release tests cover it.
+
 ## Non-Goals
 
 - Do not preserve C command logic as a permanent implementation.

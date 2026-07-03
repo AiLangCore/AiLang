@@ -36,7 +36,7 @@ Program#profile_analysis_p1 {
             }
           }
         }
-        Let#profile_analysis_l5(name=parsed) { Call#profile_analysis_c3(target=parse.parseNode) { Var#profile_analysis_v3(name=sourceText) } }
+        Let#profile_analysis_l5(name=parsed) { Call#profile_analysis_c3(target=parse.parseDocument) { Var#profile_analysis_v3(name=sourceText) } }
         Let#profile_analysis_l6(name=diagnostics) { Call#profile_analysis_c4(target=validate) { Var#profile_analysis_v4(name=parsed) } }
         Call#profile_analysis_c5(target=sys.stdout.writeLine) { ToString#profile_analysis_ts1 { ChildCount#profile_analysis_cc1 { Var#profile_analysis_v5(name=diagnostics) } } }
         Return#profile_analysis_r1 { Var#profile_analysis_v6(name=diagnostics) }
@@ -107,11 +107,11 @@ write_profile_app
 case "${1:-default}" in
   default|quick)
     run_profile "src/compiler/validate.aos" 4096 160000 128 1900 2600
-    run_profile "src/compiler/parser.aos" 4096 360000 128 2200 3200
+    run_profile "src/compiler/parser.aos" 4096 450000 128 2200 3200
     ;;
   full)
     run_profile "src/compiler/validate.aos" 4096 160000 128 1900 2600
-    run_profile "src/compiler/parser.aos" 4096 360000 128 2200 3200
+    run_profile "src/compiler/parser.aos" 4096 450000 128 2200 3200
     run_profile "src/compiler/aic.aos" 8192 800000 256 5000 6000
     ;;
   *)

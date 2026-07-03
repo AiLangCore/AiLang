@@ -193,7 +193,7 @@ RID="$(detect_rid)"
 TMP_ROOT="${SDK_ROOT}.tmp.$$"
 
 rm -rf "${TMP_ROOT}"
-mkdir -p "${TMP_ROOT}/bin" "${TMP_ROOT}/lib" "${TMP_ROOT}/include" "${TMP_ROOT}/sdk" "${TMP_ROOT}/compiler" "${TMP_ROOT}/std" "${TMP_ROOT}/sys" "${TMP_ROOT}/manifests" "${TMP_ROOT}/runtimes" "${TMP_ROOT}/libexec/ailang/commands" "${TMP_ROOT}/.artifacts"
+mkdir -p "${TMP_ROOT}/bin" "${TMP_ROOT}/lib" "${TMP_ROOT}/include" "${TMP_ROOT}/sdk" "${TMP_ROOT}/compiler" "${TMP_ROOT}/std" "${TMP_ROOT}/sys" "${TMP_ROOT}/manifests" "${TMP_ROOT}/runtimes" "${TMP_ROOT}/libexec/ailang/cli" "${TMP_ROOT}/libexec/ailang/commands" "${TMP_ROOT}/.artifacts"
 
 echo "building AiVM from ${AIVM_DIR}..."
 if [[ -d "${AIVM_DIR}" ]]; then
@@ -218,6 +218,12 @@ fi
 copy_if_exists "${AILANG_DIR}/tools/ailang" "${TMP_ROOT}/bin/ailang"
 copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/tools/aos_frontend" "${TMP_ROOT}/bin/aos_frontend"
+echo "building AiLang bytecode CLI payload..."
+"${AILANG_DIR}/tools/ailang" build "${AILANG_DIR}/src/cli/ailang.aos" --out "${TMP_ROOT}/libexec/ailang/cli" --no-cache >/dev/null
+if [[ ! -f "${TMP_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
+  echo "error: failed to stage AiLang bytecode CLI payload" >&2
+  exit 1
+fi
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-x64/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivectra-x11" "${TMP_ROOT}/runtimes/linux-x64/aivectra-x11"
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivectra-framebuffer" "${TMP_ROOT}/runtimes/linux-x64/aivectra-framebuffer"

@@ -22,6 +22,8 @@ FAKE_INSTALL_ROOT="${TMP_DIR}/fake-sdk"
 BAD_NO_ENTRY_FILE_DIR="${TMP_DIR}/bad-no-entry-file"
 BAD_NO_ENTRY_EXPORT_DIR="${TMP_DIR}/bad-no-entry-export"
 BAD_MISSING_SOURCE_DIR="${TMP_DIR}/bad-missing-source"
+BAD_UNDECLARED_PACKAGE_IMPORT_DIR="${TMP_DIR}/bad-undeclared-package-import"
+GOOD_DECLARED_PACKAGE_IMPORT_DIR="${TMP_DIR}/good-declared-package-import"
 
 run_aivm_program() {
   local program="$1"
@@ -161,3 +163,68 @@ Program#p1 {
 EOF
 BAD_MISSING_SOURCE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${BAD_MISSING_SOURCE_DIR}" 2>&1 || true)"
 printf '%s\n' "${BAD_MISSING_SOURCE_OUT}" | rg -q 'code=AILANG010'
+
+mkdir -p "${BAD_UNDECLARED_PACKAGE_IMPORT_DIR}/src"
+cat > "${BAD_UNDECLARED_PACKAGE_IMPORT_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="bad" entryFile="src/app.aos" entryExport="start")
+}
+EOF
+cat > "${BAD_UNDECLARED_PACKAGE_IMPORT_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Import#import1(package="missing-package" path="src/lib.aos")
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+BAD_UNDECLARED_PACKAGE_IMPORT_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${BAD_UNDECLARED_PACKAGE_IMPORT_DIR}" 2>&1 || true)"
+printf '%s\n' "${BAD_UNDECLARED_PACKAGE_IMPORT_OUT}" | rg -q 'code=RUN024'
+
+mkdir -p "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/src" "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/.ailang/packages/local-lib/src"
+cat > "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="good" entryFile="src/app.aos" entryExport="start") {
+    Include#include1(name="local-lib" version="0.0.1" path=".ailang/packages/local-lib")
+  }
+}
+EOF
+cat > "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/ailang.lock.toml" <<'EOF'
+[[package]]
+name = "local-lib"
+version = "0.0.1"
+path = ".ailang/packages/local-lib"
+packageRoot = "."
+EOF
+cat > "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Import#import1(package="local-lib" path="src/lib.aos")
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+cat > "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/.ailang/packages/local-lib/src/lib.aos" <<'EOF'
+Program#libp1 {
+  Export#libe1(name=answer)
+  Let#libl1(name=answer) {
+    Fn#libf1(params=args) {
+      Block#libb1 {
+        Return#libr1 { Lit#libi1(value=42) }
+      }
+    }
+  }
+}
+EOF
+run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}" --out "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/bin" >/dev/null
+test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/bin/app.aibc1"

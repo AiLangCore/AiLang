@@ -144,14 +144,26 @@ elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   fi
 fi
 
-COMMON_SOURCES=(
-  "${SOURCE_PATH}"
-  "${UI_HOST_SRC}"
-  "${NATIVE_SRC_DIR}/ailang_native_bridge.c"
-  "${NATIVE_SRC_DIR}/ailang_package_manager.c"
+VM_CORE_SOURCES=(
   "${NATIVE_SRC_DIR}/aivm_types.c"
   "${NATIVE_SRC_DIR}/aivm_vm.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_arena.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_blob.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_error.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_history.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_lifecycle.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_node.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_node_create.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_node_gc.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_profile.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_stack.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_storage.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_string_copy.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_text.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_value.c"
   "${NATIVE_SRC_DIR}/aivm_program.c"
+  "${NATIVE_SRC_DIR}/aivm_debugger.c"
+  "${NATIVE_SRC_DIR}/aivm_module_cache.c"
   "${NATIVE_SRC_DIR}/sys/aivm_syscall.c"
   "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c"
   "${NATIVE_SRC_DIR}/aivm_parity.c"
@@ -161,6 +173,14 @@ COMMON_SOURCES=(
   "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c"
   "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c"
   "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c"
+)
+
+COMMON_SOURCES=(
+  "${SOURCE_PATH}"
+  "${UI_HOST_SRC}"
+  "${NATIVE_SRC_DIR}/ailang_native_bridge.c"
+  "${NATIVE_SRC_DIR}/ailang_package_manager.c"
+  "${VM_CORE_SOURCES[@]}"
 )
 
 if [[ "${TARGET_PLATFORM}" == "linux" && "${UI_HOST_SRC}" == "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" ]]; then
@@ -197,25 +217,14 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
       "${BUILD_METADATA_DEFINES[@]}" \
       -I "${NATIVE_INCLUDE}" \
       -I "${NATIVE_SRC_DIR}/ailang_cli" \
-      "${SOURCE_PATH}" \
-      "${NATIVE_UI_HOST_LINUX_SRC}" \
-      "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
-      "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
-      "${NATIVE_SRC_DIR}/aivm_types.c" \
-      "${NATIVE_SRC_DIR}/aivm_vm.c" \
-      "${NATIVE_SRC_DIR}/aivm_program.c" \
-      "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
-      "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
-      "${NATIVE_SRC_DIR}/aivm_parity.c" \
-      "${NATIVE_SRC_DIR}/aivm_runtime.c" \
-      "${NATIVE_SRC_DIR}/aivm_c_api.c" \
-      "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
-      "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
-      "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c" \
-      "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c" \
-      "${LD_EXTRA[@]}" \
-      -lX11 \
-      -o "${AIVECTRA_X11_RUNTIME_PATH}"
+	      "${SOURCE_PATH}" \
+	      "${NATIVE_UI_HOST_LINUX_SRC}" \
+	      "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
+	      "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
+	      "${VM_CORE_SOURCES[@]}" \
+	      "${LD_EXTRA[@]}" \
+	      -lX11 \
+	      -o "${AIVECTRA_X11_RUNTIME_PATH}"
     chmod +x "${AIVECTRA_X11_RUNTIME_PATH}"
   fi
 
@@ -224,24 +233,13 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
     -I "${NATIVE_INCLUDE}" \
     -I "${NATIVE_SRC_DIR}/ailang_cli" \
     "${SOURCE_PATH}" \
-    "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" \
-    "${NATIVE_UI_HOST_AIOS_DRM_SRC}" \
-    "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
-    "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
-    "${NATIVE_SRC_DIR}/aivm_types.c" \
-    "${NATIVE_SRC_DIR}/aivm_vm.c" \
-    "${NATIVE_SRC_DIR}/aivm_program.c" \
-    "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
-    "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
-    "${NATIVE_SRC_DIR}/aivm_parity.c" \
-    "${NATIVE_SRC_DIR}/aivm_runtime.c" \
-    "${NATIVE_SRC_DIR}/aivm_c_api.c" \
-    "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
-    "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
-    "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c" \
-    "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c" \
-    "${LD_EXTRA[@]}" \
-    -o "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
+	    "${NATIVE_UI_HOST_FRAMEBUFFER_SRC}" \
+	    "${NATIVE_UI_HOST_AIOS_DRM_SRC}" \
+	    "${NATIVE_SRC_DIR}/ailang_native_bridge.c" \
+	    "${NATIVE_SRC_DIR}/ailang_package_manager.c" \
+	    "${VM_CORE_SOURCES[@]}" \
+	    "${LD_EXTRA[@]}" \
+	    -o "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
   chmod +x "${AIOS_FRAMEBUFFER_RUNTIME_PATH}"
 fi
 

@@ -234,6 +234,138 @@ Program#test_p1 {
           Block#test_b61 { Lit#test_i119(value=0) }
           Block#test_b62 { Return#test_r31 { Call#test_c54(target=fail) { Lit#test_i120(value="negative int attr failed") } } }
         }
+        Let#test_l210(name=noIdAttrNode) {
+          Call#test_c210(target=parse.parseNode) {
+            Lit#test_i210(value="Export(name=start)")
+          }
+        }
+        If#test_if210 {
+          Eq#test_e210 { NodeId#test_nid210 { Var#test_v210(name=noIdAttrNode) } Lit#test_i211(value="Export_6") }
+          Block#test_b210 { Lit#test_i212(value=0) }
+          Block#test_b211 { Return#test_r210 { Call#test_c211(target=fail) { Lit#test_i213(value="no-id attr synthetic id failed") } } }
+        }
+        Let#test_l211(name=noIdProgramNode) {
+          Call#test_c212(target=parse.parseNode) {
+            Lit#test_i214(value="Program { Lit(value=1) }")
+          }
+        }
+        If#test_if211 {
+          Eq#test_e211 { NodeId#test_nid211 { Var#test_v211(name=noIdProgramNode) } Lit#test_i215(value="Program_7") }
+          Block#test_b212 { Lit#test_i216(value=0) }
+          Block#test_b213 { Return#test_r211 { Call#test_c213(target=fail) { Lit#test_i217(value="no-id program synthetic id failed") } } }
+        }
+        Let#test_l212(name=noIdProgramChild) { ChildAt#test_ca210 { Var#test_v212(name=noIdProgramNode) Lit#test_i218(value=0) } }
+        If#test_if212 {
+          Eq#test_e212 { NodeId#test_nid212 { Var#test_v213(name=noIdProgramChild) } Lit#test_i219(value="Lit_13") }
+          Block#test_b214 { Lit#test_i220(value=0) }
+          Block#test_b215 { Return#test_r212 { Call#test_c214(target=fail) { Lit#test_i221(value="no-id child synthetic id failed") } } }
+        }
+        Let#test_l213(name=noIdBareNode) {
+          Call#test_c215(target=parse.parseNode) {
+            Lit#test_i222(value="Return")
+          }
+        }
+        If#test_if213 {
+          Eq#test_e213 { NodeId#test_nid213 { Var#test_v214(name=noIdBareNode) } Lit#test_i223(value="Return_6") }
+          Block#test_b216 { Lit#test_i224(value=0) }
+          Block#test_b217 { Return#test_r213 { Call#test_c216(target=fail) { Lit#test_i225(value="no-id bare synthetic id failed") } } }
+        }
+        Let#test_l214(name=explicitBareProgram) {
+          Call#test_c217(target=parse.parseNode) {
+            Lit#test_i232(value="Block#b1 { Return#r1 }")
+          }
+        }
+        If#test_if214 {
+          Eq#test_e214 { ChildCount#test_cc214 { Var#test_v215(name=explicitBareProgram) } Lit#test_i233(value=1) }
+          Block#test_b218 { Lit#test_i234(value=0) }
+          Block#test_b219 { Return#test_r214 { Call#test_c218(target=fail) { Lit#test_i235(value="explicit bare child count failed") } } }
+        }
+        Let#test_l215(name=explicitBareChild) { ChildAt#test_ca215 { Var#test_v216(name=explicitBareProgram) Lit#test_i236(value=0) } }
+        If#test_if215 {
+          Eq#test_e215 { NodeId#test_nid215 { Var#test_v217(name=explicitBareChild) } Lit#test_i237(value="r1") }
+          Block#test_b220 { Lit#test_i238(value=0) }
+          Block#test_b221 { Return#test_r215 { Call#test_c219(target=fail) { Lit#test_i239(value="explicit bare id failed") } } }
+        }
+        Let#test_l200(name=missingEqualsErr) {
+          Call#test_c200(target=parse.parseNode) {
+            Lit#test_i200(value="Export(name)")
+          }
+        }
+        If#test_if200 {
+          Eq#test_e200 { NodeKind#test_nk200 { Var#test_v200(name=missingEqualsErr) } Lit#test_i201(value="Err") }
+          Block#test_b200 { Lit#test_i202(value=0) }
+          Block#test_b201 { Return#test_r200 { Call#test_c201(target=fail) { Lit#test_i203(value="missing attr equals diagnostic failed") } } }
+        }
+        Let#test_l201(name=missingValueErr) {
+          Call#test_c202(target=parse.parseNode) {
+            Lit#test_i204(value="Export(name=)")
+          }
+        }
+        If#test_if201 {
+          Eq#test_e201 { NodeKind#test_nk201 { Var#test_v201(name=missingValueErr) } Lit#test_i205(value="Err") }
+          Block#test_b202 { Lit#test_i206(value=0) }
+          Block#test_b203 { Return#test_r201 { Call#test_c203(target=fail) { Lit#test_i207(value="missing attr value diagnostic failed") } } }
+        }
+        Let#test_l204(name=missingIdErr) {
+          Call#test_c208(target=parse.parseNode) {
+            Lit#test_i240(value="Export#(name=start)")
+          }
+        }
+        If#test_if204 {
+          Eq#test_e204 { NodeKind#test_nk204 { Var#test_v204(name=missingIdErr) } Lit#test_i241(value="Err") }
+          Block#test_b208 { Lit#test_i242(value=0) }
+          Block#test_b209 { Return#test_r204 { Call#test_c209(target=fail) { Lit#test_i243(value="missing node id diagnostic failed") } } }
+        }
+        Let#test_l205(name=invalidAttrKeyErr) {
+          Call#test_c220(target=parse.parseNode) {
+            Lit#test_i244(value="Export(=start)")
+          }
+        }
+        If#test_if205 {
+          Eq#test_e205 { NodeKind#test_nk205 { Var#test_v205(name=invalidAttrKeyErr) } Lit#test_i245(value="Err") }
+          Block#test_b222 { Lit#test_i246(value=0) }
+          Block#test_b223 { Return#test_r205 { Call#test_c221(target=fail) { Lit#test_i247(value="invalid attr key diagnostic failed") } } }
+        }
+        Let#test_l202(name=missingBraceErr) {
+          Call#test_c204(target=parse.parseNode) {
+            Lit#test_i208(value="Program { Lit(value=1)")
+          }
+        }
+        If#test_if202 {
+          Eq#test_e202 { NodeKind#test_nk202 { Var#test_v202(name=missingBraceErr) } Lit#test_i209(value="Err") }
+          Block#test_b204 { Lit#test_i226(value=0) }
+          Block#test_b205 { Return#test_r202 { Call#test_c205(target=fail) { Lit#test_i227(value="missing child brace diagnostic failed") } } }
+        }
+        Let#test_l203(name=invalidChildStartErr) {
+          Call#test_c206(target=parse.parseNode) {
+            Lit#test_i228(value="Program { ) }")
+          }
+        }
+        If#test_if203 {
+          Eq#test_e203 { NodeKind#test_nk203 { Var#test_v203(name=invalidChildStartErr) } Lit#test_i229(value="Err") }
+          Block#test_b206 { Lit#test_i230(value=0) }
+          Block#test_b207 { Return#test_r203 { Call#test_c207(target=fail) { Lit#test_i231(value="invalid child start diagnostic failed") } } }
+        }
+        Let#test_l206(name=validDocument) {
+          Call#test_c222(target=parse.parseDocument) {
+            Lit#test_i248(value="Program { Lit(value=1) }")
+          }
+        }
+        If#test_if206 {
+          Eq#test_e206 { NodeKind#test_nk206 { Var#test_v206(name=validDocument) } Lit#test_i249(value="Program") }
+          Block#test_b224 { Lit#test_i250(value=0) }
+          Block#test_b225 { Return#test_r206 { Call#test_c223(target=fail) { Lit#test_i251(value="valid document parse failed") } } }
+        }
+        Let#test_l207(name=trailingDocumentErr) {
+          Call#test_c224(target=parse.parseDocument) {
+            Lit#test_i252(value="Program { } Export(name=start)")
+          }
+        }
+        If#test_if207 {
+          Eq#test_e207 { NodeKind#test_nk207 { Var#test_v207(name=trailingDocumentErr) } Lit#test_i253(value="Err") }
+          Block#test_b226 { Lit#test_i254(value=0) }
+          Block#test_b227 { Return#test_r207 { Call#test_c225(target=fail) { Lit#test_i255(value="trailing document diagnostic failed") } } }
+        }
         Let#test_l23(name=realSource) {
           Call#test_c55(target=bytes.toUtf8String) {
             Call#test_c56(target=sys.fs.file.read) {

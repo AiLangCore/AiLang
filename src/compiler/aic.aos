@@ -2,6 +2,13 @@ Program#aic_p1 {
   Import#aic_im_parse(path="parser.aos")
   Import#aic_im_fmt(path="format.aos")
   Import#aic_im_val(path="validate.aos")
+  Import#aic_im_resolve(path="resolve.aos")
+  Import#aic_im_module_graph(path="module_graph.aos")
+  Import#aic_im_project(path="project.aos")
+  Import#aic_im_template(path="template.aos")
+  Import#aic_im_bundle(path="bundle.aos")
+  Import#aic_im_bootstrap_io(path="bootstrap_io.aos")
+  Import#aic_im_value(path="value.aos")
   Export#aic_e0(name=main)
 
   Let#aic_l1(name=main) {
@@ -88,31 +95,6 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l11b(name=isProjectManifest) {
-    Fn#aic_f11b(params=parsed) {
-      Block#aic_b11b {
-        If#aic_if11b {
-          Eq#aic_e11b { NodeKind#aic_nk11b { Var#aic_v11b(name=parsed) } Lit#aic_i11b(value="Program") }
-          Block#aic_b11c {
-            If#aic_if11c {
-              Eq#aic_e11c { ChildCount#aic_cc11b { Var#aic_v11c(name=parsed) } Lit#aic_i11c(value=1) }
-              Block#aic_b11d {
-                Return#aic_r11b {
-                  Eq#aic_e11d {
-                    NodeKind#aic_nk11c { ChildAt#aic_ca11b { Var#aic_v11d(name=parsed) Lit#aic_i11d(value=0) } }
-                    Lit#aic_i11e(value="Project")
-                  }
-                }
-              }
-              Block#aic_b11e { Return#aic_r11c { Lit#aic_i11f(value=false) } }
-            }
-          }
-          Block#aic_b11f { Return#aic_r11d { Lit#aic_i11g(value=false) } }
-        }
-      }
-    }
-  }
-
   Let#aic_l12(name=runTest) {
     Fn#aic_f12(params=args) {
       Block#aic_b16 {
@@ -141,16 +123,16 @@ Program#aic_p1 {
           }
           Block#aic_bn3 {
             If#aic_ifn2 {
-              Call#aic_cn3(target=runIoPathExists) { Var#aic_vn3(name=name) }
+              Call#aic_cn3(target=bootstrapIo.pathExists) { Var#aic_vn3(name=name) }
               Block#aic_bn4 {
                 Call#aic_cn4(target=io.write) { Lit#aic_in5(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
                 Return#aic_rn2 { Lit#aic_in6(value=1) }
               }
               Block#aic_bn5 {
                 Let#aic_ln2t(name=template) { Call#aic_cn1t(target=readArg) { Var#aic_vn1t(name=args) Lit#aic_in1t(value=2) } }
-                Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=resolveTemplateName) { Var#aic_vn1t2(name=template) } }
+                Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=template.resolveName) { Var#aic_vn1t2(name=template) } }
                 If#aic_ifn3 {
-                  Call#aic_cn4t(target=isSupportedTemplate) { Var#aic_vn4t(name=resolvedTemplate) }
+                  Call#aic_cn4t(target=template.isSupported) { Var#aic_vn4t(name=resolvedTemplate) }
                   Block#aic_bn5a {
                     Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
                     Let#aic_ln3a(name=assetsDir) { StrConcat#aic_sn1a { Var#aic_vn4a(name=name) Lit#aic_in7a(value="/Assets") } }
@@ -162,17 +144,41 @@ Program#aic_p1 {
                     Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
                     Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
                     Let#aic_ln6a(name=gitignorePath) { StrConcat#aic_sn4a { Var#aic_vn7a(name=name) Lit#aic_in10a(value="/.gitignore") } }
-                    Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
-                    Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
-                    Call#aic_cn6a(target=runIoMakeDir) { Var#aic_vn9a(name=assetsDir) }
-                    Call#aic_cn6b(target=runIoMakeDir) { Var#aic_vn9b(name=assetsImagesDir) }
-                    Call#aic_cn6c(target=runIoMakeDir) { Var#aic_vn9c(name=assetsFontsDir) }
-                    Call#aic_cn6d(target=runIoMakeDir) { Var#aic_vn9d(name=assetsLocaleDir) }
-                    Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
-                    Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildTemplateApp) { Var#aic_vn11t(name=resolvedTemplate) } }
-                    Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Var#aic_vn11t2(name=resolvedTemplate) } }
-                    Call#aic_cn11a(target=runIoWriteFile) { Var#aic_vn13a(name=gitignorePath) Call#aic_cn12a(target=buildGitIgnore) { Lit#aic_in10b(value=0) } }
-                    Call#aic_cn11b(target=runIoWriteFile) { Var#aic_vn13b(name=assetsLocaleEnPath) Call#aic_cn12b(target=buildLocaleSeedData) { Lit#aic_in10c(value=0) } }
+                    Call#aic_cn5(target=bootstrapIo.makeDir) { Var#aic_vn8(name=name) }
+                    Call#aic_cn6(target=bootstrapIo.makeDir) { Var#aic_vn9(name=srcDir) }
+                    Call#aic_cn6a(target=bootstrapIo.makeDir) { Var#aic_vn9a(name=assetsDir) }
+                    Call#aic_cn6b(target=bootstrapIo.makeDir) { Var#aic_vn9b(name=assetsImagesDir) }
+                    Call#aic_cn6c(target=bootstrapIo.makeDir) { Var#aic_vn9c(name=assetsFontsDir) }
+                    Call#aic_cn6d(target=bootstrapIo.makeDir) { Var#aic_vn9d(name=assetsLocaleDir) }
+                    Call#aic_cn7(target=bootstrapIo.writeFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=project.buildDefaultManifest) { Var#aic_vn11(name=name) } }
+                    If#aic_if_tpl_write1 {
+                      Eq#aic_e_tpl_write1 { Var#aic_vn11t(name=resolvedTemplate) Lit#aic_i_tpl_write1(value="cli") }
+                      Block#aic_b_tpl_write1 {
+                        Call#aic_cn9(target=bootstrapIo.writeFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=template.buildCliApp) { Lit#aic_i_tpl_write2(value=0) } }
+                      }
+                      Block#aic_b_tpl_write2 {
+                        If#aic_if_tpl_write2 {
+                          Eq#aic_e_tpl_write2 { Var#aic_vn11t(name=resolvedTemplate) Lit#aic_i_tpl_write3(value="http") }
+                          Block#aic_b_tpl_write3 {
+                            Call#aic_cn9h(target=bootstrapIo.writeFile) { Var#aic_vn12(name=appPath) Call#aic_cn10h(target=template.buildHttpApp) { Lit#aic_i_tpl_write4(value=0) } }
+                          }
+                          Block#aic_b_tpl_write4 {
+                            If#aic_if_tpl_write3 {
+                              Eq#aic_e_tpl_write3 { Var#aic_vn11t(name=resolvedTemplate) Lit#aic_i_tpl_write5(value="gui") }
+                              Block#aic_b_tpl_write5 {
+                                Call#aic_cn9g(target=bootstrapIo.writeFile) { Var#aic_vn12(name=appPath) Call#aic_cn10g(target=template.buildGuiApp) { Lit#aic_i_tpl_write6(value=0) } }
+                              }
+                              Block#aic_b_tpl_write6 {
+                                Call#aic_cn9l(target=bootstrapIo.writeFile) { Var#aic_vn12(name=appPath) Call#aic_cn10l(target=template.buildLibApp) { Lit#aic_i_tpl_write7(value=0) } }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    Call#aic_cn11(target=bootstrapIo.writeFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=template.buildAgentsDoc) { Var#aic_vn11t2(name=resolvedTemplate) } }
+                    Call#aic_cn11a(target=bootstrapIo.writeFile) { Var#aic_vn13a(name=gitignorePath) Call#aic_cn12a(target=template.buildGitIgnore) { Lit#aic_in10b(value=0) } }
+                    Call#aic_cn11b(target=bootstrapIo.writeFile) { Var#aic_vn13b(name=assetsLocaleEnPath) Call#aic_cn12b(target=template.buildLocaleSeedData) { Lit#aic_in10c(value=0) } }
                     Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
                     Return#aic_rn3 { Lit#aic_in14(value=0) }
                   }
@@ -185,231 +191,6 @@ Program#aic_p1 {
             }
           }
         }
-      }
-    }
-  }
-
-  Let#aic_ln20(name=runIoPathExists) {
-    Fn#aic_fn20(params=path) {
-      Block#aic_bn20 {
-        Let#aic_ln21(name=programText) {
-          StrConcat#aic_sn20 {
-            Lit#aic_in20(value="Program#n1 { Call#n2(target=io.pathExists) { Lit#n3(value=\"")
-            StrConcat#aic_sn21 {
-              StrEscape#aic_se20 { Var#aic_vn20(name=path) }
-              Lit#aic_in21(value="\") } }")
-            }
-          }
-        }
-        Let#aic_ln22(name=parsed) { Call#aic_cn20(target=compiler.parse) { Var#aic_vn21(name=programText) } }
-        If#aic_ifn20 {
-          Eq#aic_en20 { NodeKind#aic_nkn20 { Var#aic_vn22(name=parsed) } Lit#aic_in22(value="Err") }
-          Block#aic_bn21 { Return#aic_rn20 { Lit#aic_in23(value=false) } }
-          Block#aic_bn22 {
-            Let#aic_ln23(name=result) { Call#aic_cn21(target=compiler.run) { Var#aic_vn23(name=parsed) } }
-            If#aic_ifn21 {
-              Eq#aic_en21 { NodeKind#aic_nkn21 { Var#aic_vn24(name=result) } Lit#aic_in24(value="Lit") }
-              Block#aic_bn23 {
-                Return#aic_rn21 { AttrValueBool#aic_avbn20 { Var#aic_vn25(name=result) Lit#aic_in25(value=0) } }
-              }
-              Block#aic_bn24 { Return#aic_rn22 { Lit#aic_in26(value=false) } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln30(name=runIoMakeDir) {
-    Fn#aic_fn30(params=path) {
-      Block#aic_bn30 {
-        Let#aic_ln31(name=programText) {
-          StrConcat#aic_sn30 {
-            Lit#aic_in30(value="Program#n4 { Call#n5(target=io.makeDir) { Lit#n6(value=\"")
-            StrConcat#aic_sn31 {
-              StrEscape#aic_se30 { Var#aic_vn30(name=path) }
-              Lit#aic_in31(value="\") } }")
-            }
-          }
-        }
-        Let#aic_ln32(name=parsed) { Call#aic_cn30(target=compiler.parse) { Var#aic_vn31(name=programText) } }
-        If#aic_ifn30 {
-          Eq#aic_en30 { NodeKind#aic_nkn30 { Var#aic_vn32(name=parsed) } Lit#aic_in32(value="Err") }
-          Block#aic_bn31 { Return#aic_rn30 { Lit#aic_in33(value=1) } }
-          Block#aic_bn32 {
-            Call#aic_cn31(target=compiler.run) { Var#aic_vn33(name=parsed) }
-            Return#aic_rn31 { Lit#aic_in34(value=0) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln40(name=runIoWriteFile) {
-    Fn#aic_fn40(params=path,text) {
-      Block#aic_bn40 {
-        Let#aic_ln41(name=programText) {
-          StrConcat#aic_sn40 {
-            Lit#aic_in40(value="Program#n7 { Call#n8(target=io.writeFile) { Lit#n9(value=\"")
-            StrConcat#aic_sn41 {
-              StrEscape#aic_se40 { Var#aic_vn40(name=path) }
-              StrConcat#aic_sn42 {
-                Lit#aic_in41(value="\") Lit#n10(value=\"")
-                StrConcat#aic_sn43 {
-                  StrEscape#aic_se41 { Var#aic_vn41(name=text) }
-                  Lit#aic_in42(value="\") } }")
-                }
-              }
-            }
-          }
-        }
-        Let#aic_ln42(name=parsed) { Call#aic_cn40(target=compiler.parse) { Var#aic_vn42(name=programText) } }
-        If#aic_ifn40 {
-          Eq#aic_en40 { NodeKind#aic_nkn40 { Var#aic_vn43(name=parsed) } Lit#aic_in43(value="Err") }
-          Block#aic_bn41 { Return#aic_rn40 { Lit#aic_in44(value=1) } }
-          Block#aic_bn42 {
-            Call#aic_cn41(target=compiler.run) { Var#aic_vn44(name=parsed) }
-            Return#aic_rn41 { Lit#aic_in45(value=0) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln50(name=buildProjectManifest) {
-    Fn#aic_fn50(params=name) {
-      Block#aic_bn50 {
-        Return#aic_rn50 {
-          StrConcat#aic_sn50 {
-            Lit#aic_in50(value="Program#p1 {\nProject#proj1(\nname=\"")
-            StrConcat#aic_sn51 {
-              StrEscape#aic_se50 { Var#aic_vn50(name=name) }
-              Lit#aic_in51(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln55(name=buildGitIgnore) {
-    Fn#aic_fn55(params=_) {
-      Block#aic_bn55 {
-        Return#aic_rn55 { Lit#aic_in55(value=".toolchain/\n") }
-      }
-    }
-  }
-
-  Let#aic_ln56(name=buildLocaleSeedData) {
-    Fn#aic_fn56(params=_) {
-      Block#aic_bn56 {
-        Return#aic_rn56 { Lit#aic_in56(value="app.title = \"AiLang App\"\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60(name=buildAppTemplate) {
-    Fn#aic_fn60(params=_) {
-      Block#aic_bn60 {
-        Return#aic_rn60 { Lit#aic_in60(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60h(name=buildHttpTemplate) {
-    Fn#aic_fn60h(params=_) {
-      Block#aic_bn60h {
-        Return#aic_rn60h { Lit#aic_in60h(value="Program#p1 {\nExport#e1(name=\"init\")\nExport#e2(name=\"update\")\nLet#l1(name=\"init\") {\nFn#f1(params=\"args\") {\nBlock#b1 { Return#r1 { Lit#s1(value=\"state\") } }\n}\n}\nLet#l2(name=\"update\") {\nFn#f2(params=\"state,event\") {\nBlock#b2 {\nReturn#r2 {\nBlock#b3 {\nVar#v1(name=state)\nCommand#c1(type=\"Emit\" payload=\"ok\")\n}\n}\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60g(name=buildGuiTemplate) {
-    Fn#aic_fn60g(params=_) {
-      Block#aic_bn60g {
-        Return#aic_rn60g { Lit#aic_in60g(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"GUI template placeholder\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60l(name=buildLibTemplate) {
-    Fn#aic_fn60l(params=_) {
-      Block#aic_bn60l {
-        Return#aic_rn60l { Lit#aic_in60l(value="Program#p1 {\nExport#e1(name=\"hello\")\nExport#e2(name=\"start\")\nLet#l1(name=\"hello\") {\nFn#f1(params=\"name\") {\nBlock#b1 {\nReturn#r1 {\nStrConcat#s1 {\nLit#s2(value=\"hello \")\nVar#v1(name=name)\n}\n}\n}\n}\n}\nLet#l2(name=\"start\") {\nFn#f2(params=\"args\") {\nBlock#b2 {\nCall#print1(target=io.print) {\nCall#c1(target=hello) { Lit#s3(value=\"library\") }\n}\nReturn#r2 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60x(name=buildTemplateApp) {
-    Fn#aic_fn60x(params=template) {
-      Block#aic_bn60x {
-        If#aic_if60x1 {
-          Eq#aic_e60x1 { Var#aic_v60x1(name=template) Lit#aic_i60x1(value="cli") }
-          Block#aic_b60x1 { Return#aic_r60x1 { Call#aic_c60x1(target=buildAppTemplate) { Lit#aic_i60x2(value=0) } } }
-          Block#aic_b60x2 {
-            If#aic_if60x2 {
-              Eq#aic_e60x2 { Var#aic_v60x2(name=template) Lit#aic_i60x3(value="http") }
-              Block#aic_b60x3 { Return#aic_r60x2 { Call#aic_c60x2(target=buildHttpTemplate) { Lit#aic_i60x4(value=0) } } }
-              Block#aic_b60x4 {
-                If#aic_if60x3 {
-                  Eq#aic_e60x3 { Var#aic_v60x3(name=template) Lit#aic_i60x5(value="gui") }
-                  Block#aic_b60x5 { Return#aic_r60x3 { Call#aic_c60x3(target=buildGuiTemplate) { Lit#aic_i60x6(value=0) } } }
-                  Block#aic_b60x6 { Return#aic_r60x4 { Call#aic_c60x4(target=buildLibTemplate) { Lit#aic_i60x7(value=0) } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln60y(name=resolveTemplateName) {
-    Fn#aic_fn60y(params=template) {
-      Block#aic_bn60y {
-        If#aic_if60y1 {
-          Eq#aic_e60y1 { Var#aic_v60y1(name=template) Lit#aic_i60y1(value="") }
-          Block#aic_b60y1 { Return#aic_r60y1 { Lit#aic_i60y2(value="cli") } }
-          Block#aic_b60y2 { Return#aic_r60y2 { Var#aic_v60y2(name=template) } }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln60z(name=isSupportedTemplate) {
-    Fn#aic_fn60z(params=template) {
-      Block#aic_bn60z {
-        If#aic_if60z1 {
-          Eq#aic_e60z1 { Var#aic_v60z1(name=template) Lit#aic_i60z1(value="cli") }
-          Block#aic_b60z1 { Return#aic_r60z1 { Lit#aic_i60z2(value=true) } }
-          Block#aic_b60z2 {
-            If#aic_if60z2 {
-              Eq#aic_e60z2 { Var#aic_v60z2(name=template) Lit#aic_i60z3(value="http") }
-              Block#aic_b60z3 { Return#aic_r60z2 { Lit#aic_i60z4(value=true) } }
-              Block#aic_b60z4 {
-                If#aic_if60z3 {
-                  Eq#aic_e60z3 { Var#aic_v60z3(name=template) Lit#aic_i60z5(value="gui") }
-                  Block#aic_b60z5 { Return#aic_r60z3 { Lit#aic_i60z6(value=true) } }
-                  Block#aic_b60z6 {
-                    If#aic_if60z4 {
-                      Eq#aic_e60z4 { Var#aic_v60z4(name=template) Lit#aic_i60z7(value="lib") }
-                      Block#aic_b60z7 { Return#aic_r60z4 { Lit#aic_i60z8(value=true) } }
-                      Block#aic_b60z8 { Return#aic_r60z5 { Lit#aic_i60z9(value=false) } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln70(name=buildAgentsDoc) {
-    Fn#aic_fn70(params=_) {
-      Block#aic_bn70 {
-        Return#aic_rn70 { Lit#aic_in70(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tProject layout: src/app.aos for code, Assets/locale/*.toml for data.\n\t•\tNo JSON.\n") }
       }
     }
   }
@@ -454,91 +235,42 @@ Program#aic_p1 {
                             Return#aic_rp3 { Lit#aic_ip24(value=1) }
                           }
                           Block#aic_bp11 {
-                            Let#aic_lp12(name=firstImport) { Call#aic_cp23(target=findFirstImportPath) { Var#aic_vp23(name=entryParsed) Lit#aic_ip27(value=0) } }
-                            Let#aic_lp121(name=cycleNodeId) { Call#aic_cp36(target=detectSimpleCycleNodeId) { Var#aic_vp60(name=dir) Var#aic_vp61(name=firstImport) Var#aic_vp62(name=entryFile) } }
-                            If#aic_ifp6 {
-                              Eq#aic_ep5 { Var#aic_vp63(name=cycleNodeId) Lit#aic_ip57(value="") }
-                              Block#aic_bp12 {
+                            Let#aic_lp_pkg1(name=undeclaredPackageImportNodeId) {
+                              Call#aic_cp_pkg1(target=resolve.findFirstUndeclaredPackageImport) {
+                                Var#aic_vp23(name=entryParsed)
+                                Var#aic_vp13a(name=projectNode)
+                                Lit#aic_ip_pkg1(value=0)
+                              }
+                            }
+                            If#aic_if_pkg1 {
+                              Eq#aic_ep_pkg1 { Var#aic_vp_pkg1(name=undeclaredPackageImportNodeId) Lit#aic_ip_pkg2(value="") }
+                              Block#aic_bp_pkg_ok1 {
+                                Let#aic_lp12(name=firstImport) { Call#aic_cp23(target=resolve.findFirstImportPath) { Var#aic_vp23(name=entryParsed) Lit#aic_ip27(value=0) } }
+                                Let#aic_lp121(name=cycleNodeId) { Call#aic_cp36(target=moduleGraph.detectSimpleCycleNodeId) { Var#aic_vp60(name=dir) Var#aic_vp61(name=firstImport) Var#aic_vp62(name=entryFile) } }
+                                If#aic_ifp6 {
+                                  Eq#aic_ep5 { Var#aic_vp63(name=cycleNodeId) Lit#aic_ip57(value="") }
+                                  Block#aic_bp12 {
                                 Let#aic_lp14(name=bundleText) {
                                   If#aic_ifp7 {
                                     Eq#aic_ep6 { Var#aic_vp24(name=firstImport) Lit#aic_ip28(value="") }
                                     Block#aic_bp14 {
-                                      StrConcat#aic_sp4 {
-                                        Lit#aic_ip29(value="Bundle#b1(entryExport=\"")
-                                        StrConcat#aic_sp5 {
-                                          StrEscape#aic_se1 { Var#aic_vp25(name=entryExport) }
-                                          StrConcat#aic_sp6 {
-                                            Lit#aic_ip30(value="\" entryFile=\"")
-                                            StrConcat#aic_sp7 {
-                                              StrEscape#aic_se2 { Var#aic_vp26(name=entryFile) }
-                                              StrConcat#aic_sp8 {
-                                                Lit#aic_ip31(value="\" name=\"")
-                                                StrConcat#aic_sp9 {
-                                                  StrEscape#aic_se3 { Var#aic_vp27(name=projectName) }
-                                                  StrConcat#aic_sp10 {
-                                                    Lit#aic_ip32(value="\") { Module#m0(path=\"")
-                                                    StrConcat#aic_sp11 {
-                                                      StrEscape#aic_se4 { Var#aic_vp28(name=entryFile) }
-                                                      Lit#aic_ip33(value="\") }")
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
+                                      Call#aic_cp_bundle1(target=bundle.buildSingleModuleBundleText) {
+                                        Var#aic_vp27(name=projectName)
+                                        Var#aic_vp26(name=entryFile)
+                                        Var#aic_vp25(name=entryExport)
                                       }
                                     }
                                     Block#aic_bp15 {
-                                      StrConcat#aic_sp12 {
-                                        Lit#aic_ip34(value="Bundle#b1(entryExport=\"")
-                                        StrConcat#aic_sp13 {
-                                          StrEscape#aic_se5 { Var#aic_vp29(name=entryExport) }
-                                          StrConcat#aic_sp14 {
-                                            Lit#aic_ip35(value="\" entryFile=\"")
-                                            StrConcat#aic_sp15 {
-                                              StrEscape#aic_se6 { Var#aic_vp30(name=entryFile) }
-                                              StrConcat#aic_sp16 {
-                                                Lit#aic_ip36(value="\" name=\"")
-                                                StrConcat#aic_sp17 {
-                                                  StrEscape#aic_se7 { Var#aic_vp31(name=projectName) }
-                                                  StrConcat#aic_sp18 {
-                                                    Lit#aic_ip37(value="\") { Module#m0(path=\"")
-                                                    StrConcat#aic_sp19 {
-                                                      StrEscape#aic_se8 { Var#aic_vp32(name=entryFile) }
-                                                      StrConcat#aic_sp20 {
-                                                        Lit#aic_ip38(value="\") Module#m1(path=\"")
-                                                        StrConcat#aic_sp21 {
-                                                          StrEscape#aic_se9 { Var#aic_vp33(name=firstImport) }
-                                                          Lit#aic_ip39(value="\") }")
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
+                                      Call#aic_cp_bundle2(target=bundle.buildTwoModuleBundleText) {
+                                        Var#aic_vp31(name=projectName)
+                                        Var#aic_vp30(name=entryFile)
+                                        Var#aic_vp29(name=entryExport)
+                                        Var#aic_vp33(name=firstImport)
                                       }
                                     }
                                   }
                                 }
-                                Let#aic_lp15(name=publishProgramText) {
-                                  StrConcat#aic_sp24 {
-                                    Lit#aic_ip48(value="Program#pubp1 { Call#pubc1(target=compiler.publish) { ")
-                                    StrConcat#aic_sp25 {
-                                      Var#aic_vp46(name=bundleText)
-                                      StrConcat#aic_sp26 {
-                                        Lit#aic_ip49(value=" Lit#pubv1(value=\"")
-                                        StrConcat#aic_sp27 {
-                                          StrEscape#aic_se11 { Var#aic_vp47(name=projectName) }
-                                          Lit#aic_ip50(value="\") } }")
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
+                                Let#aic_lp15(name=publishProgramText) { Call#aic_cp_bundle3(target=bundle.buildPublishProgramText) { Var#aic_vp46(name=bundleText) Var#aic_vp47(name=projectName) } }
                                 Let#aic_lp16(name=publishProgram) { Call#aic_cp29(target=compiler.parse) { Var#aic_vp48(name=publishProgramText) } }
                                 If#aic_ifp10 {
                                   Eq#aic_ep9 { NodeKind#aic_nkp5 { Var#aic_vp49(name=publishProgram) } Lit#aic_ip51(value="Err") }
@@ -561,19 +293,34 @@ Program#aic_p1 {
                                     }
                                   }
                                 }
+                                  }
+                                  Block#aic_bp13 {
+                                    Call#aic_cp37(target=io.write) {
+                                      Call#aic_cp38(target=compiler.format) {
+                                        MakeErr#aic_mep1 {
+                                          Lit#aic_ip58(value="runtime_err")
+                                          Lit#aic_ip59(value="RUN023")
+                                          Lit#aic_ip60(value="Circular import detected.")
+                                          Var#aic_vp64(name=cycleNodeId)
+                                        }
+                                      }
+                                    }
+                                    Return#aic_rp4 { Lit#aic_ip61(value=1) }
+                                  }
+                                }
                               }
-                              Block#aic_bp13 {
-                                Call#aic_cp37(target=io.write) {
-                                  Call#aic_cp38(target=compiler.format) {
-                                    MakeErr#aic_mep1 {
-                                      Lit#aic_ip58(value="runtime_err")
-                                      Lit#aic_ip59(value="RUN023")
-                                      Lit#aic_ip60(value="Circular import detected.")
-                                      Var#aic_vp64(name=cycleNodeId)
+                              Block#aic_bp_pkg_err1 {
+                                Call#aic_cp_pkg2(target=io.write) {
+                                  Call#aic_cp_pkg3(target=compiler.format) {
+                                    MakeErr#aic_me_pkg1 {
+                                      Lit#aic_i_pkg1(value="runtime_err")
+                                      Lit#aic_i_pkg2(value="RUN024")
+                                      Lit#aic_i_pkg3(value="Package import is not declared in project manifest.")
+                                      Var#aic_vp_pkg2(name=undeclaredPackageImportNodeId)
                                     }
                                   }
                                 }
-                                Return#aic_rp4 { Lit#aic_ip61(value=1) }
+                                Return#aic_r_pkg1 { Lit#aic_i_pkg4(value=1) }
                               }
                             }
                           }
@@ -591,70 +338,6 @@ Program#aic_p1 {
                 Call#aic_cp12(target=io.write) { Lit#aic_ip13(value="Err#err0(code=AICP002 message=\"project.aiproj not found.\" nodeId=project)") }
                 Return#aic_rp9 { Lit#aic_ip14(value=1) }
               }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp20(name=detectSimpleCycleNodeId) {
-    Fn#aic_fp20(params=dir,firstImport,entryFile) {
-      Block#aic_bp300 {
-        If#aic_ifp300 {
-          Eq#aic_ep300 { Var#aic_vp300(name=firstImport) Lit#aic_ip300(value="") }
-          Block#aic_bp301 { Return#aic_rp300 { Lit#aic_ip301(value="") } }
-          Block#aic_bp302 {
-            Let#aic_lp301(name=depPath) { StrConcat#aic_sp300 { Var#aic_vp301(name=dir) StrConcat#aic_sp301 { Lit#aic_ip302(value="/") Var#aic_vp302(name=firstImport) } } }
-            Let#aic_lp302(name=depParsed) { Call#aic_cp300(target=compiler.parse) { Call#aic_cp301(target=io.readFile) { Var#aic_vp303(name=depPath) } } }
-            If#aic_ifp301 {
-              Eq#aic_ep301 { NodeKind#aic_nkp300 { Var#aic_vp304(name=depParsed) } Lit#aic_ip303(value="Err") }
-              Block#aic_bp303 { Return#aic_rp301 { Lit#aic_ip304(value="") } }
-              Block#aic_bp304 { Return#aic_rp302 { Call#aic_cp302(target=findImportNodeIdByPath) { Var#aic_vp305(name=depParsed) Var#aic_vp306(name=entryFile) Lit#aic_ip305(value=0) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp22b(name=findImportNodeIdByPath) {
-    Fn#aic_fp22b(params=program,path,index) {
-      Block#aic_bp305 {
-        If#aic_ifp302 {
-          Eq#aic_ep302 { Var#aic_vp307(name=index) ChildCount#aic_ccp300 { Var#aic_vp308(name=program) } }
-          Block#aic_bp306 { Return#aic_rp303 { Lit#aic_ip306(value="") } }
-          Block#aic_bp307 {
-            Let#aic_lp303(name=child) { ChildAt#aic_cap300 { Var#aic_vp309(name=program) Var#aic_vp310(name=index) } }
-            If#aic_ifp303 {
-              Eq#aic_ep303 { NodeKind#aic_nkp301 { Var#aic_vp311(name=child) } Lit#aic_ip307(value="Import") }
-              Block#aic_bp308 {
-                If#aic_ifp304 {
-                  Eq#aic_ep304 { Call#aic_cp303(target=getAttr) { Var#aic_vp312(name=child) Lit#aic_ip308(value="path") Lit#aic_ip309(value=0) } Var#aic_vp313(name=path) }
-                  Block#aic_bp309 { Return#aic_rp304 { NodeId#aic_nidp300 { Var#aic_vp314(name=child) } } }
-                  Block#aic_bp310 { Return#aic_rp305 { Call#aic_cp304(target=findImportNodeIdByPath) { Var#aic_vp315(name=program) Var#aic_vp316(name=path) Add#aic_ap300 { Var#aic_vp317(name=index) Lit#aic_ip310(value=1) } } } }
-                }
-              }
-              Block#aic_bp311 { Return#aic_rp306 { Call#aic_cp305(target=findImportNodeIdByPath) { Var#aic_vp318(name=program) Var#aic_vp319(name=path) Add#aic_ap301 { Var#aic_vp320(name=index) Lit#aic_ip311(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp23(name=findFirstImportPath) {
-    Fn#aic_fp23(params=program,index) {
-      Block#aic_bp21 {
-        If#aic_ifp8 {
-          Eq#aic_ep7 { Var#aic_vp38(name=index) ChildCount#aic_ccp2 { Var#aic_vp39(name=program) } }
-          Block#aic_bp22 { Return#aic_rp21 { Lit#aic_ip43(value="") } }
-          Block#aic_bp23 {
-            Let#aic_lp24(name=child) { ChildAt#aic_cap3 { Var#aic_vp40(name=program) Var#aic_vp41(name=index) } }
-            If#aic_ifp9 {
-              Eq#aic_ep8 { NodeKind#aic_nkp4 { Var#aic_vp42(name=child) } Lit#aic_ip44(value="Import") }
-              Block#aic_bp24 { Return#aic_rp10 { Call#aic_cp27(target=getAttr) { Var#aic_vp43(name=child) Lit#aic_ip45(value="path") Lit#aic_ip46(value=0) } } }
-              Block#aic_bp25 { Return#aic_rp11 { Call#aic_cp28(target=findFirstImportPath) { Var#aic_vp44(name=program) Add#aic_ap1 { Var#aic_vp45(name=index) Lit#aic_ip47(value=1) } } } }
             }
           }
         }
@@ -708,7 +391,7 @@ Program#aic_p1 {
   Let#aic_l20parse(name=compiler.parse) {
     Fn#aic_f20parse(params=text) {
       Block#aic_b20parse {
-        Return#aic_r20parse { Call#aic_c20parse(target=parse.parseNode) { Var#aic_v20parse(name=text) } }
+        Return#aic_r20parse { Call#aic_c20parse(target=parse.parseDocument) { Var#aic_v20parse(name=text) } }
       }
     }
   }
@@ -752,7 +435,7 @@ Program#aic_p1 {
             Let#aic_l42(name=diags) {
               If#aic_if401 {
                 If#aic_if402 {
-                  Call#aic_c404(target=isProjectManifest) { Var#aic_v404(name=parsed) }
+                  Call#aic_c404(target=project.isProjectManifest) { Var#aic_v404(name=parsed) }
                   Block#aic_b404 { Lit#aic_i404(value=true) }
                   Block#aic_b405 { Eq#aic_e401 { Var#aic_v402(name=mode) Lit#aic_i402(value="host") } }
                 }
@@ -800,14 +483,14 @@ Program#aic_p1 {
                 If#aic_if52 {
                   Eq#aic_e52 { NodeKind#aic_nk51 { Var#aic_v55(name=value) } Lit#aic_i54(value="Lit") }
                   Block#aic_b54 {
-                    Call#aic_c58(target=emitOkFromValue) { Var#aic_v57(name=value) }
+                    Call#aic_c58(target=value.emitOkFromValue) { Var#aic_v57(name=value) }
                     Return#aic_r51
                   }
                   Block#aic_b55 {
                     If#aic_if520 {
                       Eq#aic_e520 { NodeId#aic_nid520 { Var#aic_v520(name=value) } Lit#aic_i520(value="void") }
                       Block#aic_b520 {
-                        Call#aic_c521(target=emitOkFromValue) { Var#aic_v521(name=value) }
+                        Call#aic_c521(target=value.emitOkFromValue) { Var#aic_v521(name=value) }
                         Return#aic_r520
                       }
                       Block#aic_b521 {
@@ -946,144 +629,6 @@ Program#aic_p1 {
               Var#aic_v99(name=fnNode)
             }
             Var#aic_v100(name=env)
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l90(name=valueToString) {
-    Fn#aic_f90(params=value) {
-      Block#aic_b90 {
-        If#aic_if90 {
-          Eq#aic_e90 { NodeKind#aic_nk90 { Var#aic_v101(name=value) } Lit#aic_i77(value="Lit") }
-          Block#aic_b91 {
-            Let#aic_l91(name=k) { AttrValueKind#aic_avk90 { Var#aic_v102(name=value) Lit#aic_i78(value=0) } }
-            If#aic_if91 {
-              Eq#aic_e91 { Var#aic_v103(name=k) Lit#aic_i79(value="string") }
-              Block#aic_b92 { Return#aic_r90 { AttrValueString#aic_avs90 { Var#aic_v104(name=value) Lit#aic_i80(value=0) } } }
-              Block#aic_b93 {
-                If#aic_if92 {
-                  Eq#aic_e92 { Var#aic_v105(name=k) Lit#aic_i81(value="int") }
-                  Block#aic_b94 { Return#aic_r91 { ToString#aic_ts90 { AttrValueInt#aic_avi90 { Var#aic_v106(name=value) Lit#aic_i82(value=0) } } } }
-                  Block#aic_b95 {
-                    If#aic_if93 {
-                      AttrValueBool#aic_avb90 { Var#aic_v107(name=value) Lit#aic_i83(value=0) }
-                      Block#aic_b96 { Return#aic_r92 { Lit#aic_i84(value="true") } }
-                      Block#aic_b97 { Return#aic_r93 { Lit#aic_i85(value="false") } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          Block#aic_b98 {
-            If#aic_if94 {
-              Eq#aic_e93 { NodeKind#aic_nk91 { Var#aic_v108(name=value) } Lit#aic_i86(value="Err") }
-              Block#aic_b99 { Return#aic_r94 { Call#aic_c63(target=compiler.format) { Var#aic_v109(name=value) } } }
-              Block#aic_b100 { Return#aic_r95 { Lit#aic_i87(value="value") } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l91__2(name=makeStringLit) {
-    Fn#aic_f91(params=env,text) {
-      Block#aic_b901 {
-        Let#aic_l901(name=i) { ChildCount#aic_cc901 { Var#aic_v901(name=env) } }
-        Let#aic_l902(name=id) { StrConcat#aic_sc901 { Lit#aic_i901(value="s") ToString#aic_ts901 { Var#aic_v902(name=i) } } }
-        Return#aic_r901 { MakeLitString#aic_mls901 { Var#aic_v903(name=id) Var#aic_v904(name=text) } }
-      }
-    }
-  }
-
-  Let#aic_l92(name=makeBoolLit) {
-    Fn#aic_f92(params=b) {
-      Block#aic_b902 {
-        Let#aic_l903(name=p) {
-          If#aic_if902 {
-            Var#aic_v905(name=b)
-            Block#aic_b903 { Call#aic_c902(target=compiler.parse) { Lit#aic_i902(value="Program#bp1 { Lit#bv1(value=true) }") } }
-            Block#aic_b904 { Call#aic_c903(target=compiler.parse) { Lit#aic_i903(value="Program#bp0 { Lit#bv0(value=false) }") } }
-          }
-        }
-        Return#aic_r902 { ChildAt#aic_ca902 { Var#aic_v906(name=p) Lit#aic_i904(value=0) } }
-      }
-    }
-  }
-
-  Let#aic_l93(name=makeIntLit) {
-    Fn#aic_f93(params=n) {
-      Block#aic_b905 {
-        Let#aic_l904(name=src) {
-          StrConcat#aic_sc902 {
-            Lit#aic_i905(value="Program#ip { Lit#iv(value=")
-            StrConcat#aic_sc903 { ToString#aic_ts902 { Var#aic_v907(name=n) } Lit#aic_i906(value=") }") }
-          }
-        }
-        Let#aic_l905(name=p) { Call#aic_c904(target=compiler.parse) { Var#aic_v908(name=src) } }
-        Return#aic_r903 { ChildAt#aic_ca903 { Var#aic_v909(name=p) Lit#aic_i907(value=0) } }
-      }
-    }
-  }
-
-  Let#aic_l100(name=emitOkFromValue) {
-    Fn#aic_f100(params=value) {
-      Block#aic_b101 {
-        If#aic_if100 {
-          Eq#aic_e100 { NodeKind#aic_nk100 { Var#aic_v110(name=value) } Lit#aic_i88(value="Lit") }
-          Block#aic_b102 {
-            Let#aic_l101(name=k) { AttrValueKind#aic_avk100 { Var#aic_v111(name=value) Lit#aic_i89(value=0) } }
-            If#aic_if101 {
-              Eq#aic_e101 { Var#aic_v112(name=k) Lit#aic_i90(value="string") }
-              Block#aic_b103 {
-                Call#aic_c64(target=io.write) {
-                  StrConcat#aic_sc100 {
-                    Lit#aic_i91(value="Ok#ok0(type=string value=\"")
-                    StrConcat#aic_sc101 {
-                      StrEscape#aic_se100 { AttrValueString#aic_avs100 { Var#aic_v113(name=value) Lit#aic_i92(value=0) } }
-                      Lit#aic_i93(value="\")")
-                    }
-                  }
-                }
-                Return#aic_r100
-              }
-              Block#aic_b104 {
-                If#aic_if102 {
-                  Eq#aic_e102 { Var#aic_v114(name=k) Lit#aic_i94(value="int") }
-                  Block#aic_b105 {
-                    Call#aic_c65(target=io.write) {
-                      StrConcat#aic_sc102 {
-                        Lit#aic_i95(value="Ok#ok0(type=int value=")
-                        StrConcat#aic_sc103 {
-                          ToString#aic_ts100 { AttrValueInt#aic_avi100 { Var#aic_v115(name=value) Lit#aic_i96(value=0) } }
-                          Lit#aic_i97(value=")")
-                        }
-                      }
-                    }
-                    Return#aic_r101
-                  }
-                  Block#aic_b106 {
-                    If#aic_if103 {
-                      AttrValueBool#aic_avb100 { Var#aic_v116(name=value) Lit#aic_i98(value=0) }
-                      Block#aic_b107 { Call#aic_c66(target=io.write) { Lit#aic_i99(value="Ok#ok0(type=bool value=true)") } }
-                      Block#aic_b108 { Call#aic_c67(target=io.write) { Lit#aic_i100(value="Ok#ok0(type=bool value=false)") } }
-                    }
-                    Return#aic_r102
-                  }
-                }
-              }
-            }
-          }
-          Block#aic_b109 {
-            If#aic_if104 {
-              Eq#aic_e103 { NodeId#aic_nid100 { Var#aic_v117(name=value) } Lit#aic_i101(value="void") }
-              Block#aic_b110 { Call#aic_c68(target=io.write) { Lit#aic_i102(value="Ok#ok0(type=void)") } }
-              Block#aic_b111 { Call#aic_c69(target=io.write) { Lit#aic_i103(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
-            }
-            Return#aic_r103
           }
         }
       }
@@ -1289,7 +834,7 @@ Program#aic_p1 {
                     Block#aic_b1470 { Lit#aic_i1476(value=false) }
                   }
                 }
-                Return#aic_r1462 { Call#aic_c1468(target=makeState) { Call#aic_c1469(target=makeBoolLit) { Var#aic_v1493(name=eqv) } Var#aic_v1494(name=e3) } }
+                Return#aic_r1462 { Call#aic_c1468(target=makeState) { Call#aic_c1469(target=value.makeBoolLit) { Var#aic_v1493(name=eqv) } Var#aic_v1494(name=e3) } }
               }
             }
           }
@@ -1315,8 +860,8 @@ Program#aic_p1 {
               Eq#aic_e1471 { NodeKind#aic_nk1471 { Var#aic_v1506(name=rVal) } Lit#aic_i1480(value="Err") }
               Block#aic_b1474 { Return#aic_r1471 { Call#aic_c1477(target=makeState) { Var#aic_v1507(name=rVal) Var#aic_v1508(name=e3) } } }
               Block#aic_b1475 {
-                Let#aic_l1477(name=s) { StrConcat#aic_sc1470 { Call#aic_c1478(target=valueToString) { Var#aic_v1509(name=lVal) } Call#aic_c1479(target=valueToString) { Var#aic_v1510(name=rVal) } } }
-                Return#aic_r1472 { Call#aic_c1480(target=makeState) { Call#aic_c1481(target=makeStringLit) { Var#aic_v1511(name=e3) Var#aic_v1512(name=s) } Var#aic_v1513(name=e3) } }
+                Let#aic_l1477(name=s) { StrConcat#aic_sc1470 { Call#aic_c1478(target=value.toString) { Var#aic_v1509(name=lVal) } Call#aic_c1479(target=value.toString) { Var#aic_v1510(name=rVal) } } }
+                Return#aic_r1472 { Call#aic_c1480(target=makeState) { Call#aic_c1481(target=value.makeStringLit) { Var#aic_v1511(name=e3) Var#aic_v1512(name=s) } Var#aic_v1513(name=e3) } }
               }
             }
           }
@@ -1349,7 +894,7 @@ Program#aic_p1 {
                       Eq#aic_e1483 { AttrValueKind#aic_avk1481 { Var#aic_v1529(name=rVal) Lit#aic_i1487(value=0) } Lit#aic_i1488(value="int") }
                       Block#aic_b1486 {
                         Let#aic_l1487(name=n) { Add#aic_a1480 { AttrValueInt#aic_avi1480 { Var#aic_v1530(name=lVal) Lit#aic_i1489(value=0) } AttrValueInt#aic_avi1481 { Var#aic_v1531(name=rVal) Lit#aic_i1490(value=0) } } }
-                        Return#aic_r1482 { Call#aic_c1490(target=makeState) { Call#aic_c1491(target=makeIntLit) { Var#aic_v1532(name=n) } Var#aic_v1533(name=e3) } }
+                        Return#aic_r1482 { Call#aic_c1490(target=makeState) { Call#aic_c1491(target=value.makeIntLit) { Var#aic_v1532(name=n) } Var#aic_v1533(name=e3) } }
                       }
                       Block#aic_b1487 { Return#aic_r1483 { Call#aic_c1492(target=makeState) { MakeErr#aic_me1480 { Lit#aic_i1491(value="err_add") Lit#aic_i1492(value="RUN012") Lit#aic_i1493(value="Add expects int operands.") NodeId#aic_nid1480 { Var#aic_v1534(name=node) } } Var#aic_v1535(name=e3) } } }
                     }
@@ -1385,14 +930,14 @@ Program#aic_p1 {
             If#aic_if152 {
               Eq#aic_e152 { Var#aic_v192(name=target) Lit#aic_i135(value="io.print") }
               Block#aic_b143 {
-                Call#aic_c107(target=io.print) { Call#aic_c108(target=valueToString) { Var#aic_v193(name=argVal) } }
+                Call#aic_c107(target=io.print) { Call#aic_c108(target=value.toString) { Var#aic_v193(name=argVal) } }
                 Return#aic_r125 { Call#aic_c109(target=makeState) { Call#aic_c110(target=makeVoid) { Lit#aic_i136(value=0) } Var#aic_v194(name=e2) } }
               }
               Block#aic_b144 {
                 If#aic_if153 {
                   Eq#aic_e153 { Var#aic_v195(name=target) Lit#aic_i137(value="io.write") }
                   Block#aic_b145 {
-                    Call#aic_c111(target=io.write) { Call#aic_c112(target=valueToString) { Var#aic_v196(name=argVal) } }
+                    Call#aic_c111(target=io.write) { Call#aic_c112(target=value.toString) { Var#aic_v196(name=argVal) } }
                     Return#aic_r126 { Call#aic_c113(target=makeState) { Call#aic_c114(target=makeVoid) { Lit#aic_i138(value=0) } Var#aic_v197(name=e2) } }
                   }
                   Block#aic_b146 {
@@ -1400,7 +945,7 @@ Program#aic_p1 {
                       Eq#aic_e154 { Var#aic_v198(name=target) Lit#aic_i139(value="io.readLine") }
                       Block#aic_b147 {
                         Let#aic_l156(name=line) { Call#aic_c115(target=io.readLine) }
-                        Let#aic_l157(name=lit) { Call#aic_c116(target=makeStringLit) { Var#aic_v199(name=e2) Var#aic_v200(name=line) } }
+                        Let#aic_l157(name=lit) { Call#aic_c116(target=value.makeStringLit) { Var#aic_v199(name=e2) Var#aic_v200(name=line) } }
                         Return#aic_r127 { Call#aic_c117(target=makeState) { Var#aic_v201(name=lit) Var#aic_v202(name=e2) } }
                       }
                       Block#aic_b148 {
@@ -1408,35 +953,35 @@ Program#aic_p1 {
                           Eq#aic_e155 { Var#aic_v203(name=target) Lit#aic_i140(value="io.readAllStdin") }
                           Block#aic_b149 {
                             Let#aic_l158(name=text) { Call#aic_c118(target=io.readAllStdin) }
-                            Let#aic_l159(name=lit) { Call#aic_c119(target=makeStringLit) { Var#aic_v204(name=e2) Var#aic_v205(name=text) } }
+                            Let#aic_l159(name=lit) { Call#aic_c119(target=value.makeStringLit) { Var#aic_v204(name=e2) Var#aic_v205(name=text) } }
                             Return#aic_r128 { Call#aic_c120(target=makeState) { Var#aic_v206(name=lit) Var#aic_v207(name=e2) } }
                           }
                           Block#aic_b150 {
                             If#aic_if156 {
                               Eq#aic_e156 { Var#aic_v208(name=target) Lit#aic_i141(value="io.readFile") }
                               Block#aic_b151 {
-                                Let#aic_l160(name=text) { Call#aic_c121(target=io.readFile) { Call#aic_c122(target=valueToString) { Var#aic_v209(name=argVal) } } }
-                                Let#aic_l161(name=lit) { Call#aic_c123(target=makeStringLit) { Var#aic_v210(name=e2) Var#aic_v211(name=text) } }
+                                Let#aic_l160(name=text) { Call#aic_c121(target=io.readFile) { Call#aic_c122(target=value.toString) { Var#aic_v209(name=argVal) } } }
+                                Let#aic_l161(name=lit) { Call#aic_c123(target=value.makeStringLit) { Var#aic_v210(name=e2) Var#aic_v211(name=text) } }
                                 Return#aic_r129 { Call#aic_c124(target=makeState) { Var#aic_v212(name=lit) Var#aic_v213(name=e2) } }
                               }
                               Block#aic_b152 {
                                 If#aic_if157 {
                                   Eq#aic_e157 { Var#aic_v214(name=target) Lit#aic_i142(value="io.fileExists") }
                                   Block#aic_b153 {
-                                    Let#aic_l162(name=ok) { Call#aic_c125(target=io.fileExists) { Call#aic_c126(target=valueToString) { Var#aic_v215(name=argVal) } } }
-                                    Let#aic_l163(name=lit) { Call#aic_c127(target=makeBoolLit) { Var#aic_v216(name=ok) } }
+                                    Let#aic_l162(name=ok) { Call#aic_c125(target=io.fileExists) { Call#aic_c126(target=value.toString) { Var#aic_v215(name=argVal) } } }
+                                    Let#aic_l163(name=lit) { Call#aic_c127(target=value.makeBoolLit) { Var#aic_v216(name=ok) } }
                                     Return#aic_r130 { Call#aic_c128(target=makeState) { Var#aic_v217(name=lit) Var#aic_v218(name=e2) } }
                                   }
                                   Block#aic_b154 {
                                     If#aic_if158 {
                                       Eq#aic_e158 { Var#aic_v219(name=target) Lit#aic_i143(value="compiler.parse") }
-                                      Block#aic_b155 { Return#aic_r131 { Call#aic_c129(target=makeState) { Call#aic_c130(target=compiler.parse) { Call#aic_c131(target=valueToString) { Var#aic_v220(name=argVal) } } Var#aic_v221(name=e2) } } }
+                                      Block#aic_b155 { Return#aic_r131 { Call#aic_c129(target=makeState) { Call#aic_c130(target=compiler.parse) { Call#aic_c131(target=value.toString) { Var#aic_v220(name=argVal) } } Var#aic_v221(name=e2) } } }
                                       Block#aic_b156 {
                                         If#aic_if159 {
                                           Eq#aic_e159 { Var#aic_v222(name=target) Lit#aic_i144(value="compiler.format") }
                                           Block#aic_b157 {
                                             Let#aic_l164(name=text) { Call#aic_c132(target=compiler.format) { Var#aic_v223(name=argVal) } }
-                                            Let#aic_l165(name=lit) { Call#aic_c133(target=makeStringLit) { Var#aic_v224(name=e2) Var#aic_v225(name=text) } }
+                                            Let#aic_l165(name=lit) { Call#aic_c133(target=value.makeStringLit) { Var#aic_v224(name=e2) Var#aic_v225(name=text) } }
                                             Return#aic_r132 { Call#aic_c134(target=makeState) { Var#aic_v226(name=lit) Var#aic_v227(name=e2) } }
                                           }
                                           Block#aic_b158 {
@@ -1447,8 +992,8 @@ Program#aic_p1 {
                                                 If#aic_if161 {
                                                   Eq#aic_e161 { Var#aic_v231(name=target) Lit#aic_i146(value="compiler.test") }
                                                   Block#aic_b161 {
-                                                    Let#aic_l166(name=n) { Call#aic_c137(target=compiler.test) { Call#aic_c138(target=valueToString) { Var#aic_v232(name=argVal) } } }
-                                                    Let#aic_l167(name=lit) { Call#aic_c139(target=makeIntLit) { Var#aic_v233(name=n) } }
+                                                    Let#aic_l166(name=n) { Call#aic_c137(target=compiler.test) { Call#aic_c138(target=value.toString) { Var#aic_v232(name=argVal) } } }
+                                                    Let#aic_l167(name=lit) { Call#aic_c139(target=value.makeIntLit) { Var#aic_v233(name=n) } }
                                                     Return#aic_r134 { Call#aic_c140(target=makeState) { Var#aic_v234(name=lit) Var#aic_v235(name=e2) } }
                                                   }
                                                   Block#aic_b162 { Return#aic_r135 { Call#aic_c141(target=evalUserCall) { Var#aic_v236(name=node) Var#aic_v237(name=env) Var#aic_v238(name=target) } } }

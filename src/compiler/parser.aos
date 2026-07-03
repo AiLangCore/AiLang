@@ -920,6 +920,24 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l_synth_id1(name=parse.makeSyntheticId) {
+    Fn#parser_f_synth_id1(params=kindToken) {
+      Block#parser_b_synth_id1 {
+        Return#parser_r_synth_id1 {
+          StrConcat#parser_sc_synth_id1 {
+            StrConcat#parser_sc_synth_id2 {
+              Call#parser_c_synth_id1(target=parse.tokenValue) { Var#parser_v_synth_id1(name=kindToken) }
+              Lit#parser_i_synth_id1(value="_")
+            }
+            ToString#parser_ts_synth_id1 {
+              Call#parser_c_synth_id2(target=parse.tokenNext) { Var#parser_v_synth_id2(name=kindToken) }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#parser_l38(name=parse.parseNodeAt) {
     Fn#parser_f20(params=text,index) {
       Block#parser_b70 {
@@ -943,52 +961,155 @@ Program#parser_p1 {
             }
           }
           Block#parser_b72 {
-            Let#parser_l40(name=hashToken) { Call#parser_c64(target=parse.nextToken) { Var#parser_v118(name=text) Call#parser_c65(target=parse.tokenNext) { Var#parser_v119(name=kindToken) } } }
-            Let#parser_l41(name=idToken) { Call#parser_c66(target=parse.nextToken) { Var#parser_v120(name=text) Call#parser_c67(target=parse.tokenNext) { Var#parser_v121(name=hashToken) } } }
-            Let#parser_l42(name=afterIdToken) { Call#parser_c68(target=parse.nextToken) { Var#parser_v122(name=text) Call#parser_c69(target=parse.tokenNext) { Var#parser_v123(name=idToken) } } }
-            If#parser_if27 {
-              Eq#parser_e21 {
-                Call#parser_c70(target=parse.tokenKind) { Var#parser_v124(name=afterIdToken) }
-                Lit#parser_i88(value="lparen")
+            If#parser_if_node_start1 {
+              Eq#parser_e_node_start1 {
+                Call#parser_c_node_start1(target=parse.tokenKind) { Var#parser_v_node_start1(name=kindToken) }
+                Lit#parser_i_node_start1(value="name")
               }
-              Block#parser_b73 {
-                Return#parser_r46 {
-                  Call#parser_c71(target=parse.parseAttrNodeFromTokens) {
-                    Var#parser_v125(name=text)
-                    Var#parser_v126(name=kindToken)
-                    Var#parser_v127(name=idToken)
-                    Var#parser_v128(name=afterIdToken)
+              Block#parser_b_node_start_ok1 {
+                Let#parser_l40(name=lookaheadToken) { Call#parser_c64(target=parse.nextToken) { Var#parser_v118(name=text) Call#parser_c65(target=parse.tokenNext) { Var#parser_v119(name=kindToken) } } }
+                If#parser_if27 {
+                  Eq#parser_e21 {
+                    Call#parser_c70(target=parse.tokenKind) { Var#parser_v124(name=lookaheadToken) }
+                    Lit#parser_i88(value="lparen")
+                  }
+                  Block#parser_b73 {
+                    Return#parser_r46 {
+                      Call#parser_c71(target=parse.parseAttrNodeFromTokens) {
+                        Var#parser_v125(name=text)
+                        Var#parser_v126(name=kindToken)
+                        Call#parser_c71b(target=parse.makeToken) {
+                          Lit#parser_i88b(value="name")
+                          Call#parser_c_synth_id3(target=parse.makeSyntheticId) { Var#parser_v_synth_id3(name=kindToken) }
+                          Call#parser_c71c(target=parse.tokenNext) { Var#parser_v128b(name=kindToken) }
+                        }
+                        Var#parser_v128(name=lookaheadToken)
+                      }
+                    }
+                  }
+                  Block#parser_b74 {
+                    If#parser_if92b {
+                      Eq#parser_e22 {
+                        Call#parser_c72(target=parse.tokenKind) { Var#parser_v129(name=lookaheadToken) }
+                        Lit#parser_i89(value="lbrace")
+                      }
+                      Block#parser_b73b {
+                        Return#parser_r46b {
+                          Call#parser_c73(target=parse.parseChildrenInto) {
+                            Var#parser_v130(name=text)
+                            Call#parser_c74(target=parse.tokenNext) { Var#parser_v131(name=lookaheadToken) }
+                            MakeNode#parser_mn5 {
+                              Call#parser_c75(target=parse.tokenValue) { Var#parser_v132(name=kindToken) }
+                              Call#parser_c_synth_id4(target=parse.makeSyntheticId) { Var#parser_v_synth_id4(name=kindToken) }
+                            }
+                          }
+                        }
+                      }
+                      Block#parser_b74b {
+                        If#parser_if93b {
+                          Eq#parser_e93b {
+                            Call#parser_c72b(target=parse.tokenKind) { Var#parser_v129b(name=lookaheadToken) }
+                            Lit#parser_i89c(value="hash")
+                          }
+                          Block#parser_b73c {
+                            Let#parser_l41(name=idToken) { Call#parser_c66(target=parse.nextToken) { Var#parser_v120(name=text) Call#parser_c67(target=parse.tokenNext) { Var#parser_v121(name=lookaheadToken) } } }
+                            If#parser_if_node_id1 {
+                              Eq#parser_e_node_id1 {
+                                Call#parser_c_node_id1(target=parse.tokenKind) { Var#parser_v_node_id1(name=idToken) }
+                                Lit#parser_i_node_id1(value="name")
+                              }
+                              Block#parser_b_node_id_ok1 {
+                                Let#parser_l42(name=afterIdToken) { Call#parser_c68(target=parse.nextToken) { Var#parser_v122(name=text) Call#parser_c69(target=parse.tokenNext) { Var#parser_v123(name=idToken) } } }
+                                If#parser_if94b {
+                                  Eq#parser_e94b {
+                                    Call#parser_c70b(target=parse.tokenKind) { Var#parser_v124b(name=afterIdToken) }
+                                    Lit#parser_i89d(value="lparen")
+                                  }
+                                  Block#parser_b73d {
+                                    Return#parser_r46c {
+                                      Call#parser_c71d(target=parse.parseAttrNodeFromTokens) {
+                                        Var#parser_v125b(name=text)
+                                        Var#parser_v126b(name=kindToken)
+                                        Var#parser_v127b(name=idToken)
+                                        Var#parser_v128c(name=afterIdToken)
+                                      }
+                                    }
+                                  }
+                                  Block#parser_b74c {
+                                    If#parser_if95b {
+                                      Eq#parser_e95b {
+                                        Call#parser_c72c(target=parse.tokenKind) { Var#parser_v129c(name=afterIdToken) }
+                                        Lit#parser_i89e(value="lbrace")
+                                      }
+                                      Block#parser_b73e {
+                                        Return#parser_r46d {
+                                          Call#parser_c73b(target=parse.parseChildrenInto) {
+                                            Var#parser_v130b(name=text)
+                                            Call#parser_c74b(target=parse.tokenNext) { Var#parser_v131b(name=afterIdToken) }
+                                            MakeNode#parser_mn5b {
+                                              Call#parser_c75b(target=parse.tokenValue) { Var#parser_v132b(name=kindToken) }
+                                              Call#parser_c76b(target=parse.tokenValue) { Var#parser_v133b(name=idToken) }
+                                            }
+                                          }
+                                        }
+                                      }
+                                      Block#parser_b74d {
+                                        Return#parser_r47 {
+                                          Call#parser_c77(target=parse.makeResult) {
+                                            MakeNode#parser_mn6 {
+                                              Call#parser_c78(target=parse.tokenValue) { Var#parser_v134(name=kindToken) }
+                                              Call#parser_c79(target=parse.tokenValue) { Var#parser_v135(name=idToken) }
+                                            }
+                                            Call#parser_c80(target=parse.tokenNext) { Var#parser_v136(name=idToken) }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                              Block#parser_b_node_id_err1 {
+                                Return#parser_r_node_id_err1 {
+                                  Call#parser_c_node_id_err1(target=parse.makeResult) {
+                                    MakeErr#parser_me_node_id1 {
+                                      Lit#parser_i_node_id2(value="parse_node_id")
+                                      Lit#parser_i_node_id3(value="PARSE007")
+                                      Lit#parser_i_node_id4(value="Expected node id after '#'.")
+                                      Lit#parser_i_node_id5(value="parser")
+                                    }
+                                    Call#parser_c_node_id_err2(target=parse.tokenNext) { Var#parser_v_node_id2(name=idToken) }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          Block#parser_b74e {
+                            Return#parser_r47b {
+                              Call#parser_c77b(target=parse.makeResult) {
+                                MakeNode#parser_mn6b {
+                                  Call#parser_c78b(target=parse.tokenValue) { Var#parser_v134b(name=kindToken) }
+                                  Call#parser_c_synth_id5(target=parse.makeSyntheticId) { Var#parser_v_synth_id5(name=kindToken) }
+                                }
+                                Call#parser_c80b(target=parse.tokenNext) { Var#parser_v136b(name=kindToken) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
-              Block#parser_b74 {
-                If#parser_if92b {
-                  Eq#parser_e22 {
-                    Call#parser_c72(target=parse.tokenKind) { Var#parser_v129(name=afterIdToken) }
-                    Lit#parser_i89(value="lbrace")
-                  }
-                  Block#parser_b73b {
-                    Return#parser_r46b {
-                      Call#parser_c73(target=parse.parseChildrenInto) {
-                        Var#parser_v130(name=text)
-                        Call#parser_c74(target=parse.tokenNext) { Var#parser_v131(name=afterIdToken) }
-                        MakeNode#parser_mn5 {
-                          Call#parser_c75(target=parse.tokenValue) { Var#parser_v132(name=kindToken) }
-                          Call#parser_c76(target=parse.tokenValue) { Var#parser_v133(name=idToken) }
-                        }
-                      }
+              Block#parser_b_node_start_err1 {
+                Return#parser_r_node_start_err1 {
+                  Call#parser_c_node_start_err1(target=parse.makeResult) {
+                    MakeErr#parser_me_node_start1 {
+                      Lit#parser_i_node_start2(value="parse_node_start")
+                      Lit#parser_i_node_start3(value="PARSE005")
+                      Lit#parser_i_node_start4(value="Expected node kind.")
+                      Lit#parser_i_node_start5(value="parser")
                     }
-                  }
-                  Block#parser_b74b {
-                    Return#parser_r47 {
-                      Call#parser_c77(target=parse.makeResult) {
-                        MakeNode#parser_mn6 {
-                          Call#parser_c78(target=parse.tokenValue) { Var#parser_v134(name=kindToken) }
-                          Call#parser_c79(target=parse.tokenValue) { Var#parser_v135(name=idToken) }
-                        }
-                        Call#parser_c80(target=parse.tokenNext) { Var#parser_v136(name=afterIdToken) }
-                      }
-                    }
+                    Call#parser_c_node_start_err2(target=parse.tokenNext) { Var#parser_v_node_start2(name=kindToken) }
                   }
                 }
               }
@@ -1042,6 +1163,63 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l_attr_pred1(name=parse.isAttrListUnexpectedEndToken) {
+    Fn#parser_f_attr_pred1(params=token) {
+      Block#parser_b_attr_pred1 {
+        If#parser_if_attr_pred1 {
+          Eq#parser_e_attr_pred1 {
+            Call#parser_c_attr_pred1(target=parse.tokenKind) { Var#parser_v_attr_pred1(name=token) }
+            Lit#parser_i_attr_pred1(value="eof")
+          }
+          Block#parser_b_attr_pred2 { Return#parser_r_attr_pred1 { Lit#parser_i_attr_pred2(value=true) } }
+          Block#parser_b_attr_pred3 {
+            If#parser_if_attr_pred2 {
+              Eq#parser_e_attr_pred2 {
+                Call#parser_c_attr_pred2(target=parse.tokenKind) { Var#parser_v_attr_pred2(name=token) }
+                Lit#parser_i_attr_pred3(value="rbrace")
+              }
+              Block#parser_b_attr_pred4 { Return#parser_r_attr_pred2 { Lit#parser_i_attr_pred4(value=true) } }
+              Block#parser_b_attr_pred5 { Return#parser_r_attr_pred3 { Lit#parser_i_attr_pred5(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l_attr_pred2(name=parse.isAttrValueMissingToken) {
+    Fn#parser_f_attr_pred2(params=token) {
+      Block#parser_b_attr_pred6 {
+        If#parser_if_attr_pred3 {
+          Eq#parser_e_attr_pred3 {
+            Call#parser_c_attr_pred3(target=parse.tokenKind) { Var#parser_v_attr_pred3(name=token) }
+            Lit#parser_i_attr_pred6(value="eof")
+          }
+          Block#parser_b_attr_pred7 { Return#parser_r_attr_pred4 { Lit#parser_i_attr_pred7(value=true) } }
+          Block#parser_b_attr_pred8 {
+            If#parser_if_attr_pred4 {
+              Eq#parser_e_attr_pred4 {
+                Call#parser_c_attr_pred4(target=parse.tokenKind) { Var#parser_v_attr_pred4(name=token) }
+                Lit#parser_i_attr_pred8(value="rparen")
+              }
+              Block#parser_b_attr_pred9 { Return#parser_r_attr_pred5 { Lit#parser_i_attr_pred9(value=true) } }
+              Block#parser_b_attr_pred10 {
+                If#parser_if_attr_pred5 {
+                  Eq#parser_e_attr_pred5 {
+                    Call#parser_c_attr_pred5(target=parse.tokenKind) { Var#parser_v_attr_pred5(name=token) }
+                    Lit#parser_i_attr_pred10(value="rbrace")
+                  }
+                  Block#parser_b_attr_pred11 { Return#parser_r_attr_pred6 { Lit#parser_i_attr_pred11(value=true) } }
+                  Block#parser_b_attr_pred12 { Return#parser_r_attr_pred7 { Lit#parser_i_attr_pred12(value=false) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#parser_l74(name=parse.parseAttrsInto) {
     Fn#parser_f68(params=text,index,node) {
       Block#parser_b168 {
@@ -1060,27 +1238,105 @@ Program#parser_p1 {
             }
           }
           Block#parser_b170 {
-            Let#parser_l76(name=equalsToken) {
-              Call#parser_c240(target=parse.nextToken) {
-                Var#parser_v276(name=text)
-                Call#parser_c241(target=parse.tokenNext) { Var#parser_v277(name=nextToken) }
+            If#parser_if_attr_eof1 {
+              Call#parser_c_attr_pred6(target=parse.isAttrListUnexpectedEndToken) { Var#parser_v273b(name=nextToken) }
+              Block#parser_b_attr_eof1 {
+                Return#parser_r_attr_eof1 {
+                  Call#parser_c_attr_eof2(target=parse.makeResult) {
+                    MakeErr#parser_me_attr_eof1 {
+                      Lit#parser_i_attr_eof2(value="parse_attr")
+                      Lit#parser_i_attr_eof3(value="PARSE002")
+                      Lit#parser_i_attr_eof4(value="Expected attribute or ')'.")
+                      Lit#parser_i_attr_eof5(value="parser")
+                    }
+                    Call#parser_c_attr_eof3(target=parse.tokenNext) { Var#parser_v273d(name=nextToken) }
+                  }
+                }
               }
-            }
-            Let#parser_l77(name=valueToken) {
-              Call#parser_c242(target=parse.nextToken) {
-                Var#parser_v278(name=text)
-                Call#parser_c243(target=parse.tokenNext) { Var#parser_v279(name=equalsToken) }
-              }
-            }
-            Return#parser_r139 {
-              Call#parser_c244(target=parse.parseAttrsInto) {
-                Var#parser_v280(name=text)
-                Call#parser_c245(target=parse.tokenNext) { Var#parser_v281(name=valueToken) }
-                AppendAttr#parser_aa4 {
-                  Var#parser_v282(name=node)
-                  Call#parser_c246(target=parse.makeAttrLit) {
-                    Var#parser_v283(name=nextToken)
-                    Var#parser_v284(name=valueToken)
+              Block#parser_b_attr_continue1 {
+                If#parser_if_attr_key1 {
+                  Eq#parser_e_attr_key1 {
+                    Call#parser_c_attr_key1(target=parse.tokenKind) { Var#parser_v_attr_key1(name=nextToken) }
+                    Lit#parser_i_attr_key1(value="name")
+                  }
+                  Block#parser_b_attr_key_ok1 {
+                    Let#parser_l76(name=equalsToken) {
+                      Call#parser_c240(target=parse.nextToken) {
+                        Var#parser_v276(name=text)
+                        Call#parser_c241(target=parse.tokenNext) { Var#parser_v277(name=nextToken) }
+                      }
+                    }
+                    If#parser_if_attr_eq1 {
+                      Eq#parser_e_attr_eq1 {
+                        Call#parser_c_attr_eq1(target=parse.tokenKind) { Var#parser_v_eq1(name=equalsToken) }
+                        Lit#parser_i_attr_eq1(value="equals")
+                      }
+                      Block#parser_b_attr_eq_ok1 {
+                        Let#parser_l77(name=valueToken) {
+                          Call#parser_c242(target=parse.nextToken) {
+                            Var#parser_v278(name=text)
+                            Call#parser_c243(target=parse.tokenNext) { Var#parser_v279(name=equalsToken) }
+                          }
+                        }
+                        If#parser_if_attr_value1 {
+                          Call#parser_c_attr_pred7(target=parse.isAttrValueMissingToken) { Var#parser_v_attr_value1(name=valueToken) }
+                          Block#parser_b_attr_value_err1 {
+                            Return#parser_r_attr_value_err1 {
+                              Call#parser_c_attr_value_err1(target=parse.makeResult) {
+                                MakeErr#parser_me_attr_value1 {
+                                  Lit#parser_i_attr_value4(value="parse_attr_value")
+                                  Lit#parser_i_attr_value5(value="PARSE004")
+                                  Lit#parser_i_attr_value6(value="Expected attribute value.")
+                                  Lit#parser_i_attr_value7(value="parser")
+                                }
+                                Call#parser_c_attr_value_err2(target=parse.tokenNext) { Var#parser_v_attr_value4(name=valueToken) }
+                              }
+                            }
+                          }
+                          Block#parser_b_attr_value_ok1 {
+                            Return#parser_r139 {
+                              Call#parser_c244(target=parse.parseAttrsInto) {
+                                Var#parser_v280(name=text)
+                                Call#parser_c245(target=parse.tokenNext) { Var#parser_v281(name=valueToken) }
+                                AppendAttr#parser_aa4 {
+                                  Var#parser_v282(name=node)
+                                  Call#parser_c246(target=parse.makeAttrLit) {
+                                    Var#parser_v283(name=nextToken)
+                                    Var#parser_v284(name=valueToken)
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      Block#parser_b_attr_eq_err1 {
+                        Return#parser_r_attr_eq_err1 {
+                          Call#parser_c_attr_eq_err1(target=parse.makeResult) {
+                            MakeErr#parser_me_attr_eq1 {
+                              Lit#parser_i_attr_eq2(value="parse_attr_equals")
+                              Lit#parser_i_attr_eq3(value="PARSE003")
+                              Lit#parser_i_attr_eq4(value="Expected '=' after attribute name.")
+                              Lit#parser_i_attr_eq5(value="parser")
+                            }
+                            Call#parser_c_attr_eq_err2(target=parse.tokenNext) { Var#parser_v_attr_eq2(name=equalsToken) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block#parser_b_attr_key_err1 {
+                    Return#parser_r_attr_key_err1 {
+                      Call#parser_c_attr_key_err1(target=parse.makeResult) {
+                        MakeErr#parser_me_attr_key1 {
+                          Lit#parser_i_attr_key2(value="parse_attr_key")
+                          Lit#parser_i_attr_key3(value="PARSE008")
+                          Lit#parser_i_attr_key4(value="Expected attribute name.")
+                          Lit#parser_i_attr_key5(value="parser")
+                        }
+                        Call#parser_c_attr_key_err2(target=parse.tokenNext) { Var#parser_v_attr_key2(name=nextToken) }
+                      }
+                    }
                   }
                 }
               }
@@ -1117,7 +1373,12 @@ Program#parser_p1 {
               Block#parser_b_eof_children1 {
                 Return#parser_r_eof_children1 {
                   Call#parser_c97b(target=parse.makeResult) {
-                    Var#parser_v153b(name=parent)
+                    MakeErr#parser_me_children_eof1 {
+                      Lit#parser_i_children_eof1(value="parse_children_eof")
+                      Lit#parser_i_children_eof2(value="PARSE006")
+                      Lit#parser_i_children_eof3(value="Expected '}' before end of input.")
+                      Lit#parser_i_children_eof4(value="parser")
+                    }
                     Call#parser_c98b(target=parse.tokenNext) { Var#parser_v154b(name=nextToken) }
                   }
                 }
@@ -1129,13 +1390,24 @@ Program#parser_p1 {
                     Var#parser_v156(name=index)
                   }
                 }
-                Return#parser_r50 {
-                  Call#parser_c100(target=parse.parseChildrenInto) {
-                    Var#parser_v157(name=text)
-                    Call#parser_c101(target=parse.resultNext) { Var#parser_v158(name=childResult) }
-                    AppendChild#parser_ap6 {
-                      Var#parser_v159(name=parent)
-                      Call#parser_c102(target=parse.resultNode) { Var#parser_v160(name=childResult) }
+                If#parser_if_child_err1 {
+                  Eq#parser_e_child_err1 {
+                    NodeKind#parser_nk_child_err1 {
+                      Call#parser_c_child_err1(target=parse.resultNode) { Var#parser_v_child_err1(name=childResult) }
+                    }
+                    Lit#parser_i_child_err1(value="Err")
+                  }
+                  Block#parser_b_child_err1 { Return#parser_r_child_err1 { Var#parser_v_child_err2(name=childResult) } }
+                  Block#parser_b_child_ok1 {
+                    Return#parser_r50 {
+                      Call#parser_c100(target=parse.parseChildrenInto) {
+                        Var#parser_v157(name=text)
+                        Call#parser_c101(target=parse.resultNext) { Var#parser_v158(name=childResult) }
+                        AppendChild#parser_ap6 {
+                          Var#parser_v159(name=parent)
+                          Call#parser_c102(target=parse.resultNode) { Var#parser_v160(name=childResult) }
+                        }
+                      }
                     }
                   }
                 }
@@ -1155,6 +1427,58 @@ Program#parser_p1 {
             Call#parser_c104(target=parse.parseNodeAt) {
               Var#parser_v161(name=text)
               Lit#parser_i91(value=0)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l52(name=parse.parseDocument) {
+    Fn#parser_f24(params=text) {
+      Block#parser_b80 {
+        Let#parser_l53(name=rootResult) {
+          Call#parser_c105(target=parse.parseNodeAt) {
+            Var#parser_v162(name=text)
+            Lit#parser_i92(value=0)
+          }
+        }
+        Let#parser_l54(name=rootNode) {
+          Call#parser_c106(target=parse.resultNode) {
+            Var#parser_v163(name=rootResult)
+          }
+        }
+        If#parser_if_doc1 {
+          Eq#parser_e_doc1 {
+            NodeKind#parser_nk_doc1 { Var#parser_v164(name=rootNode) }
+            Lit#parser_i_doc1(value="Err")
+          }
+          Block#parser_b_doc1 { Return#parser_r_doc1 { Var#parser_v165(name=rootNode) } }
+          Block#parser_b_doc2 {
+            Let#parser_l55(name=afterRootToken) {
+              Call#parser_c107(target=parse.nextToken) {
+                Var#parser_v166(name=text)
+                Call#parser_c108(target=parse.resultNext) {
+                  Var#parser_v167(name=rootResult)
+                }
+              }
+            }
+            If#parser_if_doc2 {
+              Eq#parser_e_doc2 {
+                Call#parser_c109(target=parse.tokenKind) { Var#parser_v168(name=afterRootToken) }
+                Lit#parser_i_doc2(value="eof")
+              }
+              Block#parser_b_doc3 { Return#parser_r_doc2 { Var#parser_v169(name=rootNode) } }
+              Block#parser_b_doc4 {
+                Return#parser_r_doc3 {
+                  MakeErr#parser_me_doc1 {
+                    Lit#parser_i_doc3(value="parse_trailing_input")
+                    Lit#parser_i_doc4(value="PARSE009")
+                    Lit#parser_i_doc5(value="Unexpected trailing input after root node.")
+                    Lit#parser_i_doc6(value="parser")
+                  }
+                }
+              }
             }
           }
         }
@@ -1188,4 +1512,5 @@ Program#parser_p1 {
   Export#parser_e24(name=parse.parseIntToken)
   Export#parser_e26(name=parse.parseProgramWithOneChild)
   Export#parser_e34(name=parse.parseNode)
+  Export#parser_e35(name=parse.parseDocument)
 }

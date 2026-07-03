@@ -887,12 +887,26 @@ Program#cli_p1 {
                   Eq#cli_e40bp3 { Var#cli_v40bpex(name=entryExport) Lit#cli_i40bp7(value="") }
                   Block#cli_b40bp4 { Return#cli_r40bp3 { Call#cli_c40bpe2(target=buildError) { Lit#cli_i40bp8(value="AILANG009") Lit#cli_i40bp9(value="Project entryExport must be non-empty.") Lit#cli_i40bp10(value="project") } } }
                   Block#cli_b40bp5 {
-                    Let#cli_l40bpep(name=entryPath) { StrConcat#cli_sc40bp3 { Var#cli_v40bp6(name=path) StrConcat#cli_sc40bp4 { Lit#cli_i40bp11(value="/") Var#cli_v40bpef2(name=entryFile) } } }
-                    If#cli_if40bp4 {
-                      Call#cli_c40bp2(target=sys.fs.path.exists) { Var#cli_v40bpep(name=entryPath) }
-                      Block#cli_b40bp6 { Return#cli_r40bp1 { Call#cli_c40bpb(target=runBootstrapBuild) { Var#cli_v40bp7(name=path) Var#cli_v40bp8(name=resolvedOutDir) Var#cli_v40bp9(name=outFile) } } }
-                      Block#cli_b40bp7 { Return#cli_r40bp4 { Call#cli_c40bpe3(target=buildError) { Lit#cli_i40bp12(value="AILANG010") Lit#cli_i40bp13(value="Project entryFile was not found.") Lit#cli_i40bp14(value="entryFile") } } }
-                    }
+                      Let#cli_l40bpep(name=entryPath) { StrConcat#cli_sc40bp3 { Var#cli_v40bp6(name=path) StrConcat#cli_sc40bp4 { Lit#cli_i40bp11(value="/") Var#cli_v40bpef2(name=entryFile) } } }
+                      If#cli_if40bp4 {
+                        Call#cli_c40bp2(target=sys.fs.path.exists) { Var#cli_v40bpep(name=entryPath) }
+                        Block#cli_b40bp6 {
+                          Let#cli_l40bpes(name=entryText) { Call#cli_c40bpes(target=readTextFile) { Var#cli_v40bpep2(name=entryPath) } }
+                          Let#cli_l40bpui(name=undeclaredPackageImport) {
+                            Call#cli_c40bpui(target=findUndeclaredPackageImport) {
+                              Var#cli_v40bpes(name=entryText)
+                              Var#cli_v40bpt3(name=manifestText)
+                              Lit#cli_i40bpui(value=0)
+                            }
+                          }
+                          If#cli_if40bpui {
+                            Eq#cli_e40bpui { Var#cli_v40bpui(name=undeclaredPackageImport) Lit#cli_i40bpui2(value="") }
+                            Block#cli_b40bpok { Return#cli_r40bp1 { Call#cli_c40bpb(target=runBootstrapBuild) { Var#cli_v40bp7(name=path) Var#cli_v40bp8(name=resolvedOutDir) Var#cli_v40bp9(name=outFile) } } }
+                            Block#cli_b40bperr { Return#cli_r40bpui { Call#cli_c40bperr(target=buildError) { Lit#cli_i40bperr1(value="RUN024") Lit#cli_i40bperr2(value="Package import is not declared in project manifest.") Var#cli_v40bpui2(name=undeclaredPackageImport) } } }
+                          }
+                        }
+                        Block#cli_b40bp7 { Return#cli_r40bp4 { Call#cli_c40bpe3(target=buildError) { Lit#cli_i40bp12(value="AILANG010") Lit#cli_i40bp13(value="Project entryFile was not found.") Lit#cli_i40bp14(value="entryFile") } } }
+                      }
                   }
                 }
               }
@@ -904,9 +918,9 @@ Program#cli_p1 {
     }
   }
 
-  Let#cli_l40ga(name=getManifestAttr) {
-    Fn#cli_f40ga(params=text,key,needleLength) {
-      Block#cli_b40ga {
+    Let#cli_l40ga(name=getManifestAttr) {
+      Fn#cli_f40ga(params=text,key,needleLength) {
+        Block#cli_b40ga {
         Let#cli_l40gan(name=needle) { StrConcat#cli_sc40ga1 { Var#cli_v40ga1(name=key) Lit#cli_i40ga1(value="=\"") } }
         Let#cli_l40gaf(name=found) { Call#cli_c40ga1(target=find) { Var#cli_v40ga2(name=text) Var#cli_v40ga3(name=needle) Lit#cli_i40ga2(value=0) } }
         If#cli_if40ga1 {
@@ -923,12 +937,79 @@ Program#cli_p1 {
             }
           }
         }
+        }
       }
     }
-  }
 
-  Let#cli_l40rb(name=runBootstrapBuild) {
-    Fn#cli_f40rb(params=path,outDir,outFile) {
+    Let#cli_l40fupi(name=findUndeclaredPackageImport) {
+      Fn#cli_f40fupi(params=sourceText,manifestText,start) {
+        Block#cli_b40fupi {
+          Let#cli_l40fupip(name=importPos) { Call#cli_c40fupi1(target=find) { Var#cli_v40fupi1(name=sourceText) Lit#cli_i40fupi1(value="Import#") Var#cli_v40fupi2(name=start) } }
+          If#cli_if40fupi1 {
+            Eq#cli_e40fupi1 { Var#cli_v40fupi3(name=importPos) Lit#cli_i40fupi2(value=-1) }
+            Block#cli_b40fupi1 { Return#cli_r40fupi1 { Lit#cli_i40fupi3(value="") } }
+            Block#cli_b40fupi2 {
+              Let#cli_l40fupit(name=importText) { Call#cli_c40fupi2(target=substring) { Var#cli_v40fupi4(name=sourceText) Var#cli_v40fupi5(name=importPos) Lit#cli_i40fupi4(value=2147483647) } }
+              Let#cli_l40fupipkg(name=packageName) { Call#cli_c40fupi3(target=getManifestAttr) { Var#cli_v40fupi6(name=importText) Lit#cli_i40fupi5(value="package") Lit#cli_i40fupi6(value=9) } }
+              If#cli_if40fupi2 {
+                Eq#cli_e40fupi2 { Var#cli_v40fupi7(name=packageName) Lit#cli_i40fupi7(value="") }
+                Block#cli_b40fupi3 {
+                  Return#cli_r40fupi2 {
+                    Call#cli_c40fupi4(target=findUndeclaredPackageImport) {
+                      Var#cli_v40fupi8(name=sourceText)
+                      Var#cli_v40fupi9(name=manifestText)
+                      Add#cli_a40fupi1 { Var#cli_v40fupi10(name=importPos) Lit#cli_i40fupi8(value=7) }
+                    }
+                  }
+                }
+                Block#cli_b40fupi4 {
+                  If#cli_if40fupi3 {
+                    Call#cli_c40fupi5(target=manifestHasInclude) {
+                      Var#cli_v40fupi11(name=manifestText)
+                      Var#cli_v40fupi12(name=packageName)
+                    }
+                    Block#cli_b40fupi5 {
+                      Return#cli_r40fupi3 {
+                        Call#cli_c40fupi6(target=findUndeclaredPackageImport) {
+                          Var#cli_v40fupi13(name=sourceText)
+                          Var#cli_v40fupi14(name=manifestText)
+                          Add#cli_a40fupi2 { Var#cli_v40fupi15(name=importPos) Lit#cli_i40fupi9(value=7) }
+                        }
+                      }
+                    }
+                    Block#cli_b40fupi6 { Return#cli_r40fupi4 { Var#cli_v40fupi16(name=packageName) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Let#cli_l40mhi(name=manifestHasInclude) {
+      Fn#cli_f40mhi(params=manifestText,packageName) {
+        Block#cli_b40mhi {
+          Let#cli_l40mhip(name=includePos) { Call#cli_c40mhi1(target=find) { Var#cli_v40mhi1(name=manifestText) Lit#cli_i40mhi1(value="Include#") Lit#cli_i40mhi2(value=0) } }
+          If#cli_if40mhi1 {
+            Eq#cli_e40mhi1 { Var#cli_v40mhi2(name=includePos) Lit#cli_i40mhi3(value=-1) }
+            Block#cli_b40mhi1 { Return#cli_r40mhi1 { Lit#cli_i40mhi4(value=false) } }
+            Block#cli_b40mhi2 {
+              Let#cli_l40mhit(name=includeText) { Call#cli_c40mhi2(target=substring) { Var#cli_v40mhi3(name=manifestText) Var#cli_v40mhi4(name=includePos) Lit#cli_i40mhi5(value=2147483647) } }
+              Let#cli_l40mhin(name=nameNeedle) { StrConcat#cli_sc40mhi1 { Lit#cli_i40mhi6(value="name=\"") StrConcat#cli_sc40mhi2 { Var#cli_v40mhi5(name=packageName) Lit#cli_i40mhi7(value="\"") } } }
+              If#cli_if40mhi2 {
+                Eq#cli_e40mhi2 { Call#cli_c40mhi3(target=find) { Var#cli_v40mhi6(name=includeText) Var#cli_v40mhi7(name=nameNeedle) Lit#cli_i40mhi8(value=0) } Lit#cli_i40mhi9(value=-1) }
+                Block#cli_b40mhi3 { Return#cli_r40mhi2 { Lit#cli_i40mhi10(value=false) } }
+                Block#cli_b40mhi4 { Return#cli_r40mhi3 { Lit#cli_i40mhi11(value=true) } }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Let#cli_l40rb(name=runBootstrapBuild) {
+      Fn#cli_f40rb(params=path,outDir,outFile) {
       Block#cli_b40rb {
         Let#cli_l40rbc(name=compilerPath) { Call#cli_c40rb0(target=resolveBootstrapCompiler) { Var#cli_v40rb0(name=path) } }
         Let#cli_l40rba(name=spawnArgs) { Call#cli_c40rb1(target=makeBuildSpawnArgs) { Var#cli_v40rb1(name=path) Var#cli_v40rb2(name=outDir) } }
@@ -1565,10 +1646,78 @@ Program#cli_p1 {
   Let#cli_l42cf(name=copyFileBytes) {
     Fn#cli_f42cf(params=fromPath,toPath) {
       Block#cli_b42cf {
-        Return#cli_r42cf {
-          Call#cli_c42cf1(target=sys.fs.file.write) {
-            Var#cli_v42cf1(name=toPath)
-            Call#cli_c42cf2(target=sys.fs.file.read) { Var#cli_v42cf2(name=fromPath) }
+        Let#cli_l42cfr(name=readHandle) { Call#cli_c42cfr(target=sys.fs.file.openRead) { Var#cli_v42cfr(name=fromPath) } }
+        If#cli_if42cfr {
+          Eq#cli_e42cfr { Var#cli_v42cfrh(name=readHandle) Lit#cli_i42cfr(value=-1) }
+          Block#cli_b42cfr { Return#cli_r42cfr { Lit#cli_i42cfr2(value=1) } }
+          Block#cli_b42cfw {
+            Let#cli_l42cfw(name=writeHandle) { Call#cli_c42cfw(target=sys.fs.file.openWrite) { Var#cli_v42cfw(name=toPath) } }
+            If#cli_if42cfw {
+              Eq#cli_e42cfw { Var#cli_v42cfwh(name=writeHandle) Lit#cli_i42cfw(value=-1) }
+              Block#cli_b42cfw1 {
+                Call#cli_c42cfwc(target=sys.fs.file.close) { Var#cli_v42cfrhc(name=readHandle) }
+                Return#cli_r42cfw { Lit#cli_i42cfw2(value=1) }
+              }
+              Block#cli_b42cfw2 {
+                Return#cli_r42cf {
+                  Call#cli_c42cfl(target=copyFileBytesLoop) {
+                    Var#cli_v42cflr(name=readHandle)
+                    Var#cli_v42cflw(name=writeHandle)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l42cfl(name=copyFileBytesLoop) {
+    Fn#cli_f42cfl(params=readHandle,writeHandle) {
+      Block#cli_b42cfl {
+        Let#cli_l42cflc(name=chunk) {
+          Call#cli_c42cflc(target=sys.fs.file.readChunk) {
+            Var#cli_v42cflr2(name=readHandle)
+            Lit#cli_i42cflc(value=32768)
+          }
+        }
+        If#cli_if42cfl {
+          Eq#cli_e42cfl {
+            Call#cli_c42cfllen(target=bytes.length) { Var#cli_v42cflc(name=chunk) }
+            Lit#cli_i42cflz(value=0)
+          }
+          Block#cli_b42cfl1 {
+            Call#cli_c42cflcr(target=sys.fs.file.close) { Var#cli_v42cflr3(name=readHandle) }
+            Call#cli_c42cflcw(target=sys.fs.file.close) { Var#cli_v42cflw3(name=writeHandle) }
+            Return#cli_r42cfl1 { Lit#cli_i42cfl0(value=0) }
+          }
+          Block#cli_b42cfl2 {
+            Let#cli_l42cflw(name=written) {
+              Call#cli_c42cflw(target=sys.fs.file.writeChunk) {
+                Var#cli_v42cflw4(name=writeHandle)
+                Var#cli_v42cflc2(name=chunk)
+              }
+            }
+            If#cli_if42cflw {
+              Eq#cli_e42cflw {
+                Var#cli_v42cflwritten(name=written)
+                Lit#cli_i42cflw(value=-1)
+              }
+              Block#cli_b42cflw1 {
+                Call#cli_c42cflwr(target=sys.fs.file.close) { Var#cli_v42cflr5(name=readHandle) }
+                Call#cli_c42cflww(target=sys.fs.file.close) { Var#cli_v42cflw5(name=writeHandle) }
+                Return#cli_r42cflw { Lit#cli_i42cflw2(value=1) }
+              }
+              Block#cli_b42cflw2 {
+                Return#cli_r42cfl2 {
+                  Call#cli_c42cfln(target=copyFileBytesLoop) {
+                    Var#cli_v42cflr4(name=readHandle)
+                    Var#cli_v42cflw6(name=writeHandle)
+                  }
+                }
+              }
+            }
           }
         }
       }

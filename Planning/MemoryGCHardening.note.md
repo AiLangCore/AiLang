@@ -41,7 +41,7 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 - `.github/workflows/main-release-gate.yml`
 - `.github/workflows/toolkit-release.yml`
 - `SPEC/EVAL.md`
-- `Docs/Production-Memory-Readiness.md`
+- `Planning/ProductionMemoryReadiness.rc1.md`
 
 ## Validation
 

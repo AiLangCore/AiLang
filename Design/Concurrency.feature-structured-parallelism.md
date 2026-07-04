@@ -1,14 +1,14 @@
-# Concurrency Design Notes (Non-Normative)
+# Concurrency Design Notes
 
 Status: non-normative design companion. This document is explanatory and may
 change freely while the concurrency model is being refined.
 
 Authoritative AiLang semantics live only in:
 
-- `SPEC/IL.md`
-- `SPEC/EVAL.md`
-- `SPEC/VALIDATION.md`
-- `SPEC/BYTECODE.md`
+- `../SPEC/IL.md`
+- `../SPEC/EVAL.md`
+- `../SPEC/VALIDATION.md`
+- `../SPEC/BYTECODE.md`
 
 If this document conflicts with those files, those files win. When concurrency
 semantics become active language contracts, the normative changes must be made
@@ -131,8 +131,8 @@ Expected merged value shape (conceptual): first branch result, then second branc
 
 A change is complete only when all of the following are updated together:
 
-1. `SPEC/IL.md` (new node contracts).
-2. `SPEC/EVAL.md` (evaluation semantics).
-3. `SPEC/VALIDATION.md` (diagnostics/rules).
-4. `SPEC/BYTECODE.md` (instruction/runtime contract).
+1. `../SPEC/IL.md` (new node contracts).
+2. `../SPEC/EVAL.md` (evaluation semantics).
+3. `../SPEC/VALIDATION.md` (diagnostics/rules).
+4. `../SPEC/BYTECODE.md` (instruction/runtime contract).
 5. Golden tests under `examples/golden`.

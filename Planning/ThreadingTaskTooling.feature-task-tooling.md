@@ -1,6 +1,6 @@
-# Threading/Task Tooling Plan (Local-Only)
+# Threading/Task Tooling Plan
 
-Status: Completed execution plan for AiLang/AiVM tooling only.
+Status: completed execution plan for AiLang/AiVM tooling only.
 Scope excludes AiVectra runtime implementation.
 
 Completion snapshot (2026-03-05):
@@ -21,8 +21,8 @@ Primary completion evidence:
 - `../AiVM/tests/golden/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
 - `./test-aivm-c.sh`
 - `scripts/aivm-parity-dashboard.sh`
-- `Docs/SyscallCoverageSummary.md`
-- `Docs/AiVM-C-Replacement-Tasks.md`
+- `Planning/SyscallCoverageSummary.note.md`
+- `Planning/AiVM-C-Replacement.feature-zero-csharp.md`
 
 ## Constraints
 
@@ -54,7 +54,7 @@ Tasks:
 
 Validation commands:
 - `./test.sh`
-- `rg -n "ASYNC_CALL|AWAIT|PAR_|worker_|owner thread|determin" SPEC Docs -S`
+- `rg -n "ASYNC_CALL|AWAIT|PAR_|worker_|owner thread|determin" SPEC Docs Planning -S`
 
 ## Milestone M2: AiVM Task Manager Tooling Surface
 
@@ -94,13 +94,13 @@ Tasks:
    - Targets: `../AiVM/src/include/aivm_runtime.h`, `../AiVM/src/aivm_runtime.c`
    - DoD: API supports local host integration without introducing UI semantics.
 4. Add docs for host integration contract and local usage.
-   - Targets: `../AiVM/src/README.md`, `Docs/SyscallCoverageSummary.md`
+   - Targets: `../AiVM/src/README.md`, `Planning/SyscallCoverageSummary.note.md`
    - DoD: clear integration path for web-host and UI-host adapters using same deterministic queue semantics.
 
 Validation commands:
 - `./test.sh`
 - `./test-aivm-c.sh`
-- `rg -n "sys.worker_|poll|result|cancel|event queue" ../AiVM/src Docs -S`
+- `rg -n "sys.worker_|poll|result|cancel|event queue" ../AiVM/src Docs Planning -S`
 
 ## Milestone M4: Local Stress + Determinism Tooling
 
@@ -117,7 +117,7 @@ Tasks:
    - Targets: `scripts/aivm-parity-dashboard.sh`, `Docs/AiVM-C-Parity-Status.md`
    - DoD: dashboard reports task-tooling sub-gate and determinism readiness.
 4. Add reproducibility notes and runbook.
-   - Targets: `Docs/AiVM-C-Replacement-Tasks.md`
+   - Targets: `Planning/AiVM-C-Replacement.feature-zero-csharp.md`
    - DoD: one local runbook section for repeatable validation commands and expected outcomes.
 
 Validation commands:

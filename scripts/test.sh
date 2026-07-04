@@ -25,6 +25,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-linker-module.sh
 ./scripts/test-bytecode-emitter-module.sh
 ./scripts/test-local-toolchain-shim.sh
+./scripts/test-installed-bytecode-cli.sh
 ./scripts/test-validator-unknown-kind.sh
 ./scripts/test-validator-project-manifest.sh
 ./scripts/test-resolver-package-imports.sh

@@ -26,6 +26,12 @@ BAD_NO_ENTRY_EXPORT_DIR="${TMP_DIR}/bad-no-entry-export"
 BAD_MISSING_SOURCE_DIR="${TMP_DIR}/bad-missing-source"
 BAD_UNDECLARED_PACKAGE_IMPORT_DIR="${TMP_DIR}/bad-undeclared-package-import"
 GOOD_DECLARED_PACKAGE_IMPORT_DIR="${TMP_DIR}/good-declared-package-import"
+PACKAGE_RESTORE_DIR="${TMP_DIR}/package-restore-app"
+PACKAGE_RESTORE_BAD_DIR="${TMP_DIR}/package-restore-bad-app"
+PACKAGE_RESTORE_DUP_DIR="${TMP_DIR}/package-restore-dup-app"
+PACKAGE_RESTORE_CYCLE_DIR="${TMP_DIR}/package-restore-cycle-app"
+PACKAGE_REGISTRY_DIR="${TMP_DIR}/package-registry"
+PACKAGE_SOURCE_REPO="${TMP_DIR}/package-source-repo"
 
 run_aivm_program() {
   local program="$1"
@@ -51,13 +57,16 @@ mkdir -p "${CLI_BYTECODE_DIR}"
 
 HELP_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help)"
 printf '%s\n' "${HELP_OUT}" | rg -q 'Usage: ailang <command> \[options\]'
-printf '%s\n' "${HELP_OUT}" | rg -q 'Commands: init, template, agent, build, run, publish, clean, project, version, help'
+printf '%s\n' "${HELP_OUT}" | rg -q 'Commands: init, template, agent, build, run, publish, clean, package, project, version, help'
 
 HELP_BUILD_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help build)"
 printf '%s\n' "${HELP_BUILD_OUT}" | rg -q 'Usage: ailang build <project-dir> \[--out <dir>\]'
 
 HELP_PROJECT_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help project)"
 printf '%s\n' "${HELP_PROJECT_OUT}" | rg -q 'Usage: ailang project version <project-dir>'
+
+HELP_PACKAGE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help package)"
+printf '%s\n' "${HELP_PACKAGE_OUT}" | rg -Fq 'Usage: ailang package <restore|list|add|remove> [project-dir]'
 
 VERSION_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" --version)"
 printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang 0\.0\.1-beta\.10$'
@@ -86,6 +95,308 @@ perl -0pi -e 's{\Q'"${APP_DIR}"': no app args\E}{app: no app args}' "${APP_DIR}/
 
 PROJECT_VERSION_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" project version "${APP_DIR}")"
 printf '%s\n' "${PROJECT_VERSION_OUT}" | rg -q '^0\.0\.1$'
+
+cat > "${APP_DIR}/ailang.lock.toml" <<'EOF'
+schema = "ailang.lock.v1"
+
+[[package]]
+name = "std-app"
+version = "0.0.1"
+namespaces = ["std.app"]
+EOF
+PACKAGE_LIST_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package list "${APP_DIR}")"
+printf '%s\n' "${PACKAGE_LIST_OUT}" | rg -q 'schema = "ailang.lock.v1"'
+printf '%s\n' "${PACKAGE_LIST_OUT}" | rg -q 'name = "std-app"'
+printf '%s\n' "${PACKAGE_LIST_OUT}" | rg -q 'namespaces = \["std.app"\]'
+PACKAGE_ADD_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package add std-json@0.0.1 "${APP_DIR}")"
+printf '%s\n' "${PACKAGE_ADD_OUT}" | rg -q 'package-added'
+rg -q 'Include\(name="std-json" version="0\.0\.1"\)' "${APP_DIR}/project.aiproj"
+PACKAGE_ADD_DUP_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package add std-json@0.0.1 "${APP_DIR}" 2>&1 || true)"
+printf '%s\n' "${PACKAGE_ADD_DUP_OUT}" | rg -q 'code=PKG005'
+PACKAGE_REMOVE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package remove std-json "${APP_DIR}")"
+printf '%s\n' "${PACKAGE_REMOVE_OUT}" | rg -q 'package-removed'
+! rg -q 'Include\(name="std-json"' "${APP_DIR}/project.aiproj"
+PACKAGE_REMOVE_MISSING_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package remove std-json "${APP_DIR}" 2>&1 || true)"
+printf '%s\n' "${PACKAGE_REMOVE_MISSING_OUT}" | rg -q 'code=PKG007'
+rm -f "${APP_DIR}/ailang.lock.toml"
+
+mkdir -p "${PACKAGE_SOURCE_REPO}/packages/std-app/src" "${PACKAGE_SOURCE_REPO}/packages/std-core/src" "${PACKAGE_REGISTRY_DIR}/packages" "${PACKAGE_RESTORE_DIR}/src"
+cat > "${PACKAGE_SOURCE_REPO}/packages/std-app/package.toml" <<'EOF'
+schema = "ailang.package-source.v1"
+name = "std-app"
+version = "0.0.1"
+types = ["library"]
+
+[dependencies]
+std-core = "0.0.1"
+
+[libraries.app]
+namespace = "std.app"
+entry = "src/app.aos"
+exports = ["hello"]
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/std-app/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=hello)
+  Let#let1(name=hello) {
+    Fn#fn1(params=_) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value="hello") }
+      }
+    }
+  }
+}
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/std-core/package.toml" <<'EOF'
+schema = "ailang.package-source.v1"
+name = "std-core"
+version = "0.0.1"
+types = ["library"]
+
+[libraries.core]
+namespace = "std.core"
+entry = "src/core.aos"
+exports = ["ok"]
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/std-core/src/core.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=ok)
+  Let#let1(name=ok) {
+    Fn#fn1(params=_) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=1) }
+      }
+    }
+  }
+}
+EOF
+git -C "${PACKAGE_SOURCE_REPO}" init -q
+git -C "${PACKAGE_SOURCE_REPO}" add packages/std-app/package.toml packages/std-app/src/app.aos packages/std-core/package.toml packages/std-core/src/core.aos
+git -C "${PACKAGE_SOURCE_REPO}" -c user.name=AiLang -c user.email=ailang@example.invalid commit -q -m "Add std-app fixture"
+PACKAGE_SOURCE_COMMIT="$(git -C "${PACKAGE_SOURCE_REPO}" rev-parse HEAD)"
+cat > "${PACKAGE_REGISTRY_DIR}/packages/std-app.toml" <<EOF
+schema = "ailang.package.v1"
+name = "std-app"
+repo = "${PACKAGE_SOURCE_REPO}"
+packageRoot = "packages/std-app"
+license = "MIT"
+types = ["library"]
+defaultVersion = "0.0.1"
+
+[versions."0.0.1"]
+ref = "main"
+commit = "${PACKAGE_SOURCE_COMMIT}"
+EOF
+cat > "${PACKAGE_REGISTRY_DIR}/packages/std-core.toml" <<EOF
+schema = "ailang.package.v1"
+name = "std-core"
+repo = "${PACKAGE_SOURCE_REPO}"
+packageRoot = "packages/std-core"
+license = "MIT"
+types = ["library"]
+defaultVersion = "0.0.1"
+
+[versions."0.0.1"]
+ref = "main"
+commit = "${PACKAGE_SOURCE_COMMIT}"
+EOF
+cat > "${PACKAGE_RESTORE_DIR}/config.local.toml" <<EOF
+packageRegistry = "${PACKAGE_REGISTRY_DIR}"
+EOF
+cat > "${PACKAGE_RESTORE_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="restore-fixture" entryFile="src/app.aos" entryExport="start") {
+    Include(name="std-app" version="0.0.1")
+  }
+}
+EOF
+cat > "${PACKAGE_RESTORE_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+PACKAGE_RESTORE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package restore "${PACKAGE_RESTORE_DIR}")"
+printf '%s\n' "${PACKAGE_RESTORE_OUT}" | rg -q 'Ok#ok1\(type=int value=2\)'
+test -f "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+test -f "${PACKAGE_RESTORE_DIR}/.ailang/packages/std-app/packages/std-app/package.toml"
+test -f "${PACKAGE_RESTORE_DIR}/.ailang/packages/std-core/packages/std-core/package.toml"
+rg -q 'name = "std-app"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'name = "std-core"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'path = ".ailang/packages/std-app"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'path = ".ailang/packages/std-core"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'packageRoot = "packages/std-app"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'packageRoot = "packages/std-core"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q "commit = \"${PACKAGE_SOURCE_COMMIT}\"" "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+
+mkdir -p "${PACKAGE_RESTORE_BAD_DIR}/src"
+cat > "${PACKAGE_RESTORE_BAD_DIR}/config.local.toml" <<EOF
+packageRegistry = "${PACKAGE_REGISTRY_DIR}"
+EOF
+cat > "${PACKAGE_RESTORE_BAD_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="restore-bad-fixture" entryFile="src/app.aos" entryExport="start") {
+    Include(name="missing-package" version="0.0.1")
+  }
+}
+EOF
+cat > "${PACKAGE_RESTORE_BAD_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+PACKAGE_RESTORE_BAD_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package restore "${PACKAGE_RESTORE_BAD_DIR}" 2>&1 || true)"
+printf '%s\n' "${PACKAGE_RESTORE_BAD_OUT}" | rg -q 'code=PKG004'
+test ! -f "${PACKAGE_RESTORE_BAD_DIR}/ailang.lock.toml"
+
+mkdir -p "${PACKAGE_RESTORE_DUP_DIR}/src"
+cat > "${PACKAGE_RESTORE_DUP_DIR}/config.local.toml" <<EOF
+packageRegistry = "${PACKAGE_REGISTRY_DIR}"
+EOF
+cat > "${PACKAGE_RESTORE_DUP_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="restore-dup-fixture" entryFile="src/app.aos" entryExport="start") {
+    Include(name="std-app" version="0.0.1")
+    Include(name="std-app" version="0.0.1")
+  }
+}
+EOF
+cat > "${PACKAGE_RESTORE_DUP_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+PACKAGE_RESTORE_DUP_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package restore "${PACKAGE_RESTORE_DUP_DIR}" 2>&1 || true)"
+printf '%s\n' "${PACKAGE_RESTORE_DUP_OUT}" | rg -q 'code=PKG004'
+test ! -f "${PACKAGE_RESTORE_DUP_DIR}/ailang.lock.toml"
+
+mkdir -p "${PACKAGE_SOURCE_REPO}/packages/cycle-a/src" "${PACKAGE_SOURCE_REPO}/packages/cycle-b/src" "${PACKAGE_RESTORE_CYCLE_DIR}/src"
+cat > "${PACKAGE_SOURCE_REPO}/packages/cycle-a/package.toml" <<'EOF'
+schema = "ailang.package-source.v1"
+name = "cycle-a"
+version = "0.0.1"
+types = ["library"]
+
+[dependencies]
+cycle-b = "0.0.1"
+
+[libraries.cycle_a]
+namespace = "cycle.a"
+entry = "src/a.aos"
+exports = ["a"]
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/cycle-a/src/a.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=a)
+  Let#let1(name=a) {
+    Fn#fn1(params=_) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=1) }
+      }
+    }
+  }
+}
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/cycle-b/package.toml" <<'EOF'
+schema = "ailang.package-source.v1"
+name = "cycle-b"
+version = "0.0.1"
+types = ["library"]
+
+[dependencies]
+cycle-a = "0.0.1"
+
+[libraries.cycle_b]
+namespace = "cycle.b"
+entry = "src/b.aos"
+exports = ["b"]
+EOF
+cat > "${PACKAGE_SOURCE_REPO}/packages/cycle-b/src/b.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=b)
+  Let#let1(name=b) {
+    Fn#fn1(params=_) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=2) }
+      }
+    }
+  }
+}
+EOF
+git -C "${PACKAGE_SOURCE_REPO}" add packages/cycle-a/package.toml packages/cycle-a/src/a.aos packages/cycle-b/package.toml packages/cycle-b/src/b.aos
+git -C "${PACKAGE_SOURCE_REPO}" -c user.name=AiLang -c user.email=ailang@example.invalid commit -q -m "Add package cycle fixture"
+PACKAGE_CYCLE_COMMIT="$(git -C "${PACKAGE_SOURCE_REPO}" rev-parse HEAD)"
+cat > "${PACKAGE_REGISTRY_DIR}/packages/cycle-a.toml" <<EOF
+schema = "ailang.package.v1"
+name = "cycle-a"
+repo = "${PACKAGE_SOURCE_REPO}"
+packageRoot = "packages/cycle-a"
+license = "MIT"
+types = ["library"]
+defaultVersion = "0.0.1"
+
+[versions."0.0.1"]
+ref = "main"
+commit = "${PACKAGE_CYCLE_COMMIT}"
+EOF
+cat > "${PACKAGE_REGISTRY_DIR}/packages/cycle-b.toml" <<EOF
+schema = "ailang.package.v1"
+name = "cycle-b"
+repo = "${PACKAGE_SOURCE_REPO}"
+packageRoot = "packages/cycle-b"
+license = "MIT"
+types = ["library"]
+defaultVersion = "0.0.1"
+
+[versions."0.0.1"]
+ref = "main"
+commit = "${PACKAGE_CYCLE_COMMIT}"
+EOF
+cat > "${PACKAGE_RESTORE_CYCLE_DIR}/config.local.toml" <<EOF
+packageRegistry = "${PACKAGE_REGISTRY_DIR}"
+EOF
+cat > "${PACKAGE_RESTORE_CYCLE_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="restore-cycle-fixture" entryFile="src/app.aos" entryExport="start") {
+    Include(name="cycle-a" version="0.0.1")
+  }
+}
+EOF
+cat > "${PACKAGE_RESTORE_CYCLE_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#export1(name=start)
+  Let#let1(name=start) {
+    Fn#fn1(params=args) {
+      Block#block1 {
+        Return#return1 { Lit#lit1(value=0) }
+      }
+    }
+  }
+}
+EOF
+PACKAGE_RESTORE_CYCLE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" package restore "${PACKAGE_RESTORE_CYCLE_DIR}" 2>&1 || true)"
+printf '%s\n' "${PACKAGE_RESTORE_CYCLE_OUT}" | rg -q 'code=PKG004'
+test ! -f "${PACKAGE_RESTORE_CYCLE_DIR}/ailang.lock.toml"
 
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${APP_DIR}" --out "${BUILD_DIR}" >/dev/null
 test -f "${BUILD_DIR}/app.aibc1"

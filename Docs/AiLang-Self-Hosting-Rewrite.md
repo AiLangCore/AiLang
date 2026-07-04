@@ -166,6 +166,26 @@ native bridge libraries, but not in AiLang command implementation.
 - [ ] Move package manager command policy into AiLang source. Native bridge
   package helpers may remain as host adapters until package restore/list are
   implemented in AiLang.
+  - [x] Bytecode CLI owns `package` command dispatch.
+  - [x] Package command behavior lives in focused AiLang module
+    `src/cli/package.aos`; the main CLI file only imports and dispatches it.
+  - [x] `package list <project-dir>` is implemented in AiLang for restored
+    projects by reading `ailang.lock.toml`.
+  - [x] `package restore <project-dir>` is implemented in AiLang for direct
+    `Include(...)` records. It resolves package registry metadata, clones exact
+    package commits into `.ailang/packages`, and writes the linker-consumed
+    `ailang.lock.toml`.
+  - [x] Transitive package dependency restore is implemented in AiLang by
+    reading package-owned `[dependencies]` sections after direct includes are
+    restored.
+  - [x] Add package restore hardening for missing package records, missing
+    version commits, failed clone, and failed checkout. Restore now fails before
+    writing `ailang.lock.toml` when one of those errors is detected.
+  - [x] Add package restore hardening for duplicate entries and circular
+    dependencies.
+  - [x] Implement `package add` and `package remove` in AiLang. They edit
+    `project.aiproj` deterministically, reject duplicate adds and missing
+    removes, and are covered by the CLI smoke spec.
 - [ ] Move target/package discovery and command invocation policy into AiLang
   source. Target tools remain package-owned and may invoke native tools through
   explicit process syscalls.
@@ -206,9 +226,14 @@ native bridge libraries, but not in AiLang command implementation.
     through the AiLang linker artifact path.
 - [ ] Rewrite `tools/aos_frontend.c` in AiLang and remove it from normal SDK
   staging once canonical parsing/formatting no longer depends on that binary.
-- [ ] Add release-gating tests that execute the installed `ailang` command
+- [x] Add release-gating tests that execute the installed `ailang` command
   through the bytecode CLI for `--version`, `help`, `init`, `template`, `agent`,
   `build`, `run`, `publish`, `clean`, `project version`, and `package restore`.
+  - [x] Added `scripts/test-installed-bytecode-cli.sh` for the installed
+    non-C `bin/ailang` shim. It covers `--version`, `help`, `init`,
+    `template`, `agent`, `build`, `run`, framework-dependent `publish`,
+    self-contained `publish`, `clean`, `project version`, and
+    `package restore`.
 - [ ] Remove native command-policy files from `../AiVM/src/ailang_cli` after
   the bytecode CLI owns the command surface and release tests cover it.
 

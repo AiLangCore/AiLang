@@ -1,0 +1,1083 @@
+Program#cli_package_p1 {
+  Import#cli_package_im1(path="../std/str.aos")
+  Import#cli_package_im2(path="../std/bytes.aos")
+  Export#cli_package_e1(name=runPackage)
+
+  Let#cli_l23pkg(name=runPackage) {
+    Fn#cli_f23pkg(params=args) {
+      Block#cli_b43pkg {
+        Let#cli_l23pkgs(name=subcmd) { Call#cli_c23pkgs(target=packageReadArg) { Var#cli_v23pkgs(name=args) Lit#cli_i23pkgs(value=1) } }
+        Let#cli_l23pkgp(name=path) { Call#cli_c23pkgp(target=packageReadArg) { Var#cli_v23pkgp(name=args) Lit#cli_i23pkgp(value=2) } }
+        Let#cli_l23pkgp3(name=pathAfterName) { Call#cli_c23pkgp3(target=packageReadArg) { Var#cli_v23pkgp3a(name=args) Lit#cli_i23pkgp3(value=3) } }
+        If#cli_if23pkg {
+          Eq#cli_e23pkg { Var#cli_v23pkgs2(name=subcmd) Lit#cli_i23pkg(value="list") }
+          Block#cli_b43pkga { Return#cli_r23pkg { Call#cli_c23pkglist(target=runPackageList) { Var#cli_v23pkgp2(name=path) } } }
+          Block#cli_b43pkgb {
+            If#cli_if23pkg2 {
+              Eq#cli_e23pkg2 { Var#cli_v23pkgs3(name=subcmd) Lit#cli_i23pkg2(value="restore") }
+              Block#cli_b43pkgc { Return#cli_r23pkg2 { Call#cli_c23pkgrestore(target=runPackageRestore) { Var#cli_v23pkgp3(name=path) } } }
+              Block#cli_b43pkgd {
+                If#cli_if23pkg3 {
+                  Eq#cli_e23pkg3 { Var#cli_v23pkgs4(name=subcmd) Lit#cli_i23pkg4(value="add") }
+                  Block#cli_b43pkge { Return#cli_r23pkg3 { Call#cli_c23pkgadd(target=packageRunAdd) { Var#cli_v23pkgp2b(name=path) Var#cli_v23pkgp3b(name=pathAfterName) } } }
+                  Block#cli_b43pkgf {
+                    If#cli_if23pkg4 {
+                      Eq#cli_e23pkg4 { Var#cli_v23pkgs5(name=subcmd) Lit#cli_i23pkg6(value="remove") }
+                      Block#cli_b43pkgg { Return#cli_r23pkg4 { Call#cli_c23pkgremove(target=packageRunRemove) { Var#cli_v23pkgp2c(name=path) Var#cli_v23pkgp3c(name=pathAfterName) } } }
+                      Block#cli_b43pkgh { Return#cli_r23pkg5 { Call#cli_c23pkgu(target=packageUnknownCommand) { Lit#cli_i23pkg8(value="package") } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkglist(name=runPackageList) {
+    Fn#cli_f23pkglist(params=path) {
+      Block#cli_b43pkglist {
+        Let#cli_l23pkgdir(name=projectDir) { Call#cli_c23pkgdir(target=packageDefaultPath) { Var#cli_v23pkglist1(name=path) } }
+        Let#cli_l23pkglock(name=lockPath) { StrConcat#cli_sc23pkglist1 { Var#cli_v23pkglist2(name=projectDir) Lit#cli_i23pkglist1(value="/ailang.lock.toml") } }
+        If#cli_if23pkglist {
+          Call#cli_c23pkgexists(target=sys.fs.path.exists) { Var#cli_v23pkglist3(name=lockPath) }
+          Block#cli_b43pkglist1 {
+            Call#cli_c23pkgprint(target=sys.stdout.writeLine) { Call#cli_c23pkgread(target=packageReadTextFile) { Var#cli_v23pkglist4(name=lockPath) } }
+            Return#cli_r23pkglist1 { Lit#cli_i23pkglist2(value=0) }
+          }
+          Block#cli_b43pkglist2 {
+            Return#cli_r23pkglist2 { Call#cli_c23pkgerr(target=packageBuildError) { Lit#cli_i23pkglist3(value="PKG002") Lit#cli_i23pkglist4(value="Package list requires a restored lockfile in the self-hosted CLI.") Lit#cli_i23pkglist5(value="package") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkggap(name=packageSelfHostingGap) {
+    Fn#cli_f23pkggap(params=subcmd) {
+      Block#cli_b43pkggap {
+        Return#cli_r23pkggap {
+          Call#cli_c23pkggap(target=packageBuildError) {
+            Lit#cli_i23pkggap1(value="PKG002")
+            StrConcat#cli_sc23pkggap { Lit#cli_i23pkggap2(value="package ") StrConcat#cli_sc23pkggap2 { Var#cli_v23pkggap(name=subcmd) Lit#cli_i23pkggap3(value=" is not self-hosted yet.") } }
+            Lit#cli_i23pkggap4(value="package")
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgadd(name=packageRunAdd) {
+    Fn#cli_f23pkgadd(params=spec,path) {
+      Block#cli_b23pkgadd {
+        If#cli_if23pkgadd_missing {
+          Eq#cli_e23pkgadd_missing { Var#cli_v23pkgadd_spec(name=spec) Lit#cli_i23pkgadd_empty(value="") }
+          Block#cli_b23pkgadd_missing { Return#cli_r23pkgadd_missing { Call#cli_c23pkgadd_missing(target=packageBuildError) { Lit#cli_i23pkgadd_missing_code(value="PKG001") Lit#cli_i23pkgadd_missing_msg(value="Missing package name.") Lit#cli_i23pkgadd_missing_node(value="package") } } }
+          Block#cli_b23pkgadd_value {
+            Let#cli_l23pkgadd_project(name=projectDir) { Call#cli_c23pkgadd_project(target=packageDefaultPath) { Var#cli_v23pkgadd_path(name=path) } }
+            Let#cli_l23pkgadd_manifest(name=manifestPath) { StrConcat#cli_sc23pkgadd_manifest { Var#cli_v23pkgadd_project(name=projectDir) Lit#cli_i23pkgadd_manifest(value="/project.aiproj") } }
+            If#cli_if23pkgadd_manifest {
+              Call#cli_c23pkgadd_manifest_exists(target=sys.fs.path.exists) { Var#cli_v23pkgadd_manifest(name=manifestPath) }
+              Block#cli_b23pkgadd_manifest_ok {
+                Let#cli_l23pkgadd_name(name=packageName) { Call#cli_c23pkgadd_name(target=packageEditSpecName) { Var#cli_v23pkgadd_spec2(name=spec) } }
+                Let#cli_l23pkgadd_version(name=packageVersion) { Call#cli_c23pkgadd_version(target=packageEditSpecVersion) { Var#cli_v23pkgadd_spec3(name=spec) } }
+                Let#cli_l23pkgadd_text(name=manifestText) { Call#cli_c23pkgadd_read(target=packageReadTextFile) { Var#cli_v23pkgadd_manifest2(name=manifestPath) } }
+                If#cli_if23pkgadd_duplicate {
+                  Call#cli_c23pkgadd_duplicate(target=packageEditManifestHasInclude) { Var#cli_v23pkgadd_text(name=manifestText) Var#cli_v23pkgadd_name(name=packageName) }
+                  Block#cli_b23pkgadd_duplicate { Return#cli_r23pkgadd_duplicate { Call#cli_c23pkgadd_duplicate_err(target=packageBuildError) { Lit#cli_i23pkgadd_duplicate_code(value="PKG005") Lit#cli_i23pkgadd_duplicate_msg(value="Package is already included.") Lit#cli_i23pkgadd_duplicate_node(value="package") } } }
+                  Block#cli_b23pkgadd_insert {
+                    Let#cli_l23pkgadd_updated(name=updatedText) { Call#cli_c23pkgadd_insert(target=packageEditInsertInclude) { Var#cli_v23pkgadd_text2(name=manifestText) Var#cli_v23pkgadd_name2(name=packageName) Var#cli_v23pkgadd_version(name=packageVersion) } }
+                    If#cli_if23pkgadd_insert {
+                      Call#cli_c23pkgadd_insert_failed(target=packageEditIsError) { Var#cli_v23pkgadd_updated(name=updatedText) }
+                      Block#cli_b23pkgadd_insert_failed { Return#cli_r23pkgadd_insert_failed { Call#cli_c23pkgadd_insert_err(target=packageBuildError) { Lit#cli_i23pkgadd_insert_code(value="PKG006") Lit#cli_i23pkgadd_insert_msg(value="Package add failed to update project manifest.") Lit#cli_i23pkgadd_insert_node(value="package") } } }
+                      Block#cli_b23pkgadd_insert_ok {
+                        Call#cli_c23pkgadd_write(target=packageWriteTextFile) { Var#cli_v23pkgadd_manifest3(name=manifestPath) Var#cli_v23pkgadd_updated2(name=updatedText) }
+                        Call#cli_c23pkgadd_ok(target=sys.stdout.writeLine) { Lit#cli_i23pkgadd_ok(value="Ok#ok1(type=string value=\"package-added\")") }
+                        Return#cli_r23pkgadd_ok { Lit#cli_i23pkgadd_ok_code(value=0) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#cli_b23pkgadd_manifest_missing { Return#cli_r23pkgadd_manifest_missing { Call#cli_c23pkgadd_manifest_err(target=packageBuildError) { Lit#cli_i23pkgadd_manifest_code(value="PKG003") Lit#cli_i23pkgadd_manifest_msg(value="Package add requires project.aiproj.") Lit#cli_i23pkgadd_manifest_node(value="package") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgremove(name=packageRunRemove) {
+    Fn#cli_f23pkgremove(params=packageName,path) {
+      Block#cli_b23pkgremove {
+        If#cli_if23pkgremove_missing {
+          Eq#cli_e23pkgremove_missing { Var#cli_v23pkgremove_name(name=packageName) Lit#cli_i23pkgremove_empty(value="") }
+          Block#cli_b23pkgremove_missing { Return#cli_r23pkgremove_missing { Call#cli_c23pkgremove_missing(target=packageBuildError) { Lit#cli_i23pkgremove_missing_code(value="PKG001") Lit#cli_i23pkgremove_missing_msg(value="Missing package name.") Lit#cli_i23pkgremove_missing_node(value="package") } } }
+          Block#cli_b23pkgremove_value {
+            Let#cli_l23pkgremove_project(name=projectDir) { Call#cli_c23pkgremove_project(target=packageDefaultPath) { Var#cli_v23pkgremove_path(name=path) } }
+            Let#cli_l23pkgremove_manifest(name=manifestPath) { StrConcat#cli_sc23pkgremove_manifest { Var#cli_v23pkgremove_project(name=projectDir) Lit#cli_i23pkgremove_manifest(value="/project.aiproj") } }
+            If#cli_if23pkgremove_manifest {
+              Call#cli_c23pkgremove_manifest_exists(target=sys.fs.path.exists) { Var#cli_v23pkgremove_manifest(name=manifestPath) }
+              Block#cli_b23pkgremove_manifest_ok {
+                Let#cli_l23pkgremove_text(name=manifestText) { Call#cli_c23pkgremove_read(target=packageReadTextFile) { Var#cli_v23pkgremove_manifest2(name=manifestPath) } }
+                Let#cli_l23pkgremove_updated(name=updatedText) { Call#cli_c23pkgremove_update(target=packageEditRemoveInclude) { Var#cli_v23pkgremove_text(name=manifestText) Var#cli_v23pkgremove_name2(name=packageName) } }
+                If#cli_if23pkgremove_update {
+                  Call#cli_c23pkgremove_failed(target=packageEditIsError) { Var#cli_v23pkgremove_updated(name=updatedText) }
+                  Block#cli_b23pkgremove_failed { Return#cli_r23pkgremove_failed { Call#cli_c23pkgremove_err(target=packageBuildError) { Lit#cli_i23pkgremove_failed_code(value="PKG007") Lit#cli_i23pkgremove_failed_msg(value="Package include was not found.") Lit#cli_i23pkgremove_failed_node(value="package") } } }
+                  Block#cli_b23pkgremove_ok {
+                    Call#cli_c23pkgremove_write(target=packageWriteTextFile) { Var#cli_v23pkgremove_manifest3(name=manifestPath) Var#cli_v23pkgremove_updated2(name=updatedText) }
+                    Call#cli_c23pkgremove_ok(target=sys.stdout.writeLine) { Lit#cli_i23pkgremove_ok(value="Ok#ok1(type=string value=\"package-removed\")") }
+                    Return#cli_r23pkgremove_ok { Lit#cli_i23pkgremove_ok_code(value=0) }
+                  }
+                }
+              }
+              Block#cli_b23pkgremove_manifest_missing { Return#cli_r23pkgremove_manifest_missing { Call#cli_c23pkgremove_manifest_err(target=packageBuildError) { Lit#cli_i23pkgremove_manifest_code(value="PKG003") Lit#cli_i23pkgremove_manifest_msg(value="Package remove requires project.aiproj.") Lit#cli_i23pkgremove_manifest_node(value="package") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrestore(name=runPackageRestore) {
+    Fn#cli_f23pkgrestore(params=path) {
+      Block#cli_b23pkgrestore {
+        Let#cli_l23pkgrestore_dir(name=projectDir) { Call#cli_c23pkgrestore_dir(target=packageDefaultPath) { Var#cli_v23pkgrestore_path(name=path) } }
+        Let#cli_l23pkgrestore_manifest(name=manifestPath) { StrConcat#cli_sc23pkgrestore_manifest { Var#cli_v23pkgrestore_dir(name=projectDir) Lit#cli_i23pkgrestore_manifest(value="/project.aiproj") } }
+        If#cli_if23pkgrestore_manifest {
+          Call#cli_c23pkgrestore_manifest_exists(target=sys.fs.path.exists) { Var#cli_v23pkgrestore_manifest(name=manifestPath) }
+          Block#cli_b23pkgrestore_manifest_ok {
+            Call#cli_c23pkgrestore_mkdir1(target=sys.fs.dir.create) { StrConcat#cli_sc23pkgrestore_mkdir1 { Var#cli_v23pkgrestore_dir2(name=projectDir) Lit#cli_i23pkgrestore_mkdir1(value="/.ailang") } }
+            Call#cli_c23pkgrestore_mkdir2(target=sys.fs.dir.create) { StrConcat#cli_sc23pkgrestore_mkdir2 { Var#cli_v23pkgrestore_dir3(name=projectDir) Lit#cli_i23pkgrestore_mkdir2(value="/.ailang/packages") } }
+            Call#cli_c23pkgrestore_mkdir3(target=sys.fs.dir.create) { StrConcat#cli_sc23pkgrestore_mkdir3 { Var#cli_v23pkgrestore_dir4(name=projectDir) Lit#cli_i23pkgrestore_mkdir3(value="/.ailang/registry") } }
+            Let#cli_l23pkgrestore_registry(name=registryDir) { Call#cli_c23pkgrestore_registry(target=resolvePackageRegistry) { Var#cli_v23pkgrestore_dir5(name=projectDir) } }
+            Let#cli_l23pkgrestore_manifest_text(name=manifestText) { Call#cli_c23pkgrestore_manifest_read(target=packageReadTextFile) { Var#cli_v23pkgrestore_manifest2(name=manifestPath) } }
+            Let#cli_l23pkgrestore_entries(name=entries) { Call#cli_c23pkgrestore_entries(target=restoreIncludeLockEntries) { Var#cli_v23pkgrestore_dir6(name=projectDir) Var#cli_v23pkgrestore_registry2(name=registryDir) Var#cli_v23pkgrestore_manifest_text(name=manifestText) Lit#cli_i23pkgrestore_start(value=0) Lit#cli_i23pkgrestore_seen_direct(value="") } }
+            If#cli_if23pkgrestore_error {
+              Call#cli_c23pkgrestore_has_error(target=hasPackageRestoreError) { Var#cli_v23pkgrestore_entries(name=entries) }
+              Block#cli_b23pkgrestore_error {
+                Return#cli_r23pkgrestore_error { Call#cli_c23pkgrestore_error(target=packageBuildError) { Lit#cli_i23pkgrestore_error_code(value="PKG004") Lit#cli_i23pkgrestore_error_msg(value="Package restore failed.") Lit#cli_i23pkgrestore_error_node(value="package") } }
+              }
+              Block#cli_b23pkgrestore_success {
+                Let#cli_l23pkgrestore_count(name=count) { Call#cli_c23pkgrestore_count(target=countLockPackages) { Var#cli_v23pkgrestore_entries(name=entries) Lit#cli_i23pkgrestore_count_start(value=0) } }
+                Let#cli_l23pkgrestore_lock(name=lockText) {
+                  StrConcat#cli_sc23pkgrestore_lock1 {
+                    Lit#cli_i23pkgrestore_lock1(value="schema = \"ailang.lock.v1\"\n\n")
+                    Var#cli_v23pkgrestore_entries(name=entries)
+                  }
+                }
+                Call#cli_c23pkgrestore_write(target=packageWriteTextFile) { StrConcat#cli_sc23pkgrestore_lockpath { Var#cli_v23pkgrestore_dir7(name=projectDir) Lit#cli_i23pkgrestore_lockpath(value="/ailang.lock.toml") } Var#cli_v23pkgrestore_lock(name=lockText) }
+                Call#cli_c23pkgrestore_ok(target=sys.stdout.writeLine) {
+                  StrConcat#cli_sc23pkgrestore_ok1 {
+                    Lit#cli_i23pkgrestore_ok1(value="Ok#ok1(type=int value=")
+                    StrConcat#cli_sc23pkgrestore_ok2 {
+                      ToString#cli_ts23pkgrestore_ok { Var#cli_v23pkgrestore_count(name=count) }
+                      Lit#cli_i23pkgrestore_ok2(value=")")
+                    }
+                  }
+                }
+                Return#cli_r23pkgrestore_ok { Lit#cli_i23pkgrestore_ok3(value=0) }
+              }
+            }
+          }
+          Block#cli_b23pkgrestore_manifest_missing {
+            Return#cli_r23pkgrestore_missing { Call#cli_c23pkgrestore_err(target=packageBuildError) { Lit#cli_i23pkgrestore_err1(value="PKG003") Lit#cli_i23pkgrestore_err2(value="Package restore requires project.aiproj.") Lit#cli_i23pkgrestore_err3(value="package") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgspecname(name=packageEditSpecName) {
+    Fn#cli_f23pkgspecname(params=spec) {
+      Block#cli_b23pkgspecname {
+        Let#cli_l23pkgspecname_at(name=atPos) { Call#cli_c23pkgspecname_at(target=find) { Var#cli_v23pkgspecname_spec(name=spec) Lit#cli_i23pkgspecname_at(value="@") Lit#cli_i23pkgspecname_zero(value=0) } }
+        If#cli_if23pkgspecname {
+          Eq#cli_e23pkgspecname { Var#cli_v23pkgspecname_at(name=atPos) Lit#cli_i23pkgspecname_notfound(value=-1) }
+          Block#cli_b23pkgspecname_all { Return#cli_r23pkgspecname_all { Var#cli_v23pkgspecname_spec2(name=spec) } }
+          Block#cli_b23pkgspecname_slice { Return#cli_r23pkgspecname_slice { Call#cli_c23pkgspecname_slice(target=substring) { Var#cli_v23pkgspecname_spec3(name=spec) Lit#cli_i23pkgspecname_zero2(value=0) Var#cli_v23pkgspecname_at2(name=atPos) } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgspecversion(name=packageEditSpecVersion) {
+    Fn#cli_f23pkgspecversion(params=spec) {
+      Block#cli_b23pkgspecversion {
+        Let#cli_l23pkgspecversion_at(name=atPos) { Call#cli_c23pkgspecversion_at(target=find) { Var#cli_v23pkgspecversion_spec(name=spec) Lit#cli_i23pkgspecversion_at(value="@") Lit#cli_i23pkgspecversion_zero(value=0) } }
+        If#cli_if23pkgspecversion {
+          Eq#cli_e23pkgspecversion { Var#cli_v23pkgspecversion_at(name=atPos) Lit#cli_i23pkgspecversion_notfound(value=-1) }
+          Block#cli_b23pkgspecversion_empty { Return#cli_r23pkgspecversion_empty { Lit#cli_i23pkgspecversion_empty(value="") } }
+          Block#cli_b23pkgspecversion_value { Return#cli_r23pkgspecversion_value { Call#cli_c23pkgspecversion_value(target=substring) { Var#cli_v23pkgspecversion_spec2(name=spec) Add#cli_a23pkgspecversion_start { Var#cli_v23pkgspecversion_at2(name=atPos) Lit#cli_i23pkgspecversion_one(value=1) } Lit#cli_i23pkgspecversion_max(value=2147483647) } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgmanifesthas(name=packageEditManifestHasInclude) {
+    Fn#cli_f23pkgmanifesthas(params=manifestText,packageName) {
+      Block#cli_b23pkgmanifesthas {
+        Let#cli_l23pkgmanifesthas_needle(name=needle) { StrConcat#cli_sc23pkgmanifesthas_needle1 { Lit#cli_i23pkgmanifesthas_needle1(value="Include(name=\"") StrConcat#cli_sc23pkgmanifesthas_needle2 { Var#cli_v23pkgmanifesthas_name(name=packageName) Lit#cli_i23pkgmanifesthas_needle2(value="\"") } } }
+        If#cli_if23pkgmanifesthas {
+          Eq#cli_e23pkgmanifesthas { Call#cli_c23pkgmanifesthas_find(target=find) { Var#cli_v23pkgmanifesthas_text(name=manifestText) Var#cli_v23pkgmanifesthas_needle(name=needle) Lit#cli_i23pkgmanifesthas_zero(value=0) } Lit#cli_i23pkgmanifesthas_notfound(value=-1) }
+          Block#cli_b23pkgmanifesthas_false { Return#cli_r23pkgmanifesthas_false { Lit#cli_i23pkgmanifesthas_false(value=false) } }
+          Block#cli_b23pkgmanifesthas_true { Return#cli_r23pkgmanifesthas_true { Lit#cli_i23pkgmanifesthas_true(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkginsert(name=packageEditInsertInclude) {
+    Fn#cli_f23pkginsert(params=manifestText,packageName,packageVersion) {
+      Block#cli_b23pkginsert {
+        Let#cli_l23pkginsert_marker(name=marker) { Lit#cli_i23pkginsert_marker(value="\n  }\n}") }
+        Let#cli_l23pkginsert_pos(name=insertPos) { Call#cli_c23pkginsert_pos(target=find) { Var#cli_v23pkginsert_text(name=manifestText) Var#cli_v23pkginsert_marker(name=marker) Lit#cli_i23pkginsert_zero(value=0) } }
+        If#cli_if23pkginsert_pos {
+          Eq#cli_e23pkginsert_pos { Var#cli_v23pkginsert_pos(name=insertPos) Lit#cli_i23pkginsert_notfound(value=-1) }
+          Block#cli_b23pkginsert_error {
+            Let#cli_l23pkginsert_program_close(name=programClose) { Call#cli_c23pkginsert_program_close(target=find) { Var#cli_v23pkginsert_text4(name=manifestText) Lit#cli_i23pkginsert_program_close_marker(value="\n}") Lit#cli_i23pkginsert_program_close_zero(value=0) } }
+            If#cli_if23pkginsert_program_close {
+              Eq#cli_e23pkginsert_program_close { Var#cli_v23pkginsert_program_close(name=programClose) Lit#cli_i23pkginsert_program_close_missing(value=-1) }
+              Block#cli_b23pkginsert_program_close_missing { Return#cli_r23pkginsert_error { Lit#cli_i23pkginsert_error(value="PackageEditError#insert") } }
+              Block#cli_b23pkginsert_expand_project {
+                Let#cli_l23pkginsert_line_compact(name=includeLine) { Call#cli_c23pkginsert_line_compact(target=packageEditRenderIncludeLine) { Var#cli_v23pkginsert_name_compact(name=packageName) Var#cli_v23pkginsert_version_compact(name=packageVersion) } }
+                Return#cli_r23pkginsert_expand_project {
+                  StrConcat#cli_sc23pkginsert_expand1 {
+                    Call#cli_c23pkginsert_expand_prefix(target=substring) { Var#cli_v23pkginsert_text5(name=manifestText) Lit#cli_i23pkginsert_expand_zero(value=0) Var#cli_v23pkginsert_program_close2(name=programClose) }
+                    StrConcat#cli_sc23pkginsert_expand2 {
+                      Lit#cli_i23pkginsert_expand_open(value=" {")
+                      StrConcat#cli_sc23pkginsert_expand3 {
+                        Var#cli_v23pkginsert_line_compact(name=includeLine)
+                        StrConcat#cli_sc23pkginsert_expand4 {
+                          Lit#cli_i23pkginsert_expand_close(value="\n  }")
+                          Call#cli_c23pkginsert_expand_suffix(target=substring) { Var#cli_v23pkginsert_text6(name=manifestText) Var#cli_v23pkginsert_program_close3(name=programClose) Lit#cli_i23pkginsert_expand_max(value=2147483647) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#cli_b23pkginsert_ok {
+            Let#cli_l23pkginsert_line(name=includeLine) { Call#cli_c23pkginsert_line(target=packageEditRenderIncludeLine) { Var#cli_v23pkginsert_name(name=packageName) Var#cli_v23pkginsert_version(name=packageVersion) } }
+            Return#cli_r23pkginsert_ok {
+              StrConcat#cli_sc23pkginsert1 {
+                Call#cli_c23pkginsert_prefix(target=substring) { Var#cli_v23pkginsert_text2(name=manifestText) Lit#cli_i23pkginsert_zero2(value=0) Var#cli_v23pkginsert_pos2(name=insertPos) }
+                StrConcat#cli_sc23pkginsert2 {
+                  Var#cli_v23pkginsert_line(name=includeLine)
+                  Call#cli_c23pkginsert_suffix(target=substring) { Var#cli_v23pkginsert_text3(name=manifestText) Var#cli_v23pkginsert_pos3(name=insertPos) Lit#cli_i23pkginsert_max(value=2147483647) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrenderinclude(name=packageEditRenderIncludeLine) {
+    Fn#cli_f23pkgrenderinclude(params=packageName,packageVersion) {
+      Block#cli_b23pkgrenderinclude {
+        If#cli_if23pkgrenderinclude {
+          Eq#cli_e23pkgrenderinclude { Var#cli_v23pkgrenderinclude_version(name=packageVersion) Lit#cli_i23pkgrenderinclude_empty(value="") }
+          Block#cli_b23pkgrenderinclude_no_version {
+            Return#cli_r23pkgrenderinclude_no_version {
+              StrConcat#cli_sc23pkgrenderinclude1 { Lit#cli_i23pkgrenderinclude1(value="\n    Include(name=\"") StrConcat#cli_sc23pkgrenderinclude2 { Var#cli_v23pkgrenderinclude_name(name=packageName) Lit#cli_i23pkgrenderinclude2(value="\")") } }
+            }
+          }
+          Block#cli_b23pkgrenderinclude_version {
+            Return#cli_r23pkgrenderinclude_version {
+              StrConcat#cli_sc23pkgrenderinclude3 {
+                Lit#cli_i23pkgrenderinclude3(value="\n    Include(name=\"")
+                StrConcat#cli_sc23pkgrenderinclude4 {
+                  Var#cli_v23pkgrenderinclude_name2(name=packageName)
+                  StrConcat#cli_sc23pkgrenderinclude5 {
+                    Lit#cli_i23pkgrenderinclude4(value="\" version=\"")
+                    StrConcat#cli_sc23pkgrenderinclude6 { Var#cli_v23pkgrenderinclude_version2(name=packageVersion) Lit#cli_i23pkgrenderinclude5(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgremoveinclude(name=packageEditRemoveInclude) {
+    Fn#cli_f23pkgremoveinclude(params=manifestText,packageName) {
+      Block#cli_b23pkgremoveinclude {
+        Let#cli_l23pkgremoveinclude_needle(name=needle) { StrConcat#cli_sc23pkgremoveinclude_needle1 { Lit#cli_i23pkgremoveinclude_needle1(value="\n    Include(name=\"") StrConcat#cli_sc23pkgremoveinclude_needle2 { Var#cli_v23pkgremoveinclude_name(name=packageName) Lit#cli_i23pkgremoveinclude_needle2(value="\"") } } }
+        Let#cli_l23pkgremoveinclude_pos(name=linePos) { Call#cli_c23pkgremoveinclude_pos(target=find) { Var#cli_v23pkgremoveinclude_text(name=manifestText) Var#cli_v23pkgremoveinclude_needle(name=needle) Lit#cli_i23pkgremoveinclude_zero(value=0) } }
+        If#cli_if23pkgremoveinclude {
+          Eq#cli_e23pkgremoveinclude { Var#cli_v23pkgremoveinclude_pos(name=linePos) Lit#cli_i23pkgremoveinclude_notfound(value=-1) }
+          Block#cli_b23pkgremoveinclude_error { Return#cli_r23pkgremoveinclude_error { Lit#cli_i23pkgremoveinclude_error(value="PackageEditError#remove") } }
+          Block#cli_b23pkgremoveinclude_ok {
+            Let#cli_l23pkgremoveinclude_line_end(name=lineEnd) { Call#cli_c23pkgremoveinclude_line_end(target=find) { Var#cli_v23pkgremoveinclude_text2(name=manifestText) Lit#cli_i23pkgremoveinclude_newline(value="\n") Add#cli_a23pkgremoveinclude_after { Var#cli_v23pkgremoveinclude_pos2(name=linePos) Lit#cli_i23pkgremoveinclude_one(value=1) } } }
+            If#cli_if23pkgremoveinclude_end {
+              Eq#cli_e23pkgremoveinclude_end { Var#cli_v23pkgremoveinclude_line_end(name=lineEnd) Lit#cli_i23pkgremoveinclude_notfound2(value=-1) }
+              Block#cli_b23pkgremoveinclude_tail { Return#cli_r23pkgremoveinclude_tail { Call#cli_c23pkgremoveinclude_prefix_tail(target=substring) { Var#cli_v23pkgremoveinclude_text3(name=manifestText) Lit#cli_i23pkgremoveinclude_zero2(value=0) Var#cli_v23pkgremoveinclude_pos3(name=linePos) } } }
+              Block#cli_b23pkgremoveinclude_middle {
+                Return#cli_r23pkgremoveinclude_middle {
+                  StrConcat#cli_sc23pkgremoveinclude1 {
+                    Call#cli_c23pkgremoveinclude_prefix(target=substring) { Var#cli_v23pkgremoveinclude_text4(name=manifestText) Lit#cli_i23pkgremoveinclude_zero3(value=0) Var#cli_v23pkgremoveinclude_pos4(name=linePos) }
+                    Call#cli_c23pkgremoveinclude_suffix(target=substring) { Var#cli_v23pkgremoveinclude_text5(name=manifestText) Var#cli_v23pkgremoveinclude_line_end2(name=lineEnd) Lit#cli_i23pkgremoveinclude_max(value=2147483647) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgediterror(name=packageEditIsError) {
+    Fn#cli_f23pkgediterror(params=text) {
+      Block#cli_b23pkgediterror {
+        If#cli_if23pkgediterror {
+          Eq#cli_e23pkgediterror { Call#cli_c23pkgediterror_find(target=find) { Var#cli_v23pkgediterror_text(name=text) Lit#cli_i23pkgediterror_marker(value="PackageEditError#") Lit#cli_i23pkgediterror_zero(value=0) } Lit#cli_i23pkgediterror_notfound(value=-1) }
+          Block#cli_b23pkgediterror_false { Return#cli_r23pkgediterror_false { Lit#cli_i23pkgediterror_false(value=false) } }
+          Block#cli_b23pkgediterror_true { Return#cli_r23pkgediterror_true { Lit#cli_i23pkgediterror_true(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgregistry(name=resolvePackageRegistry) {
+    Fn#cli_f23pkgregistry(params=projectDir) {
+      Block#cli_b23pkgregistry {
+        Let#cli_l23pkgregistry_env(name=envRegistry) { Call#cli_c23pkgregistry_env(target=sys.process.env.get) { Lit#cli_i23pkgregistry_env(value="AILANG_PACKAGE_REGISTRY") } }
+        If#cli_if23pkgregistry_env {
+          Eq#cli_e23pkgregistry_env { Var#cli_v23pkgregistry_env(name=envRegistry) Lit#cli_i23pkgregistry_empty(value="") }
+          Block#cli_b23pkgregistry_noenv {
+            Let#cli_l23pkgregistry_config(name=configRegistry) { Call#cli_c23pkgregistry_config(target=getConfigPackageRegistry) { Var#cli_v23pkgregistry_project(name=projectDir) } }
+            If#cli_if23pkgregistry_config {
+              Eq#cli_e23pkgregistry_config { Var#cli_v23pkgregistry_config(name=configRegistry) Lit#cli_i23pkgregistry_empty2(value="") }
+              Block#cli_b23pkgregistry_default {
+                Let#cli_l23pkgregistry_workspace(name=workspaceRegistry) { Lit#cli_i23pkgregistry_workspace(value="../../../../ailang-packages") }
+                If#cli_if23pkgregistry_workspace {
+                  Call#cli_c23pkgregistry_workspace_exists(target=sys.fs.path.exists) { Var#cli_v23pkgregistry_workspace(name=workspaceRegistry) }
+                  Block#cli_b23pkgregistry_workspace_ok { Return#cli_r23pkgregistry_workspace { Var#cli_v23pkgregistry_workspace2(name=workspaceRegistry) } }
+                  Block#cli_b23pkgregistry_clone {
+                    Let#cli_l23pkgregistry_local(name=localRegistry) { StrConcat#cli_sc23pkgregistry_local { Var#cli_v23pkgregistry_project2(name=projectDir) Lit#cli_i23pkgregistry_local(value="/.ailang/registry/ailang-packages") } }
+                    If#cli_if23pkgregistry_local {
+                      Call#cli_c23pkgregistry_local_exists(target=sys.fs.path.exists) { Var#cli_v23pkgregistry_local(name=localRegistry) }
+                      Block#cli_b23pkgregistry_local_ok { Lit#cli_i23pkgregistry_local_ok(value=0) }
+                      Block#cli_b23pkgregistry_local_clone {
+                        Call#cli_c23pkgregistry_clone(target=runGitClone) { Lit#cli_i23pkgregistry_repo(value="https://github.com/AiLangCore/ailang-packages.git") Var#cli_v23pkgregistry_local2(name=localRegistry) }
+                      }
+                    }
+                    Return#cli_r23pkgregistry_local { Var#cli_v23pkgregistry_local3(name=localRegistry) }
+                  }
+                }
+              }
+              Block#cli_b23pkgregistry_config_ok { Return#cli_r23pkgregistry_config { Var#cli_v23pkgregistry_config2(name=configRegistry) } }
+            }
+          }
+          Block#cli_b23pkgregistry_env_ok { Return#cli_r23pkgregistry_env { Var#cli_v23pkgregistry_env2(name=envRegistry) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgconfig(name=getConfigPackageRegistry) {
+    Fn#cli_f23pkgconfig(params=projectDir) {
+      Block#cli_b23pkgconfig {
+        Let#cli_l23pkgconfig_path(name=configPath) { StrConcat#cli_sc23pkgconfig_path { Var#cli_v23pkgconfig_project(name=projectDir) Lit#cli_i23pkgconfig_path(value="/config.local.toml") } }
+        If#cli_if23pkgconfig {
+          Call#cli_c23pkgconfig_exists(target=sys.fs.path.exists) { Var#cli_v23pkgconfig_path(name=configPath) }
+          Block#cli_b23pkgconfig_read {
+            Return#cli_r23pkgconfig_read { Call#cli_c23pkgconfig_value(target=packageGetTomlString) { Call#cli_c23pkgconfig_text(target=packageReadTextFile) { Var#cli_v23pkgconfig_path2(name=configPath) } Lit#cli_i23pkgconfig_key(value="packageRegistry") } }
+          }
+          Block#cli_b23pkgconfig_empty { Return#cli_r23pkgconfig_empty { Lit#cli_i23pkgconfig_empty(value="") } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrestore_entries(name=restoreIncludeLockEntries) {
+    Fn#cli_f23pkgrestore_entries(params=projectDir,registryDir,manifestText,startIndex,seen) {
+      Block#cli_b23pkgrestore_entries {
+        Let#cli_l23pkgrestore_find(name=includePos) { Call#cli_c23pkgrestore_find(target=find) { Var#cli_v23pkgrestore_entries_text(name=manifestText) Lit#cli_i23pkgrestore_find(value="Include(") Var#cli_v23pkgrestore_entries_start(name=startIndex) } }
+        If#cli_if23pkgrestore_find {
+          Eq#cli_e23pkgrestore_find { Var#cli_v23pkgrestore_include_pos(name=includePos) Lit#cli_i23pkgrestore_notfound(value=-1) }
+          Block#cli_b23pkgrestore_done { Return#cli_r23pkgrestore_done { Lit#cli_i23pkgrestore_done(value="") } }
+          Block#cli_b23pkgrestore_one {
+            Let#cli_l23pkgrestore_after(name=afterInclude) { Call#cli_c23pkgrestore_after(target=substring) { Var#cli_v23pkgrestore_entries_text2(name=manifestText) Var#cli_v23pkgrestore_include_pos2(name=includePos) Lit#cli_i23pkgrestore_max(value=2147483647) } }
+            Let#cli_l23pkgrestore_close(name=closePos) { Call#cli_c23pkgrestore_close(target=find) { Var#cli_v23pkgrestore_after(name=afterInclude) Lit#cli_i23pkgrestore_close(value=")") Lit#cli_i23pkgrestore_zero(value=0) } }
+            Let#cli_l23pkgrestore_include_text(name=includeText) { Call#cli_c23pkgrestore_include_text(target=substring) { Var#cli_v23pkgrestore_after2(name=afterInclude) Lit#cli_i23pkgrestore_zero2(value=0) Var#cli_v23pkgrestore_close_pos(name=closePos) } }
+            Let#cli_l23pkgrestore_name(name=packageName) { Call#cli_c23pkgrestore_name(target=packageGetManifestAttr) { Var#cli_v23pkgrestore_include_text(name=includeText) Lit#cli_i23pkgrestore_name_key(value="name") Lit#cli_i23pkgrestore_name_len(value=6) } }
+            Let#cli_l23pkgrestore_version(name=packageVersion) { Call#cli_c23pkgrestore_version(target=packageGetManifestAttr) { Var#cli_v23pkgrestore_include_text2(name=includeText) Lit#cli_i23pkgrestore_version_key(value="version") Lit#cli_i23pkgrestore_version_len(value=9) } }
+            Let#cli_l23pkgrestore_next(name=nextIndex) { Add#cli_a23pkgrestore_next { Add#cli_a23pkgrestore_next2 { Var#cli_v23pkgrestore_include_pos3(name=includePos) Var#cli_v23pkgrestore_close_pos2(name=closePos) } Lit#cli_i23pkgrestore_next(value=1) } }
+            If#cli_if23pkgrestore_duplicate {
+              Call#cli_c23pkgrestore_duplicate_seen(target=packageSeenContains) { Var#cli_v23pkgrestore_seen(name=seen) Var#cli_v23pkgrestore_name_seen(name=packageName) }
+              Block#cli_b23pkgrestore_duplicate { Return#cli_r23pkgrestore_duplicate { Call#cli_c23pkgrestore_duplicate_error(target=packageRestoreError) { Var#cli_v23pkgrestore_name_duplicate(name=packageName) Lit#cli_i23pkgrestore_duplicate_msg(value="duplicate direct include") } } }
+              Block#cli_b23pkgrestore_entries_ok {
+                Return#cli_r23pkgrestore_entries {
+                  StrConcat#cli_sc23pkgrestore_entries {
+                    Call#cli_c23pkgrestore_package(target=restorePackageLockEntrySeen) { Var#cli_v23pkgrestore_entries_project(name=projectDir) Var#cli_v23pkgrestore_entries_registry(name=registryDir) Var#cli_v23pkgrestore_name(name=packageName) Var#cli_v23pkgrestore_version(name=packageVersion) Lit#cli_i23pkgrestore_seen_empty(value="") }
+                    Call#cli_c23pkgrestore_recurse(target=restoreIncludeLockEntries) { Var#cli_v23pkgrestore_entries_project2(name=projectDir) Var#cli_v23pkgrestore_entries_registry2(name=registryDir) Var#cli_v23pkgrestore_entries_text3(name=manifestText) Var#cli_v23pkgrestore_next(name=nextIndex) Call#cli_c23pkgrestore_seen_next(target=packageSeenAdd) { Var#cli_v23pkgrestore_seen2(name=seen) Var#cli_v23pkgrestore_name2(name=packageName) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrestore_count(name=countIncludes) {
+    Fn#cli_f23pkgrestore_count(params=manifestText,startIndex) {
+      Block#cli_b23pkgrestore_count {
+        Let#cli_l23pkgrestore_count_find(name=includePos) { Call#cli_c23pkgrestore_count_find(target=find) { Var#cli_v23pkgrestore_count_text(name=manifestText) Lit#cli_i23pkgrestore_count_find(value="Include(") Var#cli_v23pkgrestore_count_start(name=startIndex) } }
+        If#cli_if23pkgrestore_count_find {
+          Eq#cli_e23pkgrestore_count_find { Var#cli_v23pkgrestore_count_pos(name=includePos) Lit#cli_i23pkgrestore_count_notfound(value=-1) }
+          Block#cli_b23pkgrestore_count_done { Return#cli_r23pkgrestore_count_done { Lit#cli_i23pkgrestore_count_zero(value=0) } }
+          Block#cli_b23pkgrestore_count_more {
+            Let#cli_l23pkgrestore_count_after(name=afterInclude) { Call#cli_c23pkgrestore_count_after(target=substring) { Var#cli_v23pkgrestore_count_text2(name=manifestText) Var#cli_v23pkgrestore_count_pos2(name=includePos) Lit#cli_i23pkgrestore_count_max(value=2147483647) } }
+            Let#cli_l23pkgrestore_count_close(name=closePos) { Call#cli_c23pkgrestore_count_close(target=find) { Var#cli_v23pkgrestore_count_after(name=afterInclude) Lit#cli_i23pkgrestore_count_close(value=")") Lit#cli_i23pkgrestore_count_zero2(value=0) } }
+            Return#cli_r23pkgrestore_count_more {
+              Add#cli_a23pkgrestore_count {
+                Lit#cli_i23pkgrestore_count_one(value=1)
+                Call#cli_c23pkgrestore_count_recurse(target=countIncludes) {
+                  Var#cli_v23pkgrestore_count_text3(name=manifestText)
+                  Add#cli_a23pkgrestore_count_next { Add#cli_a23pkgrestore_count_next2 { Var#cli_v23pkgrestore_count_pos3(name=includePos) Var#cli_v23pkgrestore_count_close2(name=closePos) } Lit#cli_i23pkgrestore_count_one2(value=1) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrestore_has_error(name=hasPackageRestoreError) {
+    Fn#cli_f23pkgrestore_has_error(params=entries) {
+      Block#cli_b23pkgrestore_has_error {
+        If#cli_if23pkgrestore_has_error {
+          Eq#cli_e23pkgrestore_has_error { Call#cli_c23pkgrestore_has_error_find(target=find) { Var#cli_v23pkgrestore_has_error_entries(name=entries) Lit#cli_i23pkgrestore_has_error_marker(value="PackageRestoreError#") Lit#cli_i23pkgrestore_has_error_zero(value=0) } Lit#cli_i23pkgrestore_has_error_notfound(value=-1) }
+          Block#cli_b23pkgrestore_has_error_false { Return#cli_r23pkgrestore_has_error_false { Lit#cli_i23pkgrestore_has_error_false(value=false) } }
+          Block#cli_b23pkgrestore_has_error_true { Return#cli_r23pkgrestore_has_error_true { Lit#cli_i23pkgrestore_has_error_true(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgrestore_lock_count(name=countLockPackages) {
+    Fn#cli_f23pkgrestore_lock_count(params=lockEntries,startIndex) {
+      Block#cli_b23pkgrestore_lock_count {
+        Let#cli_l23pkgrestore_lock_count_find(name=packagePos) { Call#cli_c23pkgrestore_lock_count_find(target=find) { Var#cli_v23pkgrestore_lock_count_text(name=lockEntries) Lit#cli_i23pkgrestore_lock_count_find(value="[[package]]") Var#cli_v23pkgrestore_lock_count_start(name=startIndex) } }
+        If#cli_if23pkgrestore_lock_count_find {
+          Eq#cli_e23pkgrestore_lock_count_find { Var#cli_v23pkgrestore_lock_count_pos(name=packagePos) Lit#cli_i23pkgrestore_lock_count_notfound(value=-1) }
+          Block#cli_b23pkgrestore_lock_count_done { Return#cli_r23pkgrestore_lock_count_done { Lit#cli_i23pkgrestore_lock_count_zero(value=0) } }
+          Block#cli_b23pkgrestore_lock_count_more {
+            Return#cli_r23pkgrestore_lock_count_more {
+              Add#cli_a23pkgrestore_lock_count {
+                Lit#cli_i23pkgrestore_lock_count_one(value=1)
+                Call#cli_c23pkgrestore_lock_count_recurse(target=countLockPackages) {
+                  Var#cli_v23pkgrestore_lock_count_text2(name=lockEntries)
+                  Add#cli_a23pkgrestore_lock_count_next { Var#cli_v23pkgrestore_lock_count_pos2(name=packagePos) Lit#cli_i23pkgrestore_lock_count_step(value=11) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgentry(name=restorePackageLockEntrySeen) {
+    Fn#cli_f23pkgentry(params=projectDir,registryDir,packageName,requestedVersion,seen) {
+      Block#cli_b23pkgentry {
+        If#cli_if23pkgentry_empty {
+          Eq#cli_e23pkgentry_empty { Var#cli_v23pkgentry_name(name=packageName) Lit#cli_i23pkgentry_empty(value="") }
+          Block#cli_b23pkgentry_empty { Return#cli_r23pkgentry_empty { Lit#cli_i23pkgentry_empty2(value="") } }
+          Block#cli_b23pkgentry_value {
+            Let#cli_l23pkgentry_record(name=recordPath) {
+              StrConcat#cli_sc23pkgentry_record1 {
+                Var#cli_v23pkgentry_registry(name=registryDir)
+                StrConcat#cli_sc23pkgentry_record2 {
+                  Lit#cli_i23pkgentry_record(value="/packages/")
+                  StrConcat#cli_sc23pkgentry_record3 { Var#cli_v23pkgentry_name2(name=packageName) Lit#cli_i23pkgentry_record2(value=".toml") }
+                }
+              }
+            }
+            If#cli_if23pkgentry_record_exists {
+              Call#cli_c23pkgentry_record_exists(target=sys.fs.path.exists) { Var#cli_v23pkgentry_record(name=recordPath) }
+              Block#cli_b23pkgentry_record_ok {
+                Let#cli_l23pkgentry_record_text(name=recordText) { Call#cli_c23pkgentry_record_read(target=packageReadTextFile) { Var#cli_v23pkgentry_record2(name=recordPath) } }
+                Let#cli_l23pkgentry_default_version(name=defaultVersion) { Call#cli_c23pkgentry_default_version(target=packageGetTomlString) { Var#cli_v23pkgentry_record_text(name=recordText) Lit#cli_i23pkgentry_default_version(value="defaultVersion") } }
+                Let#cli_l23pkgentry_version(name=packageVersion) { Call#cli_c23pkgentry_version(target=packageSelectRequestedOrDefault) { Var#cli_v23pkgentry_requested(name=requestedVersion) Var#cli_v23pkgentry_default_version(name=defaultVersion) } }
+                Let#cli_l23pkgentry_repo(name=repo) { Call#cli_c23pkgentry_repo(target=packageGetTomlString) { Var#cli_v23pkgentry_record_text2(name=recordText) Lit#cli_i23pkgentry_repo(value="repo") } }
+                Let#cli_l23pkgentry_root(name=packageRoot) { Call#cli_c23pkgentry_root(target=packageGetTomlString) { Var#cli_v23pkgentry_record_text3(name=recordText) Lit#cli_i23pkgentry_root(value="packageRoot") } }
+                Let#cli_l23pkgentry_commit(name=commit) { Call#cli_c23pkgentry_commit(target=packageGetVersionCommit) { Var#cli_v23pkgentry_record_text4(name=recordText) Var#cli_v23pkgentry_version(name=packageVersion) } }
+                If#cli_if23pkgentry_commit_missing {
+                  Eq#cli_e23pkgentry_commit_missing { Var#cli_v23pkgentry_commit(name=commit) Lit#cli_i23pkgentry_commit_empty(value="") }
+                  Block#cli_b23pkgentry_commit_missing { Return#cli_r23pkgentry_commit_missing { Call#cli_c23pkgentry_error1(target=packageRestoreError) { Var#cli_v23pkgentry_name3(name=packageName) Lit#cli_i23pkgentry_commit_missing_msg(value="missing commit") } } }
+                  Block#cli_b23pkgentry_commit_ok {
+                    Let#cli_l23pkgentry_path(name=packagePath) { StrConcat#cli_sc23pkgentry_path { Lit#cli_i23pkgentry_path(value=".ailang/packages/") Var#cli_v23pkgentry_name4(name=packageName) } }
+                    Let#cli_l23pkgentry_dir(name=packageDir) { StrConcat#cli_sc23pkgentry_dir { Var#cli_v23pkgentry_project(name=projectDir) StrConcat#cli_sc23pkgentry_dir2 { Lit#cli_i23pkgentry_slash(value="/") Var#cli_v23pkgentry_path(name=packagePath) } } }
+                    Let#cli_l23pkgentry_clone_code(name=cloneCode) {
+                      If#cli_if23pkgentry_dir {
+                        Call#cli_c23pkgentry_dir_exists(target=sys.fs.path.exists) { Var#cli_v23pkgentry_dir(name=packageDir) }
+                        Block#cli_b23pkgentry_checkout_only { Lit#cli_i23pkgentry_checkout_only(value=0) }
+                        Block#cli_b23pkgentry_clone { Call#cli_c23pkgentry_clone(target=runGitClone) { Var#cli_v23pkgentry_repo(name=repo) Var#cli_v23pkgentry_dir2(name=packageDir) } }
+                      }
+                    }
+                    If#cli_if23pkgentry_clone_failed {
+                      Eq#cli_e23pkgentry_clone_failed { Var#cli_v23pkgentry_clone_code(name=cloneCode) Lit#cli_i23pkgentry_clone_ok(value=0) }
+                      Block#cli_b23pkgentry_clone_ok {
+                        Let#cli_l23pkgentry_checkout_code(name=checkoutCode) { Call#cli_c23pkgentry_checkout(target=runGitCheckout) { Var#cli_v23pkgentry_dir3(name=packageDir) Var#cli_v23pkgentry_commit2(name=commit) } }
+                        If#cli_if23pkgentry_checkout_failed {
+                          Eq#cli_e23pkgentry_checkout_failed { Var#cli_v23pkgentry_checkout_code(name=checkoutCode) Lit#cli_i23pkgentry_checkout_ok(value=0) }
+                          Block#cli_b23pkgentry_checkout_ok {
+                            Let#cli_l23pkgentry_descriptor(name=descriptorPath) { Call#cli_c23pkgentry_descriptor(target=packageDescriptorPath) { Var#cli_v23pkgentry_dir4(name=packageDir) Var#cli_v23pkgentry_root3(name=packageRoot) } }
+                            Let#cli_l23pkgentry_dependency_entries(name=dependencyEntries) {
+                              Call#cli_c23pkgentry_dependencies(target=restorePackageDependencies) {
+                                Var#cli_v23pkgentry_project2(name=projectDir)
+                                Var#cli_v23pkgentry_registry2(name=registryDir)
+                                Call#cli_c23pkgentry_descriptor_read(target=packageReadOptionalText) { Var#cli_v23pkgentry_descriptor(name=descriptorPath) }
+                                Call#cli_c23pkgentry_seen_next(target=packageSeenAdd) { Var#cli_v23pkgentry_seen(name=seen) Var#cli_v23pkgentry_name_seen(name=packageName) }
+                              }
+                            }
+                            Return#cli_r23pkgentry {
+                              StrConcat#cli_sc23pkgentry1 {
+                                Lit#cli_i23pkgentry1(value="[[package]]\nname = \"")
+                                StrConcat#cli_sc23pkgentry2 {
+                                  Var#cli_v23pkgentry_name5(name=packageName)
+                                  StrConcat#cli_sc23pkgentry3 {
+                                    Lit#cli_i23pkgentry2(value="\"\nversion = \"")
+                                    StrConcat#cli_sc23pkgentry4 {
+                                      Var#cli_v23pkgentry_version2(name=packageVersion)
+                                      StrConcat#cli_sc23pkgentry5 {
+                                        Lit#cli_i23pkgentry3(value="\"\nrepo = \"")
+                                        StrConcat#cli_sc23pkgentry6 {
+                                          Var#cli_v23pkgentry_repo2(name=repo)
+                                          StrConcat#cli_sc23pkgentry7 {
+                                            Lit#cli_i23pkgentry4(value="\"\ncommit = \"")
+                                            StrConcat#cli_sc23pkgentry8 {
+                                              Var#cli_v23pkgentry_commit3(name=commit)
+                                              StrConcat#cli_sc23pkgentry9 {
+                                                Lit#cli_i23pkgentry5(value="\"\npath = \"")
+                                                StrConcat#cli_sc23pkgentry10 {
+                                                  Var#cli_v23pkgentry_path2(name=packagePath)
+                                                  StrConcat#cli_sc23pkgentry11 {
+                                                    Lit#cli_i23pkgentry6(value="\"\npackageRoot = \"")
+                                                    StrConcat#cli_sc23pkgentry12 {
+                                                      Var#cli_v23pkgentry_root2(name=packageRoot)
+                                                      StrConcat#cli_sc23pkgentry13 { Lit#cli_i23pkgentry7(value="\"\n\n") Var#cli_v23pkgentry_dependency_entries(name=dependencyEntries) }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          Block#cli_b23pkgentry_checkout_failed { Return#cli_r23pkgentry_checkout_failed { Call#cli_c23pkgentry_error2(target=packageRestoreError) { Var#cli_v23pkgentry_name6(name=packageName) Lit#cli_i23pkgentry_checkout_msg(value="checkout failed") } } }
+                        }
+                      }
+                      Block#cli_b23pkgentry_clone_failed { Return#cli_r23pkgentry_clone_failed { Call#cli_c23pkgentry_error3(target=packageRestoreError) { Var#cli_v23pkgentry_name7(name=packageName) Lit#cli_i23pkgentry_clone_msg(value="clone failed") } } }
+                    }
+                  }
+                }
+              }
+              Block#cli_b23pkgentry_record_missing { Return#cli_r23pkgentry_record_missing { Call#cli_c23pkgentry_error4(target=packageRestoreError) { Var#cli_v23pkgentry_name8(name=packageName) Lit#cli_i23pkgentry_record_missing_msg(value="missing package record") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgerror(name=packageRestoreError) {
+    Fn#cli_f23pkgerror(params=packageName,reason) {
+      Block#cli_b23pkgerror {
+        Return#cli_r23pkgerror {
+          StrConcat#cli_sc23pkgerror1 {
+            Lit#cli_i23pkgerror1(value="PackageRestoreError#pkg(name=\"")
+            StrConcat#cli_sc23pkgerror2 {
+              Var#cli_v23pkgerror_name(name=packageName)
+              StrConcat#cli_sc23pkgerror3 {
+                Lit#cli_i23pkgerror2(value="\" reason=\"")
+                StrConcat#cli_sc23pkgerror4 { Var#cli_v23pkgerror_reason(name=reason) Lit#cli_i23pkgerror3(value="\")\n") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgseen_add(name=packageSeenAdd) {
+    Fn#cli_f23pkgseen_add(params=seen,packageName) {
+      Block#cli_b23pkgseen_add {
+        Return#cli_r23pkgseen_add {
+          StrConcat#cli_sc23pkgseen_add1 {
+            Var#cli_v23pkgseen_add_seen(name=seen)
+            StrConcat#cli_sc23pkgseen_add2 {
+              Lit#cli_i23pkgseen_add_bar1(value="|")
+              StrConcat#cli_sc23pkgseen_add3 { Var#cli_v23pkgseen_add_name(name=packageName) Lit#cli_i23pkgseen_add_bar2(value="|") }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgseen_contains(name=packageSeenContains) {
+    Fn#cli_f23pkgseen_contains(params=seen,packageName) {
+      Block#cli_b23pkgseen_contains {
+        Let#cli_l23pkgseen_contains_needle(name=needle) {
+          StrConcat#cli_sc23pkgseen_contains1 {
+            Lit#cli_i23pkgseen_contains_bar1(value="|")
+            StrConcat#cli_sc23pkgseen_contains2 { Var#cli_v23pkgseen_contains_name(name=packageName) Lit#cli_i23pkgseen_contains_bar2(value="|") }
+          }
+        }
+        If#cli_if23pkgseen_contains {
+          Eq#cli_e23pkgseen_contains { Call#cli_c23pkgseen_contains_find(target=find) { Var#cli_v23pkgseen_contains_seen(name=seen) Var#cli_v23pkgseen_contains_needle(name=needle) Lit#cli_i23pkgseen_contains_zero(value=0) } Lit#cli_i23pkgseen_contains_missing(value=-1) }
+          Block#cli_b23pkgseen_contains_false { Return#cli_r23pkgseen_contains_false { Lit#cli_i23pkgseen_contains_false(value=false) } }
+          Block#cli_b23pkgseen_contains_true { Return#cli_r23pkgseen_contains_true { Lit#cli_i23pkgseen_contains_true(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdescriptor(name=packageDescriptorPath) {
+    Fn#cli_f23pkgdescriptor(params=packageDir,packageRoot) {
+      Block#cli_b23pkgdescriptor {
+        If#cli_if23pkgdescriptor {
+          Eq#cli_e23pkgdescriptor { Var#cli_v23pkgdescriptor_root(name=packageRoot) Lit#cli_i23pkgdescriptor_dot(value=".") }
+          Block#cli_b23pkgdescriptor_root { Return#cli_r23pkgdescriptor_root { StrConcat#cli_sc23pkgdescriptor_root { Var#cli_v23pkgdescriptor_dir(name=packageDir) Lit#cli_i23pkgdescriptor_root(value="/package.toml") } } }
+          Block#cli_b23pkgdescriptor_nested {
+            Return#cli_r23pkgdescriptor_nested {
+              StrConcat#cli_sc23pkgdescriptor_nested1 {
+                Var#cli_v23pkgdescriptor_dir2(name=packageDir)
+                StrConcat#cli_sc23pkgdescriptor_nested2 {
+                  Lit#cli_i23pkgdescriptor_slash(value="/")
+                  StrConcat#cli_sc23pkgdescriptor_nested3 { Var#cli_v23pkgdescriptor_root2(name=packageRoot) Lit#cli_i23pkgdescriptor_file(value="/package.toml") }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdependencies(name=restorePackageDependencies) {
+    Fn#cli_f23pkgdependencies(params=projectDir,registryDir,descriptorText,seen) {
+      Block#cli_b23pkgdependencies {
+        Let#cli_l23pkgdependencies_pos(name=dependenciesPos) { Call#cli_c23pkgdependencies_pos(target=find) { Var#cli_v23pkgdependencies_text(name=descriptorText) Lit#cli_i23pkgdependencies_header(value="[dependencies]") Lit#cli_i23pkgdependencies_zero(value=0) } }
+        If#cli_if23pkgdependencies {
+          Eq#cli_e23pkgdependencies_missing { Var#cli_v23pkgdependencies_pos(name=dependenciesPos) Lit#cli_i23pkgdependencies_notfound(value=-1) }
+          Block#cli_b23pkgdependencies_empty { Return#cli_r23pkgdependencies_empty { Lit#cli_i23pkgdependencies_empty(value="") } }
+          Block#cli_b23pkgdependencies_parse {
+            Let#cli_l23pkgdependencies_after(name=afterDependencies) {
+              Call#cli_c23pkgdependencies_after(target=substring) {
+                Var#cli_v23pkgdependencies_text2(name=descriptorText)
+                Add#cli_a23pkgdependencies_after { Var#cli_v23pkgdependencies_pos2(name=dependenciesPos) Lit#cli_i23pkgdependencies_header_len(value=14) }
+                Lit#cli_i23pkgdependencies_max(value=2147483647)
+              }
+            }
+            Let#cli_l23pkgdependencies_next(name=nextSection) { Call#cli_c23pkgdependencies_next(target=find) { Var#cli_v23pkgdependencies_after(name=afterDependencies) Lit#cli_i23pkgdependencies_section(value="\n[") Lit#cli_i23pkgdependencies_zero2(value=0) } }
+            Let#cli_l23pkgdependencies_block(name=dependencyBlock) { Call#cli_c23pkgdependencies_block(target=dependencySectionBlock) { Var#cli_v23pkgdependencies_after2(name=afterDependencies) Var#cli_v23pkgdependencies_next(name=nextSection) } }
+            Return#cli_r23pkgdependencies_parse { Call#cli_c23pkgdependencies_lines(target=restoreDependencyLines) { Var#cli_v23pkgdependencies_project(name=projectDir) Var#cli_v23pkgdependencies_registry(name=registryDir) Var#cli_v23pkgdependencies_block(name=dependencyBlock) Lit#cli_i23pkgdependencies_start(value=0) Var#cli_v23pkgdependencies_seen(name=seen) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdependency_block(name=dependencySectionBlock) {
+    Fn#cli_f23pkgdependency_block(params=afterDependencies,nextSection) {
+      Block#cli_b23pkgdependency_block {
+        If#cli_if23pkgdependency_block {
+          Eq#cli_e23pkgdependency_block { Var#cli_v23pkgdependency_block_next(name=nextSection) Lit#cli_i23pkgdependency_block_notfound(value=-1) }
+          Block#cli_b23pkgdependency_block_all { Return#cli_r23pkgdependency_block_all { Var#cli_v23pkgdependency_block_after(name=afterDependencies) } }
+          Block#cli_b23pkgdependency_block_slice { Return#cli_r23pkgdependency_block_slice { Call#cli_c23pkgdependency_block_slice(target=substring) { Var#cli_v23pkgdependency_block_after2(name=afterDependencies) Lit#cli_i23pkgdependency_block_zero(value=0) Var#cli_v23pkgdependency_block_next2(name=nextSection) } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdependency_lines(name=restoreDependencyLines) {
+    Fn#cli_f23pkgdependency_lines(params=projectDir,registryDir,dependencyBlock,startIndex,seen) {
+      Block#cli_b23pkgdependency_lines {
+        Let#cli_l23pkgdependency_line_end(name=lineEnd) { Call#cli_c23pkgdependency_line_end(target=find) { Var#cli_v23pkgdependency_block(name=dependencyBlock) Lit#cli_i23pkgdependency_newline(value="\n") Var#cli_v23pkgdependency_start(name=startIndex) } }
+        If#cli_if23pkgdependency_lines_done {
+          Eq#cli_e23pkgdependency_lines_done { Var#cli_v23pkgdependency_line_end(name=lineEnd) Lit#cli_i23pkgdependency_notfound(value=-1) }
+          Block#cli_b23pkgdependency_last {
+            Return#cli_r23pkgdependency_last {
+              Call#cli_c23pkgdependency_line(target=restoreDependencyLine) {
+                Var#cli_v23pkgdependency_project(name=projectDir)
+                Var#cli_v23pkgdependency_registry(name=registryDir)
+                Call#cli_c23pkgdependency_last_text(target=substring) { Var#cli_v23pkgdependency_block2(name=dependencyBlock) Var#cli_v23pkgdependency_start2(name=startIndex) Lit#cli_i23pkgdependency_max(value=2147483647) }
+                Var#cli_v23pkgdependency_seen_last(name=seen)
+              }
+            }
+          }
+          Block#cli_b23pkgdependency_more {
+            Let#cli_l23pkgdependency_line(name=lineText) { Call#cli_c23pkgdependency_line_text(target=substring) { Var#cli_v23pkgdependency_block3(name=dependencyBlock) Var#cli_v23pkgdependency_start3(name=startIndex) Var#cli_v23pkgdependency_line_end2(name=lineEnd) } }
+            Return#cli_r23pkgdependency_more {
+              StrConcat#cli_sc23pkgdependency_more {
+                Call#cli_c23pkgdependency_line2(target=restoreDependencyLine) { Var#cli_v23pkgdependency_project2(name=projectDir) Var#cli_v23pkgdependency_registry2(name=registryDir) Var#cli_v23pkgdependency_line(name=lineText) Var#cli_v23pkgdependency_seen_line(name=seen) }
+                Call#cli_c23pkgdependency_recurse(target=restoreDependencyLines) {
+                  Var#cli_v23pkgdependency_project3(name=projectDir)
+                  Var#cli_v23pkgdependency_registry3(name=registryDir)
+                  Var#cli_v23pkgdependency_block4(name=dependencyBlock)
+                  Add#cli_a23pkgdependency_next { Var#cli_v23pkgdependency_line_end3(name=lineEnd) Lit#cli_i23pkgdependency_one(value=1) }
+                  Var#cli_v23pkgdependency_seen_more(name=seen)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdependency_line(name=restoreDependencyLine) {
+    Fn#cli_f23pkgdependency_line(params=projectDir,registryDir,lineText,seen) {
+      Block#cli_b23pkgdependency_line {
+        Let#cli_l23pkgdependency_eq(name=eqPos) { Call#cli_c23pkgdependency_eq(target=find) { Var#cli_v23pkgdependency_line_text(name=lineText) Lit#cli_i23pkgdependency_eq(value=" = \"") Lit#cli_i23pkgdependency_zero(value=0) } }
+        If#cli_if23pkgdependency_line {
+          Eq#cli_e23pkgdependency_line { Var#cli_v23pkgdependency_eqpos(name=eqPos) Lit#cli_i23pkgdependency_notfound2(value=-1) }
+          Block#cli_b23pkgdependency_line_empty { Return#cli_r23pkgdependency_line_empty { Lit#cli_i23pkgdependency_empty(value="") } }
+          Block#cli_b23pkgdependency_line_restore {
+            Let#cli_l23pkgdependency_name(name=dependencyName) { Call#cli_c23pkgdependency_name(target=substring) { Var#cli_v23pkgdependency_line_text2(name=lineText) Lit#cli_i23pkgdependency_zero2(value=0) Var#cli_v23pkgdependency_eqpos2(name=eqPos) } }
+            Let#cli_l23pkgdependency_version(name=dependencyVersion) { Call#cli_c23pkgdependency_version(target=packageGetValueAfterNeedle) { Var#cli_v23pkgdependency_line_text3(name=lineText) Lit#cli_i23pkgdependency_version(value=" = \"") Lit#cli_i23pkgdependency_version_len(value=4) } }
+            If#cli_if23pkgdependency_cycle {
+              Call#cli_c23pkgdependency_seen(target=packageSeenContains) { Var#cli_v23pkgdependency_seen(name=seen) Var#cli_v23pkgdependency_name_seen(name=dependencyName) }
+              Block#cli_b23pkgdependency_cycle { Return#cli_r23pkgdependency_cycle { Call#cli_c23pkgdependency_cycle_error(target=packageRestoreError) { Var#cli_v23pkgdependency_name_cycle(name=dependencyName) Lit#cli_i23pkgdependency_cycle_msg(value="circular dependency") } } }
+              Block#cli_b23pkgdependency_line_restore {
+                Return#cli_r23pkgdependency_line_restore {
+                  Call#cli_c23pkgdependency_restore(target=restorePackageLockEntrySeen) {
+                    Var#cli_v23pkgdependency_project(name=projectDir)
+                    Var#cli_v23pkgdependency_registry(name=registryDir)
+                    Var#cli_v23pkgdependency_name(name=dependencyName)
+                    Var#cli_v23pkgdependency_version(name=dependencyVersion)
+                    Var#cli_v23pkgdependency_seen2(name=seen)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgselect(name=packageSelectRequestedOrDefault) {
+    Fn#cli_f23pkgselect(params=requested,defaultVersion) {
+      Block#cli_b23pkgselect {
+        If#cli_if23pkgselect {
+          Eq#cli_e23pkgselect { Var#cli_v23pkgselect_requested(name=requested) Lit#cli_i23pkgselect_empty(value="") }
+          Block#cli_b23pkgselect_default { Return#cli_r23pkgselect_default { Var#cli_v23pkgselect_default(name=defaultVersion) } }
+          Block#cli_b23pkgselect_requested { Return#cli_r23pkgselect_requested { Var#cli_v23pkgselect_requested2(name=requested) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtoml(name=packageGetTomlString) {
+    Fn#cli_f23pkgtoml(params=text,key) {
+      Block#cli_b23pkgtoml {
+        If#cli_if23pkgtoml_package_registry {
+          Eq#cli_e23pkgtoml_package_registry { Var#cli_v23pkgtoml_key(name=key) Lit#cli_i23pkgtoml_package_registry(value="packageRegistry") }
+          Block#cli_b23pkgtoml_package_registry { Return#cli_r23pkgtoml_package_registry { Call#cli_c23pkgtoml_package_registry(target=packageGetTomlStringFixed) { Var#cli_v23pkgtoml_text(name=text) Lit#cli_i23pkgtoml_package_registry_key(value="packageRegistry") Lit#cli_i23pkgtoml_package_registry_spaced(value=19) Lit#cli_i23pkgtoml_package_registry_tight(value=17) } } }
+          Block#cli_b23pkgtoml_default_version_check {
+            If#cli_if23pkgtoml_default_version {
+              Eq#cli_e23pkgtoml_default_version { Var#cli_v23pkgtoml_key2(name=key) Lit#cli_i23pkgtoml_default_version(value="defaultVersion") }
+              Block#cli_b23pkgtoml_default_version { Return#cli_r23pkgtoml_default_version { Call#cli_c23pkgtoml_default_version(target=packageGetTomlStringFixed) { Var#cli_v23pkgtoml_text2(name=text) Lit#cli_i23pkgtoml_default_version_key(value="defaultVersion") Lit#cli_i23pkgtoml_default_version_spaced(value=18) Lit#cli_i23pkgtoml_default_version_tight(value=16) } } }
+              Block#cli_b23pkgtoml_repo_check {
+                If#cli_if23pkgtoml_repo {
+                  Eq#cli_e23pkgtoml_repo { Var#cli_v23pkgtoml_key3(name=key) Lit#cli_i23pkgtoml_repo(value="repo") }
+                  Block#cli_b23pkgtoml_repo { Return#cli_r23pkgtoml_repo { Call#cli_c23pkgtoml_repo(target=packageGetTomlStringFixed) { Var#cli_v23pkgtoml_text3(name=text) Lit#cli_i23pkgtoml_repo_key(value="repo") Lit#cli_i23pkgtoml_repo_spaced(value=8) Lit#cli_i23pkgtoml_repo_tight(value=6) } } }
+                  Block#cli_b23pkgtoml_root_check {
+                    If#cli_if23pkgtoml_root {
+                      Eq#cli_e23pkgtoml_root { Var#cli_v23pkgtoml_key4(name=key) Lit#cli_i23pkgtoml_root(value="packageRoot") }
+                      Block#cli_b23pkgtoml_root { Return#cli_r23pkgtoml_root { Call#cli_c23pkgtoml_root(target=packageGetTomlStringFixed) { Var#cli_v23pkgtoml_text4(name=text) Lit#cli_i23pkgtoml_root_key(value="packageRoot") Lit#cli_i23pkgtoml_root_spaced(value=15) Lit#cli_i23pkgtoml_root_tight(value=13) } } }
+                      Block#cli_b23pkgtoml_commit_check {
+                        If#cli_if23pkgtoml_commit {
+                          Eq#cli_e23pkgtoml_commit { Var#cli_v23pkgtoml_key5(name=key) Lit#cli_i23pkgtoml_commit(value="commit") }
+                          Block#cli_b23pkgtoml_commit { Return#cli_r23pkgtoml_commit { Call#cli_c23pkgtoml_commit(target=packageGetTomlStringFixed) { Var#cli_v23pkgtoml_text5(name=text) Lit#cli_i23pkgtoml_commit_key(value="commit") Lit#cli_i23pkgtoml_commit_spaced(value=10) Lit#cli_i23pkgtoml_commit_tight(value=8) } } }
+                          Block#cli_b23pkgtoml_empty { Return#cli_r23pkgtoml_empty { Lit#cli_i23pkgtoml_empty(value="") } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtomlfixed(name=packageGetTomlStringFixed) {
+    Fn#cli_f23pkgtomlfixed(params=text,key,spacedLength,tightLength) {
+      Block#cli_b23pkgtomlfixed {
+        Let#cli_l23pkgtomlfixed_spaced(name=spacedNeedle) { StrConcat#cli_sc23pkgtomlfixed_spaced { Var#cli_v23pkgtomlfixed_key(name=key) Lit#cli_i23pkgtomlfixed_spaced(value=" = \"") } }
+        Let#cli_l23pkgtomlfixed_tight(name=tightNeedle) { StrConcat#cli_sc23pkgtomlfixed_tight { Var#cli_v23pkgtomlfixed_key2(name=key) Lit#cli_i23pkgtomlfixed_tight(value="=\"") } }
+        Let#cli_l23pkgtomlfixed_value(name=value) { Call#cli_c23pkgtomlfixed_value(target=packageGetValueAfterNeedle) { Var#cli_v23pkgtomlfixed_text(name=text) Var#cli_v23pkgtomlfixed_spaced(name=spacedNeedle) Var#cli_v23pkgtomlfixed_spaced_len(name=spacedLength) } }
+        If#cli_if23pkgtomlfixed {
+          Eq#cli_e23pkgtomlfixed { Var#cli_v23pkgtomlfixed_value(name=value) Lit#cli_i23pkgtomlfixed_empty(value="") }
+          Block#cli_b23pkgtomlfixed_tight { Return#cli_r23pkgtomlfixed_tight { Call#cli_c23pkgtomlfixed_tight(target=packageGetValueAfterNeedle) { Var#cli_v23pkgtomlfixed_text2(name=text) Var#cli_v23pkgtomlfixed_tight(name=tightNeedle) Var#cli_v23pkgtomlfixed_tight_len(name=tightLength) } } }
+          Block#cli_b23pkgtomlfixed_value { Return#cli_r23pkgtomlfixed_value { Var#cli_v23pkgtomlfixed_value2(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgcommit(name=packageGetVersionCommit) {
+    Fn#cli_f23pkgcommit(params=recordText,version) {
+      Block#cli_b23pkgcommit {
+        Let#cli_l23pkgcommit_section(name=sectionNeedle) {
+          StrConcat#cli_sc23pkgcommit_section1 {
+            Lit#cli_i23pkgcommit_section1(value="[versions.\"")
+            StrConcat#cli_sc23pkgcommit_section2 { Var#cli_v23pkgcommit_version(name=version) Lit#cli_i23pkgcommit_section2(value="\"]") }
+          }
+        }
+        Let#cli_l23pkgcommit_pos(name=sectionPos) { Call#cli_c23pkgcommit_pos(target=find) { Var#cli_v23pkgcommit_record(name=recordText) Var#cli_v23pkgcommit_section(name=sectionNeedle) Lit#cli_i23pkgcommit_zero(value=0) } }
+        If#cli_if23pkgcommit {
+          Eq#cli_e23pkgcommit { Var#cli_v23pkgcommit_pos(name=sectionPos) Lit#cli_i23pkgcommit_notfound(value=-1) }
+          Block#cli_b23pkgcommit_empty { Return#cli_r23pkgcommit_empty { Lit#cli_i23pkgcommit_empty(value="") } }
+          Block#cli_b23pkgcommit_value {
+            Return#cli_r23pkgcommit_value {
+              Call#cli_c23pkgcommit_value(target=packageGetTomlString) {
+                Call#cli_c23pkgcommit_rest(target=substring) { Var#cli_v23pkgcommit_record2(name=recordText) Var#cli_v23pkgcommit_pos2(name=sectionPos) Lit#cli_i23pkgcommit_max(value=2147483647) }
+                Lit#cli_i23pkgcommit_key(value="commit")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkggitcloneargs(name=makeGitCloneArgs) {
+    Fn#cli_f23pkggitcloneargs(params=repo,dest) {
+      Block#cli_b23pkggitcloneargs {
+        Return#cli_r23pkggitcloneargs {
+          AppendChild#cli_ap23pkggitcloneargs1 {
+            AppendChild#cli_ap23pkggitcloneargs2 {
+              AppendChild#cli_ap23pkggitcloneargs3 {
+                MakeBlock#cli_mb23pkggitcloneargs { Lit#cli_i23pkggitcloneargs1(value="args") }
+                MakeLitString#cli_mls23pkggitcloneargs1 { Lit#cli_i23pkggitcloneargs2(value="arg0") Lit#cli_i23pkggitcloneargs3(value="clone") }
+              }
+              MakeLitString#cli_mls23pkggitcloneargs2 { Lit#cli_i23pkggitcloneargs4(value="arg1") Var#cli_v23pkggitcloneargs_repo(name=repo) }
+            }
+            MakeLitString#cli_mls23pkggitcloneargs3 { Lit#cli_i23pkggitcloneargs5(value="arg2") Var#cli_v23pkggitcloneargs_dest(name=dest) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkggitcheckoutargs(name=makeGitCheckoutArgs) {
+    Fn#cli_f23pkggitcheckoutargs(params=dest,commit) {
+      Block#cli_b23pkggitcheckoutargs {
+        Return#cli_r23pkggitcheckoutargs {
+          AppendChild#cli_ap23pkggitcheckoutargs1 {
+            AppendChild#cli_ap23pkggitcheckoutargs2 {
+              AppendChild#cli_ap23pkggitcheckoutargs3 {
+                AppendChild#cli_ap23pkggitcheckoutargs4 {
+                  AppendChild#cli_ap23pkggitcheckoutargs5 {
+                    MakeBlock#cli_mb23pkggitcheckoutargs { Lit#cli_i23pkggitcheckoutargs1(value="args") }
+                    MakeLitString#cli_mls23pkggitcheckoutargs1 { Lit#cli_i23pkggitcheckoutargs2(value="arg0") Lit#cli_i23pkggitcheckoutargs3(value="-C") }
+                  }
+                  MakeLitString#cli_mls23pkggitcheckoutargs2 { Lit#cli_i23pkggitcheckoutargs4(value="arg1") Var#cli_v23pkggitcheckoutargs_dest(name=dest) }
+                }
+                MakeLitString#cli_mls23pkggitcheckoutargs3 { Lit#cli_i23pkggitcheckoutargs5(value="arg2") Lit#cli_i23pkggitcheckoutargs6(value="checkout") }
+              }
+              MakeLitString#cli_mls23pkggitcheckoutargs4 { Lit#cli_i23pkggitcheckoutargs7(value="arg3") Lit#cli_i23pkggitcheckoutargs8(value="--detach") }
+            }
+            MakeLitString#cli_mls23pkggitcheckoutargs5 { Lit#cli_i23pkggitcheckoutargs9(value="arg4") Var#cli_v23pkggitcheckoutargs_commit(name=commit) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkggitclone(name=runGitClone) {
+    Fn#cli_f23pkggitclone(params=repo,dest) {
+      Block#cli_b23pkggitclone {
+        Let#cli_l23pkggitclone_args(name=args) { Call#cli_c23pkggitclone_args(target=makeGitCloneArgs) { Var#cli_v23pkggitclone_repo(name=repo) Var#cli_v23pkggitclone_dest(name=dest) } }
+        Let#cli_l23pkggitclone_env(name=env) { MakeBlock#cli_mb23pkggitclone_env { Lit#cli_i23pkggitclone_env(value="env") } }
+        Let#cli_l23pkggitclone_handle(name=handle) { Call#cli_c23pkggitclone_spawn(target=sys.process.spawn) { Lit#cli_i23pkggitclone_git(value="git") Var#cli_v23pkggitclone_args(name=args) Lit#cli_i23pkggitclone_cwd(value="") Var#cli_v23pkggitclone_env(name=env) } }
+        Return#cli_r23pkggitclone { Call#cli_c23pkggitclone_wait(target=sys.process.wait) { Var#cli_v23pkggitclone_handle(name=handle) } }
+      }
+    }
+  }
+
+  Let#cli_l23pkggitcheckout(name=runGitCheckout) {
+    Fn#cli_f23pkggitcheckout(params=dest,commit) {
+      Block#cli_b23pkggitcheckout {
+        If#cli_if23pkggitcheckout {
+          Eq#cli_e23pkggitcheckout { Var#cli_v23pkggitcheckout_commit(name=commit) Lit#cli_i23pkggitcheckout_empty(value="") }
+          Block#cli_b23pkggitcheckout_skip { Return#cli_r23pkggitcheckout_skip { Lit#cli_i23pkggitcheckout_zero(value=0) } }
+          Block#cli_b23pkggitcheckout_run {
+            Let#cli_l23pkggitcheckout_args(name=args) { Call#cli_c23pkggitcheckout_args(target=makeGitCheckoutArgs) { Var#cli_v23pkggitcheckout_dest(name=dest) Var#cli_v23pkggitcheckout_commit2(name=commit) } }
+            Let#cli_l23pkggitcheckout_env(name=env) { MakeBlock#cli_mb23pkggitcheckout_env { Lit#cli_i23pkggitcheckout_env(value="env") } }
+            Let#cli_l23pkggitcheckout_handle(name=handle) { Call#cli_c23pkggitcheckout_spawn(target=sys.process.spawn) { Lit#cli_i23pkggitcheckout_git(value="git") Var#cli_v23pkggitcheckout_args(name=args) Lit#cli_i23pkggitcheckout_cwd(value="") Var#cli_v23pkggitcheckout_env(name=env) } }
+            Return#cli_r23pkggitcheckout_run { Call#cli_c23pkggitcheckout_wait(target=sys.process.wait) { Var#cli_v23pkggitcheckout_handle(name=handle) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgdefault(name=packageDefaultPath) {
+    Fn#cli_f23pkgdefault(params=path) {
+      Block#cli_b43pkgdefault {
+        If#cli_if23pkgdefault {
+          Eq#cli_e23pkgdefault { Var#cli_v23pkgdefault(name=path) Lit#cli_i23pkgdefault(value="") }
+          Block#cli_b43pkgdefault1 { Return#cli_r23pkgdefault1 { Lit#cli_i23pkgdefault2(value=".") } }
+          Block#cli_b43pkgdefault2 { Return#cli_r23pkgdefault2 { Var#cli_v23pkgdefault2(name=path) } }
+        }
+      }
+    }
+  }
+
+
+  Let#cli_package_l_read_arg(name=packageReadArg) {
+    Fn#cli_package_f_read_arg(params=args,index) {
+      Block#cli_package_b_read_arg {
+        If#cli_package_if_read_arg {
+          Eq#cli_package_e_read_arg { Var#cli_package_v_read_arg1(name=index) ChildCount#cli_package_cc_read_arg { Var#cli_package_v_read_arg2(name=args) } }
+          Block#cli_package_b_read_arg1 { Return#cli_package_r_read_arg1 { Lit#cli_package_i_read_arg1(value="") } }
+          Block#cli_package_b_read_arg2 {
+            Return#cli_package_r_read_arg2 {
+              AttrValueString#cli_package_av_read_arg {
+                ChildAt#cli_package_ca_read_arg { Var#cli_package_v_read_arg3(name=args) Var#cli_package_v_read_arg4(name=index) }
+                Lit#cli_package_i_read_arg2(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_package_l_unknown(name=packageUnknownCommand) {
+    Fn#cli_package_f_unknown(params=cmd) {
+      Block#cli_package_b_unknown {
+        Call#cli_package_c_unknown(target=sys.stdout.writeLine) {
+          StrConcat#cli_package_sc_unknown1 {
+            Lit#cli_package_i_unknown1(value="Err#err0(code=AILANG001 message=\"Unknown command: ")
+            StrConcat#cli_package_sc_unknown2 { Var#cli_package_v_unknown(name=cmd) Lit#cli_package_i_unknown2(value="\" nodeId=argv)") }
+          }
+        }
+        Return#cli_package_r_unknown { Lit#cli_package_i_unknown3(value=1) }
+      }
+    }
+  }
+
+  Let#cli_package_l_write(name=packageWriteTextFile) {
+    Fn#cli_package_f_write(params=path,text) {
+      Block#cli_package_b_write {
+        Return#cli_package_r_write {
+          Call#cli_package_c_write(target=sys.fs.file.write) {
+            Var#cli_package_v_write_path(name=path)
+            Call#cli_package_c_write_bytes(target=bytes.fromUtf8String) { Var#cli_package_v_write_text(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_package_l_read(name=packageReadTextFile) {
+    Fn#cli_package_f_read(params=path) {
+      Block#cli_package_b_read {
+        Return#cli_package_r_read {
+          Call#cli_package_c_read_string(target=bytes.toUtf8String) {
+            Call#cli_package_c_read_bytes(target=sys.fs.file.read) { Var#cli_package_v_read_path(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_package_l_optional(name=packageReadOptionalText) {
+    Fn#cli_package_f_optional(params=path) {
+      Block#cli_package_b_optional {
+        If#cli_package_if_optional {
+          Call#cli_package_c_optional_exists(target=sys.fs.path.exists) { Var#cli_package_v_optional_path(name=path) }
+          Block#cli_package_b_optional_read { Return#cli_package_r_optional_read { Call#cli_package_c_optional_read(target=packageReadTextFile) { Var#cli_package_v_optional_path2(name=path) } } }
+          Block#cli_package_b_optional_empty { Return#cli_package_r_optional_empty { Lit#cli_package_i_optional_empty(value="") } }
+        }
+      }
+    }
+  }
+
+  Let#cli_package_l_build_error(name=packageBuildError) {
+    Fn#cli_package_f_build_error(params=code,message,nodeId) {
+      Block#cli_package_b_build_error {
+        Call#cli_package_c_build_error(target=sys.stdout.writeLine) {
+          StrConcat#cli_package_sc_build_error1 {
+            Lit#cli_package_i_build_error1(value="Err#err0(code=")
+            StrConcat#cli_package_sc_build_error2 {
+              Var#cli_package_v_build_error_code(name=code)
+              StrConcat#cli_package_sc_build_error3 {
+                Lit#cli_package_i_build_error2(value=" message=\"")
+                StrConcat#cli_package_sc_build_error4 {
+                  Var#cli_package_v_build_error_message(name=message)
+                  StrConcat#cli_package_sc_build_error5 {
+                    Lit#cli_package_i_build_error3(value="\" nodeId=\"")
+                    StrConcat#cli_package_sc_build_error6 { Var#cli_package_v_build_error_node(name=nodeId) Lit#cli_package_i_build_error4(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return#cli_package_r_build_error { Lit#cli_package_i_build_error5(value=1) }
+      }
+    }
+  }
+
+  Let#cli_package_l_manifest_attr(name=packageGetManifestAttr) {
+    Fn#cli_package_f_manifest_attr(params=text,key,needleLength) {
+      Block#cli_package_b_manifest_attr {
+        Let#cli_package_l_manifest_attr_needle(name=needle) { StrConcat#cli_package_sc_manifest_attr1 { Var#cli_package_v_manifest_attr_key(name=key) Lit#cli_package_i_manifest_attr1(value="=\"") } }
+        Return#cli_package_r_manifest_attr { Call#cli_package_c_manifest_attr(target=packageGetValueAfterNeedle) { Var#cli_package_v_manifest_attr_text(name=text) Var#cli_package_v_manifest_attr_needle(name=needle) Var#cli_package_v_manifest_attr_len(name=needleLength) } }
+      }
+    }
+  }
+
+  Let#cli_package_l_value_after(name=packageGetValueAfterNeedle) {
+    Fn#cli_package_f_value_after(params=text,needle,needleLength) {
+      Block#cli_package_b_value_after {
+        Let#cli_package_l_value_after_found(name=found) { Call#cli_package_c_value_after_find(target=find) { Var#cli_package_v_value_after_text(name=text) Var#cli_package_v_value_after_needle(name=needle) Lit#cli_package_i_value_after_zero(value=0) } }
+        If#cli_package_if_value_after1 {
+          Eq#cli_package_e_value_after1 { Var#cli_package_v_value_after_found(name=found) Lit#cli_package_i_value_after_notfound(value=-1) }
+          Block#cli_package_b_value_after_empty { Return#cli_package_r_value_after_empty { Lit#cli_package_i_value_after_empty(value="") } }
+          Block#cli_package_b_value_after_value {
+            Let#cli_package_l_value_after_start(name=valueStart) { Add#cli_package_a_value_after_start { Var#cli_package_v_value_after_found2(name=found) Var#cli_package_v_value_after_len(name=needleLength) } }
+            Let#cli_package_l_value_after_rest(name=rest) { Call#cli_package_c_value_after_rest(target=substring) { Var#cli_package_v_value_after_text2(name=text) Var#cli_package_v_value_after_start(name=valueStart) Lit#cli_package_i_value_after_max(value=2147483647) } }
+            Let#cli_package_l_value_after_end(name=valueEnd) { Call#cli_package_c_value_after_end(target=find) { Var#cli_package_v_value_after_rest(name=rest) Lit#cli_package_i_value_after_quote(value="\"") Lit#cli_package_i_value_after_zero2(value=0) } }
+            If#cli_package_if_value_after2 {
+              Eq#cli_package_e_value_after2 { Var#cli_package_v_value_after_end(name=valueEnd) Lit#cli_package_i_value_after_notfound2(value=-1) }
+              Block#cli_package_b_value_after_noend { Return#cli_package_r_value_after_noend { Lit#cli_package_i_value_after_empty2(value="") } }
+              Block#cli_package_b_value_after_slice { Return#cli_package_r_value_after_slice { Call#cli_package_c_value_after_slice(target=substring) { Var#cli_package_v_value_after_rest2(name=rest) Lit#cli_package_i_value_after_zero3(value=0) Var#cli_package_v_value_after_end2(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

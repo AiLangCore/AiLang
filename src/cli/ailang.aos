@@ -5,6 +5,7 @@ Program#cli_p1 {
   Import#cli_im4(path="../compiler/linker.aos")
   Import#cli_im5(path="../compiler/bundle.aos")
   Import#cli_im6(path="../compiler/bytecode.aos")
+  Import#cli_im7(path="package.aos")
   Export#cli_e1(name=main)
 
   Let#cli_l1(name=main) {
@@ -60,9 +61,15 @@ Program#cli_p1 {
                                                       Block#cli_b24 { Return#cli_r12 { Call#cli_c13(target=runClean) { Var#cli_v20(name=args) } } }
                                                       Block#cli_b25 {
                                                         If#cli_if13 {
-                                                          Eq#cli_e14 { Var#cli_v21(name=cmd) Lit#cli_i19(value="project") }
-                                                          Block#cli_b26 { Return#cli_r13 { Call#cli_c14(target=runProject) { Var#cli_v22(name=args) } } }
-                                                          Block#cli_b27 { Return#cli_r14 { Call#cli_c15(target=unknownCommand) { Var#cli_v23(name=cmd) } } }
+                                                          Eq#cli_e14 { Var#cli_v21(name=cmd) Lit#cli_i19(value="package") }
+                                                          Block#cli_b26 { Return#cli_r13 { Call#cli_c14(target=runPackage) { Var#cli_v22(name=args) } } }
+                                                          Block#cli_b27 {
+                                                            If#cli_if14 {
+                                                              Eq#cli_e15 { Var#cli_v24(name=cmd) Lit#cli_i20(value="project") }
+                                                              Block#cli_b28 { Return#cli_r14 { Call#cli_c15(target=runProject) { Var#cli_v25(name=args) } } }
+                                                              Block#cli_b29 { Return#cli_r15 { Call#cli_c16(target=unknownCommand) { Var#cli_v26(name=cmd) } } }
+                                                            }
+                                                          }
                                                         }
                                                       }
                                                     }
@@ -119,7 +126,7 @@ Program#cli_p1 {
           Eq#cli_e20t { Var#cli_v20t2(name=topic) Lit#cli_i20t2(value="") }
           Block#cli_b40a {
             Call#cli_c20(target=sys.stdout.writeLine) { Lit#cli_i30(value="Usage: ailang <command> [options]") }
-            Call#cli_c21(target=sys.stdout.writeLine) { Lit#cli_i31(value="Commands: init, template, agent, build, run, publish, clean, project, version, help") }
+            Call#cli_c21(target=sys.stdout.writeLine) { Lit#cli_i31(value="Commands: init, template, agent, build, run, publish, clean, package, project, version, help") }
             Return#cli_r30 { Lit#cli_i32(value=0) }
           }
           Block#cli_b40b { Return#cli_r30b { Call#cli_c20h(target=runHelpTopic) { Var#cli_v20t3(name=topic) } } }
@@ -195,7 +202,16 @@ Program#cli_p1 {
                                         Call#cli_c21h8(target=sys.stdout.writeLine) { Lit#cli_i21h23(value="Usage: ailang project version <project-dir>") }
                                         Return#cli_r21h8 { Lit#cli_i21h24(value=0) }
                                       }
-                                      Block#cli_b41h16 { Return#cli_r21h9 { Call#cli_c21h9(target=unknownCommand) { Var#cli_v21h9(name=topic) } } }
+                                      Block#cli_b41h16 {
+                                        If#cli_if21h9 {
+                                          Eq#cli_e21h9 { Var#cli_v21h9(name=topic) Lit#cli_i21h25(value="package") }
+                                          Block#cli_b41h17 {
+                                            Call#cli_c21h9(target=sys.stdout.writeLine) { Lit#cli_i21h26(value="Usage: ailang package <restore|list|add|remove> [project-dir]") }
+                                            Return#cli_r21h9 { Lit#cli_i21h27(value=0) }
+                                          }
+                                          Block#cli_b41h18 { Return#cli_r21h10 { Call#cli_c21h10(target=unknownCommand) { Var#cli_v21h10(name=topic) } } }
+                                        }
+                                      }
                                     }
                                   }
                                 }
@@ -1593,8 +1609,31 @@ Program#cli_p1 {
       Block#cli_b41rp {
         If#cli_if41rp1 {
           Call#cli_c41rp1(target=sys.fs.path.exists) { Var#cli_v41rp1(name=path) }
-          Block#cli_b41rp1 { Return#cli_r41rp1 { Call#cli_c41rb(target=runBootstrapRun) { Var#cli_v41rp2(name=path) Var#cli_v41rp3(name=args) } } }
+          Block#cli_b41rp1 {
+            If#cli_if41rp_project {
+              Call#cli_c41rp_project_exists(target=sys.fs.path.exists) {
+                StrConcat#cli_sc41rp_project_manifest { Var#cli_v41rp_project_path(name=path) Lit#cli_i41rp_project_manifest(value="/project.aiproj") }
+              }
+              Block#cli_b41rp_project { Return#cli_r41rp_project { Call#cli_c41rpd(target=runProjectDirectory) { Var#cli_v41rp2(name=path) Var#cli_v41rp3(name=args) } } }
+              Block#cli_b41rp_file { Return#cli_r41rp1 { Call#cli_c41rb(target=runBootstrapRun) { Var#cli_v41rp4(name=path) Var#cli_v41rp5(name=args) } } }
+            }
+          }
           Block#cli_b41rp2 { Return#cli_r41rp2 { Call#cli_c41rpe(target=buildError) { Lit#cli_i41rp1(value="AILANG011") Lit#cli_i41rp2(value="Run path was not found.") Lit#cli_i41rp3(value="run") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l41rpd(name=runProjectDirectory) {
+    Fn#cli_f41rpd(params=path,args) {
+      Block#cli_b41rpd {
+        Let#cli_l41rpd_out(name=outDir) { StrConcat#cli_sc41rpd_out { Var#cli_v41rpd_path(name=path) Lit#cli_i41rpd_out(value="/obj/run") } }
+        Let#cli_l41rpd_file(name=outFile) { StrConcat#cli_sc41rpd_file { Var#cli_v41rpd_out(name=outDir) Lit#cli_i41rpd_file(value="/app.aibc1") } }
+        Let#cli_l41rpd_code(name=buildCode) { Call#cli_c41rpd_build(target=buildProject) { Var#cli_v41rpd_path2(name=path) Var#cli_v41rpd_out2(name=outDir) } }
+        If#cli_if41rpd_code {
+          Eq#cli_e41rpd_code { Var#cli_v41rpd_code(name=buildCode) Lit#cli_i41rpd_zero(value=0) }
+          Block#cli_b41rpd_ok { Return#cli_r41rpd_ok { Call#cli_c41rpd_run(target=runBootstrapRun) { Var#cli_v41rpd_file(name=outFile) Var#cli_v41rpd_args(name=args) } } }
+          Block#cli_b41rpd_fail { Return#cli_r41rpd_fail { Var#cli_v41rpd_code2(name=buildCode) } }
         }
       }
     }

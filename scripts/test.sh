@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 cd "${ROOT_DIR}"
 
-./scripts/check-doc-taxonomy.sh
+bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-stdlib-conformance.sh
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-stdlib-behavior.sh

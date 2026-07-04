@@ -129,9 +129,9 @@ Verified on 2026-05-20:
 
 Verified on 2026-05-20:
 
-- AiLang `SPEC/CONCURRENCY.md` is non-normative and points to canonical
-  semantics in `SPEC/IL.md`, `SPEC/EVAL.md`, `SPEC/VALIDATION.md`, and
-  `SPEC/BYTECODE.md`.
+- AiLang `Design/Concurrency.feature-structured-parallelism.md` is
+  non-normative and points to canonical semantics in `SPEC/IL.md`,
+  `SPEC/EVAL.md`, `SPEC/VALIDATION.md`, and `SPEC/BYTECODE.md`.
 - AiVM owns runtime memory/threading strategy in `SPEC/MEMORY.md` and syscall
   contracts in `Docs/Syscalls.md`.
 - AiVectra owns UI/runtime threading in `SPEC/THREADING.md`.

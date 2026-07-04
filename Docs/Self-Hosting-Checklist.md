@@ -87,20 +87,60 @@ compiler path.
      `src/compiler/bootstrap_io.aos`
    - done: runtime value/literal formatting helpers live in
      `src/compiler/value.aos`
-   - package imports through lockfile/cache
+   - done: evaluator behavior lives in focused `src/compiler/eval.aos`
+   - done: `aic.aos` and `runtime.aos` call `eval.runProgram` instead of the
+     old local `runProgram`/`compiler.run` path
+   - done: package imports through lockfile/cache participate in linker graph
+     artifact generation
    - done: package imports require matching `Project` manifest `Include`
      declarations before bootstrap compilation
    - circular import diagnostics
    - stable module graph
 
 5. Linker in AiLang
+   - done: initial linker module exists in `src/compiler/linker.aos`
+   - done: publish bundle generation consumes a deterministic linker module
+     path list instead of hardcoding entry plus one import
+   - done: recursive import graph collection lives in `src/compiler/linker.aos`
+   - done: linker-owned circular import diagnostics emit deterministic `LINK001`
+   - done: deterministic link report text generation lives in
+     `src/compiler/linker.aos`
+   - done: publish writes the link report artifact to `obj/link-report.aos`
+   - done: bytecode CLI `build` writes `obj/link-report.aos` and
+     `obj/linked-bundle.aos`; supported bootstrap shapes now emit runnable
+     `obj/app.aibc1` directly from AiLang bytecode emission instead of
+     recompiling source through the bootstrap path
    - start from `Project.entryFile` and `Project.entryExport`
+   - done: package-root-aware import graph resolution
    - include only reachable modules, functions, constants, and declared assets
    - exclude unused package source, tests, examples, tools, templates, and docs
-   - emit link report
 
 6. Bytecode emitter in AiLang
-   - deterministic AiBC/AiBE output
+   - follow `SPEC/OPTIMIZATION.md`: parser -> validation -> checked IR ->
+     local optimization -> object -> linker -> whole-program optimization ->
+     final bundle
+   - done: initial `src/compiler/bytecode.aos` emitter module writes a
+     deterministic textual bytecode object for a strict direct integer-return
+     entry function
+   - done: emitter also supports the basic CLI template shape:
+     literal `sys.stdout.writeLine` followed by an integer-literal `Return`
+   - done: emitter supports the current `cli-args` template shape:
+     `ChildCount(args)`, `count == 0` branching, literal no-args output,
+     first-argument output through `ChildAt`/`AttrValueString`, and integer
+     returns
+   - done: bytecode CLI `build` writes `obj/bytecode-emitter-report.aos`,
+     writes `obj/app.bytecode.aos` for inspection, and writes `obj/app.aibc1`
+     as the runnable artifact when the current emitter supports the entry shape
+   - done: bytecode CLI `build` writes `obj/build-input-report.aos` to record
+     whether the runnable `app.aibc1` was produced from `obj/app.aibc1` or from
+     the remaining source bootstrap path
+   - done: argv-template bytecode now emits direct binary instructions for
+     `sys.process.args`, deterministic no-args branching, first-argument
+     extraction, stdout writes, and integer returns without the native
+     `params="argv"` bytecode-object adapter
+   - done: VM string arena copy hazards in `STR_CONCAT` and `STR_ESCAPE` were
+     fixed after branch bytecode output exposed truncated generated artifacts
+   - general deterministic AiBC/AiBE output beyond the bootstrap template shapes
    - stable constants and instruction order
    - source/debug metadata where requested
 
@@ -110,7 +150,8 @@ compiler path.
    - `package`
    - `build`
    - `run`
-   - `publish`
+   - done: `publish` uses the same AiLang `buildProject` path for project
+     compilation before packaging
    - package tool dispatch
 
 8. Bootstrap handoff

@@ -390,9 +390,20 @@ jobs:
             cp "./${{ matrix.artifact_dir }}/aivectra-framebuffer" "${PACKAGE_DIR}/"
           fi
           mkdir -p "${PACKAGE_DIR}/bin"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/bin/ailang"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm-runtime"
-          chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm-runtime"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm"
+          printf '%s\n' \
+            '#!/usr/bin/env sh' \
+            'set -eu' \
+            'SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"' \
+            'export AILANG_SDK_ROOT="$SDK_ROOT"' \
+            'exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"' \
+            > "${PACKAGE_DIR}/bin/ailang"
+          chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm" "${PACKAGE_DIR}/bin/aivm-runtime"
+          if file "${PACKAGE_DIR}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
+            echo "release package violation: bin/ailang must be a non-C shim" >&2
+            exit 1
+          fi
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/bin/aos_frontend"
           chmod +x "${PACKAGE_DIR}/bin/aos_frontend"
           mkdir -p "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}"
@@ -430,8 +441,17 @@ jobs:
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
           New-Item -ItemType Directory -Force "$packageDir\bin" | Out-Null
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}" "$packageDir\bin\ailang.exe"
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm-runtime.exe"
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm.exe"
+          @'
+          @echo off
+          setlocal
+          set "SDK_ROOT=%~dp0.."
+          set "AILANG_SDK_ROOT=%SDK_ROOT%"
+          "%SDK_ROOT%\bin\aivm.exe" "%SDK_ROOT%\libexec\ailang\cli\app.aibc1" %*
+          exit /b %ERRORLEVEL%
+          '@ -replace '(?m)^[ \t]{10}', '' | Set-Content -NoNewline "$packageDir\bin\ailang.cmd"
+          if (Test-Path "$packageDir\bin\ailang.exe") { throw 'release package violation: bin/ailang.exe must not be staged as native command' }
           Copy-Item ".\\dist\\${{ matrix.frontend }}" "$packageDir\bin\aos_frontend.exe"
           $targetRid = '${{ matrix.rid }}' -replace '^windows-', 'win-'
           New-Item -ItemType Directory -Force "$packageDir\runtimes\$targetRid" | Out-Null

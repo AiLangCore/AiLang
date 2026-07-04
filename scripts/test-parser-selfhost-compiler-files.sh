@@ -64,11 +64,11 @@ Program#test_p1 {
           }
           Block#test_b7 {
             If#test_if4 {
-              Eq#test_e4 { ChildCount#test_cc2 { Var#test_v3(name=program) } Lit#test_i9(value=2) }
+              Eq#test_e4 { ChildCount#test_cc2 { Var#test_v3(name=program) } Lit#test_i9(value=3) }
               Block#test_b8 { Lit#test_i10(value=0) }
               Block#test_b9 { Return#test_r4 { Call#test_c7(target=fail) { Lit#test_i11(value="http compiler child count failed") } } }
             }
-            Let#test_l7(name=httpMakeRequest) { ChildAt#test_ca1 { Var#test_v4(name=program) Lit#test_i12(value=1) } }
+            Let#test_l7(name=httpMakeRequest) { ChildAt#test_ca1 { Var#test_v4(name=program) Lit#test_i12(value=2) } }
             Let#test_l8(name=httpFn) { ChildAt#test_ca2 { Var#test_v5(name=httpMakeRequest) Lit#test_i13(value=0) } }
             Let#test_l9(name=httpBlock) { ChildAt#test_ca3 { Var#test_v6(name=httpFn) Lit#test_i14(value=0) } }
             Let#test_l10(name=httpProgramTextLet) { ChildAt#test_ca4 { Var#test_v7(name=httpBlock) Lit#test_i15(value=0) } }

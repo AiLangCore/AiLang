@@ -10,7 +10,8 @@ mkdir -p "${TMP_DIR}"
 
 cat > "${TMP_DIR}/app.aos" <<'AOS'
 Program#test_p1 {
-  Import#test_i1(path="../../src/compiler/aic.aos")
+  Import#test_i1(path="../../src/compiler/parser.aos")
+  Import#test_i2(path="../../src/compiler/validate.aos")
   Export#test_e1(name=start)
 
   Let#test_l1(name=fail) {
@@ -61,22 +62,22 @@ Program#test_p1 {
     Fn#test_f3(params=args) {
       Block#test_b9 {
         Let#test_l5(name=unknownNode) {
-          Call#test_c5(target=compiler.parse) {
+          Call#test_c5(target=parse.parseDocument) {
             Lit#test_i10(value="Mystery#m1")
           }
         }
         Call#test_c6(target=requireVal004) {
-          Call#test_c7(target=compiler.validate) { Var#test_v9(name=unknownNode) }
+          Call#test_c7(target=validate) { Var#test_v9(name=unknownNode) }
           Lit#test_i11(value="unknown node kind was not rejected")
         }
 
         Let#test_l6(name=parseErrNode) {
-          Call#test_c8(target=compiler.parse) {
+          Call#test_c8(target=parse.parseDocument) {
             Lit#test_i12(value="Program { } Export(name=start)")
           }
         }
         Call#test_c9(target=requireVal004) {
-          Call#test_c10(target=compiler.validate) { Var#test_v10(name=parseErrNode) }
+          Call#test_c10(target=validate) { Var#test_v10(name=parseErrNode) }
           Lit#test_i13(value="parser Err node was not rejected by validator")
         }
 

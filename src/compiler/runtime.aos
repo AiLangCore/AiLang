@@ -1,4 +1,6 @@
 Program#rt_p1 {
+  Import#rt_im0(path="parser.aos")
+  Import#rt_im2(path="eval.aos")
   Import#rt_im1(path="../std/bytes.aos")
 
   Export#rt_e1(name=runtime.start)
@@ -239,12 +241,12 @@ Program#rt_p1 {
             }
           }
         }
-        Let#rt_l16(name=parsed) { Call#rt_c15(target=compiler.parse) { Var#rt_v24(name=programText) } }
+        Let#rt_l16(name=parsed) { Call#rt_c15(target=parse.parseDocument) { Var#rt_v24(name=programText) } }
         If#rt_if3 {
           Eq#rt_eq3 { NodeKind#rt_nk1 { Var#rt_v25(name=parsed) } Lit#rt_i9(value="Program") }
           Block#rt_b10 { Return#rt_r7 { ChildAt#rt_ca1 { Var#rt_v26(name=parsed) Lit#rt_i10(value=0) } } }
           Block#rt_b11 {
-            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"net.request\" payload=\"\") }") } }
+            Let#rt_l17(name=fallback) { Call#rt_c16(target=parse.parseDocument) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"net.request\" payload=\"\") }") } }
             Return#rt_r8 { ChildAt#rt_ca2 { Var#rt_v27(name=fallback) Lit#rt_i12(value=0) } }
           }
         }
@@ -389,12 +391,12 @@ Program#rt_p1 {
   Let#rt_l40(name=runtime_make_start_event) {
     Fn#rt_f15(params=_) {
       Block#rt_b59 {
-        Let#rt_l41(name=parsed) { Call#rt_c48(target=compiler.parse) { Lit#rt_i62(value="Program#rt_start_p1 { Event#Start }") } }
+        Let#rt_l41(name=parsed) { Call#rt_c48(target=parse.parseDocument) { Lit#rt_i62(value="Program#rt_start_p1 { Event#Start }") } }
         If#rt_if23 {
           Eq#rt_eq18 { NodeKind#rt_nk4 { Var#rt_v108(name=parsed) } Lit#rt_i63(value="Program") }
           Block#rt_b60 { Return#rt_r34 { ChildAt#rt_ca7 { Var#rt_v109(name=parsed) Lit#rt_i64(value=0) } } }
           Block#rt_b61 {
-            Let#rt_l42(name=fallback) { Call#rt_c49(target=compiler.parse) { Lit#rt_i65(value="Program#rt_start_p2 { Event#Message(type=\"start\" payload=\"\") }") } }
+            Let#rt_l42(name=fallback) { Call#rt_c49(target=parse.parseDocument) { Lit#rt_i65(value="Program#rt_start_p2 { Event#Message(type=\"start\" payload=\"\") }") } }
             Return#rt_r35 { ChildAt#rt_ca8 { Var#rt_v110(name=fallback) Lit#rt_i66(value=0) } }
           }
         }
@@ -425,7 +427,7 @@ Program#rt_p1 {
                 }
               }
             }
-            Let#rt_l61(name=parsed) { Call#rt_c70(target=compiler.parse) { Var#rt_v163(name=programText) } }
+            Let#rt_l61(name=parsed) { Call#rt_c70(target=parse.parseDocument) { Var#rt_v163(name=programText) } }
             If#rt_if39 {
               Eq#rt_eq35 { NodeKind#rt_nk10 { Var#rt_v164(name=parsed) } Lit#rt_i113(value="Program") }
               Block#rt_b97 { Return#rt_r50 { ChildAt#rt_ca12 { Var#rt_v165(name=parsed) Lit#rt_i114(value=0) } } }
@@ -679,13 +681,14 @@ Program#rt_p1 {
             }
           }
         }
-        Let#rt_l54(name=parsed) { Call#rt_c62(target=compiler.parse) { Var#rt_v148(name=programText) } }
+        Let#rt_l54(name=parsed) { Call#rt_c62(target=parse.parseDocument) { Var#rt_v148(name=programText) } }
         If#rt_if35 {
           Eq#rt_eq31 { NodeKind#rt_nk8 { Var#rt_v149(name=parsed) } Lit#rt_i100(value="Program") }
-          Block#rt_b88 { Return#rt_r45 { Call#rt_c63(target=compiler.run) { Var#rt_v150(name=parsed) } } }
+          Block#rt_b88 { Return#rt_r45 { Call#rt_c63(target=eval.runProgram) { Var#rt_v150(name=parsed) } } }
           Block#rt_b89 { Return#rt_r46 { Var#rt_v151(name=__program_result) } }
         }
       }
     }
   }
+
 }

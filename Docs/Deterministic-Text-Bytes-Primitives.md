@@ -60,6 +60,9 @@ or intrinsic nodes for:
 - `BytesToUtf8String(data) -> string`
 - `BytesFromBase64(text) -> bytes`
 - `BytesToBase64(data) -> string`
+- `BytesFromByte(value) -> bytes`
+- `BytesU32LE(value) -> bytes`
+- `BytesI64LE(value) -> bytes`
 - `MakePair(first, second) -> pair`
 - `PairFirst(pair) -> any`
 - `PairSecond(pair) -> any`

@@ -44,6 +44,19 @@ of the output.
 `src/cli/ailang.aos` owns the command contract, argument validation, output
 path policy, and user-facing diagnostics.
 
+Before binary emission, the AiLang-authored build command parses the entry
+module, constructs the deterministic linker module graph, and writes:
+
+```text
+<project-dir>/obj/link-report.aos
+<project-dir>/obj/linked-bundle.aos
+```
+
+These files are compiler-owned intermediate artifacts. They make the current
+self-hosting boundary explicit: graph construction and bundle description are
+AiLang code; final AiBC binary emission is still the remaining bootstrap
+adapter.
+
 During the alpha bootstrap phase it delegates source-to-AiBC compilation to a
 bootstrap compiler process:
 

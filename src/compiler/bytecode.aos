@@ -1,0 +1,1022 @@
+Program#bytecode_p1 {
+  Import#bytecode_imp1(path="../std/bytes.aos")
+  Export#bytecode_e1(name=bytecode.buildEntryReturnIntMainText)
+  Export#bytecode_e2(name=bytecode.buildEntryReturnIntMainBytes)
+
+  Let#bytecode_l1(name=bytecode.buildEntryReturnIntMainText) {
+    Fn#bytecode_f1(params=program,entryExport) {
+      Block#bytecode_b1 {
+        Let#bytecode_l2(name=entryLet) {
+          Call#bytecode_c1(target=bytecode.findLetByName) {
+            Var#bytecode_v1(name=program)
+            Var#bytecode_v2(name=entryExport)
+            Lit#bytecode_i1(value=0)
+          }
+        }
+        If#bytecode_if1 {
+          Eq#bytecode_e1 { NodeKind#bytecode_nk1 { Var#bytecode_v3(name=entryLet) } Lit#bytecode_i2(value="Err") }
+          Block#bytecode_b2 { Return#bytecode_r1 { Var#bytecode_v4(name=entryLet) } }
+          Block#bytecode_b3 {
+            Let#bytecode_l3(name=entryBlock) {
+              Call#bytecode_c2(target=bytecode.extractEntryBlock) {
+                Var#bytecode_v5(name=entryLet)
+              }
+            }
+            If#bytecode_if2 {
+              Eq#bytecode_e2 { NodeKind#bytecode_nk2 { Var#bytecode_v6(name=entryBlock) } Lit#bytecode_i3(value="Err") }
+              Block#bytecode_b4 { Return#bytecode_r2 { Var#bytecode_v7(name=entryBlock) } }
+              Block#bytecode_b5 {
+                Return#bytecode_r3 {
+                  Call#bytecode_c3(target=bytecode.emitSupportedEntryBlockMainText) {
+                    Var#bytecode_v8(name=entryBlock)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l1b(name=bytecode.buildEntryReturnIntMainBytes) {
+    Fn#bytecode_f1b(params=program,entryExport) {
+      Block#bytecode_b1b {
+        Let#bytecode_l2b(name=entryLet) {
+          Call#bytecode_c1b(target=bytecode.findLetByName) {
+            Var#bytecode_v1b(name=program)
+            Var#bytecode_v2b(name=entryExport)
+            Lit#bytecode_i1b(value=0)
+          }
+        }
+        If#bytecode_if1b {
+          Eq#bytecode_e1b { NodeKind#bytecode_nk1b { Var#bytecode_v3b(name=entryLet) } Lit#bytecode_i2b(value="Err") }
+          Block#bytecode_b2b { Return#bytecode_r1b { Var#bytecode_v4b(name=entryLet) } }
+          Block#bytecode_b3b {
+            Let#bytecode_l3b(name=entryBlock) {
+              Call#bytecode_c2b(target=bytecode.extractEntryBlock) {
+                Var#bytecode_v5b(name=entryLet)
+              }
+            }
+            If#bytecode_if2b {
+              Eq#bytecode_e2b { NodeKind#bytecode_nk2b { Var#bytecode_v6b(name=entryBlock) } Lit#bytecode_i3b(value="Err") }
+              Block#bytecode_b4b { Return#bytecode_r2b { Var#bytecode_v7b(name=entryBlock) } }
+              Block#bytecode_b5b {
+                Return#bytecode_r3b {
+                  Call#bytecode_c3b(target=bytecode.emitSupportedEntryBlockMainBytes) {
+                    Var#bytecode_v8b(name=entryBlock)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l4(name=bytecode.findLetByName) {
+    Fn#bytecode_f2(params=program,name,index) {
+      Block#bytecode_b6 {
+        If#bytecode_if3 {
+          Eq#bytecode_e3 { Var#bytecode_v9(name=index) ChildCount#bytecode_cc1 { Var#bytecode_v10(name=program) } }
+          Block#bytecode_b7 { Return#bytecode_r4 { Call#bytecode_c4(target=bytecode.unsupported) { Lit#bytecode_i4(value="Entry export was not found.") Lit#bytecode_i5(value="entryExport") } } }
+          Block#bytecode_b8 {
+            Let#bytecode_l5(name=child) {
+              ChildAt#bytecode_ca1 { Var#bytecode_v11(name=program) Var#bytecode_v12(name=index) }
+            }
+            If#bytecode_if4 {
+              Eq#bytecode_e4 { NodeKind#bytecode_nk3 { Var#bytecode_v13(name=child) } Lit#bytecode_i6(value="Let") }
+              Block#bytecode_b9 {
+                If#bytecode_if5 {
+                  Eq#bytecode_e5 {
+                    Call#bytecode_c5(target=bytecode.getAttr) {
+                      Var#bytecode_v14(name=child)
+                      Lit#bytecode_i7(value="name")
+                      Lit#bytecode_i8(value=0)
+                    }
+                    Var#bytecode_v15(name=name)
+                  }
+                  Block#bytecode_b10 { Return#bytecode_r5 { Var#bytecode_v16(name=child) } }
+                  Block#bytecode_b11 {
+                    Return#bytecode_r6 {
+                      Call#bytecode_c6(target=bytecode.findLetByName) {
+                        Var#bytecode_v17(name=program)
+                        Var#bytecode_v18(name=name)
+                        Add#bytecode_a1 { Var#bytecode_v19(name=index) Lit#bytecode_i9(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#bytecode_b12 {
+                Return#bytecode_r7 {
+                  Call#bytecode_c7(target=bytecode.findLetByName) {
+                    Var#bytecode_v20(name=program)
+                    Var#bytecode_v21(name=name)
+                    Add#bytecode_a2 { Var#bytecode_v22(name=index) Lit#bytecode_i10(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l6(name=bytecode.extractEntryBlock) {
+    Fn#bytecode_f3(params=entryLet) {
+      Block#bytecode_b13 {
+        If#bytecode_if6 {
+          Eq#bytecode_e6 { ChildCount#bytecode_cc2 { Var#bytecode_v23(name=entryLet) } Lit#bytecode_i11(value=1) }
+          Block#bytecode_b14 {
+            Let#bytecode_l7(name=fnNode) {
+              ChildAt#bytecode_ca2 { Var#bytecode_v24(name=entryLet) Lit#bytecode_i12(value=0) }
+            }
+            If#bytecode_if7 {
+              Eq#bytecode_e7 { NodeKind#bytecode_nk4 { Var#bytecode_v25(name=fnNode) } Lit#bytecode_i13(value="Fn") }
+              Block#bytecode_b15 {
+                If#bytecode_if8 {
+                  Eq#bytecode_e8 { ChildCount#bytecode_cc3 { Var#bytecode_v26(name=fnNode) } Lit#bytecode_i14(value=1) }
+                  Block#bytecode_b16 {
+                    Let#bytecode_l8(name=blockNode) {
+                      ChildAt#bytecode_ca3 { Var#bytecode_v27(name=fnNode) Lit#bytecode_i15(value=0) }
+                    }
+                    If#bytecode_if9 {
+                      Eq#bytecode_e9 { NodeKind#bytecode_nk5 { Var#bytecode_v28(name=blockNode) } Lit#bytecode_i16(value="Block") }
+                      Block#bytecode_b17 { Return#bytecode_r8 { Var#bytecode_v29(name=blockNode) } }
+                      Block#bytecode_b18 { Return#bytecode_r9 { Call#bytecode_c8(target=bytecode.unsupported) { Lit#bytecode_i17(value="Entry function body must be a block.") Lit#bytecode_i18(value="entry") } } }
+                    }
+                  }
+                  Block#bytecode_b19 { Return#bytecode_r10 { Call#bytecode_c9(target=bytecode.unsupported) { Lit#bytecode_i19(value="Entry function must contain exactly one body block.") Lit#bytecode_i20(value="entry") } } }
+                }
+              }
+              Block#bytecode_b20 { Return#bytecode_r11 { Call#bytecode_c10(target=bytecode.unsupported) { Lit#bytecode_i21(value="Entry binding is not a function.") Lit#bytecode_i22(value="entry") } } }
+            }
+          }
+          Block#bytecode_b21 { Return#bytecode_r12 { Call#bytecode_c11(target=bytecode.unsupported) { Lit#bytecode_i23(value="Entry binding must contain exactly one function.") Lit#bytecode_i24(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l9(name=bytecode.emitSupportedEntryBlockMainText) {
+    Fn#bytecode_f4(params=blockNode) {
+      Block#bytecode_b22 {
+        If#bytecode_if10 {
+          Eq#bytecode_e10 { ChildCount#bytecode_cc4 { Var#bytecode_v30(name=blockNode) } Lit#bytecode_i25(value=1) }
+          Block#bytecode_b23 {
+            Return#bytecode_r13 {
+              Call#bytecode_c12(target=bytecode.emitReturnOnlyBlockMainText) {
+                Var#bytecode_v31(name=blockNode)
+              }
+            }
+          }
+          Block#bytecode_b24 {
+            If#bytecode_if11 {
+              Eq#bytecode_e11 { ChildCount#bytecode_cc5 { Var#bytecode_v32(name=blockNode) } Lit#bytecode_i26(value=2) }
+              Block#bytecode_b25 {
+                Return#bytecode_r14 {
+                  Call#bytecode_c13(target=bytecode.emitTwoStatementBlockMainText) {
+                    Var#bytecode_v33(name=blockNode)
+                  }
+                }
+              }
+              Block#bytecode_b26 { Return#bytecode_r15 { Call#bytecode_c14(target=bytecode.unsupported) { Lit#bytecode_i27(value="Entry block must contain a supported statement shape.") Lit#bytecode_i28(value="entry") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l10(name=bytecode.emitReturnOnlyBlockMainText) {
+    Fn#bytecode_f5(params=blockNode) {
+      Block#bytecode_b27 {
+        Let#bytecode_l11(name=returnNode) {
+          ChildAt#bytecode_ca4 { Var#bytecode_v34(name=blockNode) Lit#bytecode_i29(value=0) }
+        }
+        If#bytecode_if12 {
+          Eq#bytecode_e12 { NodeKind#bytecode_nk6 { Var#bytecode_v35(name=returnNode) } Lit#bytecode_i30(value="Return") }
+          Block#bytecode_b28 {
+            Let#bytecode_l12(name=returnValue) {
+              Call#bytecode_c15(target=bytecode.extractReturnIntLit) {
+                Var#bytecode_v36(name=returnNode)
+              }
+            }
+            If#bytecode_if13 {
+              Eq#bytecode_e13 { NodeKind#bytecode_nk7 { Var#bytecode_v37(name=returnValue) } Lit#bytecode_i31(value="Err") }
+              Block#bytecode_b29 { Return#bytecode_r16 { Var#bytecode_v38(name=returnValue) } }
+              Block#bytecode_b30 {
+                Return#bytecode_r17 {
+                  MakeLitString#bytecode_mls1 {
+                    Lit#bytecode_i32(value="bytecode")
+                    Call#bytecode_c16(target=bytecode.renderReturnIntMainText) {
+                      AttrValueInt#bytecode_avi1 {
+                        Var#bytecode_v39(name=returnValue)
+                        Lit#bytecode_i33(value=0)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#bytecode_b31 { Return#bytecode_r18 { Call#bytecode_c17(target=bytecode.unsupported) { Lit#bytecode_i34(value="Entry block is not a single return statement.") Lit#bytecode_i35(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l13a(name=bytecode.emitTwoStatementBlockMainText) {
+    Fn#bytecode_f6a(params=blockNode) {
+      Block#bytecode_b32a {
+        Let#bytecode_l14a(name=firstNode) {
+          ChildAt#bytecode_ca5a { Var#bytecode_v40a(name=blockNode) Lit#bytecode_i36a(value=0) }
+        }
+        If#bytecode_if14a {
+          Eq#bytecode_e14a { NodeKind#bytecode_nk8a { Var#bytecode_v41a(name=firstNode) } Lit#bytecode_i37a(value="Call") }
+          Block#bytecode_b33a {
+            Return#bytecode_r19a {
+              Call#bytecode_c18a(target=bytecode.emitStdoutThenReturnBlockMainText) {
+                Var#bytecode_v42a(name=blockNode)
+              }
+            }
+          }
+          Block#bytecode_b34a {
+            If#bytecode_if15a {
+              Eq#bytecode_e15a { NodeKind#bytecode_nk9a { Var#bytecode_v43a(name=firstNode) } Lit#bytecode_i38a(value="Let") }
+              Block#bytecode_b35a {
+                Return#bytecode_r20a {
+                  Call#bytecode_c19a(target=bytecode.emitCliArgsTemplateMainText) {
+                    Var#bytecode_v44a(name=blockNode)
+                  }
+                }
+              }
+              Block#bytecode_b36a { Return#bytecode_r21a { Call#bytecode_c20a(target=bytecode.unsupported) { Lit#bytecode_i39a(value="Two-statement entry block is not a supported shape.") Lit#bytecode_i40a(value="entry") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l13(name=bytecode.emitStdoutThenReturnBlockMainText) {
+    Fn#bytecode_f6(params=blockNode) {
+      Block#bytecode_b32 {
+        Let#bytecode_l14(name=callNode) {
+          ChildAt#bytecode_ca5 { Var#bytecode_v40(name=blockNode) Lit#bytecode_i36(value=0) }
+        }
+        Let#bytecode_l15(name=messageNode) {
+          Call#bytecode_c18(target=bytecode.extractStdoutWriteLineStringLit) {
+            Var#bytecode_v41(name=callNode)
+          }
+        }
+        If#bytecode_if14 {
+          Eq#bytecode_e14 { NodeKind#bytecode_nk8 { Var#bytecode_v42(name=messageNode) } Lit#bytecode_i37(value="Err") }
+          Block#bytecode_b33 { Return#bytecode_r19 { Var#bytecode_v43(name=messageNode) } }
+          Block#bytecode_b34 {
+            Let#bytecode_l16(name=returnNode) {
+              ChildAt#bytecode_ca6 { Var#bytecode_v44(name=blockNode) Lit#bytecode_i38(value=1) }
+            }
+            If#bytecode_if15 {
+              Eq#bytecode_e15 { NodeKind#bytecode_nk9 { Var#bytecode_v45(name=returnNode) } Lit#bytecode_i39(value="Return") }
+              Block#bytecode_b35 {
+                Let#bytecode_l17(name=returnValue) {
+                  Call#bytecode_c19(target=bytecode.extractReturnIntLit) {
+                    Var#bytecode_v46(name=returnNode)
+                  }
+                }
+                If#bytecode_if16 {
+                  Eq#bytecode_e16 { NodeKind#bytecode_nk10 { Var#bytecode_v47(name=returnValue) } Lit#bytecode_i40(value="Err") }
+                  Block#bytecode_b36 { Return#bytecode_r20 { Var#bytecode_v48(name=returnValue) } }
+                  Block#bytecode_b37 {
+                    Return#bytecode_r21 {
+                      MakeLitString#bytecode_mls2 {
+                        Lit#bytecode_i41(value="bytecode")
+                        Call#bytecode_c20(target=bytecode.renderStdoutWriteLineThenReturnIntMainText) {
+                          AttrValueString#bytecode_avs1 {
+                            Var#bytecode_v49(name=messageNode)
+                            Lit#bytecode_i42(value=0)
+                          }
+                          AttrValueInt#bytecode_avi2 {
+                            Var#bytecode_v50(name=returnValue)
+                            Lit#bytecode_i43(value=0)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#bytecode_b38 { Return#bytecode_r22 { Call#bytecode_c21(target=bytecode.unsupported) { Lit#bytecode_i44(value="Stdout entry shape must end with an integer return.") Lit#bytecode_i45(value="entry") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l13b(name=bytecode.emitCliArgsTemplateMainText) {
+    Fn#bytecode_f6b(params=blockNode) {
+      Block#bytecode_b32b {
+        Let#bytecode_l14b(name=ifNode) {
+          ChildAt#bytecode_ca5b { Var#bytecode_v40b(name=blockNode) Lit#bytecode_i36b(value=1) }
+        }
+        If#bytecode_if14b {
+          Eq#bytecode_e14b { NodeKind#bytecode_nk8b { Var#bytecode_v41b(name=ifNode) } Lit#bytecode_i37b(value="If") }
+          Block#bytecode_b33b {
+            If#bytecode_if15b {
+              Eq#bytecode_e15b { ChildCount#bytecode_cc6b { Var#bytecode_v42b(name=ifNode) } Lit#bytecode_i38b(value=3) }
+              Block#bytecode_b34b {
+                Let#bytecode_l15b(name=thenBlock) {
+                  ChildAt#bytecode_ca6b { Var#bytecode_v43b(name=ifNode) Lit#bytecode_i39b(value=1) }
+                }
+                Let#bytecode_l16b(name=thenCall) {
+                  ChildAt#bytecode_ca7b { Var#bytecode_v44b(name=thenBlock) Lit#bytecode_i40b(value=0) }
+                }
+                Let#bytecode_l17b(name=noArgsMessage) {
+                  Call#bytecode_c18b(target=bytecode.extractStdoutWriteLineStringLit) {
+                    Var#bytecode_v45b(name=thenCall)
+                  }
+                }
+                If#bytecode_if16b {
+                  Eq#bytecode_e16b { NodeKind#bytecode_nk9b { Var#bytecode_v46b(name=noArgsMessage) } Lit#bytecode_i41b(value="Err") }
+                  Block#bytecode_b35b { Return#bytecode_r19b { Var#bytecode_v47b(name=noArgsMessage) } }
+                  Block#bytecode_b36b {
+                    Return#bytecode_r20b {
+                      MakeLitString#bytecode_mls3b {
+                        Lit#bytecode_i42b(value="bytecode")
+                        Call#bytecode_c19b(target=bytecode.renderCliArgsTemplateMainText) {
+                          AttrValueString#bytecode_avs1b {
+                            Var#bytecode_v48b(name=noArgsMessage)
+                            Lit#bytecode_i43b(value=0)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#bytecode_b37b { Return#bytecode_r21b { Call#bytecode_c20b(target=bytecode.unsupported) { Lit#bytecode_i44b(value="cli-args template If must contain condition, then block, and else block.") Lit#bytecode_i45b(value="entry") } } }
+            }
+          }
+          Block#bytecode_b38b { Return#bytecode_r22b { Call#bytecode_c21b(target=bytecode.unsupported) { Lit#bytecode_i46b(value="cli-args template entry second statement must be If.") Lit#bytecode_i47b(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l18(name=bytecode.extractStdoutWriteLineStringLit) {
+    Fn#bytecode_f7(params=callNode) {
+      Block#bytecode_b39 {
+        If#bytecode_if17 {
+          Eq#bytecode_e17 { NodeKind#bytecode_nk11 { Var#bytecode_v51(name=callNode) } Lit#bytecode_i46(value="Call") }
+          Block#bytecode_b40 {
+            If#bytecode_if18 {
+              Eq#bytecode_e18 {
+                Call#bytecode_c22(target=bytecode.getAttr) {
+                  Var#bytecode_v52(name=callNode)
+                  Lit#bytecode_i47(value="target")
+                  Lit#bytecode_i48(value=0)
+                }
+                Lit#bytecode_i49(value="sys.stdout.writeLine")
+              }
+              Block#bytecode_b41 {
+                If#bytecode_if19 {
+                  Eq#bytecode_e19 { ChildCount#bytecode_cc6 { Var#bytecode_v53(name=callNode) } Lit#bytecode_i50(value=1) }
+                  Block#bytecode_b42 {
+                    Let#bytecode_l19(name=argNode) {
+                      ChildAt#bytecode_ca7 { Var#bytecode_v54(name=callNode) Lit#bytecode_i51(value=0) }
+                    }
+                    If#bytecode_if20 {
+                      Eq#bytecode_e20 { NodeKind#bytecode_nk12 { Var#bytecode_v55(name=argNode) } Lit#bytecode_i52(value="Lit") }
+                      Block#bytecode_b43 {
+                        If#bytecode_if21 {
+                          Eq#bytecode_e21 { AttrValueKind#bytecode_avk1 { Var#bytecode_v56(name=argNode) Lit#bytecode_i53(value=0) } Lit#bytecode_i54(value="string") }
+                          Block#bytecode_b44 { Return#bytecode_r23 { Var#bytecode_v57(name=argNode) } }
+                          Block#bytecode_b45 { Return#bytecode_r24 { Call#bytecode_c23(target=bytecode.unsupported) { Lit#bytecode_i55(value="sys.stdout.writeLine argument is not a string literal.") Lit#bytecode_i56(value="call") } } }
+                        }
+                      }
+                      Block#bytecode_b46 { Return#bytecode_r25 { Call#bytecode_c24(target=bytecode.unsupported) { Lit#bytecode_i57(value="sys.stdout.writeLine argument is not a literal.") Lit#bytecode_i58(value="call") } } }
+                    }
+                  }
+                  Block#bytecode_b47 { Return#bytecode_r26 { Call#bytecode_c25(target=bytecode.unsupported) { Lit#bytecode_i59(value="sys.stdout.writeLine must have exactly one argument.") Lit#bytecode_i60(value="call") } } }
+                }
+              }
+              Block#bytecode_b48 { Return#bytecode_r27 { Call#bytecode_c26(target=bytecode.unsupported) { Lit#bytecode_i61(value="Entry call is not sys.stdout.writeLine.") Lit#bytecode_i62(value="call") } } }
+            }
+          }
+          Block#bytecode_b49 { Return#bytecode_r28 { Call#bytecode_c27(target=bytecode.unsupported) { Lit#bytecode_i63(value="Entry statement is not a call.") Lit#bytecode_i64(value="call") } } }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l20(name=bytecode.extractReturnIntLit) {
+    Fn#bytecode_f8(params=returnNode) {
+      Block#bytecode_b50 {
+        If#bytecode_if22 {
+          Eq#bytecode_e22 { ChildCount#bytecode_cc7 { Var#bytecode_v58(name=returnNode) } Lit#bytecode_i65(value=0) }
+          Block#bytecode_b51 { Return#bytecode_r29 { Call#bytecode_c28(target=bytecode.unsupported) { Lit#bytecode_i66(value="Return is missing an expression.") Lit#bytecode_i67(value="return") } } }
+          Block#bytecode_b52 {
+            Let#bytecode_l21(name=expr) {
+              ChildAt#bytecode_ca8 { Var#bytecode_v59(name=returnNode) Lit#bytecode_i68(value=0) }
+            }
+            If#bytecode_if23 {
+              Eq#bytecode_e23 { NodeKind#bytecode_nk13 { Var#bytecode_v60(name=expr) } Lit#bytecode_i69(value="Lit") }
+              Block#bytecode_b53 {
+                If#bytecode_if24 {
+                  Eq#bytecode_e24 { AttrValueKind#bytecode_avk2 { Var#bytecode_v61(name=expr) Lit#bytecode_i70(value=0) } Lit#bytecode_i71(value="int") }
+                  Block#bytecode_b54 { Return#bytecode_r30 { Var#bytecode_v62(name=expr) } }
+                  Block#bytecode_b55 { Return#bytecode_r31 { Call#bytecode_c29(target=bytecode.unsupported) { Lit#bytecode_i72(value="Return expression is not an integer literal.") Lit#bytecode_i73(value="return") } } }
+                }
+              }
+              Block#bytecode_b56 { Return#bytecode_r32 { Call#bytecode_c30(target=bytecode.unsupported) { Lit#bytecode_i74(value="Return expression is not a literal.") Lit#bytecode_i75(value="return") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l22(name=bytecode.renderReturnIntMainText) {
+    Fn#bytecode_f9(params=value) {
+      Block#bytecode_b57 {
+        Return#bytecode_r33 {
+          StrConcat#bytecode_s1 {
+            Lit#bytecode_i76(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=int value=")
+            StrConcat#bytecode_s2 {
+              ToString#bytecode_ts1 { Var#bytecode_v63(name=value) }
+              Lit#bytecode_i77(value=") Func#f_main(name=main) { Inst#i0(a=0 op=CONST) Inst#i1(op=RETURN) } }")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23(name=bytecode.renderStdoutWriteLineThenReturnIntMainText) {
+    Fn#bytecode_f10(params=message,value) {
+      Block#bytecode_b58 {
+        Return#bytecode_r34 {
+          StrConcat#bytecode_s3 {
+            Lit#bytecode_i78(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=string value=\"sys.stdout.writeLine\") Const#k1(kind=string value=\"")
+            StrConcat#bytecode_s4 {
+              StrEscape#bytecode_se1 { Var#bytecode_v64(name=message) }
+              StrConcat#bytecode_s5 {
+                Lit#bytecode_i79(value="\") Const#k2(kind=int value=")
+                StrConcat#bytecode_s6 {
+                  ToString#bytecode_ts2 { Var#bytecode_v65(name=value) }
+                  Lit#bytecode_i80(value=") Func#f_main(name=main) { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=CONST) Inst#i2(a=1 op=CALL_SYS) Inst#i3(op=POP) Inst#i4(a=2 op=CONST) Inst#i5(op=RETURN) } }")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin1(name=bytecode.emitSupportedEntryBlockMainBytes) {
+    Fn#bytecode_f23bin1(params=blockNode) {
+      Block#bytecode_b23bin1 {
+        If#bytecode_if23bin1 {
+          Eq#bytecode_e23bin1 { ChildCount#bytecode_cc23bin1 { Var#bytecode_v23bin1(name=blockNode) } Lit#bytecode_i23bin1(value=1) }
+          Block#bytecode_b23bin2 {
+            Return#bytecode_r23bin1 {
+              Call#bytecode_c23bin1(target=bytecode.emitReturnOnlyBlockMainBytes) {
+                Var#bytecode_v23bin2(name=blockNode)
+              }
+            }
+          }
+          Block#bytecode_b23bin3 {
+            If#bytecode_if23bin2 {
+              Eq#bytecode_e23bin2 { ChildCount#bytecode_cc23bin2 { Var#bytecode_v23bin3(name=blockNode) } Lit#bytecode_i23bin2(value=2) }
+              Block#bytecode_b23bin4 {
+                Let#bytecode_l23bin2(name=firstNode) {
+                  ChildAt#bytecode_ca23bin1 { Var#bytecode_v23bin4(name=blockNode) Lit#bytecode_i23bin3(value=0) }
+                }
+                If#bytecode_if23bin3 {
+                  Eq#bytecode_e23bin3 { NodeKind#bytecode_nk23bin1 { Var#bytecode_v23bin5(name=firstNode) } Lit#bytecode_i23bin4(value="Call") }
+                  Block#bytecode_b23bin5 {
+                    Return#bytecode_r23bin2 {
+                      Call#bytecode_c23bin2(target=bytecode.emitStdoutThenReturnBlockMainBytes) {
+                        Var#bytecode_v23bin6(name=blockNode)
+                      }
+                    }
+                  }
+                  Block#bytecode_b23bin6 {
+                    If#bytecode_if23bin8 {
+                      Eq#bytecode_e23bin8 { NodeKind#bytecode_nk23bin6 { Var#bytecode_v23bin50(name=firstNode) } Lit#bytecode_i23bin56(value="Let") }
+                      Block#bytecode_b23bin28 {
+                        Return#bytecode_r23bin21 {
+                          Call#bytecode_c23bin68(target=bytecode.emitCliArgsTemplateMainBytes) {
+                            Var#bytecode_v23bin51(name=blockNode)
+                          }
+                        }
+                      }
+                      Block#bytecode_b23bin29 {
+                        Return#bytecode_r23bin22 {
+                          Call#bytecode_c23bin69(target=bytecode.unsupported) {
+                            Lit#bytecode_i23bin57(value="Binary emitter does not support this two-statement entry shape yet.")
+                            Lit#bytecode_i23bin58(value="entry")
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#bytecode_b23bin7 {
+                Return#bytecode_r23bin4 {
+                  Call#bytecode_c23bin4(target=bytecode.unsupported) {
+                    Lit#bytecode_i23bin7(value="Binary emitter does not support this entry block shape yet.")
+                    Lit#bytecode_i23bin8(value="entry")
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin3(name=bytecode.emitReturnOnlyBlockMainBytes) {
+    Fn#bytecode_f23bin2(params=blockNode) {
+      Block#bytecode_b23bin8 {
+        Let#bytecode_l23bin4(name=returnNode) {
+          ChildAt#bytecode_ca23bin2 { Var#bytecode_v23bin7(name=blockNode) Lit#bytecode_i23bin9(value=0) }
+        }
+        If#bytecode_if23bin4 {
+          Eq#bytecode_e23bin4 { NodeKind#bytecode_nk23bin2 { Var#bytecode_v23bin8(name=returnNode) } Lit#bytecode_i23bin10(value="Return") }
+          Block#bytecode_b23bin9 {
+            Let#bytecode_l23bin5(name=returnValue) {
+              Call#bytecode_c23bin5(target=bytecode.extractReturnIntLit) {
+                Var#bytecode_v23bin9(name=returnNode)
+              }
+            }
+            If#bytecode_if23bin5 {
+              Eq#bytecode_e23bin5 { NodeKind#bytecode_nk23bin3 { Var#bytecode_v23bin10(name=returnValue) } Lit#bytecode_i23bin11(value="Err") }
+              Block#bytecode_b23bin10 { Return#bytecode_r23bin5 { Var#bytecode_v23bin11(name=returnValue) } }
+              Block#bytecode_b23bin11 {
+                Return#bytecode_r23bin6 {
+                  Call#bytecode_c23bin6(target=bytecode.renderReturnIntMainBytes) {
+                    AttrValueInt#bytecode_avi23bin1 {
+                      Var#bytecode_v23bin12(name=returnValue)
+                      Lit#bytecode_i23bin12(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#bytecode_b23bin12 {
+            Return#bytecode_r23bin7 {
+              Call#bytecode_c23bin7(target=bytecode.unsupported) {
+                Lit#bytecode_i23bin13(value="Binary entry block is not a single return statement.")
+                Lit#bytecode_i23bin14(value="entry")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin6(name=bytecode.emitStdoutThenReturnBlockMainBytes) {
+    Fn#bytecode_f23bin3(params=blockNode) {
+      Block#bytecode_b23bin13 {
+        Let#bytecode_l23bin7(name=callNode) {
+          ChildAt#bytecode_ca23bin3 { Var#bytecode_v23bin13(name=blockNode) Lit#bytecode_i23bin15(value=0) }
+        }
+        Let#bytecode_l23bin8(name=messageNode) {
+          Call#bytecode_c23bin8(target=bytecode.extractStdoutWriteLineStringLit) {
+            Var#bytecode_v23bin14(name=callNode)
+          }
+        }
+        If#bytecode_if23bin6 {
+          Eq#bytecode_e23bin6 { NodeKind#bytecode_nk23bin4 { Var#bytecode_v23bin15(name=messageNode) } Lit#bytecode_i23bin16(value="Err") }
+          Block#bytecode_b23bin14 { Return#bytecode_r23bin8 { Var#bytecode_v23bin16(name=messageNode) } }
+          Block#bytecode_b23bin15 {
+            Let#bytecode_l23bin9(name=returnNode) {
+              ChildAt#bytecode_ca23bin4 { Var#bytecode_v23bin17(name=blockNode) Lit#bytecode_i23bin17(value=1) }
+            }
+            Let#bytecode_l23bin10(name=returnValue) {
+              Call#bytecode_c23bin9(target=bytecode.extractReturnIntLit) {
+                Var#bytecode_v23bin18(name=returnNode)
+              }
+            }
+            If#bytecode_if23bin7 {
+              Eq#bytecode_e23bin7 { NodeKind#bytecode_nk23bin5 { Var#bytecode_v23bin19(name=returnValue) } Lit#bytecode_i23bin18(value="Err") }
+              Block#bytecode_b23bin16 { Return#bytecode_r23bin9 { Var#bytecode_v23bin20(name=returnValue) } }
+              Block#bytecode_b23bin17 {
+                Return#bytecode_r23bin10 {
+                  Call#bytecode_c23bin10(target=bytecode.renderStdoutWriteLineThenReturnIntMainBytes) {
+                    AttrValueString#bytecode_avs23bin1 {
+                      Var#bytecode_v23bin21(name=messageNode)
+                      Lit#bytecode_i23bin19(value=0)
+                    }
+                    AttrValueInt#bytecode_avi23bin2 {
+                      Var#bytecode_v23bin22(name=returnValue)
+                      Lit#bytecode_i23bin20(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin11(name=bytecode.cat2) {
+    Fn#bytecode_f23bin4(params=left,right) {
+      Block#bytecode_b23bin18 {
+        Return#bytecode_r23bin11 {
+          Call#bytecode_c23bin11(target=bytes.concat) {
+            Var#bytecode_v23bin23(name=left)
+            Var#bytecode_v23bin24(name=right)
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin12(name=bytecode.cat3) {
+    Fn#bytecode_f23bin5(params=a,b,c) {
+      Block#bytecode_b23bin19 {
+        Return#bytecode_r23bin12 {
+          Call#bytecode_c23bin12(target=bytecode.cat2) {
+            Call#bytecode_c23bin13(target=bytecode.cat2) {
+              Var#bytecode_v23bin25(name=a)
+              Var#bytecode_v23bin26(name=b)
+            }
+            Var#bytecode_v23bin27(name=c)
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin13(name=bytecode.inst) {
+    Fn#bytecode_f23bin6(params=op,operand) {
+      Block#bytecode_b23bin20 {
+        Return#bytecode_r23bin13 {
+          Call#bytecode_c23bin14(target=bytecode.cat2) {
+            Call#bytecode_c23bin15(target=bytes.u32le) { Var#bytecode_v23bin28(name=op) }
+            Call#bytecode_c23bin16(target=bytes.i64le) { Var#bytecode_v23bin29(name=operand) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin14(name=bytecode.constInt) {
+    Fn#bytecode_f23bin7(params=value) {
+      Block#bytecode_b23bin21 {
+        Return#bytecode_r23bin14 {
+          Call#bytecode_c23bin17(target=bytecode.cat2) {
+            Call#bytecode_c23bin18(target=bytes.fromByte) { Lit#bytecode_i23bin21(value=1) }
+            Call#bytecode_c23bin19(target=bytes.i64le) { Var#bytecode_v23bin30(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin15(name=bytecode.constString) {
+    Fn#bytecode_f23bin8(params=value) {
+      Block#bytecode_b23bin22 {
+        Let#bytecode_l23bin16(name=raw) {
+          Call#bytecode_c23bin20(target=bytes.fromUtf8String) { Var#bytecode_v23bin31(name=value) }
+        }
+        Return#bytecode_r23bin15 {
+          Call#bytecode_c23bin21(target=bytecode.cat3) {
+            Call#bytecode_c23bin22(target=bytes.fromByte) { Lit#bytecode_i23bin22(value=3) }
+            Call#bytecode_c23bin23(target=bytes.u32le) {
+              Call#bytecode_c23bin24(target=bytes.length) { Var#bytecode_v23bin32(name=raw) }
+            }
+            Var#bytecode_v23bin33(name=raw)
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin17(name=bytecode.aibcHeader) {
+    Fn#bytecode_f23bin9(params=sectionCount) {
+      Block#bytecode_b23bin23 {
+        Return#bytecode_r23bin16 {
+          Call#bytecode_c23bin25(target=bytecode.cat2) {
+            Call#bytecode_c23bin26(target=bytecode.cat3) {
+              Call#bytecode_c23bin27(target=bytes.fromUtf8String) { Lit#bytecode_i23bin23(value="AIBC") }
+              Call#bytecode_c23bin28(target=bytes.u32le) { Lit#bytecode_i23bin24(value=2) }
+              Call#bytecode_c23bin29(target=bytes.u32le) { Lit#bytecode_i23bin25(value=0) }
+            }
+            Call#bytecode_c23bin30(target=bytes.u32le) { Var#bytecode_v23bin34(name=sectionCount) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin18(name=bytecode.instructionsSection) {
+    Fn#bytecode_f23bin10(params=payloadSize,instructionCount,instructionBytes) {
+      Block#bytecode_b23bin24 {
+        Return#bytecode_r23bin17 {
+          Call#bytecode_c23bin31(target=bytecode.cat2) {
+            Call#bytecode_c23bin32(target=bytecode.cat3) {
+              Call#bytecode_c23bin33(target=bytes.u32le) { Lit#bytecode_i23bin26(value=1) }
+              Call#bytecode_c23bin34(target=bytes.u32le) { Var#bytecode_v23bin35(name=payloadSize) }
+              Call#bytecode_c23bin35(target=bytes.u32le) { Var#bytecode_v23bin36(name=instructionCount) }
+            }
+            Var#bytecode_v23bin37(name=instructionBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin19(name=bytecode.constantsSection) {
+    Fn#bytecode_f23bin11(params=payloadSize,constantCount,constantBytes) {
+      Block#bytecode_b23bin25 {
+        Return#bytecode_r23bin18 {
+          Call#bytecode_c23bin36(target=bytecode.cat2) {
+            Call#bytecode_c23bin37(target=bytecode.cat3) {
+              Call#bytecode_c23bin38(target=bytes.u32le) { Lit#bytecode_i23bin27(value=2) }
+              Call#bytecode_c23bin39(target=bytes.u32le) { Var#bytecode_v23bin38(name=payloadSize) }
+              Call#bytecode_c23bin40(target=bytes.u32le) { Var#bytecode_v23bin39(name=constantCount) }
+            }
+            Var#bytecode_v23bin40(name=constantBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin20(name=bytecode.renderReturnIntMainBytes) {
+    Fn#bytecode_f23bin12(params=value) {
+      Block#bytecode_b23bin26 {
+        Return#bytecode_r23bin19 {
+          Call#bytecode_c23bin41(target=bytecode.cat3) {
+            Call#bytecode_c23bin42(target=bytecode.aibcHeader) { Lit#bytecode_i23bin28(value=2) }
+            Call#bytecode_c23bin43(target=bytecode.instructionsSection) {
+              Lit#bytecode_i23bin29(value=28)
+              Lit#bytecode_i23bin30(value=2)
+              Call#bytecode_c23bin44(target=bytecode.cat2) {
+                Call#bytecode_c23bin45(target=bytecode.inst) { Lit#bytecode_i23bin31(value=15) Lit#bytecode_i23bin32(value=0) }
+                Call#bytecode_c23bin46(target=bytecode.inst) { Lit#bytecode_i23bin33(value=19) Lit#bytecode_i23bin34(value=0) }
+              }
+            }
+            Call#bytecode_c23bin47(target=bytecode.constantsSection) {
+              Lit#bytecode_i23bin35(value=13)
+              Lit#bytecode_i23bin36(value=1)
+              Call#bytecode_c23bin48(target=bytecode.constInt) { Var#bytecode_v23bin41(name=value) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin21(name=bytecode.renderStdoutWriteLineThenReturnIntMainBytes) {
+    Fn#bytecode_f23bin13(params=message,value) {
+      Block#bytecode_b23bin27 {
+        Let#bytecode_l23bin22(name=syscallConst) {
+          Call#bytecode_c23bin49(target=bytecode.constString) { Lit#bytecode_i23bin37(value="sys.stdout.writeLine") }
+        }
+        Let#bytecode_l23bin23(name=messageConst) {
+          Call#bytecode_c23bin50(target=bytecode.constString) { Var#bytecode_v23bin42(name=message) }
+        }
+        Let#bytecode_l23bin24(name=returnConst) {
+          Call#bytecode_c23bin51(target=bytecode.constInt) { Var#bytecode_v23bin43(name=value) }
+        }
+        Let#bytecode_l23bin25(name=constBytes) {
+          Call#bytecode_c23bin52(target=bytecode.cat3) {
+            Var#bytecode_v23bin44(name=syscallConst)
+            Var#bytecode_v23bin45(name=messageConst)
+            Var#bytecode_v23bin46(name=returnConst)
+          }
+        }
+        Let#bytecode_l23bin26(name=constPayloadSize) {
+          Add#bytecode_add23bin1 {
+            Lit#bytecode_i23bin38(value=4)
+            Call#bytecode_c23bin53(target=bytes.length) { Var#bytecode_v23bin47(name=constBytes) }
+          }
+        }
+        Return#bytecode_r23bin20 {
+          Call#bytecode_c23bin54(target=bytecode.cat3) {
+            Call#bytecode_c23bin55(target=bytecode.aibcHeader) { Lit#bytecode_i23bin39(value=2) }
+            Call#bytecode_c23bin56(target=bytecode.instructionsSection) {
+              Lit#bytecode_i23bin40(value=76)
+              Lit#bytecode_i23bin41(value=6)
+              Call#bytecode_c23bin57(target=bytecode.cat3) {
+                Call#bytecode_c23bin58(target=bytecode.cat3) {
+                  Call#bytecode_c23bin59(target=bytecode.inst) { Lit#bytecode_i23bin42(value=15) Lit#bytecode_i23bin43(value=0) }
+                  Call#bytecode_c23bin60(target=bytecode.inst) { Lit#bytecode_i23bin44(value=15) Lit#bytecode_i23bin45(value=1) }
+                  Call#bytecode_c23bin61(target=bytecode.inst) { Lit#bytecode_i23bin46(value=22) Lit#bytecode_i23bin47(value=1) }
+                }
+                Call#bytecode_c23bin62(target=bytecode.cat3) {
+                  Call#bytecode_c23bin63(target=bytecode.inst) { Lit#bytecode_i23bin48(value=4) Lit#bytecode_i23bin49(value=0) }
+                  Call#bytecode_c23bin64(target=bytecode.inst) { Lit#bytecode_i23bin50(value=15) Lit#bytecode_i23bin51(value=2) }
+                  Call#bytecode_c23bin65(target=bytecode.inst) { Lit#bytecode_i23bin52(value=19) Lit#bytecode_i23bin53(value=0) }
+                }
+                Call#bytecode_c23bin66(target=bytes.fromUtf8String) { Lit#bytecode_i23bin54(value="") }
+              }
+            }
+            Call#bytecode_c23bin67(target=bytecode.constantsSection) {
+              Var#bytecode_v23bin48(name=constPayloadSize)
+              Lit#bytecode_i23bin55(value=3)
+              Var#bytecode_v23bin49(name=constBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin27(name=bytecode.emitCliArgsTemplateMainBytes) {
+    Fn#bytecode_f23bin14(params=blockNode) {
+      Block#bytecode_b23bin30 {
+        Let#bytecode_l23bin28(name=ifNode) {
+          ChildAt#bytecode_ca23bin5 { Var#bytecode_v23bin52(name=blockNode) Lit#bytecode_i23bin59(value=1) }
+        }
+        If#bytecode_if23bin9 {
+          Eq#bytecode_e23bin9 { NodeKind#bytecode_nk23bin7 { Var#bytecode_v23bin53(name=ifNode) } Lit#bytecode_i23bin60(value="If") }
+          Block#bytecode_b23bin31 {
+            Let#bytecode_l23bin29(name=thenBlock) {
+              ChildAt#bytecode_ca23bin6 { Var#bytecode_v23bin54(name=ifNode) Lit#bytecode_i23bin61(value=1) }
+            }
+            Let#bytecode_l23bin30(name=thenCall) {
+              ChildAt#bytecode_ca23bin7 { Var#bytecode_v23bin55(name=thenBlock) Lit#bytecode_i23bin62(value=0) }
+            }
+            Let#bytecode_l23bin31(name=noArgsMessage) {
+              Call#bytecode_c23bin70(target=bytecode.extractStdoutWriteLineStringLit) {
+                Var#bytecode_v23bin56(name=thenCall)
+              }
+            }
+            If#bytecode_if23bin10 {
+              Eq#bytecode_e23bin10 { NodeKind#bytecode_nk23bin8 { Var#bytecode_v23bin57(name=noArgsMessage) } Lit#bytecode_i23bin63(value="Err") }
+              Block#bytecode_b23bin32 { Return#bytecode_r23bin23 { Var#bytecode_v23bin58(name=noArgsMessage) } }
+              Block#bytecode_b23bin33 {
+                Return#bytecode_r23bin24 {
+                  Call#bytecode_c23bin71(target=bytecode.renderCliArgsTemplateMainBytes) {
+                    AttrValueString#bytecode_avs23bin2 {
+                      Var#bytecode_v23bin59(name=noArgsMessage)
+                      Lit#bytecode_i23bin64(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#bytecode_b23bin34 {
+            Return#bytecode_r23bin25 {
+              Call#bytecode_c23bin72(target=bytecode.unsupported) {
+                Lit#bytecode_i23bin65(value="Binary cli-args template entry second statement must be If.")
+                Lit#bytecode_i23bin66(value="entry")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23bin32(name=bytecode.renderCliArgsTemplateMainBytes) {
+    Fn#bytecode_f23bin15(params=noArgsMessage) {
+      Block#bytecode_b23bin35 {
+        Let#bytecode_l23bin33(name=constBytes) {
+          Call#bytecode_c23bin73(target=bytecode.cat3) {
+            Call#bytecode_c23bin74(target=bytecode.constString) { Lit#bytecode_i23bin67(value="sys.process.args") }
+            Call#bytecode_c23bin75(target=bytecode.constString) { Lit#bytecode_i23bin68(value="sys.stdout.writeLine") }
+            Call#bytecode_c23bin76(target=bytecode.cat2) {
+              Call#bytecode_c23bin77(target=bytecode.constInt) { Lit#bytecode_i23bin69(value=0) }
+              Call#bytecode_c23bin78(target=bytecode.constString) { Var#bytecode_v23bin60(name=noArgsMessage) }
+            }
+          }
+        }
+        Let#bytecode_l23bin34(name=constPayloadSize) {
+          Add#bytecode_add23bin2 {
+            Lit#bytecode_i23bin70(value=4)
+            Call#bytecode_c23bin79(target=bytes.length) { Var#bytecode_v23bin61(name=constBytes) }
+          }
+        }
+        Let#bytecode_l23bin35(name=i0) { Call#bytecode_c23bin80(target=bytecode.inst) { Lit#bytecode_i23bin71(value=15) Lit#bytecode_i23bin72(value=0) } }
+        Let#bytecode_l23bin36(name=i1) { Call#bytecode_c23bin81(target=bytecode.cat2) { Var#bytecode_v23bin62(name=i0) Call#bytecode_c23bin82(target=bytecode.inst) { Lit#bytecode_i23bin73(value=22) Lit#bytecode_i23bin74(value=0) } } }
+        Let#bytecode_l23bin37(name=i2) { Call#bytecode_c23bin83(target=bytecode.cat2) { Var#bytecode_v23bin63(name=i1) Call#bytecode_c23bin84(target=bytecode.inst) { Lit#bytecode_i23bin75(value=5) Lit#bytecode_i23bin76(value=0) } } }
+        Let#bytecode_l23bin38(name=i3) { Call#bytecode_c23bin85(target=bytecode.cat2) { Var#bytecode_v23bin64(name=i2) Call#bytecode_c23bin86(target=bytecode.inst) { Lit#bytecode_i23bin77(value=6) Lit#bytecode_i23bin78(value=0) } } }
+        Let#bytecode_l23bin39(name=i4) { Call#bytecode_c23bin87(target=bytecode.cat2) { Var#bytecode_v23bin65(name=i3) Call#bytecode_c23bin88(target=bytecode.inst) { Lit#bytecode_i23bin79(value=39) Lit#bytecode_i23bin80(value=0) } } }
+        Let#bytecode_l23bin40(name=i5) { Call#bytecode_c23bin89(target=bytecode.cat2) { Var#bytecode_v23bin66(name=i4) Call#bytecode_c23bin90(target=bytecode.inst) { Lit#bytecode_i23bin81(value=5) Lit#bytecode_i23bin82(value=1) } } }
+        Let#bytecode_l23bin41(name=i6) { Call#bytecode_c23bin91(target=bytecode.cat2) { Var#bytecode_v23bin67(name=i5) Call#bytecode_c23bin92(target=bytecode.inst) { Lit#bytecode_i23bin83(value=6) Lit#bytecode_i23bin84(value=1) } } }
+        Let#bytecode_l23bin42(name=i7) { Call#bytecode_c23bin93(target=bytecode.cat2) { Var#bytecode_v23bin68(name=i6) Call#bytecode_c23bin94(target=bytecode.inst) { Lit#bytecode_i23bin85(value=15) Lit#bytecode_i23bin86(value=2) } } }
+        Let#bytecode_l23bin43(name=i8) { Call#bytecode_c23bin95(target=bytecode.cat2) { Var#bytecode_v23bin69(name=i7) Call#bytecode_c23bin96(target=bytecode.inst) { Lit#bytecode_i23bin87(value=14) Lit#bytecode_i23bin88(value=0) } } }
+        Let#bytecode_l23bin44(name=i9) { Call#bytecode_c23bin97(target=bytecode.cat2) { Var#bytecode_v23bin70(name=i8) Call#bytecode_c23bin98(target=bytecode.inst) { Lit#bytecode_i23bin89(value=9) Lit#bytecode_i23bin90(value=16) } } }
+        Let#bytecode_l23bin45(name=i10) { Call#bytecode_c23bin99(target=bytecode.cat2) { Var#bytecode_v23bin71(name=i9) Call#bytecode_c23bin100(target=bytecode.inst) { Lit#bytecode_i23bin91(value=15) Lit#bytecode_i23bin92(value=1) } } }
+        Let#bytecode_l23bin46(name=i11) { Call#bytecode_c23bin101(target=bytecode.cat2) { Var#bytecode_v23bin72(name=i10) Call#bytecode_c23bin102(target=bytecode.inst) { Lit#bytecode_i23bin93(value=15) Lit#bytecode_i23bin94(value=3) } } }
+        Let#bytecode_l23bin47(name=i12) { Call#bytecode_c23bin103(target=bytecode.cat2) { Var#bytecode_v23bin73(name=i11) Call#bytecode_c23bin104(target=bytecode.inst) { Lit#bytecode_i23bin95(value=22) Lit#bytecode_i23bin96(value=1) } } }
+        Let#bytecode_l23bin48(name=i13) { Call#bytecode_c23bin105(target=bytecode.cat2) { Var#bytecode_v23bin74(name=i12) Call#bytecode_c23bin106(target=bytecode.inst) { Lit#bytecode_i23bin97(value=4) Lit#bytecode_i23bin98(value=0) } } }
+        Let#bytecode_l23bin49(name=i14) { Call#bytecode_c23bin107(target=bytecode.cat2) { Var#bytecode_v23bin75(name=i13) Call#bytecode_c23bin108(target=bytecode.inst) { Lit#bytecode_i23bin99(value=15) Lit#bytecode_i23bin100(value=2) } } }
+        Let#bytecode_l23bin50(name=i15) { Call#bytecode_c23bin109(target=bytecode.cat2) { Var#bytecode_v23bin76(name=i14) Call#bytecode_c23bin110(target=bytecode.inst) { Lit#bytecode_i23bin101(value=19) Lit#bytecode_i23bin102(value=0) } } }
+        Let#bytecode_l23bin51(name=i16) { Call#bytecode_c23bin111(target=bytecode.cat2) { Var#bytecode_v23bin77(name=i15) Call#bytecode_c23bin112(target=bytecode.inst) { Lit#bytecode_i23bin103(value=15) Lit#bytecode_i23bin104(value=1) } } }
+        Let#bytecode_l23bin52(name=i17) { Call#bytecode_c23bin113(target=bytecode.cat2) { Var#bytecode_v23bin78(name=i16) Call#bytecode_c23bin114(target=bytecode.inst) { Lit#bytecode_i23bin105(value=6) Lit#bytecode_i23bin106(value=0) } } }
+        Let#bytecode_l23bin53(name=i18) { Call#bytecode_c23bin115(target=bytecode.cat2) { Var#bytecode_v23bin79(name=i17) Call#bytecode_c23bin116(target=bytecode.inst) { Lit#bytecode_i23bin107(value=15) Lit#bytecode_i23bin108(value=2) } } }
+        Let#bytecode_l23bin54(name=i19) { Call#bytecode_c23bin117(target=bytecode.cat2) { Var#bytecode_v23bin80(name=i18) Call#bytecode_c23bin118(target=bytecode.inst) { Lit#bytecode_i23bin109(value=40) Lit#bytecode_i23bin110(value=0) } } }
+        Let#bytecode_l23bin55(name=i20) { Call#bytecode_c23bin119(target=bytecode.cat2) { Var#bytecode_v23bin81(name=i19) Call#bytecode_c23bin120(target=bytecode.inst) { Lit#bytecode_i23bin111(value=15) Lit#bytecode_i23bin112(value=2) } } }
+        Let#bytecode_l23bin56(name=i21) { Call#bytecode_c23bin121(target=bytecode.cat2) { Var#bytecode_v23bin82(name=i20) Call#bytecode_c23bin122(target=bytecode.inst) { Lit#bytecode_i23bin113(value=36) Lit#bytecode_i23bin114(value=0) } } }
+        Let#bytecode_l23bin57(name=i22) { Call#bytecode_c23bin123(target=bytecode.cat2) { Var#bytecode_v23bin83(name=i21) Call#bytecode_c23bin124(target=bytecode.inst) { Lit#bytecode_i23bin115(value=22) Lit#bytecode_i23bin116(value=1) } } }
+        Let#bytecode_l23bin58(name=i23) { Call#bytecode_c23bin125(target=bytecode.cat2) { Var#bytecode_v23bin84(name=i22) Call#bytecode_c23bin126(target=bytecode.inst) { Lit#bytecode_i23bin117(value=4) Lit#bytecode_i23bin118(value=0) } } }
+        Let#bytecode_l23bin59(name=i24) { Call#bytecode_c23bin127(target=bytecode.cat2) { Var#bytecode_v23bin85(name=i23) Call#bytecode_c23bin128(target=bytecode.inst) { Lit#bytecode_i23bin119(value=15) Lit#bytecode_i23bin120(value=2) } } }
+        Let#bytecode_l23bin60(name=i25) { Call#bytecode_c23bin129(target=bytecode.cat2) { Var#bytecode_v23bin86(name=i24) Call#bytecode_c23bin130(target=bytecode.inst) { Lit#bytecode_i23bin121(value=19) Lit#bytecode_i23bin122(value=0) } } }
+        Return#bytecode_r23bin26 {
+          Call#bytecode_c23bin131(target=bytecode.cat3) {
+            Call#bytecode_c23bin132(target=bytecode.aibcHeader) { Lit#bytecode_i23bin123(value=2) }
+            Call#bytecode_c23bin133(target=bytecode.instructionsSection) {
+              Lit#bytecode_i23bin124(value=316)
+              Lit#bytecode_i23bin125(value=26)
+              Var#bytecode_v23bin87(name=i25)
+            }
+            Call#bytecode_c23bin134(target=bytecode.constantsSection) {
+              Var#bytecode_v23bin88(name=constPayloadSize)
+              Lit#bytecode_i23bin126(value=4)
+              Var#bytecode_v23bin89(name=constBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l23b(name=bytecode.renderCliArgsTemplateMainText) {
+    Fn#bytecode_f10b(params=noArgsMessage) {
+      Block#bytecode_b58b {
+        Return#bytecode_r34b {
+          StrConcat#bytecode_s3b {
+            Lit#bytecode_i78b(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=string value=\"sys.stdout.writeLine\") Const#k1(kind=int value=0) Const#k2(kind=string value=\"")
+            StrConcat#bytecode_s4b {
+              StrEscape#bytecode_se1b { Var#bytecode_v64b(name=noArgsMessage) }
+              StrConcat#bytecode_s5b {
+                Lit#bytecode_i79b(value="\") Func#f_main(locals=\"argv,count,start\" name=main params=\"argv\") { Inst#i0(a=0 op=LOAD_LOCAL) Inst#i1(op=CHILD_COUNT) Inst#i2(a=1 op=STORE_LOCAL) ")
+                StrConcat#bytecode_s6b {
+                  Lit#bytecode_i80b(value="Inst#i3(a=1 op=LOAD_LOCAL) Inst#i4(a=1 op=CONST) Inst#i5(op=EQ) Inst#i6(a=14 op=JUMP_IF_FALSE) Inst#i7(a=0 op=CONST) ")
+                  StrConcat#bytecode_s7b {
+                    Lit#bytecode_i81b(value="Inst#i8(a=2 op=CONST) Inst#i9(a=1 op=CALL_SYS) Inst#i10(op=POP) Inst#i11(a=1 op=CONST) Inst#i12(a=2 op=STORE_LOCAL) ")
+                    StrConcat#bytecode_s8b {
+                      Lit#bytecode_i82b(value="Inst#i13(op=RETURN) Inst#i14(a=0 op=CONST) Inst#i15(a=0 op=LOAD_LOCAL) Inst#i16(a=1 op=CONST) Inst#i17(op=CHILD_AT) ")
+                      Lit#bytecode_i83b(value="Inst#i18(a=1 op=CONST) Inst#i19(op=ATTR_VALUE_STRING) Inst#i20(a=1 op=CALL_SYS) Inst#i21(op=POP) Inst#i22(a=1 op=CONST) Inst#i23(a=2 op=STORE_LOCAL) Inst#i24(op=RETURN) } }")
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l24(name=bytecode.getAttr) {
+    Fn#bytecode_f11(params=node,key,index) {
+      Block#bytecode_b59 {
+        If#bytecode_if25 {
+          Eq#bytecode_e25 { Var#bytecode_v66(name=index) AttrCount#bytecode_ac1 { Var#bytecode_v67(name=node) } }
+          Block#bytecode_b60 { Return#bytecode_r35 { Lit#bytecode_i81(value="") } }
+          Block#bytecode_b61 {
+            If#bytecode_if26 {
+              Eq#bytecode_e26 { AttrKey#bytecode_ak1 { Var#bytecode_v68(name=node) Var#bytecode_v69(name=index) } Var#bytecode_v70(name=key) }
+              Block#bytecode_b62 { Return#bytecode_r36 { AttrValueString#bytecode_avs2 { Var#bytecode_v71(name=node) Var#bytecode_v72(name=index) } } }
+              Block#bytecode_b63 {
+                Return#bytecode_r37 {
+                  Call#bytecode_c31(target=bytecode.getAttr) {
+                    Var#bytecode_v73(name=node)
+                    Var#bytecode_v74(name=key)
+                    Add#bytecode_a3 { Var#bytecode_v75(name=index) Lit#bytecode_i82(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bytecode_l25(name=bytecode.unsupported) {
+    Fn#bytecode_f12(params=message,nodeId) {
+      Block#bytecode_b64 {
+        Return#bytecode_r38 {
+          MakeErr#bytecode_me1 {
+            Lit#bytecode_i83(value="bytecode_err")
+            Lit#bytecode_i84(value="BYTECODE001")
+            Var#bytecode_v76(name=message)
+            Var#bytecode_v77(name=nodeId)
+          }
+        }
+      }
+    }
+  }
+}

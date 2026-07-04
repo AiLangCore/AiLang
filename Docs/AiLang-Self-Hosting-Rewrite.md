@@ -8,8 +8,10 @@ AiLang command-line tooling should be implemented in AiLang, not C.
 
 Moving C out of the AiLang repository is only a boundary cleanup. It is not the
 end state. The native C launcher currently living in AiVM is a bootstrap host
-that should shrink over time until it only provides VM execution, SDK loading,
-and host syscall adapters.
+that should be removed from the final AiLang toolchain. Final AiLang tooling
+must contain zero C command implementation and zero C `ailang` launcher code.
+C belongs in AiVM, target-owned host adapters, or explicitly native library
+bindings, not in AiLang command behavior.
 
 ## Ownership
 
@@ -89,6 +91,33 @@ The migrated C launcher is temporarily parked in:
 ../AiVM/src/ailang_cli
 ```
 
+## Remaining Native Launcher Debt
+
+The native launcher still contains command-policy code during the bootstrap
+period. This is debt, not architecture. Do not add new command behavior there.
+
+Remaining C-owned command surface to remove:
+
+- native subcommand dispatch
+- native `init`, `template`, `package`, `build`, `run`, `publish`, `debug`, and
+  target-option policy
+- native package/target lockfile interpretation
+- native source bootstrap compiler and its temporary opcode mappings
+
+Final `ailang` rule:
+
+- no C implementation in the `ailang` command
+- no C subcommand dispatcher
+- no C package, target, build, run, publish, debug, or template policy
+- installed `ailang` should be the compiled AiLang CLI bytecode plus a
+  packaging-level, non-C command shim where an operating system requires a
+  command entrypoint
+- the command shim may locate the SDK and invoke `aivm`, but it must not own
+  command semantics
+
+VM opcodes, bytecode loading, and host syscall adapters remain AiVM-owned. CLI
+semantics and command behavior do not.
+
 ## Rewrite Sequence
 
 1. Keep `src/cli/ailang.aos` as the canonical bytecode-runnable AiLang CLI
@@ -109,18 +138,26 @@ The migrated C launcher is temporarily parked in:
 
 ## Completion Checklist
 
-Fully self-hosted means the installed `ailang` command starts by running
-AiLang-authored bytecode on `aivm`. The native code may still provide VM
-execution, SDK discovery, process launch, file/network/UI syscalls, and native
-bridge loading, but it must not own language/tooling policy.
+Fully self-hosted means the installed `ailang` command is AiLang-authored
+bytecode running on `aivm`. The final AiLang toolchain must not ship C code as
+part of `ailang`. Native code may still exist in `aivm`, target hosts, and
+native bridge libraries, but not in AiLang command implementation.
 
 - [ ] Build and publish `src/cli/ailang.aos` as the installed CLI bytecode
   payload during SDK staging.
   - [x] Local SDK staging builds `libexec/ailang/cli/app.aibc1`.
   - [x] Release SDK staging includes the same bytecode CLI payload.
-- [ ] Replace the native launcher command dispatcher with a minimal bootstrap
-  path: locate SDK, locate CLI bytecode, invoke `aivm`, forward argv/env, and
-  return the bytecode program exit code.
+- [ ] Replace the native launcher command dispatcher with a non-C installed
+  command shim that locates SDK CLI bytecode, invokes `aivm`, forwards argv/env,
+  and returns the bytecode program exit code.
+  - [x] Local SDK staging writes `bin/ailang` as a shell shim over
+    `bin/aivm libexec/ailang/cli/app.aibc1` instead of copying the native
+    bootstrap tool into the SDK.
+  - [x] Local SDK staging rejects a staged native `bin/ailang` binary.
+  - [x] Release SDK staging uses the same non-C installed `ailang` shim on
+    Unix and a non-C `ailang.cmd` shim on Windows.
+  - [ ] Remove the native `ailang.c` command dispatcher after release gates run
+    the installed bytecode CLI for the required command surface.
 - [ ] Keep `aivm` executable behavior independent from `ailang` command
   behavior. `aivm` should execute bytecode/bundles and expose debug/profile
   runtime switches only.
@@ -135,6 +172,36 @@ bridge loading, but it must not own language/tooling policy.
 - [ ] Rework `build`, `run`, and `publish` so source/project inputs compile
   through AiLang-authored compiler bytecode instead of the native bootstrap
   compiler path.
+  - [x] `build` now constructs the project import graph and emits
+    `obj/link-report.aos` plus `obj/linked-bundle.aos` from AiLang-authored
+    CLI/linker code before invoking the remaining bootstrap binary emitter.
+  - [x] `publish` now routes project compilation through the same AiLang
+    `buildProject` path instead of calling the bootstrap binary emitter
+    directly.
+  - [x] `build` now emits `obj/bytecode-emitter-report.aos`, writes
+    `obj/app.bytecode.aos` for inspection, and writes `obj/app.aibc1`
+    directly from AiLang-authored bytecode emission for the supported bootstrap
+    shapes: an entry function containing exactly one integer-literal `Return`,
+    the basic CLI template shape with literal `sys.stdout.writeLine` followed
+    by an integer-literal `Return`, and the current `cli-args` template.
+  - [x] `build` now emits `obj/build-input-report.aos` and uses generated
+    bytecode objects as the runnable build input when the current assembler can
+    encode them.
+  - [x] The self-hosted bytecode emitter now also lowers the current
+    `cli-args` template shape with `ChildCount(args)`, deterministic branching,
+    first-argument extraction, stdout writes, and integer returns.
+  - [x] The AiLang bytecode emitter now emits direct argv bootstrap bytecode:
+    `sys.process.args`, deterministic no-args branching, first-argument
+    extraction, stdout writes, and integer returns without a native
+    `params="argv"` adapter.
+  - [x] AiVM string arena handling was corrected for generated object text:
+    `STR_CONCAT` and `STR_ESCAPE` snapshot arena-backed operands before
+    allocations that may compact the string arena.
+  - [x] Replace the first binary AiBC emission adapter used by `build` for the
+    supported bootstrap shapes.
+  - [ ] Generalize binary AiBC emission beyond the bootstrap template shapes.
+  - [x] Add package-root-aware graph linking so package imports also flow
+    through the AiLang linker artifact path.
 - [ ] Rewrite `tools/aos_frontend.c` in AiLang and remove it from normal SDK
   staging once canonical parsing/formatting no longer depends on that binary.
 - [ ] Add release-gating tests that execute the installed `ailang` command

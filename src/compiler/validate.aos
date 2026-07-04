@@ -465,6 +465,18 @@ Program#p1 {
           Eq#k600 { Var#k601(name=kind) Lit#k602(value="BytesToBase64") }
           Block#k603 { Return#k604 { Lit#k605(value=1) } }
           Block#k606 {
+            If#k900 {
+              Eq#k901 { Var#k902(name=kind) Lit#k903(value="BytesFromByte") }
+              Block#k904 { Return#k905 { Lit#k906(value=1) } }
+              Block#k907 {
+                If#k908 {
+                  Eq#k909 { Var#k910(name=kind) Lit#k911(value="BytesU32LE") }
+                  Block#k912 { Return#k913 { Lit#k914(value=1) } }
+                  Block#k915 {
+                    If#k916 {
+                      Eq#k917 { Var#k918(name=kind) Lit#k919(value="BytesI64LE") }
+                      Block#k920 { Return#k921 { Lit#k922(value=1) } }
+                      Block#k923 {
             If#k609 {
               Eq#k610 { Var#k611(name=kind) Lit#k612(value="MakePair") }
               Block#k613 { Return#k614 { Lit#k615(value=2) } }
@@ -512,6 +524,12 @@ Program#p1 {
                             }
                           }
                         }
+                      }
+                    }
+                  }
+                }
+              }
+            }
                       }
                     }
                   }

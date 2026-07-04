@@ -1,6 +1,10 @@
 Program#cli_p1 {
   Import#cli_im1(path="../std/str.aos")
   Import#cli_im2(path="../std/bytes.aos")
+  Import#cli_im3(path="../compiler/parser.aos")
+  Import#cli_im4(path="../compiler/linker.aos")
+  Import#cli_im5(path="../compiler/bundle.aos")
+  Import#cli_im6(path="../compiler/bytecode.aos")
   Export#cli_e1(name=main)
 
   Let#cli_l1(name=main) {
@@ -585,6 +589,22 @@ Program#cli_p1 {
     }
   }
 
+  Let#cli_l35orl(name=readOptionalLockText) {
+    Fn#cli_f35orl(params=path) {
+      Block#cli_b35orl {
+        If#cli_if35orl {
+          Call#cli_c35orl1(target=sys.fs.path.exists) { Var#cli_v35orl1(name=path) }
+          Block#cli_b35orl1 {
+            Return#cli_r35orl1 {
+              Call#cli_c35orl2(target=readTextFile) { Var#cli_v35orl2(name=path) }
+            }
+          }
+          Block#cli_b35orl2 { Return#cli_r35orl2 { Lit#cli_i35orl1(value="") } }
+        }
+      }
+    }
+  }
+
   Let#cli_l35rt(name=renderProjectTemplate) {
     Fn#cli_f35rt(params=text,projectName) {
       Block#cli_b55rt {
@@ -877,6 +897,7 @@ Program#cli_p1 {
           Call#cli_c40bp1(target=sys.fs.path.exists) { Var#cli_v40bp5(name=manifestPath) }
           Block#cli_b40bp1 {
             Let#cli_l40bpt(name=manifestText) { Call#cli_c40bpr(target=readTextFile) { Var#cli_v40bpmr(name=manifestPath) } }
+            Let#cli_l40bpn(name=projectName) { Call#cli_c40bpna(target=getManifestAttr) { Var#cli_v40bptn(name=manifestText) Lit#cli_i40bpn(value="name") Lit#cli_i40bpnl(value=6) } }
             Let#cli_l40bpef(name=entryFile) { Call#cli_c40bpa(target=getManifestAttr) { Var#cli_v40bpt(name=manifestText) Lit#cli_i40bpef(value="entryFile") Lit#cli_i40bpefl(value=11) } }
             Let#cli_l40bpex(name=entryExport) { Call#cli_c40bpx(target=getManifestAttr) { Var#cli_v40bpt2(name=manifestText) Lit#cli_i40bpex(value="entryExport") Lit#cli_i40bpexl(value=13) } }
             If#cli_if40bp2 {
@@ -901,7 +922,35 @@ Program#cli_p1 {
                           }
                           If#cli_if40bpui {
                             Eq#cli_e40bpui { Var#cli_v40bpui(name=undeclaredPackageImport) Lit#cli_i40bpui2(value="") }
-                            Block#cli_b40bpok { Return#cli_r40bp1 { Call#cli_c40bpb(target=runBootstrapBuild) { Var#cli_v40bp7(name=path) Var#cli_v40bp8(name=resolvedOutDir) Var#cli_v40bp9(name=outFile) } } }
+                            Block#cli_b40bpok {
+                              Let#cli_l40bpg(name=graphCode) {
+                                Call#cli_c40bpg(target=writeBuildGraphArtifacts) {
+                                  Var#cli_v40bp7g(name=path)
+                                  Var#cli_v40bpng(name=projectName)
+                                  Var#cli_v40bpefg(name=entryFile)
+                                  Var#cli_v40bpexg(name=entryExport)
+                                  Var#cli_v40bpesg(name=entryText)
+                                }
+                              }
+                              If#cli_if40bpg {
+                                Eq#cli_e40bpg { Var#cli_v40bpgg(name=graphCode) Lit#cli_i40bpg(value=0) }
+                                Block#cli_b40bpgok {
+                                  Let#cli_l40bpbi(name=bootstrapInput) {
+                                    Call#cli_c40bpbi(target=selectBootstrapBuildInput) {
+                                      Var#cli_v40bpbi1(name=path)
+                                    }
+                                  }
+                                  Return#cli_r40bp1 {
+                                    Call#cli_c40bpb(target=runBootstrapBuild) {
+                                      Var#cli_v40bpbi2(name=bootstrapInput)
+                                      Var#cli_v40bp8(name=resolvedOutDir)
+                                      Var#cli_v40bp9(name=outFile)
+                                    }
+                                  }
+                                }
+                                Block#cli_b40bpgerr { Return#cli_r40bpg { Var#cli_v40bpgc(name=graphCode) } }
+                              }
+                            }
                             Block#cli_b40bperr { Return#cli_r40bpui { Call#cli_c40bperr(target=buildError) { Lit#cli_i40bperr1(value="RUN024") Lit#cli_i40bperr2(value="Package import is not declared in project manifest.") Var#cli_v40bpui2(name=undeclaredPackageImport) } } }
                           }
                         }
@@ -1008,6 +1057,164 @@ Program#cli_p1 {
       }
     }
 
+    Let#cli_l40wbg(name=writeBuildGraphArtifacts) {
+      Fn#cli_f40wbg(params=projectDir,projectName,entryFile,entryExport,entryText) {
+        Block#cli_b40wbg {
+          Let#cli_l40wbg_obj(name=objDir) {
+            StrConcat#cli_sc40wbg_obj {
+              Var#cli_v40wbg_project_dir(name=projectDir)
+              Lit#cli_i40wbg_obj(value="/obj")
+            }
+          }
+          Let#cli_l40wbg_report(name=linkReportPath) {
+            StrConcat#cli_sc40wbg_report {
+              Var#cli_v40wbg_obj_dir(name=objDir)
+              Lit#cli_i40wbg_report(value="/link-report.aos")
+            }
+          }
+          Let#cli_l40wbg_bundle_path(name=linkedBundlePath) {
+            StrConcat#cli_sc40wbg_bundle_path {
+              Var#cli_v40wbg_obj_dir2(name=objDir)
+              Lit#cli_i40wbg_bundle_path(value="/linked-bundle.aos")
+            }
+          }
+          Let#cli_l40wbg_bytecode_path(name=bytecodeObjectPath) {
+            StrConcat#cli_sc40wbg_bytecode_path {
+              Var#cli_v40wbg_obj_dir_bc(name=objDir)
+              Lit#cli_i40wbg_bytecode_path(value="/app.bytecode.aos")
+            }
+          }
+          Let#cli_l40wbg_aibc_path(name=bytecodeBinaryPath) {
+            StrConcat#cli_sc40wbg_aibc_path {
+              Var#cli_v40wbg_obj_dir_aibc(name=objDir)
+              Lit#cli_i40wbg_aibc_path(value="/app.aibc1")
+            }
+          }
+          Let#cli_l40wbg_bytecode_report_path(name=bytecodeReportPath) {
+            StrConcat#cli_sc40wbg_bytecode_report_path {
+              Var#cli_v40wbg_obj_dir_bcr(name=objDir)
+              Lit#cli_i40wbg_bytecode_report_path(value="/bytecode-emitter-report.aos")
+            }
+          }
+          Let#cli_l40wbg_lock_path(name=lockfilePath) {
+            StrConcat#cli_sc40wbg_lock_path {
+              Var#cli_v40wbg_project_dir_lock(name=projectDir)
+              Lit#cli_i40wbg_lock_path(value="/ailang.lock.toml")
+            }
+          }
+          Let#cli_l40wbg_lock_text(name=lockText) {
+            Call#cli_c40wbg_lock_text(target=readOptionalLockText) {
+              Var#cli_v40wbg_lock_path1(name=lockfilePath)
+            }
+          }
+          Let#cli_l40wbg_entry(name=entryProgram) {
+            Call#cli_c40wbg_parse(target=parse.parseDocument) {
+              Var#cli_v40wbg_entry_text(name=entryText)
+            }
+          }
+          If#cli_if40wbg_parse {
+            Eq#cli_e40wbg_parse {
+              NodeKind#cli_nk40wbg_parse { Var#cli_v40wbg_entry_program(name=entryProgram) }
+              Lit#cli_i40wbg_parse(value="Err")
+            }
+            Block#cli_b40wbg_parse_err {
+              Return#cli_r40wbg_parse_err {
+                Call#cli_c40wbg_parse_err(target=buildError) {
+                  Lit#cli_i40wbg_parse_err_code(value="AILANG013")
+                  Lit#cli_i40wbg_parse_err_msg(value="Project entryFile could not be parsed.")
+                  Lit#cli_i40wbg_parse_err_node(value="entryFile")
+                }
+              }
+            }
+            Block#cli_b40wbg_parse_ok {
+              Let#cli_l40wbg_modules(name=modulePaths) {
+                Call#cli_c40wbg_modules(target=linker.collectProjectModulePathsWithLock) {
+                  Var#cli_v40wbg_project_dir2(name=projectDir)
+                  Var#cli_v40wbg_entry_program2(name=entryProgram)
+                  Var#cli_v40wbg_entry_file(name=entryFile)
+                  Var#cli_v40wbg_lock_text1(name=lockText)
+                }
+              }
+              If#cli_if40wbg_link {
+                Eq#cli_e40wbg_link {
+                  NodeKind#cli_nk40wbg_link { Var#cli_v40wbg_modules(name=modulePaths) }
+                  Lit#cli_i40wbg_link(value="Err")
+                }
+                Block#cli_b40wbg_link_err {
+                  Return#cli_r40wbg_link_err {
+                    Call#cli_c40wbg_link_err(target=buildError) {
+                      Lit#cli_i40wbg_link_err_code(value="AILANG021")
+                      Lit#cli_i40wbg_link_err_msg(value="Project import graph could not be linked.")
+                      Lit#cli_i40wbg_link_err_node(value="linker")
+                    }
+                  }
+                }
+                Block#cli_b40wbg_link_ok {
+                  Call#cli_c40wbg_mkdir(target=sys.fs.dir.create) { Var#cli_v40wbg_obj_dir3(name=objDir) }
+                  Call#cli_c40wbg_report_write(target=writeTextFile) {
+                    Var#cli_v40wbg_report_path(name=linkReportPath)
+                    Call#cli_c40wbg_report_text(target=linker.buildLinkReportText) {
+                      Var#cli_v40wbg_modules2(name=modulePaths)
+                    }
+                  }
+                  Call#cli_c40wbg_bundle_write(target=writeTextFile) {
+                    Var#cli_v40wbg_bundle_path2(name=linkedBundlePath)
+                    Call#cli_c40wbg_bundle_text(target=bundle.buildLinkedBundleText) {
+                      Var#cli_v40wbg_project_name(name=projectName)
+                      Var#cli_v40wbg_entry_export(name=entryExport)
+                      Var#cli_v40wbg_modules3(name=modulePaths)
+                    }
+                  }
+                  Let#cli_l40wbg_bytecode_result(name=bytecodeResult) {
+                    Call#cli_c40wbg_bytecode_result(target=bytecode.buildEntryReturnIntMainText) {
+                      Var#cli_v40wbg_entry_program_bc(name=entryProgram)
+                      Var#cli_v40wbg_entry_export_bc(name=entryExport)
+                    }
+                  }
+                  If#cli_if40wbg_bytecode_result {
+                    Eq#cli_e40wbg_bytecode_result {
+                      NodeKind#cli_nk40wbg_bytecode_result { Var#cli_v40wbg_bytecode_result1(name=bytecodeResult) }
+                      Lit#cli_i40wbg_bytecode_result(value="Err")
+                    }
+                    Block#cli_b40wbg_bytecode_unsupported {
+                      Call#cli_c40wbg_bytecode_report_unsupported(target=writeTextFile) {
+                        Var#cli_v40wbg_bytecode_report_path1(name=bytecodeReportPath)
+                        Lit#cli_i40wbg_bytecode_report_unsupported(value="BytecodeEmitterReport#bytecode_report(status=\"unsupported\" emitter=\"entry-return-int\")")
+                      }
+                    }
+                    Block#cli_b40wbg_bytecode_ok {
+                      Let#cli_l40wbg_bytecode_text(name=bytecodeText) {
+                        AttrValueString#cli_avs40wbg_bytecode1 {
+                          Var#cli_v40wbg_bytecode_result2(name=bytecodeResult)
+                          Lit#cli_i40wbg_bytecode_attr(value=0)
+                        }
+                      }
+                      Call#cli_c40wbg_bytecode_write(target=writeTextFile) {
+                        Var#cli_v40wbg_bytecode_path1(name=bytecodeObjectPath)
+                        Var#cli_v40wbg_bytecode_text1(name=bytecodeText)
+                      }
+                      Call#cli_c40wbg_aibc_write(target=sys.fs.file.write) {
+                        Var#cli_v40wbg_aibc_path1(name=bytecodeBinaryPath)
+                        Call#cli_c40wbg_bytecode_bytes(target=bytecode.buildEntryReturnIntMainBytes) {
+                          Var#cli_v40wbg_entry_program_bin(name=entryProgram)
+                          Var#cli_v40wbg_entry_export_bin(name=entryExport)
+                        }
+                      }
+                      Call#cli_c40wbg_bytecode_report_binary_ok(target=writeTextFile) {
+                        Var#cli_v40wbg_bytecode_report_path2(name=bytecodeReportPath)
+                        Lit#cli_i40wbg_bytecode_report_binary_ok(value="BytecodeEmitterReport#bytecode_report(status=\"ok\" emitter=\"entry-return-int\" output=\"app.aibc1\")")
+                      }
+                    }
+                  }
+                  Return#cli_r40wbg_ok { Lit#cli_i40wbg_ok(value=0) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     Let#cli_l40rb(name=runBootstrapBuild) {
       Fn#cli_f40rb(params=path,outDir,outFile) {
       Block#cli_b40rb {
@@ -1036,6 +1243,133 @@ Program#cli_p1 {
               Block#cli_b40rb6 { Call#cli_c40rb10(target=sys.stdout.writeLine) { Var#cli_v40rb14(name=stdoutText) } }
             }
             Return#cli_r40rb2 { Call#cli_c40rb11(target=buildError) { Lit#cli_i40rb11(value="AILANG014") Lit#cli_i40rb12(value="Bootstrap compiler build failed.") Lit#cli_i40rb13(value="build") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40sbi(name=selectBootstrapBuildInput) {
+    Fn#cli_f40sbi(params=projectDir) {
+      Block#cli_b40sbi {
+        Let#cli_l40sbi_obj(name=objDir) {
+          StrConcat#cli_sc40sbi_obj {
+            Var#cli_v40sbi_project_dir(name=projectDir)
+            Lit#cli_i40sbi_obj(value="/obj")
+          }
+        }
+        Let#cli_l40sbi_bytecode_path(name=bytecodeObjectPath) {
+          StrConcat#cli_sc40sbi_bytecode_path {
+            Var#cli_v40sbi_obj_dir(name=objDir)
+            Lit#cli_i40sbi_bytecode_path(value="/app.bytecode.aos")
+          }
+        }
+        Let#cli_l40sbi_aibc_path(name=bytecodeBinaryPath) {
+          StrConcat#cli_sc40sbi_aibc_path {
+            Var#cli_v40sbi_obj_dir_aibc(name=objDir)
+            Lit#cli_i40sbi_aibc_path(value="/app.aibc1")
+          }
+        }
+        Let#cli_l40sbi_report_path(name=bytecodeReportPath) {
+          StrConcat#cli_sc40sbi_report_path {
+            Var#cli_v40sbi_obj_dir2(name=objDir)
+            Lit#cli_i40sbi_report_path(value="/bytecode-emitter-report.aos")
+          }
+        }
+        Let#cli_l40sbi_input_report_path(name=buildInputReportPath) {
+          StrConcat#cli_sc40sbi_input_report_path {
+            Var#cli_v40sbi_obj_dir3(name=objDir)
+            Lit#cli_i40sbi_input_report_path(value="/build-input-report.aos")
+          }
+        }
+        If#cli_if40sbi_report_exists {
+          Call#cli_c40sbi_report_exists(target=sys.fs.path.exists) {
+            Var#cli_v40sbi_report_path(name=bytecodeReportPath)
+          }
+          Block#cli_b40sbi_report_exists {
+            If#cli_if40sbi_bytecode_exists {
+              Call#cli_c40sbi_bytecode_exists(target=sys.fs.path.exists) {
+                Var#cli_v40sbi_bytecode_path(name=bytecodeObjectPath)
+              }
+              Block#cli_b40sbi_bytecode_exists {
+                Let#cli_l40sbi_report_text(name=reportText) {
+                  Call#cli_c40sbi_read_report(target=readTextFile) {
+                    Var#cli_v40sbi_report_path2(name=bytecodeReportPath)
+                  }
+                }
+                If#cli_if40sbi_ok {
+                  Eq#cli_e40sbi_ok {
+                    Call#cli_c40sbi_find_ok(target=find) {
+                      Var#cli_v40sbi_report_text(name=reportText)
+                      Lit#cli_i40sbi_ok_needle(value="status=\"ok\"")
+                      Lit#cli_i40sbi_ok_start(value=0)
+                    }
+                    Lit#cli_i40sbi_not_found(value=-1)
+                  }
+                  Block#cli_b40sbi_not_ok {
+                    Call#cli_c40sbi_write_source_report(target=writeTextFile) {
+                      Var#cli_v40sbi_input_report_path1(name=buildInputReportPath)
+                      Lit#cli_i40sbi_source_report(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-emitter-not-ok\")")
+                    }
+                    Return#cli_r40sbi_source1 { Var#cli_v40sbi_project_dir2(name=projectDir) }
+                  }
+                  Block#cli_b40sbi_ok {
+                    If#cli_if40sbi_binary_report {
+                      Eq#cli_e40sbi_binary_report {
+                        Call#cli_c40sbi_find_binary_output(target=find) {
+                          Var#cli_v40sbi_report_text2(name=reportText)
+                          Lit#cli_i40sbi_binary_output(value="output=\"app.aibc1\"")
+                          Lit#cli_i40sbi_binary_start(value=0)
+                        }
+                        Lit#cli_i40sbi_binary_not_found(value=-1)
+                      }
+                      Block#cli_b40sbi_text_report {
+                        Call#cli_c40sbi_write_bytecode_report(target=writeTextFile) {
+                          Var#cli_v40sbi_input_report_path6(name=buildInputReportPath)
+                          Lit#cli_i40sbi_bytecode_report(value="BuildInputReport#build_input(status=\"bytecode\" input=\"obj/app.bytecode.aos\")")
+                        }
+                        Return#cli_r40sbi_bytecode { Var#cli_v40sbi_bytecode_path2(name=bytecodeObjectPath) }
+                      }
+                      Block#cli_b40sbi_binary_report {
+                        If#cli_if40sbi_binary_exists {
+                          Call#cli_c40sbi_binary_exists(target=sys.fs.path.exists) {
+                            Var#cli_v40sbi_aibc_path1(name=bytecodeBinaryPath)
+                          }
+                          Block#cli_b40sbi_binary_exists {
+                            Call#cli_c40sbi_write_binary_report(target=writeTextFile) {
+                              Var#cli_v40sbi_input_report_path2(name=buildInputReportPath)
+                              Lit#cli_i40sbi_binary_report(value="BuildInputReport#build_input(status=\"bytecode\" input=\"obj/app.aibc1\")")
+                            }
+                            Return#cli_r40sbi_binary { Var#cli_v40sbi_aibc_path2(name=bytecodeBinaryPath) }
+                          }
+                          Block#cli_b40sbi_binary_missing {
+                            Call#cli_c40sbi_write_binary_missing_report(target=writeTextFile) {
+                              Var#cli_v40sbi_input_report_path5(name=buildInputReportPath)
+                              Lit#cli_i40sbi_binary_missing_report(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-binary-missing\")")
+                            }
+                            Return#cli_r40sbi_source4 { Var#cli_v40sbi_project_dir5(name=projectDir) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#cli_b40sbi_bytecode_missing {
+                Call#cli_c40sbi_write_missing_report(target=writeTextFile) {
+                  Var#cli_v40sbi_input_report_path3(name=buildInputReportPath)
+                  Lit#cli_i40sbi_missing_report(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-object-missing\")")
+                }
+                Return#cli_r40sbi_source2 { Var#cli_v40sbi_project_dir3(name=projectDir) }
+              }
+            }
+          }
+          Block#cli_b40sbi_report_missing {
+            Call#cli_c40sbi_write_no_report(target=writeTextFile) {
+              Var#cli_v40sbi_input_report_path4(name=buildInputReportPath)
+              Lit#cli_i40sbi_no_report(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-report-missing\")")
+            }
+            Return#cli_r40sbi_source3 { Var#cli_v40sbi_project_dir4(name=projectDir) }
           }
         }
       }
@@ -1577,7 +1911,7 @@ Program#cli_p1 {
         Let#cli_l42plre(name=runtimeExePath) { StrConcat#cli_sc42pl17 { Var#cli_v42plrd3(name=runtimeDir) Lit#cli_i42pl20(value="/aivm.exe") } }
         Call#cli_c42pl0(target=sys.fs.dir.create) { Var#cli_v42pl0(name=outDir) }
         Call#cli_c42pl0b(target=sys.fs.dir.create) { Var#cli_v42plb0(name=buildDir) }
-        Let#cli_l42plcode(name=buildCode) { Call#cli_c42pl1(target=runBootstrapBuild) { Var#cli_v42pl7(name=path) Var#cli_v42plb2(name=buildDir) Var#cli_v42plbf(name=buildFile) } }
+        Let#cli_l42plcode(name=buildCode) { Call#cli_c42pl1(target=buildProject) { Var#cli_v42pl7(name=path) Var#cli_v42plb2(name=buildDir) } }
         If#cli_if42pl1 {
           Eq#cli_e42pl1 { Var#cli_v42plcode(name=buildCode) Lit#cli_i42pl13(value=0) }
           Block#cli_b42pl1 {

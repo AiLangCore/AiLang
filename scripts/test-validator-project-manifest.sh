@@ -10,7 +10,8 @@ mkdir -p "${TMP_DIR}"
 
 cat > "${TMP_DIR}/app.aos" <<'AOS'
 Program#test_p1 {
-  Import#test_i1(path="../../src/compiler/aic.aos")
+  Import#test_i1(path="../../src/compiler/parser.aos")
+  Import#test_i2(path="../../src/compiler/validate.aos")
   Export#test_e1(name=start)
 
   Let#test_l1(name=fail) {
@@ -53,11 +54,11 @@ Program#test_p1 {
     Fn#test_f3(params=args) {
       Block#test_b7 {
         Let#test_l5(name=validProject) {
-          Call#test_c4(target=compiler.parse) {
+          Call#test_c4(target=parse.parseDocument) {
             Lit#test_i7(value="Program { Project(name=\"ok\" entryFile=\"src/app.aos\" entryExport=\"start\") { Include(name=\"std-app\" version=\"0.0.1\") Include(name=\"local-lib\" version=\"0.0.1-local\" path=\"packages/local-lib\") } }")
           }
         }
-        Let#test_l6(name=validDiags) { Call#test_c5(target=compiler.validateHost) { Var#test_v8(name=validProject) } }
+        Let#test_l6(name=validDiags) { Call#test_c5(target=validate) { Var#test_v8(name=validProject) } }
         If#test_if3 {
           Eq#test_e4 {
             ChildCount#test_cc2 { Var#test_v9(name=validDiags) }
@@ -68,56 +69,56 @@ Program#test_p1 {
         }
 
         Let#test_l7(name=badChildProject) {
-          Call#test_c7(target=compiler.parse) {
+          Call#test_c7(target=parse.parseDocument) {
             Lit#test_i11(value="Program { Project(name=\"bad\" entryFile=\"src/app.aos\" entryExport=\"start\") { Lit(value=1) } }")
           }
         }
         Call#test_c8(target=requireFirstCode) {
-          Call#test_c9(target=compiler.validateHost) { Var#test_v10(name=badChildProject) }
+          Call#test_c9(target=validate) { Var#test_v10(name=badChildProject) }
           Lit#test_i12(value="VAL096")
           Lit#test_i13(value="Project accepted non-Include child")
         }
 
         Let#test_l8(name=badIncludeProject) {
-          Call#test_c10(target=compiler.parse) {
+          Call#test_c10(target=parse.parseDocument) {
             Lit#test_i14(value="Program { Project(name=\"bad\" entryFile=\"src/app.aos\" entryExport=\"start\") { Include(name=\"std-app\") } }")
           }
         }
         Call#test_c11(target=requireFirstCode) {
-          Call#test_c12(target=compiler.validateHost) { Var#test_v11(name=badIncludeProject) }
+          Call#test_c12(target=validate) { Var#test_v11(name=badIncludeProject) }
           Lit#test_i15(value="VAL002")
           Lit#test_i16(value="Include without version was not rejected")
         }
 
         Let#test_l9(name=emptyPathProject) {
-          Call#test_c13(target=compiler.parse) {
+          Call#test_c13(target=parse.parseDocument) {
             Lit#test_i17(value="Program { Project(name=\"bad\" entryFile=\"src/app.aos\" entryExport=\"start\") { Include(name=\"local\" version=\"0.0.1\" path=\"\") } }")
           }
         }
         Call#test_c14(target=requireFirstCode) {
-          Call#test_c15(target=compiler.validateHost) { Var#test_v12(name=emptyPathProject) }
+          Call#test_c15(target=validate) { Var#test_v12(name=emptyPathProject) }
           Lit#test_i18(value="VAL097")
           Lit#test_i19(value="Include empty path was not rejected")
         }
 
         Let#test_l10(name=absolutePathProject) {
-          Call#test_c16(target=compiler.parse) {
+          Call#test_c16(target=parse.parseDocument) {
             Lit#test_i20(value="Program { Project(name=\"bad\" entryFile=\"src/app.aos\" entryExport=\"start\") { Include(name=\"local\" version=\"0.0.1\" path=\"/tmp/local\") } }")
           }
         }
         Call#test_c17(target=requireFirstCode) {
-          Call#test_c18(target=compiler.validateHost) { Var#test_v13(name=absolutePathProject) }
+          Call#test_c18(target=validate) { Var#test_v13(name=absolutePathProject) }
           Lit#test_i21(value="VAL097")
           Lit#test_i22(value="Include absolute path was not rejected")
         }
 
         Let#test_l11(name=urlPathProject) {
-          Call#test_c19(target=compiler.parse) {
+          Call#test_c19(target=parse.parseDocument) {
             Lit#test_i23(value="Program { Project(name=\"bad\" entryFile=\"src/app.aos\" entryExport=\"start\") { Include(name=\"local\" version=\"0.0.1\" path=\"https://example.test/pkg\") } }")
           }
         }
         Call#test_c20(target=requireFirstCode) {
-          Call#test_c21(target=compiler.validateHost) { Var#test_v14(name=urlPathProject) }
+          Call#test_c21(target=validate) { Var#test_v14(name=urlPathProject) }
           Lit#test_i24(value="VAL097")
           Lit#test_i25(value="Include URL path was not rejected")
         }

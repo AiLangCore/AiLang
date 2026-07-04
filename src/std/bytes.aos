@@ -69,6 +69,30 @@ Program#std_bytes_p1 {
     }
   }
 
+  Let#std_bytes_l9(name=bytes.fromByte) {
+    Fn#std_bytes_f9(params=value) {
+      Block#std_bytes_b9 {
+        Return#std_bytes_r9 { BytesFromByte#std_bytes_bfb2 { Var#std_bytes_v13(name=value) } }
+      }
+    }
+  }
+
+  Let#std_bytes_l10(name=bytes.u32le) {
+    Fn#std_bytes_f10(params=value) {
+      Block#std_bytes_b10 {
+        Return#std_bytes_r10 { BytesU32LE#std_bytes_bu321 { Var#std_bytes_v14(name=value) } }
+      }
+    }
+  }
+
+  Let#std_bytes_l11(name=bytes.i64le) {
+    Fn#std_bytes_f11(params=value) {
+      Block#std_bytes_b11 {
+        Return#std_bytes_r11 { BytesI64LE#std_bytes_bi641 { Var#std_bytes_v15(name=value) } }
+      }
+    }
+  }
+
   Export#std_bytes_e1(name=bytes.length)
   Export#std_bytes_e2(name=bytes.at)
   Export#std_bytes_e3(name=bytes.slice)
@@ -77,4 +101,7 @@ Program#std_bytes_p1 {
   Export#std_bytes_e6(name=bytes.toBase64)
   Export#std_bytes_e7(name=bytes.toUtf8String)
   Export#std_bytes_e8(name=bytes.fromUtf8String)
+  Export#std_bytes_e9(name=bytes.fromByte)
+  Export#std_bytes_e10(name=bytes.u32le)
+  Export#std_bytes_e11(name=bytes.i64le)
 }

@@ -438,6 +438,27 @@ Program#stdlib_behavior_bytes_p1 {
             }
           }
         }
+        Call#stdlib_behavior_bytes_c16(target=io.print) {
+          Call#stdlib_behavior_bytes_c17(target=bytes.toBase64) {
+            Call#stdlib_behavior_bytes_c18(target=bytes.fromByte) {
+              Lit#stdlib_behavior_bytes_i8(value=65)
+            }
+          }
+        }
+        Call#stdlib_behavior_bytes_c19(target=io.print) {
+          Call#stdlib_behavior_bytes_c20(target=bytes.toBase64) {
+            Call#stdlib_behavior_bytes_c21(target=bytes.u32le) {
+              Lit#stdlib_behavior_bytes_i9(value=305419896)
+            }
+          }
+        }
+        Call#stdlib_behavior_bytes_c22(target=io.print) {
+          Call#stdlib_behavior_bytes_c23(target=bytes.toBase64) {
+            Call#stdlib_behavior_bytes_c24(target=bytes.i64le) {
+              Lit#stdlib_behavior_bytes_i10(value=1)
+            }
+          }
+        }
         Return#stdlib_behavior_bytes_r1 { Lit#stdlib_behavior_bytes_i7(value=0) }
       }
     }
@@ -875,6 +896,9 @@ BYTES_EXPECTED='5
 ello
 aGVsbG8=
 hello
+QQ==
+eFY0Eg==
+AQAAAAAAAAA=
 Ok#ok1(type=int value=0)'
 
 if [[ "${BYTES_OUT}" != "${BYTES_EXPECTED}" ]]; then

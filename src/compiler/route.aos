@@ -1,4 +1,6 @@
 Program#route_p1 {
+  Import#route_i1(path="parser.aos")
+
   Let#route_l1(name=compiler.route) {
     Fn#route_f1(params=path,table) {
       Block#route_b1 {
@@ -108,7 +110,7 @@ Program#route_p1 {
             }
           }
         }
-        Let#route_l9(name=parsed) { Call#route_c9(target=compiler.parse) { Var#route_v30(name=programText) } }
+        Let#route_l9(name=parsed) { Call#route_c9(target=parse.parseDocument) { Var#route_v30(name=programText) } }
         Return#route_r9 { ChildAt#route_ca2 { Var#route_v31(name=parsed) Lit#route_i14(value=0) } }
       }
     }
@@ -117,7 +119,7 @@ Program#route_p1 {
   Let#route_l10(name=route_make_null) {
     Fn#route_f5(params=_) {
       Block#route_b15 {
-        Let#route_l11(name=parsed) { Call#route_c10(target=compiler.parse) { Lit#route_i15(value="Program#rp2 { Match#auto(handler=null) }") } }
+        Let#route_l11(name=parsed) { Call#route_c10(target=parse.parseDocument) { Lit#route_i15(value="Program#rp2 { Match#auto(handler=null) }") } }
         Return#route_r10 { ChildAt#route_ca3 { Var#route_v32(name=parsed) Lit#route_i16(value=0) } }
       }
     }

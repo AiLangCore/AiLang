@@ -14,7 +14,9 @@ fi
 TMP_DIR="${ROOT_DIR}/.tmp/ailang-cli-spec-smoke"
 CLI_BYTECODE_DIR="${TMP_DIR}/cli-bytecode"
 APP_DIR="${TMP_DIR}/app"
+BASIC_CLI_DIR="${TMP_DIR}/basic-cli"
 BUILD_DIR="${TMP_DIR}/build"
+BASIC_CLI_BUILD_DIR="${TMP_DIR}/basic-cli-build"
 LOCAL_BUILD_DIR="${TMP_DIR}/local-build"
 PUBLISH_DIR="${TMP_DIR}/publish"
 SELF_CONTAINED_PUBLISH_DIR="${TMP_DIR}/publish-self-contained"
@@ -80,12 +82,44 @@ test -f "${APP_DIR}/GEMINI.md"
 test -f "${APP_DIR}/.cursor/rules/ailang.mdc"
 test -f "${APP_DIR}/.github/copilot-instructions.md"
 test -f "${APP_DIR}/.windsurfrules"
+perl -0pi -e 's{\Q'"${APP_DIR}"': no app args\E}{app: no app args}' "${APP_DIR}/src/app.aos"
 
 PROJECT_VERSION_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" project version "${APP_DIR}")"
 printf '%s\n' "${PROJECT_VERSION_OUT}" | rg -q '^0\.0\.1$'
 
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${APP_DIR}" --out "${BUILD_DIR}" >/dev/null
 test -f "${BUILD_DIR}/app.aibc1"
+test -f "${APP_DIR}/obj/link-report.aos"
+test -f "${APP_DIR}/obj/linked-bundle.aos"
+test -f "${APP_DIR}/obj/build-input-report.aos"
+test -f "${APP_DIR}/obj/bytecode-emitter-report.aos"
+test -f "${APP_DIR}/obj/app.bytecode.aos"
+rg -q 'LinkReport#linker_report\(moduleCount=1\)' "${APP_DIR}/obj/link-report.aos"
+rg -q 'Bundle#b1\(entryExport="start" entryFile="src/app.aos"' "${APP_DIR}/obj/linked-bundle.aos"
+rg -q 'CHILD_COUNT' "${APP_DIR}/obj/app.bytecode.aos"
+rg -q 'JUMP_IF_FALSE' "${APP_DIR}/obj/app.bytecode.aos"
+rg -q 'ATTR_VALUE_STRING' "${APP_DIR}/obj/app.bytecode.aos"
+rg -q 'status="ok"' "${APP_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'output="app.aibc1"' "${APP_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'status="bytecode"' "${APP_DIR}/obj/build-input-report.aos"
+rg -q 'input="obj/app.aibc1"' "${APP_DIR}/obj/build-input-report.aos"
+APP_NO_ARGS_OUT="$("${AIVM_BIN}" "${BUILD_DIR}/app.aibc1")"
+printf '%s\n' "${APP_NO_ARGS_OUT}" | rg -q '^app: no app args$'
+APP_WITH_ARG_OUT="$("${AIVM_BIN}" "${BUILD_DIR}/app.aibc1" alpha)"
+printf '%s\n' "${APP_WITH_ARG_OUT}" | rg -q '^alpha$'
+
+run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" init "${BASIC_CLI_DIR}" --template cli >/dev/null
+run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${BASIC_CLI_DIR}" --out "${BASIC_CLI_BUILD_DIR}" >/dev/null
+test -f "${BASIC_CLI_BUILD_DIR}/app.aibc1"
+test -f "${BASIC_CLI_DIR}/obj/app.bytecode.aos"
+test -f "${BASIC_CLI_DIR}/obj/build-input-report.aos"
+test -f "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'sys.stdout.writeLine' "${BASIC_CLI_DIR}/obj/app.bytecode.aos"
+rg -q 'Hello from .*/basic-cli[.]' "${BASIC_CLI_DIR}/obj/app.bytecode.aos"
+rg -q 'status="ok"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'output="app.aibc1"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'status="bytecode"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
+rg -q 'input="obj/app.aibc1"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
 
 mkdir -p "${FAKE_INSTALL_ROOT}/local/bin"
 ln -sf "${ROOT_DIR}/tools/ailang" "${FAKE_INSTALL_ROOT}/local/bin/ailang"
@@ -100,7 +134,11 @@ AILANG_INSTALL_ROOT="${FAKE_INSTALL_ROOT}" run_aivm_program "${CLI_BYTECODE_DIR}
 test -f "${LOCAL_BUILD_DIR}/app.aibc1"
 
 export AILANG_INSTALL_ROOT="${FAKE_INSTALL_ROOT}"
+rm -rf "${APP_DIR}/obj"
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" publish "${APP_DIR}" --out "${PUBLISH_DIR}" >/dev/null
+test -f "${APP_DIR}/obj/link-report.aos"
+test -f "${APP_DIR}/obj/linked-bundle.aos"
+test -f "${APP_DIR}/obj/bytecode-emitter-report.aos"
 test -f "${PUBLISH_DIR}/bin/app"
 test -f "${PUBLISH_DIR}/bin/app.cmd"
 test -f "${PUBLISH_DIR}/lib/ailang/app/app.aibe"
@@ -228,3 +266,11 @@ Program#libp1 {
 EOF
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}" --out "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/bin" >/dev/null
 test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/bin/app.aibc1"
+test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/link-report.aos"
+test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/linked-bundle.aos"
+test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/app.bytecode.aos"
+test -f "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/bytecode-emitter-report.aos"
+rg -q 'package:local-lib/src/lib.aos' "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/link-report.aos"
+rg -q 'package:local-lib/src/lib.aos' "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/linked-bundle.aos"
+rg -q 'Bytecode#bc1' "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/app.bytecode.aos"
+rg -q 'status="ok"' "${GOOD_DECLARED_PACKAGE_IMPORT_DIR}/obj/bytecode-emitter-report.aos"

@@ -43,6 +43,9 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `BytesToUtf8String` | none | `1` | UTF-8 decode bytes to string, or `""` for invalid payload. |
 | `BytesFromBase64` | none | `1` | Strict base64 decode string to bytes; invalid payload is a runtime error. |
 | `BytesToBase64` | none | `1` | Base64 encode bytes to string. |
+| `BytesFromByte` | none | `1` | Construct a one-byte value from an int in range `0..255`; out-of-range input is a runtime error. |
+| `BytesU32LE` | none | `1` | Encode an unsigned 32-bit integer in little-endian byte order; out-of-range input is a runtime error. |
+| `BytesI64LE` | none | `1` | Encode a signed 64-bit integer in two's-complement little-endian byte order. |
 | `MakePair` | none | `2` | Creates an internal scratch pair for compiler/parser implementation state. Not a public semantic record. |
 | `PairFirst` | none | `1` | Reads the first value from an internal scratch pair. |
 | `PairSecond` | none | `1` | Reads the second value from an internal scratch pair. |
@@ -129,7 +132,8 @@ operations before removing these VM contracts.
 
 The canonical non-syscall primitive node targets are `BytesLength`, `BytesAt`,
 `BytesSlice`, `BytesConcat`, `BytesFromUtf8String`, `BytesToUtf8String`,
-`BytesFromBase64`, and `BytesToBase64`.
+`BytesFromBase64`, `BytesToBase64`, `BytesFromByte`, `BytesU32LE`, and
+`BytesI64LE`.
 
 - `sys.bytes.length(data)` returns byte length as int.
 - `sys.bytes.at(data,index)` returns byte value (`0..255`) or `-1` when index is out of range.

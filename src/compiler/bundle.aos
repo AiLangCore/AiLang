@@ -2,6 +2,7 @@ Program#bundle_p1 {
   Export#bundle_e1(name=bundle.buildSingleModuleBundleText)
   Export#bundle_e2(name=bundle.buildTwoModuleBundleText)
   Export#bundle_e3(name=bundle.buildPublishProgramText)
+  Export#bundle_e4(name=bundle.buildLinkedBundleText)
 
   Let#bundle_l1(name=bundle.buildSingleModuleBundleText) {
     Fn#bundle_f1(params=projectName,entryFile,entryExport) {
@@ -90,6 +91,89 @@ Program#bundle_p1 {
                 StrConcat#bundle_s22 {
                   StrEscape#bundle_se10 { Var#bundle_v11(name=projectName) }
                   Lit#bundle_i14(value="\") } }")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bundle_l4(name=bundle.buildLinkedBundleText) {
+    Fn#bundle_f4(params=projectName,entryExport,modulePaths) {
+      Block#bundle_b4 {
+        Let#bundle_l5(name=entryFile) {
+          AttrValueString#bundle_avs1 {
+            ChildAt#bundle_ca1 { Var#bundle_v12(name=modulePaths) Lit#bundle_i15(value=0) }
+            Lit#bundle_i16(value=0)
+          }
+        }
+        Return#bundle_r4 {
+          StrConcat#bundle_s23 {
+            Lit#bundle_i17(value="Bundle#b1(entryExport=\"")
+            StrConcat#bundle_s24 {
+              StrEscape#bundle_se11 { Var#bundle_v13(name=entryExport) }
+              StrConcat#bundle_s25 {
+                Lit#bundle_i18(value="\" entryFile=\"")
+                StrConcat#bundle_s26 {
+                  StrEscape#bundle_se12 { Var#bundle_v14(name=entryFile) }
+                  StrConcat#bundle_s27 {
+                    Lit#bundle_i19(value="\" name=\"")
+                    StrConcat#bundle_s28 {
+                      StrEscape#bundle_se13 { Var#bundle_v15(name=projectName) }
+                      StrConcat#bundle_s29 {
+                        Lit#bundle_i20(value="\") { ")
+                        StrConcat#bundle_s30 {
+                          Call#bundle_c1(target=bundle.buildModuleEntries) {
+                            Var#bundle_v16(name=modulePaths)
+                            Lit#bundle_i21(value=0)
+                          }
+                          Lit#bundle_i22(value=" }")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#bundle_l6(name=bundle.buildModuleEntries) {
+    Fn#bundle_f5(params=modulePaths,index) {
+      Block#bundle_b5 {
+        If#bundle_if1 {
+          Eq#bundle_e1 { Var#bundle_v17(name=index) ChildCount#bundle_cc1 { Var#bundle_v18(name=modulePaths) } }
+          Block#bundle_b6 { Return#bundle_r5 { Lit#bundle_i23(value="") } }
+          Block#bundle_b7 {
+            Let#bundle_l7(name=path) {
+              AttrValueString#bundle_avs2 {
+                ChildAt#bundle_ca2 { Var#bundle_v19(name=modulePaths) Var#bundle_v20(name=index) }
+                Lit#bundle_i24(value=0)
+              }
+            }
+            Return#bundle_r6 {
+              StrConcat#bundle_s31 {
+                Lit#bundle_i25(value="Module#m")
+                StrConcat#bundle_s32 {
+                  ToString#bundle_ts1 { Var#bundle_v21(name=index) }
+                  StrConcat#bundle_s33 {
+                    Lit#bundle_i26(value="(path=\"")
+                    StrConcat#bundle_s34 {
+                      StrEscape#bundle_se14 { Var#bundle_v22(name=path) }
+                      StrConcat#bundle_s35 {
+                        Lit#bundle_i27(value="\") ")
+                        Call#bundle_c2(target=bundle.buildModuleEntries) {
+                          Var#bundle_v23(name=modulePaths)
+                          Add#bundle_a1 { Var#bundle_v24(name=index) Lit#bundle_i28(value=1) }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

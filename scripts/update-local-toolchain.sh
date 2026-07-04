@@ -178,13 +178,26 @@ write_private_command_shim() {
   local name="$1"
   local path="${TMP_ROOT}/libexec/ailang/commands/${name}"
   mkdir -p "$(dirname "${path}")"
-  cat > "${path}" <<EOF
+cat > "${path}" <<EOF
 #!/usr/bin/env sh
 set -eu
 SDK_ROOT="\$(CDPATH= cd -- "\$(dirname -- "\$0")/../../.." && pwd)"
 export AILANG_SDK_ROOT="\$SDK_ROOT"
 export AILANG_COMMAND_NAME="${name}"
-exec "\$SDK_ROOT/bin/ailang" "${name}" "\$@"
+exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "${name}" "\$@"
+EOF
+  chmod +x "${path}"
+}
+
+write_sdk_ailang_shim() {
+  local path="${TMP_ROOT}/bin/ailang"
+  mkdir -p "$(dirname "${path}")"
+cat > "${path}" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+export AILANG_SDK_ROOT="$SDK_ROOT"
+exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
 EOF
   chmod +x "${path}"
 }
@@ -215,7 +228,6 @@ else
   (cd "${AILANG_DIR}" && ./build.sh host)
 fi
 
-copy_if_exists "${AILANG_DIR}/tools/ailang" "${TMP_ROOT}/bin/ailang"
 copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/tools/aos_frontend" "${TMP_ROOT}/bin/aos_frontend"
 echo "building AiLang bytecode CLI payload..."
@@ -224,6 +236,7 @@ if [[ ! -f "${TMP_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
   echo "error: failed to stage AiLang bytecode CLI payload" >&2
   exit 1
 fi
+write_sdk_ailang_shim
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-x64/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivectra-x11" "${TMP_ROOT}/runtimes/linux-x64/aivectra-x11"
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivectra-framebuffer" "${TMP_ROOT}/runtimes/linux-x64/aivectra-framebuffer"
@@ -308,12 +321,14 @@ write_shim ailang ailang
 write_shim aivm aivm
 write_shim aivectra aivectra
 
-SOURCE_AILANG_VERSION="$("${AILANG_DIR}/tools/ailang" --version)"
 STAGED_AILANG_VERSION="$("${SDK_ROOT}/bin/ailang" --version)"
-if [[ "${SOURCE_AILANG_VERSION}" != "${STAGED_AILANG_VERSION}" ]]; then
-  echo "error: staged ailang version does not match rebuilt source tool" >&2
-  echo "source: ${SOURCE_AILANG_VERSION}" >&2
+if ! printf '%s\n' "${STAGED_AILANG_VERSION}" | grep -Eq '^ailang [0-9]+\.[0-9]+\.[0-9]+'; then
+  echo "error: staged ailang did not run the AiLang bytecode CLI" >&2
   echo "staged: ${STAGED_AILANG_VERSION}" >&2
+  exit 1
+fi
+if file "${SDK_ROOT}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
+  echo "error: staged ailang must be a non-C shim, not a native binary" >&2
   exit 1
 fi
 
@@ -337,6 +352,6 @@ Use the local SDK per project:
   scripts/select-toolchain.sh local <project-dir>
 
 Smoke checks:
-  ailang --version
+  AILANG_TOOLCHAIN=local ailang --version
   aivm --help
 EOF

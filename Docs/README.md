@@ -9,6 +9,7 @@ The root `README.md` is human-oriented.
 
 ## Normative Source
 
+- `../SPEC/README.md`
 - `../SPEC/IL.md`
 - `../SPEC/EVAL.md`
 - `../SPEC/VALIDATION.md`
@@ -16,7 +17,20 @@ The root `README.md` is human-oriented.
 
 If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 
-## Index
+## Taxonomy
+
+- `../SPEC/` contains normative specifications only.
+- `../Docs/` contains stable usage documentation for humans and developer agents.
+- `../Design/` contains non-normative design notes, proposals, rationale, and decisions.
+- `../Planning/` contains gated plans, tasks, readiness notes, and checklists.
+- `../Archive/` contains historical or superseded documents.
+- `*.local.md` / `*.local.*` files are local scratch and must not be committed.
+
+If a planning or design document proposes behavior that becomes language meaning,
+validation, bytecode, formatting, or observable runtime behavior, move that
+behavior into `../SPEC/` before implementation relies on it.
+
+## Usage Index
 
 - [Overview](./Overview.md)
 - [Getting Started](./Getting-Started.md)
@@ -26,23 +40,21 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Conventions](./Conventions.md)
 - [Agent Debug Workflow](./Agent-Debug-Workflow.md)
 - [C VM Test/Profile/Benchmark Workflow](./C-VM-Performance-Workflow.md)
-- [Production Memory Readiness](./Production-Memory-Readiness.md)
-- [WASM Remote Transport and Fullstack Stdio Task](./Wasm-Remote-Transport-And-Stdio-Task.md)
 - [WASM Limitations and Matrix](./Wasm-Limitations-And-Matrix.md)
 - [CLI Wrapper Contract](./CLI-Wrapper-Contract.md)
 - [AiLang vs AiVectra Boundary](./AiLang-AiVectra-Boundary.md)
-- [Three Repository Migration](./Archive/2026-beta/Three-Repo-Migration.md)
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
 - [Installation and Versioning Contract](./Installation-Versioning.md)
 - [Packages](./AiLang-Packages.md)
 - [Test Workflow](./AiLang-Test.md)
-- [Migration 0.0.1](./Archive/2026-beta/Migration-0.0.1.md)
-- [Launch Stdlib 0.0.1](./Archive/2026-beta/Launch-Stdlib-0.0.1.md)
-- [Release 0.0.1](./Archive/2026-beta/Release-0.0.1.md)
-- [Beta Demo and Release Checklist](./Archive/2026-beta/Launch-Checklist.md)
-- [Self-Hosting Checklist](./Self-Hosting-Checklist.md)
-- [Concurrency Design Notes](../SPEC/CONCURRENCY.md)
+
+## Related Non-Usage Documents
+
+- [Specification Index](../SPEC/README.md)
+- [Design Notes](../Design/README.md)
+- [Planning Documents](../Planning/README.md)
+- [Archive](../Archive/README.md)
 
 ## Hard Constraints
 

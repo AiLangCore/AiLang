@@ -121,8 +121,22 @@ rg -q 'output="app.aibc1"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'status="bytecode"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
 rg -q 'input="obj/app.aibc1"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
 
-mkdir -p "${FAKE_INSTALL_ROOT}/local/bin"
-ln -sf "${ROOT_DIR}/tools/ailang" "${FAKE_INSTALL_ROOT}/local/bin/ailang"
+mkdir -p "${FAKE_INSTALL_ROOT}/local/bin" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli"
+cp "${AIVM_BIN}" "${FAKE_INSTALL_ROOT}/local/bin/aivm"
+chmod +x "${FAKE_INSTALL_ROOT}/local/bin/aivm"
+cp "${CLI_BYTECODE_DIR}/app.aibc1" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli/app.aibc1"
+cat > "${FAKE_INSTALL_ROOT}/local/bin/ailang" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+export AILANG_SDK_ROOT="$SDK_ROOT"
+exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
+EOF
+chmod +x "${FAKE_INSTALL_ROOT}/local/bin/ailang"
+if file "${FAKE_INSTALL_ROOT}/local/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
+  echo "fake SDK fixture must use a non-C ailang shim" >&2
+  exit 1
+fi
 mkdir -p "${FAKE_INSTALL_ROOT}/local/runtimes/host"
 cp "${AIVM_BIN}" "${FAKE_INSTALL_ROOT}/local/runtimes/host/aivm"
 chmod +x "${FAKE_INSTALL_ROOT}/local/runtimes/host/aivm"

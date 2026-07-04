@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="${ROOT_DIR}/scripts/update-local-toolchain.sh"
 RELEASE_WORKFLOW="${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+CLI_SPEC="${ROOT_DIR}/scripts/test-ailang-cli-spec.sh"
 
 sh -n "${SCRIPT}"
 
@@ -33,5 +34,13 @@ rg -q 'exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "\$@
 rg -q 'release package violation: bin/ailang must be a non-C shim' "${RELEASE_WORKFLOW}"
 rg -q 'ailang\.cmd' "${RELEASE_WORKFLOW}"
 rg -q 'release package violation: bin/ailang\.exe must not be staged as native command' "${RELEASE_WORKFLOW}"
+
+if rg -n 'ln -sf "\$\{ROOT_DIR\}/tools/ailang" "\$\{FAKE_INSTALL_ROOT\}/local/bin/ailang"' "${CLI_SPEC}" >/tmp/ailang-cli-spec-native-fixture.out; then
+  cat /tmp/ailang-cli-spec-native-fixture.out >&2
+  echo "CLI spec fixture policy violation: fake SDK must use the bytecode CLI shim, not native tools/ailang" >&2
+  exit 1
+fi
+
+rg -q 'fake SDK fixture must use a non-C ailang shim' "${CLI_SPEC}"
 
 echo "local-toolchain-shim-ok"

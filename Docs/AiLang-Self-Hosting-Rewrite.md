@@ -156,6 +156,8 @@ native bridge libraries, but not in AiLang command implementation.
   - [x] Local SDK staging rejects a staged native `bin/ailang` binary.
   - [x] Release SDK staging uses the same non-C installed `ailang` shim on
     Unix and a non-C `ailang.cmd` shim on Windows.
+  - [x] Bytecode CLI spec tests use a fake installed SDK with a non-C
+    `bin/ailang` shim over `bin/aivm` plus `libexec/ailang/cli/app.aibc1`.
   - [ ] Remove the native `ailang.c` command dispatcher after release gates run
     the installed bytecode CLI for the required command surface.
 - [ ] Keep `aivm` executable behavior independent from `ailang` command

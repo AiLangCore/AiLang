@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.24] - 2026-07-10
+
+### Fixed
+
+- Updated Windows SDK staging to compile the complete split AiVM source set,
+  including VM arena, lifecycle, storage, error, and host-ABI modules.
+- Reissued the coordinated beta after `v0.0.1-beta.23` exposed the stale
+  Windows source list in release CI.
+
 ## [0.0.1-beta.23] - 2026-07-10
 
 ### Added

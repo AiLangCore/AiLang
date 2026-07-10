@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.25] - 2026-07-10
+
+### Fixed
+
+- Corrected release package staging to build the bytecode CLI payload with the
+  target-specific staged runtime rather than a host-only development tool.
+- Publish GitHub release assets while the release is a draft, then publish it,
+  which is compatible with immutable GitHub releases.
+- Release workflow now runs only for explicit version tags, preventing ordinary
+  `develop` integration pushes from producing accidental prerelease tags.
+
 ## [0.0.1-beta.24] - 2026-07-10
 
 ### Fixed

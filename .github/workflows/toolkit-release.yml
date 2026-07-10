@@ -2,17 +2,8 @@ name: Toolkit Release
 
 on:
   push:
-    branches:
-      - develop
-      - main
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Release tag to create or publish, for example v0.0.1-beta.7"
-        required: false
-        type: string
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -41,13 +32,7 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             exit 0
           fi
-          if [[ "${GITHUB_REF_TYPE}" == "branch" && ( "${GITHUB_REF_NAME}" == "develop" || "${GITHUB_REF_NAME}" == "main" ) ]]; then
-            exit 0
-          fi
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            exit 0
-          fi
-          echo "Releases can only run from develop, main, workflow_dispatch, or v* tags." >&2
+          echo "Releases can only run from v* tags." >&2
           exit 1
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -58,43 +43,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DISPATCH_TAG="${{ github.event.inputs.tag || '' }}"
-          if [[ -n "${DISPATCH_TAG}" ]]; then
-            if [[ ! "${DISPATCH_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-              echo "Invalid release tag: ${DISPATCH_TAG}" >&2
-              exit 1
-            fi
-            TAG="${DISPATCH_TAG}"
-            VERSION="${TAG#v}"
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             TAG="${GITHUB_REF_NAME}"
             VERSION="${TAG#v}"
           else
-            VERSION="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease)"
-            TAG="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease-tag)"
+            echo "A release workflow must run from a version tag." >&2
+            exit 1
           fi
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
-        env:
-          GITHUB_REF_TYPE: ${{ github.ref_type }}
-
-      - name: Create and push tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            echo "Release is already running from tag ${GITHUB_REF_NAME}."
-            exit 0
-          fi
-          TAG="${{ steps.version.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists on origin."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "${TAG}" -m "Release ${TAG}" "${GITHUB_SHA}"
-            git push origin "${TAG}"
-          fi
         env:
           GITHUB_REF_TYPE: ${{ github.ref_type }}
 
@@ -363,7 +320,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./dist/libexec/ailang/cli
-          ./tools/ailang build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
+          "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
           test -f ./dist/libexec/ailang/cli/app.aibc1
 
       - name: Stage bytecode CLI payload (Windows)
@@ -371,7 +328,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\dist\libexec\ailang\cli | Out-Null
-          .\tools\ailang.exe build .\src\cli\ailang.aos --out .\dist\libexec\ailang\cli --no-cache | Out-Null
+          & ".\${{ matrix.artifact_dir }}\${{ matrix.tool }}" build .\src\cli\ailang.aos --out .\dist\libexec\ailang\cli --no-cache | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'failed to build bytecode CLI payload' }
           if (-not (Test-Path .\dist\libexec\ailang\cli\app.aibc1)) { throw 'missing bytecode CLI payload' }
 
       - name: Pack release artifact (Unix)
@@ -720,10 +678,7 @@ jobs:
           case "${TAG}" in
             *-alpha*|*-beta*|*-rc*|*-local*) PRERELEASE="true" ;;
           esac
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release delete "${TAG}" --yes
-          fi
-          args=(release create "${TAG}" --verify-tag --latest=false --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
+          args=(release create "${TAG}" --verify-tag --latest=false --draft --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
           if [[ "${PRERELEASE}" == "true" ]]; then
             args+=(--prerelease)
           fi
@@ -732,8 +687,17 @@ jobs:
             echo "No release asset files found." >&2
             exit 1
           fi
-          args+=("${release_files[@]}")
-          gh "${args[@]}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${release_files[@]}" --clobber
+          else
+            gh "${args[@]}"
+            gh release upload "${TAG}" "${release_files[@]}" --clobber
+          fi
+          publish_args=(release edit "${TAG}" --draft=false --latest=false)
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            publish_args+=(--prerelease)
+          fi
+          gh "${publish_args[@]}"
 
   install-smoke-unix:
     name: install-smoke-${{ matrix.os }}

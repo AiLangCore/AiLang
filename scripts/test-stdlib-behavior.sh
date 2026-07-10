@@ -736,9 +736,10 @@ Program#stdlib_behavior_time_p1 {
           }
         }
         Call#stdlib_behavior_time_c26(target=io.print) {
-          Call#stdlib_behavior_time_c27(target=relativeDayLabelFromIsoDate) {
-            Lit#stdlib_behavior_time_i19(value="2026-06-19")
-            Lit#stdlib_behavior_time_i20(value="2026-06-19")
+          ToString#stdlib_behavior_time_t5 {
+            Call#stdlib_behavior_time_c27(target=dayIndexFromIsoDate) {
+              Lit#stdlib_behavior_time_s5(value="2026-06-19")
+            }
           }
         }
         Call#stdlib_behavior_time_c28(target=io.print) {
@@ -1009,7 +1010,7 @@ Tomorrow
 Sunday
 Monday
 Tuesday
-Today
+20623
 Tomorrow
 Sunday
 Monday

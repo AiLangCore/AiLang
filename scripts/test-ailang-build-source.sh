@@ -140,6 +140,65 @@ EOF
 RECURSE_RUN_OUT="$(./tools/ailang run "${RECURSE_OUT_DIR}/app.aibc1" 2>&1 || true)"
 printf '%s\n' "${RECURSE_RUN_OUT}" | rg -q '^Ok#ok1\(type=int value=3608\)$'
 
+CANONICAL_IMPORT_DIR="${TMP_DIR}/canonical-imports"
+CANONICAL_IMPORT_OUT_DIR="${TMP_DIR}/canonical-imports-out"
+mkdir -p "${CANONICAL_IMPORT_DIR}/src/Views" "${CANONICAL_IMPORT_DIR}/src/weather"
+cat > "${CANONICAL_IMPORT_DIR}/src/weather/parse.aos" <<'EOF'
+Program#p1 {
+  Export#e1(name=weatherValue)
+
+  Let#l1(name=weatherValue) {
+    Fn#f1(params=unused) {
+      Block#b1 {
+        Return#r1 { Lit#i1(value=41) }
+      }
+    }
+  }
+}
+EOF
+cat > "${CANONICAL_IMPORT_DIR}/src/Views/MainView.aos" <<'EOF'
+Program#p1 {
+  Import#i1(path="../weather/parse.aos")
+  Export#e1(name=viewValue)
+
+  Let#l1(name=viewValue) {
+    Fn#f1(params=unused) {
+      Block#b1 {
+        Return#r1 { Add#a1 { Call#c1(target=weatherValue) { Lit#i1(value=0) } Lit#i2(value=1) } }
+      }
+    }
+  }
+}
+EOF
+cat > "${CANONICAL_IMPORT_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Import#i1(path="weather/parse.aos")
+  Import#i2(path="Views/MainView.aos")
+  Export#e1(name=start)
+
+  Let#l1(name=start) {
+    Fn#f1(params=args) {
+      Block#b1 {
+        Return#r1 { Call#c1(target=viewValue) { Lit#i1(value=0) } }
+      }
+    }
+  }
+}
+EOF
+cat > "${CANONICAL_IMPORT_DIR}/project.aiproj" <<'EOF'
+Program {
+  Project(
+    name="CanonicalImports"
+    entryFile="src/app.aos"
+    entryExport="start"
+  ) { }
+}
+EOF
+
+./tools/ailang build "${CANONICAL_IMPORT_DIR}" --out "${CANONICAL_IMPORT_OUT_DIR}" --no-cache >/dev/null
+CANONICAL_IMPORT_RUN_OUT="$(./tools/ailang run "${CANONICAL_IMPORT_OUT_DIR}/app.aibc1" 2>&1 || true)"
+printf '%s\n' "${CANONICAL_IMPORT_RUN_OUT}" | rg -q '^Ok#ok1\(type=int value=42\)$'
+
 UI_TEXT_DIR="${TMP_DIR}/ui-text-events"
 UI_TEXT_OUT_DIR="${TMP_DIR}/ui-text-events-out"
 mkdir -p "${UI_TEXT_DIR}"

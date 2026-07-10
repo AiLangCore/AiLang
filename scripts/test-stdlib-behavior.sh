@@ -370,6 +370,16 @@ Program#stdlib_behavior_core_str_p1 {
             Call#stdlib_behavior_core_str_c49(target=equals) { Lit#stdlib_behavior_core_str_i44(value=1) Lit#stdlib_behavior_core_str_i45(value="1") }
           }
         }
+        Call#stdlib_behavior_core_str_c50(target=io.print) {
+          ToString#stdlib_behavior_core_str_t13 {
+            Call#stdlib_behavior_core_str_c51(target=length) { Lit#stdlib_behavior_core_str_i46(value="abc") }
+          }
+        }
+        Call#stdlib_behavior_core_str_c52(target=io.print) {
+          ToString#stdlib_behavior_core_str_t14 {
+            Call#stdlib_behavior_core_str_c53(target=str.len) { Lit#stdlib_behavior_core_str_i47(value="éx") }
+          }
+        }
         Return#stdlib_behavior_core_str_r1 { Lit#stdlib_behavior_core_str_i31(value=0) }
       }
     }
@@ -879,6 +889,8 @@ false
 true
 false
 false
+3
+2
 Ok#ok1(type=int value=0)'
 
 if [[ "${CORE_STR_OUT}" != "${CORE_STR_EXPECTED}" ]]; then

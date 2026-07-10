@@ -131,18 +131,60 @@ Program#cli_targets_p1 {
   Let#cli_targets_l_getValue(name=getValue) {
     Fn#cli_targets_f_getValue(params=text,key) {
       Block#cli_targets_b_getValue {
-        Let#cli_targets_l_gv1(name=keyStart) { Call#cli_targets_c_gv1(target=find) { Var#cli_targets_v_gv1(name=text) StrConcat#cli_targets_sc_gv1 { Var#cli_targets_v_gv2(name=key) Lit#cli_targets_i_gv1(value=" = ") } Lit#cli_targets_i_gv2(value=0) } }
-        If#cli_targets_if_gv1 {
-          Eq#cli_targets_eq_gv1 { Var#cli_targets_v_gv3(name=keyStart) Lit#cli_targets_i_gv3(value=-1) }
-          Block#cli_targets_b_gv1 { Return#cli_targets_r_gv1 { Lit#cli_targets_i_gv4(value="") } }
-          Block#cli_targets_b_gv2 {
-            Let#cli_targets_l_gv2(name=valueStart) { Add#cli_targets_a_gv1 { Var#cli_targets_v_gv4(name=keyStart) Call#cli_targets_c_gv2(target=len) { Var#cli_targets_v_gv5(name=key) } Lit#cli_targets_i_gv5(value=3) } }
-            Let#cli_targets_l_gv3(name=rest) { Call#cli_targets_c_gv3(target=substring) { Var#cli_targets_v_gv6(name=text) Var#cli_targets_v_gv7(name=valueStart) Lit#cli_targets_i_gv6(value=2147483647) } }
-            Let#cli_targets_l_gv4(name=valueEnd) { Call#cli_targets_c_gv4(target=find) { Var#cli_targets_v_gv8(name=rest) Lit#cli_targets_i_gv7(value="\n") Lit#cli_targets_i_gv8(value=0) } }
-            If#cli_targets_if_gv2 {
-              Eq#cli_targets_eq_gv2 { Var#cli_targets_v_gv9(name=valueEnd) Lit#cli_targets_i_gv9(value=-1) }
-              Block#cli_targets_b_gv3 { Return#cli_targets_r_gv2 { Var#cli_targets_v_gv10(name=rest) } }
-              Block#cli_targets_b_gv4 { Return#cli_targets_r_gv3 { Call#cli_targets_c_gv5(target=substring) { Var#cli_targets_v_gv11(name=rest) Lit#cli_targets_i_gv10(value=0) Var#cli_targets_v_gv12(name=valueEnd) } } }
+        If#cli_targets_if_gv_aliases {
+          Eq#cli_targets_eq_gv_aliases { Var#cli_targets_v_gv_key(name=key) Lit#cli_targets_i_gv_aliases(value="aliases") }
+          Block#cli_targets_b_gv_aliases { Return#cli_targets_r_gv_aliases { Call#cli_targets_c_gv_aliases(target=getValueFixed) { Var#cli_targets_v_gv_text(name=text) Lit#cli_targets_i_gv_aliases_key(value="aliases") Lit#cli_targets_i_gv_aliases_len(value=10) } } }
+          Block#cli_targets_b_gv_package_check {
+            If#cli_targets_if_gv_package {
+              Eq#cli_targets_eq_gv_package { Var#cli_targets_v_gv_key2(name=key) Lit#cli_targets_i_gv_package(value="package") }
+              Block#cli_targets_b_gv_package { Return#cli_targets_r_gv_package { Call#cli_targets_c_gv_package(target=getValueFixed) { Var#cli_targets_v_gv_text2(name=text) Lit#cli_targets_i_gv_package_key(value="package") Lit#cli_targets_i_gv_package_len(value=10) } } }
+              Block#cli_targets_b_gv_runner_check {
+                If#cli_targets_if_gv_runner {
+                  Eq#cli_targets_eq_gv_runner { Var#cli_targets_v_gv_key3(name=key) Lit#cli_targets_i_gv_runner(value="defaultRunner") }
+                  Block#cli_targets_b_gv_runner { Return#cli_targets_r_gv_runner { Call#cli_targets_c_gv_runner(target=getValueFixed) { Var#cli_targets_v_gv_text3(name=text) Lit#cli_targets_i_gv_runner_key(value="defaultRunner") Lit#cli_targets_i_gv_runner_len(value=16) } } }
+                  Block#cli_targets_b_gv_artifacts_check {
+                    If#cli_targets_if_gv_artifacts {
+                      Eq#cli_targets_eq_gv_artifacts { Var#cli_targets_v_gv_key4(name=key) Lit#cli_targets_i_gv_artifacts(value="artifactTypes") }
+                      Block#cli_targets_b_gv_artifacts { Return#cli_targets_r_gv_artifacts { Call#cli_targets_c_gv_artifacts(target=getValueFixed) { Var#cli_targets_v_gv_text4(name=text) Lit#cli_targets_i_gv_artifacts_key(value="artifactTypes") Lit#cli_targets_i_gv_artifacts_len(value=16) } } }
+                      Block#cli_targets_b_gv_run_tools_check {
+                        If#cli_targets_if_gv_run_tools {
+                          Eq#cli_targets_eq_gv_run_tools { Var#cli_targets_v_gv_key5(name=key) Lit#cli_targets_i_gv_run_tools(value="runTools") }
+                          Block#cli_targets_b_gv_run_tools { Return#cli_targets_r_gv_run_tools { Call#cli_targets_c_gv_run_tools(target=getValueFixed) { Var#cli_targets_v_gv_text5(name=text) Lit#cli_targets_i_gv_run_tools_key(value="runTools") Lit#cli_targets_i_gv_run_tools_len(value=11) } } }
+                          Block#cli_targets_b_gv_publish_tools_check {
+                            If#cli_targets_if_gv_publish_tools {
+                              Eq#cli_targets_eq_gv_publish_tools { Var#cli_targets_v_gv_key6(name=key) Lit#cli_targets_i_gv_publish_tools(value="publishTools") }
+                              Block#cli_targets_b_gv_publish_tools { Return#cli_targets_r_gv_publish_tools { Call#cli_targets_c_gv_publish_tools(target=getValueFixed) { Var#cli_targets_v_gv_text6(name=text) Lit#cli_targets_i_gv_publish_tools_key(value="publishTools") Lit#cli_targets_i_gv_publish_tools_len(value=15) } } }
+                              Block#cli_targets_b_gv_empty { Return#cli_targets_r_gv_empty { Lit#cli_targets_i_gv_empty(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_targets_l_getValueFixed(name=getValueFixed) {
+    Fn#cli_targets_f_getValueFixed(params=text,key,needleLength) {
+      Block#cli_targets_b_getValueFixed {
+        Let#cli_targets_l_gvf1(name=keyStart) { Call#cli_targets_c_gvf1(target=find) { Var#cli_targets_v_gvf1(name=text) StrConcat#cli_targets_sc_gvf1 { Var#cli_targets_v_gvf2(name=key) Lit#cli_targets_i_gvf1(value=" = ") } Lit#cli_targets_i_gvf2(value=0) } }
+        If#cli_targets_if_gvf1 {
+          Eq#cli_targets_eq_gvf1 { Var#cli_targets_v_gvf3(name=keyStart) Lit#cli_targets_i_gvf3(value=-1) }
+          Block#cli_targets_b_gvf1 { Return#cli_targets_r_gvf1 { Lit#cli_targets_i_gvf4(value="") } }
+          Block#cli_targets_b_gvf2 {
+            Let#cli_targets_l_gvf2(name=valueStart) { Add#cli_targets_a_gvf1 { Var#cli_targets_v_gvf4(name=keyStart) Var#cli_targets_v_gvf5(name=needleLength) } }
+            Let#cli_targets_l_gvf3(name=rest) { Call#cli_targets_c_gvf3(target=substring) { Var#cli_targets_v_gvf6(name=text) Var#cli_targets_v_gvf7(name=valueStart) Lit#cli_targets_i_gvf6(value=2147483647) } }
+            Let#cli_targets_l_gvf4(name=valueEnd) { Call#cli_targets_c_gvf4(target=find) { Var#cli_targets_v_gvf8(name=rest) Lit#cli_targets_i_gvf7(value="\n") Lit#cli_targets_i_gvf8(value=0) } }
+            If#cli_targets_if_gvf2 {
+              Eq#cli_targets_eq_gvf2 { Var#cli_targets_v_gvf9(name=valueEnd) Lit#cli_targets_i_gvf9(value=-1) }
+              Block#cli_targets_b_gvf3 { Return#cli_targets_r_gvf2 { Var#cli_targets_v_gvf10(name=rest) } }
+              Block#cli_targets_b_gvf4 { Return#cli_targets_r_gvf3 { Call#cli_targets_c_gvf5(target=substring) { Var#cli_targets_v_gvf11(name=rest) Lit#cli_targets_i_gvf10(value=0) Var#cli_targets_v_gvf12(name=valueEnd) } } }
             }
           }
         }
@@ -158,14 +200,6 @@ Program#cli_targets_p1 {
             Call#cli_c46r(target=sys.fs.file.read) { Var#cli_v45r(name=path) }
           }
         }
-      }
-    }
-  }
-
-  Let#cli_l_len(name=len) {
-    Fn#cli_f_len(params=text) {
-      Block#cli_b_len {
-        Return#cli_r_len { Call#cli_c_len(target=str.len) { Var#cli_v_len(name=text) } }
       }
     }
   }
@@ -279,11 +313,11 @@ Program#cli_targets_p1 {
   }
 
   Let#cli_targets_l10(name=resolveTargetRunner) {
-    Fn#cli_targets_f10(params=target,requestedRunner) {
+    Fn#cli_targets_f10(params=target,requestedRunner,projectPath) {
       Block#cli_targets_b36 {
         If#cli_targets_if14 {
           Eq#cli_targets_eq14 { Var#cli_targets_v22(name=requestedRunner) Lit#cli_targets_i30(value="") }
-          Block#cli_targets_b37 { Return#cli_targets_r23 { Call#cli_targets_c7(target=targetDefaultRunner) { Var#cli_targets_v23(name=target) } } }
+          Block#cli_targets_b37 { Return#cli_targets_r23 { Call#cli_targets_c7(target=targetDefaultRunner) { Var#cli_targets_v23(name=target) Var#cli_targets_v23p(name=projectPath) } } }
           Block#cli_targets_b38 { Return#cli_targets_r24 { Var#cli_targets_v24(name=requestedRunner) } }
         }
       }

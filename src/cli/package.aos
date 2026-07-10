@@ -537,14 +537,16 @@ Program#cli_package_p1 {
                           Eq#cli_e23pkgentry_checkout_failed { Var#cli_v23pkgentry_checkout_code(name=checkoutCode) Lit#cli_i23pkgentry_checkout_ok(value=0) }
                           Block#cli_b23pkgentry_checkout_ok {
                             Let#cli_l23pkgentry_descriptor(name=descriptorPath) { Call#cli_c23pkgentry_descriptor(target=packageDescriptorPath) { Var#cli_v23pkgentry_dir4(name=packageDir) Var#cli_v23pkgentry_root3(name=packageRoot) } }
+                            Let#cli_l23pkgentry_descriptor_text(name=descriptorText) { Call#cli_c23pkgentry_descriptor_read(target=packageReadOptionalText) { Var#cli_v23pkgentry_descriptor(name=descriptorPath) } }
                             Let#cli_l23pkgentry_dependency_entries(name=dependencyEntries) {
                               Call#cli_c23pkgentry_dependencies(target=restorePackageDependencies) {
                                 Var#cli_v23pkgentry_project2(name=projectDir)
                                 Var#cli_v23pkgentry_registry2(name=registryDir)
-                                Call#cli_c23pkgentry_descriptor_read(target=packageReadOptionalText) { Var#cli_v23pkgentry_descriptor(name=descriptorPath) }
+                                Var#cli_v23pkgentry_descriptor_text(name=descriptorText)
                                 Call#cli_c23pkgentry_seen_next(target=packageSeenAdd) { Var#cli_v23pkgentry_seen(name=seen) Var#cli_v23pkgentry_name_seen(name=packageName) }
                               }
                             }
+                            Let#cli_l23pkgentry_target_entries(name=targetEntries) { Call#cli_c23pkgentry_targets(target=restorePackageTargetEntries) { Var#cli_v23pkgentry_name_targets(name=packageName) Var#cli_v23pkgentry_descriptor_text2(name=descriptorText) Lit#cli_i23pkgentry_targets_start(value=0) } }
                             Return#cli_r23pkgentry {
                               StrConcat#cli_sc23pkgentry1 {
                                 Lit#cli_i23pkgentry1(value="[[package]]\nname = \"")
@@ -570,7 +572,13 @@ Program#cli_package_p1 {
                                                     Lit#cli_i23pkgentry6(value="\"\npackageRoot = \"")
                                                     StrConcat#cli_sc23pkgentry12 {
                                                       Var#cli_v23pkgentry_root2(name=packageRoot)
-                                                      StrConcat#cli_sc23pkgentry13 { Lit#cli_i23pkgentry7(value="\"\n\n") Var#cli_v23pkgentry_dependency_entries(name=dependencyEntries) }
+                                                      StrConcat#cli_sc23pkgentry13 {
+                                                        Lit#cli_i23pkgentry7(value="\"\n\n")
+                                                        StrConcat#cli_sc23pkgentry14 {
+                                                          Var#cli_v23pkgentry_target_entries(name=targetEntries)
+                                                          Var#cli_v23pkgentry_dependency_entries(name=dependencyEntries)
+                                                        }
+                                                      }
                                                     }
                                                   }
                                                 }
@@ -774,6 +782,245 @@ Program#cli_package_p1 {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtargets(name=restorePackageTargetEntries) {
+    Fn#cli_f23pkgtargets(params=packageName,descriptorText,startIndex) {
+      Block#cli_b23pkgtargets {
+        Let#cli_l23pkgtargets_pos(name=targetPos) { Call#cli_c23pkgtargets_pos(target=find) { Var#cli_v23pkgtargets_text(name=descriptorText) Lit#cli_i23pkgtargets_header(value="[targets.") Var#cli_v23pkgtargets_start(name=startIndex) } }
+        If#cli_if23pkgtargets_done {
+          Eq#cli_e23pkgtargets_done { Var#cli_v23pkgtargets_pos(name=targetPos) Lit#cli_i23pkgtargets_notfound(value=-1) }
+          Block#cli_b23pkgtargets_done { Return#cli_r23pkgtargets_done { Lit#cli_i23pkgtargets_empty(value="") } }
+          Block#cli_b23pkgtargets_found {
+            Let#cli_l23pkgtargets_after_header(name=afterHeader) { Add#cli_a23pkgtargets_after_header { Var#cli_v23pkgtargets_pos2(name=targetPos) Lit#cli_i23pkgtargets_header_len(value=9) } }
+            Let#cli_l23pkgtargets_close(name=closePos) { Call#cli_c23pkgtargets_close(target=find) { Var#cli_v23pkgtargets_text2(name=descriptorText) Lit#cli_i23pkgtargets_close(value="]") Var#cli_v23pkgtargets_after_header(name=afterHeader) } }
+            If#cli_if23pkgtargets_bad {
+              Eq#cli_e23pkgtargets_bad { Var#cli_v23pkgtargets_close(name=closePos) Lit#cli_i23pkgtargets_notfound2(value=-1) }
+              Block#cli_b23pkgtargets_bad { Return#cli_r23pkgtargets_bad { Lit#cli_i23pkgtargets_empty2(value="") } }
+              Block#cli_b23pkgtargets_parse {
+                Let#cli_l23pkgtargets_id(name=targetId) { Call#cli_c23pkgtargets_id(target=substring) { Var#cli_v23pkgtargets_text3(name=descriptorText) Var#cli_v23pkgtargets_after_header2(name=afterHeader) Sub#cli_s23pkgtargets_id_len { Var#cli_v23pkgtargets_close2(name=closePos) Var#cli_v23pkgtargets_after_header3(name=afterHeader) } } }
+                Let#cli_l23pkgtargets_next_start(name=nextStart) { Add#cli_a23pkgtargets_next_start { Var#cli_v23pkgtargets_close3(name=closePos) Lit#cli_i23pkgtargets_one(value=1) } }
+                If#cli_if23pkgtargets_tools {
+                  Eq#cli_e23pkgtargets_tools { Call#cli_c23pkgtargets_tools_dot(target=find) { Var#cli_v23pkgtargets_id(name=targetId) Lit#cli_i23pkgtargets_dot(value=".") Lit#cli_i23pkgtargets_zero(value=0) } Lit#cli_i23pkgtargets_notfound3(value=-1) }
+                  Block#cli_b23pkgtargets_real {
+                    Let#cli_l23pkgtargets_block(name=targetBlock) { Call#cli_c23pkgtargets_block(target=packageTomlSectionBlock) { Var#cli_v23pkgtargets_text4(name=descriptorText) Var#cli_v23pkgtargets_next_start2(name=nextStart) } }
+                    Return#cli_r23pkgtargets_real {
+                      StrConcat#cli_sc23pkgtargets_real {
+                        Call#cli_c23pkgtargets_render(target=packageRenderTargetLockEntry) {
+                          Var#cli_v23pkgtargets_package(name=packageName)
+                          Var#cli_v23pkgtargets_id2(name=targetId)
+                          Var#cli_v23pkgtargets_block(name=targetBlock)
+                          Call#cli_c23pkgtargets_tools_block(target=packageTargetToolsBlock) { Var#cli_v23pkgtargets_text5(name=descriptorText) Var#cli_v23pkgtargets_id3(name=targetId) }
+                        }
+                        Call#cli_c23pkgtargets_more(target=restorePackageTargetEntries) {
+                          Var#cli_v23pkgtargets_package2(name=packageName)
+                          Var#cli_v23pkgtargets_text6(name=descriptorText)
+                          Var#cli_v23pkgtargets_next_start3(name=nextStart)
+                        }
+                      }
+                    }
+                  }
+                  Block#cli_b23pkgtargets_skip {
+                    Return#cli_r23pkgtargets_skip {
+                      Call#cli_c23pkgtargets_skip(target=restorePackageTargetEntries) {
+                        Var#cli_v23pkgtargets_package3(name=packageName)
+                        Var#cli_v23pkgtargets_text7(name=descriptorText)
+                        Var#cli_v23pkgtargets_next_start4(name=nextStart)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtarget_render(name=packageRenderTargetLockEntry) {
+    Fn#cli_f23pkgtarget_render(params=packageName,targetId,targetBlock,toolsBlock) {
+      Block#cli_b23pkgtarget_render {
+        Return#cli_r23pkgtarget_render {
+          StrConcat#cli_sc23pkgtarget_render1 {
+            Lit#cli_i23pkgtarget_render1(value="[[target]]\npackage = \"")
+            StrConcat#cli_sc23pkgtarget_render2 {
+              Var#cli_v23pkgtarget_render_package(name=packageName)
+              StrConcat#cli_sc23pkgtarget_render3 {
+                Lit#cli_i23pkgtarget_render2(value="\"\nid = \"")
+                StrConcat#cli_sc23pkgtarget_render4 {
+                  Var#cli_v23pkgtarget_render_id(name=targetId)
+                  StrConcat#cli_sc23pkgtarget_render5 {
+                    Lit#cli_i23pkgtarget_render3(value="\"\naliases = ")
+                    StrConcat#cli_sc23pkgtarget_render6 {
+                      Call#cli_c23pkgtarget_render_aliases(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_alias_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_block(name=targetBlock) Lit#cli_i23pkgtarget_render_alias_key(value="aliases") } Lit#cli_i23pkgtarget_render_empty_array(value="[]") }
+                      StrConcat#cli_sc23pkgtarget_render7 {
+                        Lit#cli_i23pkgtarget_render4(value="\ndefaultRunner = ")
+                        StrConcat#cli_sc23pkgtarget_render8 {
+                          Call#cli_c23pkgtarget_render_runner(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_runner_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_block2(name=targetBlock) Lit#cli_i23pkgtarget_render_runner_key(value="defaultRunner") } Lit#cli_i23pkgtarget_render_empty_string(value="\"\"") }
+                          StrConcat#cli_sc23pkgtarget_render9 {
+                            Lit#cli_i23pkgtarget_render5(value="\nartifactTypes = ")
+                            StrConcat#cli_sc23pkgtarget_render10 {
+                              Call#cli_c23pkgtarget_render_artifacts(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_artifacts_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_block3(name=targetBlock) Lit#cli_i23pkgtarget_render_artifacts_key(value="artifactTypes") } Lit#cli_i23pkgtarget_render_empty_array2(value="[]") }
+                              StrConcat#cli_sc23pkgtarget_render11 {
+                                Lit#cli_i23pkgtarget_render6(value="\nhostAbi = ")
+                                StrConcat#cli_sc23pkgtarget_render12 {
+                                  Call#cli_c23pkgtarget_render_abi(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_abi_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_block4(name=targetBlock) Lit#cli_i23pkgtarget_render_abi_key(value="hostAbi") } Lit#cli_i23pkgtarget_render_zero(value="0") }
+                                  StrConcat#cli_sc23pkgtarget_render13 {
+                                    Lit#cli_i23pkgtarget_render7(value="\nrunTools = ")
+                                    StrConcat#cli_sc23pkgtarget_render14 {
+                                      Call#cli_c23pkgtarget_render_run_tools(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_run_tools_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_tools(name=toolsBlock) Lit#cli_i23pkgtarget_render_run_key(value="run") } Lit#cli_i23pkgtarget_render_empty_array3(value="[]") }
+                                      StrConcat#cli_sc23pkgtarget_render15 {
+                                        Lit#cli_i23pkgtarget_render8(value="\npublishTools = ")
+                                        StrConcat#cli_sc23pkgtarget_render16 {
+                                          Call#cli_c23pkgtarget_render_publish_tools(target=packageRawOrDefault) { Call#cli_c23pkgtarget_render_publish_tools_value(target=packageGetTomlRawValue) { Var#cli_v23pkgtarget_render_tools2(name=toolsBlock) Lit#cli_i23pkgtarget_render_publish_key(value="publish") } Lit#cli_i23pkgtarget_render_empty_array4(value="[]") }
+                                          Lit#cli_i23pkgtarget_render9(value="\n\n")
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtarget_tools_block(name=packageTargetToolsBlock) {
+    Fn#cli_f23pkgtarget_tools_block(params=descriptorText,targetId) {
+      Block#cli_b23pkgtarget_tools_block {
+        Let#cli_l23pkgtarget_tools_header(name=header) {
+          StrConcat#cli_sc23pkgtarget_tools_header1 {
+            Lit#cli_i23pkgtarget_tools_header1(value="[targets.")
+            StrConcat#cli_sc23pkgtarget_tools_header2 { Var#cli_v23pkgtarget_tools_id(name=targetId) Lit#cli_i23pkgtarget_tools_header2(value=".tools]") }
+          }
+        }
+        Let#cli_l23pkgtarget_tools_pos(name=toolsPos) { Call#cli_c23pkgtarget_tools_pos(target=find) { Var#cli_v23pkgtarget_tools_text(name=descriptorText) Var#cli_v23pkgtarget_tools_header(name=header) Lit#cli_i23pkgtarget_tools_zero(value=0) } }
+        If#cli_if23pkgtarget_tools_missing {
+          Eq#cli_e23pkgtarget_tools_missing { Var#cli_v23pkgtarget_tools_pos(name=toolsPos) Lit#cli_i23pkgtarget_tools_notfound(value=-1) }
+          Block#cli_b23pkgtarget_tools_empty { Return#cli_r23pkgtarget_tools_empty { Lit#cli_i23pkgtarget_tools_empty(value="") } }
+          Block#cli_b23pkgtarget_tools_found {
+            Let#cli_l23pkgtarget_tools_close(name=toolsClose) { Call#cli_c23pkgtarget_tools_close(target=find) { Var#cli_v23pkgtarget_tools_text2(name=descriptorText) Lit#cli_i23pkgtarget_tools_close(value="]") Var#cli_v23pkgtarget_tools_pos2(name=toolsPos) } }
+            Return#cli_r23pkgtarget_tools_found { Call#cli_c23pkgtarget_tools_section(target=packageTomlSectionBlock) { Var#cli_v23pkgtarget_tools_text3(name=descriptorText) Add#cli_a23pkgtarget_tools_after { Var#cli_v23pkgtarget_tools_close(name=toolsClose) Lit#cli_i23pkgtarget_tools_one(value=1) } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtoml_section(name=packageTomlSectionBlock) {
+    Fn#cli_f23pkgtoml_section(params=text,sectionBodyStart) {
+      Block#cli_b23pkgtoml_section {
+        Let#cli_l23pkgtoml_section_rest(name=rest) { Call#cli_c23pkgtoml_section_rest(target=substring) { Var#cli_v23pkgtoml_section_text(name=text) Var#cli_v23pkgtoml_section_start(name=sectionBodyStart) Lit#cli_i23pkgtoml_section_max(value=2147483647) } }
+        Let#cli_l23pkgtoml_section_next(name=nextSection) { Call#cli_c23pkgtoml_section_next(target=find) { Var#cli_v23pkgtoml_section_rest(name=rest) Lit#cli_i23pkgtoml_section_marker(value="\n[") Lit#cli_i23pkgtoml_section_zero(value=0) } }
+        If#cli_if23pkgtoml_section_next {
+          Eq#cli_e23pkgtoml_section_next { Var#cli_v23pkgtoml_section_next(name=nextSection) Lit#cli_i23pkgtoml_section_notfound(value=-1) }
+          Block#cli_b23pkgtoml_section_all { Return#cli_r23pkgtoml_section_all { Var#cli_v23pkgtoml_section_rest2(name=rest) } }
+          Block#cli_b23pkgtoml_section_slice { Return#cli_r23pkgtoml_section_slice { Call#cli_c23pkgtoml_section_slice(target=substring) { Var#cli_v23pkgtoml_section_rest3(name=rest) Lit#cli_i23pkgtoml_section_zero2(value=0) Var#cli_v23pkgtoml_section_next2(name=nextSection) } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtoml_raw(name=packageGetTomlRawValue) {
+    Fn#cli_f23pkgtoml_raw(params=text,key) {
+      Block#cli_b23pkgtoml_raw {
+        If#cli_if23pkgtoml_raw_aliases {
+          Eq#cli_e23pkgtoml_raw_aliases { Var#cli_v23pkgtoml_raw_key(name=key) Lit#cli_i23pkgtoml_raw_aliases(value="aliases") }
+          Block#cli_b23pkgtoml_raw_aliases { Return#cli_r23pkgtoml_raw_aliases { Call#cli_c23pkgtoml_raw_aliases(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text(name=text) Lit#cli_i23pkgtoml_raw_aliases_key(value="aliases") Lit#cli_i23pkgtoml_raw_aliases_spaced(value=10) Lit#cli_i23pkgtoml_raw_aliases_tight(value=8) } } }
+          Block#cli_b23pkgtoml_raw_runner_check {
+            If#cli_if23pkgtoml_raw_runner {
+              Eq#cli_e23pkgtoml_raw_runner { Var#cli_v23pkgtoml_raw_key2(name=key) Lit#cli_i23pkgtoml_raw_runner(value="defaultRunner") }
+              Block#cli_b23pkgtoml_raw_runner { Return#cli_r23pkgtoml_raw_runner { Call#cli_c23pkgtoml_raw_runner(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text2(name=text) Lit#cli_i23pkgtoml_raw_runner_key(value="defaultRunner") Lit#cli_i23pkgtoml_raw_runner_spaced(value=16) Lit#cli_i23pkgtoml_raw_runner_tight(value=14) } } }
+              Block#cli_b23pkgtoml_raw_artifacts_check {
+                If#cli_if23pkgtoml_raw_artifacts {
+                  Eq#cli_e23pkgtoml_raw_artifacts { Var#cli_v23pkgtoml_raw_key3(name=key) Lit#cli_i23pkgtoml_raw_artifacts(value="artifactTypes") }
+                  Block#cli_b23pkgtoml_raw_artifacts { Return#cli_r23pkgtoml_raw_artifacts { Call#cli_c23pkgtoml_raw_artifacts(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text3(name=text) Lit#cli_i23pkgtoml_raw_artifacts_key(value="artifactTypes") Lit#cli_i23pkgtoml_raw_artifacts_spaced(value=16) Lit#cli_i23pkgtoml_raw_artifacts_tight(value=14) } } }
+                  Block#cli_b23pkgtoml_raw_abi_check {
+                    If#cli_if23pkgtoml_raw_abi {
+                      Eq#cli_e23pkgtoml_raw_abi { Var#cli_v23pkgtoml_raw_key4(name=key) Lit#cli_i23pkgtoml_raw_abi(value="hostAbi") }
+                      Block#cli_b23pkgtoml_raw_abi { Return#cli_r23pkgtoml_raw_abi { Call#cli_c23pkgtoml_raw_abi(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text4(name=text) Lit#cli_i23pkgtoml_raw_abi_key(value="hostAbi") Lit#cli_i23pkgtoml_raw_abi_spaced(value=10) Lit#cli_i23pkgtoml_raw_abi_tight(value=8) } } }
+                      Block#cli_b23pkgtoml_raw_run_check {
+                        If#cli_if23pkgtoml_raw_run {
+                          Eq#cli_e23pkgtoml_raw_run { Var#cli_v23pkgtoml_raw_key5(name=key) Lit#cli_i23pkgtoml_raw_run(value="run") }
+                          Block#cli_b23pkgtoml_raw_run { Return#cli_r23pkgtoml_raw_run { Call#cli_c23pkgtoml_raw_run(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text5(name=text) Lit#cli_i23pkgtoml_raw_run_key(value="run") Lit#cli_i23pkgtoml_raw_run_spaced(value=6) Lit#cli_i23pkgtoml_raw_run_tight(value=4) } } }
+                          Block#cli_b23pkgtoml_raw_publish_check {
+                            If#cli_if23pkgtoml_raw_publish {
+                              Eq#cli_e23pkgtoml_raw_publish { Var#cli_v23pkgtoml_raw_key6(name=key) Lit#cli_i23pkgtoml_raw_publish(value="publish") }
+                              Block#cli_b23pkgtoml_raw_publish { Return#cli_r23pkgtoml_raw_publish { Call#cli_c23pkgtoml_raw_publish(target=packageGetTomlRawValueFixed) { Var#cli_v23pkgtoml_raw_text6(name=text) Lit#cli_i23pkgtoml_raw_publish_key(value="publish") Lit#cli_i23pkgtoml_raw_publish_spaced(value=10) Lit#cli_i23pkgtoml_raw_publish_tight(value=8) } } }
+                              Block#cli_b23pkgtoml_raw_empty { Return#cli_r23pkgtoml_raw_empty { Lit#cli_i23pkgtoml_raw_empty(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgtoml_raw_fixed(name=packageGetTomlRawValueFixed) {
+    Fn#cli_f23pkgtoml_raw_fixed(params=text,key,spacedLength,tightLength) {
+      Block#cli_b23pkgtoml_raw_fixed {
+        Let#cli_l23pkgtoml_raw_fixed_spaced(name=spacedNeedle) { StrConcat#cli_sc23pkgtoml_raw_fixed_spaced { Var#cli_v23pkgtoml_raw_fixed_key(name=key) Lit#cli_i23pkgtoml_raw_fixed_spaced(value=" = ") } }
+        Let#cli_l23pkgtoml_raw_fixed_tight(name=tightNeedle) { StrConcat#cli_sc23pkgtoml_raw_fixed_tight { Var#cli_v23pkgtoml_raw_fixed_key2(name=key) Lit#cli_i23pkgtoml_raw_fixed_tight(value="=") } }
+        Let#cli_l23pkgtoml_raw_fixed_value(name=value) { Call#cli_c23pkgtoml_raw_fixed_value(target=packageGetRawValueAfterNeedle) { Var#cli_v23pkgtoml_raw_fixed_text(name=text) Var#cli_v23pkgtoml_raw_fixed_spaced(name=spacedNeedle) Var#cli_v23pkgtoml_raw_fixed_spaced_len(name=spacedLength) } }
+        If#cli_if23pkgtoml_raw_fixed {
+          Eq#cli_e23pkgtoml_raw_fixed { Var#cli_v23pkgtoml_raw_fixed_value(name=value) Lit#cli_i23pkgtoml_raw_fixed_empty(value="") }
+          Block#cli_b23pkgtoml_raw_fixed_tight { Return#cli_r23pkgtoml_raw_fixed_tight { Call#cli_c23pkgtoml_raw_fixed_tight(target=packageGetRawValueAfterNeedle) { Var#cli_v23pkgtoml_raw_fixed_text2(name=text) Var#cli_v23pkgtoml_raw_fixed_tight(name=tightNeedle) Var#cli_v23pkgtoml_raw_fixed_tight_len(name=tightLength) } } }
+          Block#cli_b23pkgtoml_raw_fixed_value { Return#cli_r23pkgtoml_raw_fixed_value { Var#cli_v23pkgtoml_raw_fixed_value2(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgraw_after(name=packageGetRawValueAfterNeedle) {
+    Fn#cli_f23pkgraw_after(params=text,needle,needleLength) {
+      Block#cli_b23pkgraw_after {
+        Let#cli_l23pkgraw_after_found(name=found) { Call#cli_c23pkgraw_after_find(target=find) { Var#cli_v23pkgraw_after_text(name=text) Var#cli_v23pkgraw_after_needle(name=needle) Lit#cli_i23pkgraw_after_zero(value=0) } }
+        If#cli_if23pkgraw_after_found {
+          Eq#cli_e23pkgraw_after_found { Var#cli_v23pkgraw_after_found(name=found) Lit#cli_i23pkgraw_after_notfound(value=-1) }
+          Block#cli_b23pkgraw_after_empty { Return#cli_r23pkgraw_after_empty { Lit#cli_i23pkgraw_after_empty(value="") } }
+          Block#cli_b23pkgraw_after_value {
+            Let#cli_l23pkgraw_after_start(name=valueStart) { Add#cli_a23pkgraw_after_start { Var#cli_v23pkgraw_after_found2(name=found) Var#cli_v23pkgraw_after_len(name=needleLength) } }
+            Let#cli_l23pkgraw_after_rest(name=rest) { Call#cli_c23pkgraw_after_rest(target=substring) { Var#cli_v23pkgraw_after_text2(name=text) Var#cli_v23pkgraw_after_start(name=valueStart) Lit#cli_i23pkgraw_after_max(value=2147483647) } }
+            Let#cli_l23pkgraw_after_end(name=valueEnd) { Call#cli_c23pkgraw_after_end(target=find) { Var#cli_v23pkgraw_after_rest(name=rest) Lit#cli_i23pkgraw_after_newline(value="\n") Lit#cli_i23pkgraw_after_zero2(value=0) } }
+            If#cli_if23pkgraw_after_end {
+              Eq#cli_e23pkgraw_after_end { Var#cli_v23pkgraw_after_end(name=valueEnd) Lit#cli_i23pkgraw_after_notfound2(value=-1) }
+              Block#cli_b23pkgraw_after_all { Return#cli_r23pkgraw_after_all { Var#cli_v23pkgraw_after_rest2(name=rest) } }
+              Block#cli_b23pkgraw_after_slice { Return#cli_r23pkgraw_after_slice { Call#cli_c23pkgraw_after_slice(target=substring) { Var#cli_v23pkgraw_after_rest3(name=rest) Lit#cli_i23pkgraw_after_zero3(value=0) Var#cli_v23pkgraw_after_end2(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgraw_default(name=packageRawOrDefault) {
+    Fn#cli_f23pkgraw_default(params=value,defaultValue) {
+      Block#cli_b23pkgraw_default {
+        If#cli_if23pkgraw_default {
+          Eq#cli_e23pkgraw_default { Var#cli_v23pkgraw_default_value(name=value) Lit#cli_i23pkgraw_default_empty(value="") }
+          Block#cli_b23pkgraw_default_value { Return#cli_r23pkgraw_default_value { Var#cli_v23pkgraw_default_default(name=defaultValue) } }
+          Block#cli_b23pkgraw_default_keep { Return#cli_r23pkgraw_default_keep { Var#cli_v23pkgraw_default_value2(name=value) } }
         }
       }
     }

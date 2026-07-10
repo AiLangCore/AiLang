@@ -86,11 +86,6 @@ if [[ -n "${RUNTIME_BIN}" ]]; then
   copy_executable "${RUNTIME_BIN}" "${TOOLS_DIR}/aivm-runtime"
 fi
 
-FRONTEND_BIN="$(resolve_sdk_executable aos_frontend || true)"
-if [[ -n "${FRONTEND_BIN}" ]]; then
-  copy_executable "${FRONTEND_BIN}" "${TOOLS_DIR}/aos_frontend"
-fi
-
 if [[ -d "${SDK_ROOT}/.artifacts" ]]; then
   mkdir -p "${ROOT_DIR}/.artifacts"
   cp -R "${SDK_ROOT}/.artifacts"/. "${ROOT_DIR}/.artifacts"/

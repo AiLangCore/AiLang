@@ -6,6 +6,7 @@ Program#cli_p1 {
   Import#cli_im5(path="../compiler/bundle.aos")
   Import#cli_im6(path="../compiler/bytecode.aos")
   Import#cli_im7(path="package.aos")
+  Import#cli_im8(path="target_packages.aos")
   Export#cli_e1(name=main)
 
   Let#cli_l1(name=main) {
@@ -1901,7 +1902,7 @@ Program#cli_p1 {
           Block#cli_b42psc1 { Return#cli_r42psc1 { Call#cli_c42psc1(target=buildError) { Lit#cli_i42psc2(value="AILANG017") Lit#cli_i42psc3(value="Self-contained publish requires --target.") Lit#cli_i42psc4(value="publish") } } }
           Block#cli_b42psc2 {
             If#cli_if42psc2 {
-              Call#cli_c42psct(target=isKnownPublishTarget) { Var#cli_v42psct(name=target) }
+              Call#cli_c42psct(target=isKnownPublishTargetForProject) { Var#cli_v42psct(name=target) Var#cli_v42psc_project(name=path) Lit#cli_i42psc_artifact(value="dir") }
               Block#cli_b42psc3 {
                 Let#cli_l42pscv(name=aivmPath) { Call#cli_c42psc2(target=resolveBundledAivmPath) { Var#cli_v42psct2(name=target) } }
                 If#cli_if42psc3 {
@@ -2162,6 +2163,26 @@ Program#cli_p1 {
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l42ptp(name=isKnownPublishTargetForProject) {
+    Fn#cli_f42ptp(params=target,projectPath,artifactType) {
+      Block#cli_b42ptp {
+        If#cli_if42ptp_builtin {
+          Call#cli_c42ptp_builtin(target=isKnownPublishTarget) { Var#cli_v42ptp_target(name=target) }
+          Block#cli_b42ptp_builtin { Return#cli_r42ptp_builtin { Lit#cli_i42ptp_true(value=true) } }
+          Block#cli_b42ptp_package {
+            Return#cli_r42ptp_package {
+              Call#cli_c42ptp_package(target=targetSupportsArtifactType) {
+                Var#cli_v42ptp_target2(name=target)
+                Var#cli_v42ptp_artifact(name=artifactType)
+                Var#cli_v42ptp_project(name=projectPath)
               }
             }
           }

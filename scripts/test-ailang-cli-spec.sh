@@ -15,8 +15,10 @@ TMP_DIR="${ROOT_DIR}/.tmp/ailang-cli-spec-smoke"
 CLI_BYTECODE_DIR="${TMP_DIR}/cli-bytecode"
 APP_DIR="${TMP_DIR}/app"
 BASIC_CLI_DIR="${TMP_DIR}/basic-cli"
+MULTI_STDOUT_DIR="${TMP_DIR}/multi-stdout"
 BUILD_DIR="${TMP_DIR}/build"
 BASIC_CLI_BUILD_DIR="${TMP_DIR}/basic-cli-build"
+MULTI_STDOUT_BUILD_DIR="${TMP_DIR}/multi-stdout-build"
 LOCAL_BUILD_DIR="${TMP_DIR}/local-build"
 PUBLISH_DIR="${TMP_DIR}/publish"
 SELF_CONTAINED_PUBLISH_DIR="${TMP_DIR}/publish-self-contained"
@@ -130,6 +132,19 @@ types = ["library"]
 [dependencies]
 std-core = "0.0.1"
 
+[targets.fixture-gui]
+id = "fixture-gui"
+aliases = ["fixture"]
+hostAbi = 1
+defaultRunner = "qemu"
+artifactTypes = ["dir", "img"]
+
+[targets.fixture-gui.tools]
+run = ["qemu-system-aarch64"]
+publish = []
+doctor = []
+flash = ["dd"]
+
 [libraries.app]
 namespace = "std.app"
 entry = "src/app.aos"
@@ -234,6 +249,13 @@ rg -q 'path = ".ailang/packages/std-core"' "${PACKAGE_RESTORE_DIR}/ailang.lock.t
 rg -q 'packageRoot = "packages/std-app"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
 rg -q 'packageRoot = "packages/std-core"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
 rg -q "commit = \"${PACKAGE_SOURCE_COMMIT}\"" "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q '\[\[target\]\]' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'package = "std-app"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'id = "fixture-gui"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'aliases = \["fixture"\]' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'defaultRunner = "qemu"' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'artifactTypes = \["dir", "img"\]' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
+rg -q 'runTools = \["qemu-system-aarch64"\]' "${PACKAGE_RESTORE_DIR}/ailang.lock.toml"
 
 mkdir -p "${PACKAGE_RESTORE_BAD_DIR}/src"
 cat > "${PACKAGE_RESTORE_BAD_DIR}/config.local.toml" <<EOF
@@ -431,6 +453,33 @@ rg -q 'status="ok"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'output="app.aibc1"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'status="bytecode"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
 rg -q 'input="obj/app.aibc1"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
+
+mkdir -p "${MULTI_STDOUT_DIR}/src"
+cat > "${MULTI_STDOUT_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="multi-stdout" entryFile="src/app.aos" entryExport="start") { }
+}
+EOF
+cat > "${MULTI_STDOUT_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=args) {
+      Block#b1 {
+        Call#c1(target=sys.stdout.writeLine) { Lit#s1(value="first") }
+        Call#c2(target=sys.stdout.writeLine) { Lit#s2(value="second") }
+        Return#r1 { Lit#i1(value=0) }
+      }
+    }
+  }
+}
+EOF
+run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" build "${MULTI_STDOUT_DIR}" --out "${MULTI_STDOUT_BUILD_DIR}" >/dev/null
+test -f "${MULTI_STDOUT_BUILD_DIR}/app.aibc1"
+rg -q 'status="ok"' "${MULTI_STDOUT_DIR}/obj/bytecode-emitter-report.aos"
+MULTI_STDOUT_OUT="$("${AIVM_BIN}" "${MULTI_STDOUT_BUILD_DIR}/app.aibc1")"
+printf '%s\n' "${MULTI_STDOUT_OUT}" | rg -q '^first$'
+printf '%s\n' "${MULTI_STDOUT_OUT}" | rg -q '^second$'
 
 mkdir -p "${FAKE_INSTALL_ROOT}/local/bin" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli"
 cp "${AIVM_BIN}" "${FAKE_INSTALL_ROOT}/local/bin/aivm"

@@ -224,8 +224,10 @@ native bridge libraries, but not in AiLang command implementation.
   - [ ] Generalize binary AiBC emission beyond the bootstrap template shapes.
   - [x] Add package-root-aware graph linking so package imports also flow
     through the AiLang linker artifact path.
-- [ ] Rewrite `tools/aos_frontend.c` in AiLang and remove it from normal SDK
-  staging once canonical parsing/formatting no longer depends on that binary.
+- [ ] Rewrite `tools/aos_frontend.c` in AiLang.
+  - [x] Removed `aos_frontend` from normal local/installed SDK staging and
+    release package `bin/` outputs. The C frontend remains a bootstrap and
+    canonical-formatting test tool until the parser/formatter rewrite lands.
 - [x] Add release-gating tests that execute the installed `ailang` command
   through the bytecode CLI for `--version`, `help`, `init`, `template`, `agent`,
   `build`, `run`, `publish`, `clean`, `project version`, and `package restore`.

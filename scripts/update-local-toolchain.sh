@@ -229,7 +229,6 @@ else
 fi
 
 copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
-copy_if_exists "${AILANG_DIR}/tools/aos_frontend" "${TMP_ROOT}/bin/aos_frontend"
 echo "building AiLang bytecode CLI payload..."
 "${AILANG_DIR}/tools/ailang" build "${AILANG_DIR}/src/cli/ailang.aos" --out "${TMP_ROOT}/libexec/ailang/cli" --no-cache >/dev/null
 if [[ ! -f "${TMP_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then

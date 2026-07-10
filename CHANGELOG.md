@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.28] - 2026-07-10
+
+### Fixed
+
+- Separate the host compiler used to build the bytecode CLI payload from each
+  target artifact in cross-platform release packaging.
+
 ## [0.0.1-beta.27] - 2026-07-10
 
 ### Fixed

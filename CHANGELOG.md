@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.26] - 2026-07-10
+
+### Fixed
+
+- Pinned the release WASM verification runner to an explicit official Wasmtime
+  artifact after the upstream latest-version installer failed to install a
+  runnable binary in CI.
+
 ## [0.0.1-beta.25] - 2026-07-10
 
 ### Fixed

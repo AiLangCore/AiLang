@@ -225,6 +225,12 @@ jobs:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
 
+      - name: Download bytecode CLI payload
+        uses: actions/download-artifact@v8
+        with:
+          name: ailang-cli-bytecode
+          path: ./dist/libexec/ailang/cli
+
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -281,38 +287,6 @@ jobs:
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
 
-      - name: Stage host bytecode compiler (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
-          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
-          AILANG_BUILD_CHANNEL: beta
-        run: |
-          set -euo pipefail
-          unset AILANG_NATIVE_PLATFORM AILANG_NATIVE_ARCH
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
-          test -x ./tools/ailang
-
-      - name: Setup Windows host compiler tools
-        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
-
-      - name: Stage host bytecode compiler (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
-          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
-          AILANG_BUILD_CHANNEL: beta
-        run: |
-          $env:AILANG_NATIVE_ARCH = 'x64'
-          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
-          ./build.ps1 host
-          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing host bytecode compiler' }
-
       - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'
         shell: bash
@@ -345,22 +319,17 @@ jobs:
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
-      - name: Stage bytecode CLI payload (Unix)
+      - name: Verify bytecode CLI payload (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p ./dist/libexec/ailang/cli
-          ./tools/ailang build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
           test -f ./dist/libexec/ailang/cli/app.aibc1
 
-      - name: Stage bytecode CLI payload (Windows)
+      - name: Verify bytecode CLI payload (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force .\dist\libexec\ailang\cli | Out-Null
-          & .\tools\ailang.exe build .\src\cli\ailang.aos --out .\dist\libexec\ailang\cli --no-cache | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw 'failed to build bytecode CLI payload' }
           if (-not (Test-Path .\dist\libexec\ailang\cli\app.aibc1)) { throw 'missing bytecode CLI payload' }
 
       - name: Pack release artifact (Unix)
@@ -502,6 +471,20 @@ jobs:
           AILANG_NATIVE_PLATFORM=linux \
           AILANG_NATIVE_ARCH=x64 \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
+
+      - name: Build canonical bytecode CLI payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/libexec/ailang/cli
+          ./tools/ailang build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
+          test -f ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Upload bytecode CLI payload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ailang-cli-bytecode
+          path: ./dist/libexec/ailang/cli/app.aibc1
 
       - name: Setup wasmtime
         shell: bash

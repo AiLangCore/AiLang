@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.30] - 2026-07-10
+
+### Fixed
+
+- Build the platform-neutral bytecode CLI payload once on the verified Linux
+  host and reuse it for every target SDK package.
+
 ## [0.0.1-beta.29] - 2026-07-10
 
 ### Fixed

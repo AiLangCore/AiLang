@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.27] - 2026-07-10
+
+### Fixed
+
+- Create the isolated CI runner's local binary directory before installing the
+  pinned WASM verification runtime.
+
 ## [0.0.1-beta.26] - 2026-07-10
 
 ### Fixed

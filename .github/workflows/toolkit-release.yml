@@ -480,6 +480,7 @@ jobs:
           WASMTIME_ARCHIVE="wasmtime-${WASMTIME_VERSION}-x86_64-linux.tar.xz"
           WASMTIME_ROOT="${RUNNER_TEMP}/wasmtime-${WASMTIME_VERSION}"
           mkdir -p "${WASMTIME_ROOT}"
+          mkdir -p "${HOME}/.local/bin"
           curl -fsSL \
             "https://github.com/bytecodealliance/wasmtime/releases/download/${WASMTIME_VERSION}/${WASMTIME_ARCHIVE}" \
             -o "${WASMTIME_ROOT}/${WASMTIME_ARCHIVE}"

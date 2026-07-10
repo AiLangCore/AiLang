@@ -197,6 +197,7 @@ cat > "${path}" <<'EOF'
 set -eu
 SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 export AILANG_SDK_ROOT="$SDK_ROOT"
+export AILANG_SDK_VERSION="local"
 exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
 EOF
   chmod +x "${path}"

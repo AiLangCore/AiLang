@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.23] - 2026-07-10
+
+### Added
+
+- Added dynamic package-target metadata discovery during package restore, so
+  restored target packages can contribute target IDs, aliases, runners,
+  artifact types, and operation tools without recompiling the CLI.
+- Added UTF-8 scalar-length support to the standard string surface through the
+  VM intrinsic `StringScalarLength`.
+
+### Changed
+
+- The installed bytecode `ailang` CLI now reports the actual selected SDK
+  version from its shim instead of a stale hard-coded prerelease value.
+- Removed the bootstrap `aos_frontend` executable from normal SDK package
+  staging; it remains a bootstrap/CI implementation detail.
+- Pre-1.0 alpha, beta, and RC artifacts are now cut from `develop`; stable
+  releases remain `main`-only.
+
 ## [0.0.1-beta.8] - 2026-05-28
 
 ### Notes
@@ -69,7 +88,7 @@ All notable changes to this project are documented in this file.
 - Agent-facing docs:
   - `Docs/Agent-Debug-Workflow.md`
   - `Docs/CLI-Wrapper-Contract.md`
-  - `Docs/Launch-Checklist.md`
+  - `Archive/2026-beta/Launch-Checklist.md`
 
 ### Changed
 - CLI help now documents standardized syntax patterns and legacy separator deprecation.

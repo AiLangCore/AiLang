@@ -14,7 +14,7 @@ For curated public examples, use
 
 ## Current Status
 
-Current public SDK beta: `v0.0.1-beta.8`.
+Current public SDK beta: `v0.0.1-beta.23`.
 
 Install the latest public beta SDK:
 

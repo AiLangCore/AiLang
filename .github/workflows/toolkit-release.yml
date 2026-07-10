@@ -3,6 +3,7 @@ name: Toolkit Release
 on:
   push:
     branches:
+      - develop
       - main
     tags:
       - "v*"
@@ -40,13 +41,13 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             exit 0
           fi
-          if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "main" ]]; then
+          if [[ "${GITHUB_REF_TYPE}" == "branch" && ( "${GITHUB_REF_NAME}" == "develop" || "${GITHUB_REF_NAME}" == "main" ) ]]; then
             exit 0
           fi
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             exit 0
           fi
-          echo "Releases can only run from main, workflow_dispatch, or v* tags." >&2
+          echo "Releases can only run from develop, main, workflow_dispatch, or v* tags." >&2
           exit 1
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -396,6 +397,7 @@ jobs:
             'set -eu' \
             'SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"' \
             'export AILANG_SDK_ROOT="$SDK_ROOT"' \
+            'export AILANG_SDK_VERSION="'"${VERSION}"'"' \
             'exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"' \
             > "${PACKAGE_DIR}/bin/ailang"
           chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm" "${PACKAGE_DIR}/bin/aivm-runtime"

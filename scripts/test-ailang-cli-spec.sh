@@ -71,7 +71,7 @@ HELP_PACKAGE_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" help packag
 printf '%s\n' "${HELP_PACKAGE_OUT}" | rg -Fq 'Usage: ailang package <restore|list|add|remove> [project-dir]'
 
 VERSION_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" --version)"
-printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang 0\.0\.1-beta\.10$'
+printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang 0\.0\.1-dev$'
 
 TEMPLATE_LIST_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list)"
 printf '%s\n' "${TEMPLATE_LIST_OUT}" | rg -q 'name = "cli"'

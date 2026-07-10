@@ -1,5 +1,8 @@
 # Task: Move High-Level UI Composition To AiVectra
 
+Status: archived planning task. The active implementation work belongs in the
+AiVectra repository; this file records the original AiLang ownership decision.
+
 ## Goal
 
 Implement high-level UI composition features in `src/AiVectra` using minimal VM UI primitives, instead of adding new VM syscalls.

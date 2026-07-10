@@ -4,6 +4,7 @@
 
 1. `develop`
 - Integration branch for ongoing work.
+- Source for alpha, beta, and release-candidate artifacts while pre-1.0.
 
 2. `main`
 - Release branch only.
@@ -19,6 +20,8 @@
 
 ## Release policy
 
-- Releases are cut from `main` only.
-- Tags are created from `main` release commits.
+- Alpha, beta, and release-candidate releases are cut from `develop` while the
+  default branch remains the active pre-1.0 integration branch.
+- Stable releases are cut from `main` only.
+- Tags are created from the corresponding release commit.
 - Release artifacts come from CI workflows.

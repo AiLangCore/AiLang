@@ -139,7 +139,12 @@ Program#cli_p1 {
   Let#cli_l21(name=runVersion) {
     Fn#cli_f21(params=_) {
       Block#cli_b41 {
-        Call#cli_c22(target=sys.stdout.writeLine) { Lit#cli_i33(value="ailang 0.0.1-beta.10") }
+        Let#cli_l21v(name=sdkVersion) { Call#cli_c22v(target=sys.process.env.get) { Lit#cli_i33v(value="AILANG_SDK_VERSION") } }
+        If#cli_if21v {
+          Eq#cli_e21v { Var#cli_v21v(name=sdkVersion) Lit#cli_i33ve(value="") }
+          Block#cli_b41v { Call#cli_c22(target=sys.stdout.writeLine) { Lit#cli_i33(value="ailang 0.0.1-dev") } }
+          Block#cli_b41ve { Call#cli_c22ve(target=sys.stdout.writeLine) { StrConcat#cli_sc21v { Lit#cli_i33vp(value="ailang ") Var#cli_v21vp(name=sdkVersion) } } }
+        }
         Return#cli_r31 { Lit#cli_i34(value=0) }
       }
     }

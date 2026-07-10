@@ -107,39 +107,6 @@ jobs:
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
 
-      - name: Stage host bytecode compiler (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
-          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
-          AILANG_BUILD_CHANNEL: beta
-        run: |
-          set -euo pipefail
-          unset AILANG_NATIVE_PLATFORM AILANG_NATIVE_ARCH
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
-          test -x ./tools/ailang
-
-      - name: Setup Windows host compiler tools
-        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
-
-      - name: Stage host bytecode compiler (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        env:
-          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
-          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
-          AILANG_BUILD_CHANNEL: beta
-        run: |
-          $env:AILANG_NATIVE_ARCH = 'x64'
-          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
-          ./build.ps1 host
-          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing host bytecode compiler' }
-          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
-
       - name: Runtime smoke (Unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -313,6 +280,38 @@ jobs:
           $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
+
+      - name: Stage host bytecode compiler (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
+        run: |
+          set -euo pipefail
+          unset AILANG_NATIVE_PLATFORM AILANG_NATIVE_ARCH
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
+          test -x ./tools/ailang
+
+      - name: Setup Windows host compiler tools
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Stage host bytecode compiler (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
+        run: |
+          $env:AILANG_NATIVE_ARCH = 'x64'
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
+          ./build.ps1 host
+          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing host bytecode compiler' }
 
       - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'

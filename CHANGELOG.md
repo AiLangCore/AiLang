@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.29] - 2026-07-10
+
+### Fixed
+
+- Run the release host-tool staging only in target package jobs, leaving the
+  platform build gate independent of package matrix metadata.
+
 ## [0.0.1-beta.28] - 2026-07-10
 
 ### Fixed

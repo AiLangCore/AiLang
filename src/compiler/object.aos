@@ -1,5 +1,6 @@
 Program {
   Export(name=object.emitModuleText)
+  Export(name=object.emitSymbols)
 
   Let(name=object.emitModuleText) {
     Fn(params=program,modulePath) {
@@ -16,8 +17,11 @@ Program {
                   StrConcat {
                     Call(target=object.emitExports) { Var(name=program) Var(name=modulePath) Lit(value=0) }
                     StrConcat {
-                      Call(target=object.emitFunctions) { Var(name=program) Var(name=modulePath) Lit(value=0) }
-                      Lit(value="}")
+                      Call(target=object.emitSymbols) { Var(name=program) Var(name=modulePath) Lit(value=0) }
+                      StrConcat {
+                        Call(target=object.emitFunctions) { Var(name=program) Var(name=modulePath) Lit(value=0) }
+                        Lit(value="}")
+                      }
                     }
                   }
                 }
@@ -139,6 +143,45 @@ Program {
                             }
                           }
                         }
+                      }
+                      Block { Return { Var(name=tail) } }
+                    }
+                  }
+                  Block { Return { Var(name=tail) } }
+                }
+              }
+              Block { Return { Var(name=tail) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=object.emitSymbols) {
+    Fn(params=program,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            Let(name=tail) { Call(target=object.emitSymbols) { Var(name=program) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Let") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=child) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=child) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Fn") }
+                      Block {
+                        Let(name=name) { Call(target=object.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
+                        Let(name=symbol) { Call(target=object.symbol) { Var(name=modulePath) Var(name=name) } }
+                        Let(name=prefix) { StrConcat { Lit(value="Symbol(kind=\"function\" name=\"") StrEscape { Var(name=name) } } }
+                        Let(name=middle) { StrConcat { Var(name=prefix) StrConcat { Lit(value="\" symbol=\"") Var(name=symbol) } } }
+                        Return { StrConcat { Var(name=middle) StrConcat { Lit(value="\") ") Var(name=tail) } } }
                       }
                       Block { Return { Var(name=tail) } }
                     }

@@ -33,7 +33,7 @@ Program {
 AOS
 
 OUT="$(./tools/ailang run "${TMP_DIR}/app.aos")"
-printf '%s\n' "${OUT}" | rg -Fqx 'Object(format="AiBCO1" modulePath="src/app.aos" version=1) { Import(path="dep.aos") Export(name="start" symbol="src/app.aos::start") Function(name="start" symbol="src/app.aos::start" params="args" locals="args") {} }'
+printf '%s\n' "${OUT}" | rg -Fqx 'Object(format="AiBCO1" modulePath="src/app.aos" version=1) { Import(path="dep.aos") Export(name="start" symbol="src/app.aos::start") Symbol(kind="function" name="start" symbol="src/app.aos::start") Function(name="start" symbol="src/app.aos::start" params="args" locals="args") {} }'
 printf '%s\n' "${OUT}" | rg -Fq 'Ok#ok1(type=int value=0)'
 
 echo "object emitter module: PASS"

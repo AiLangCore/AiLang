@@ -26,6 +26,7 @@ Object(
 ) {
   Import(path="std/net/http.aos")
   Export(name="start" symbol="src/app.aos::start")
+  Symbol(kind="function" name="start" symbol="src/app.aos::start")
   Function(name="start" symbol="src/app.aos::start" params="args" locals="args") {
     Inst(op=CALL a=0)
     Reloc(kind="call" instruction=0 target="std/net/http.aos::httpRequestPoll")
@@ -44,6 +45,9 @@ metadata. They are not runtime semantic nodes and are not passed to AiVM.
 - `Import.path` is a canonical linker display path.
 - `Export.name` is the module-local exported identifier.
 - `Export.symbol` and `Function.symbol` are `<modulePath>::<name>`.
+- `Symbol.kind` is `function` and records every module-local function in source
+  order, whether or not it is exported. `Symbol.name` is module-local and
+  `Symbol.symbol` is fully qualified.
 - `Function.params` and `Function.locals` use canonical comma-separated order.
 - `Reloc.kind` is one of `call`, `const`, or `entry`.
 - `Reloc.instruction` is a zero-based instruction index in its owning function.
@@ -54,6 +58,8 @@ metadata. They are not runtime semantic nodes and are not passed to AiVM.
 - Object files are emitted in canonical module-graph order.
 - Imports are emitted in source order after canonical path resolution.
 - Exports and functions are emitted in source order.
+- Symbols are emitted in function source order and are the sole input to final
+  linker function-index assignment.
 - Constants are emitted by first encounter during canonical function traversal.
 - Relocations are emitted by instruction order.
 - The linker assigns final function indices by object order then function order.

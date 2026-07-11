@@ -24,6 +24,7 @@ PACKAGE_REGISTRY_DIR="${TMP_DIR}/registry"
 rm -rf "${TMP_DIR}"
 mkdir -p "${SDK_ROOT}/bin" "${SDK_ROOT}/libexec/ailang/cli" "${SDK_ROOT}/runtimes/host" "${CLI_BYTECODE_DIR}" "${PACKAGE_REGISTRY_DIR}/packages"
 cp "${ROOT_DIR}/sdk-runtime.toml" "${SDK_ROOT}/sdk-runtime.toml"
+cp -R "${ROOT_DIR}/src/std" "${SDK_ROOT}/std"
 
 ./tools/ailang build src/cli/ailang.aos --out "${CLI_BYTECODE_DIR}" --no-cache >/dev/null
 cp "${CLI_BYTECODE_DIR}/app.aibc1" "${SDK_ROOT}/libexec/ailang/cli/app.aibc1"

@@ -402,7 +402,7 @@ Program#cli_package_p1 {
   Let#cli_l23pkgrestore_entries(name=restoreIncludeLockEntries) {
     Fn#cli_f23pkgrestore_entries(params=projectDir,registryDir,manifestText,startIndex,seen) {
       Block#cli_b23pkgrestore_entries {
-        Let#cli_l23pkgrestore_find(name=includePos) { Call#cli_c23pkgrestore_find(target=find) { Var#cli_v23pkgrestore_entries_text(name=manifestText) Lit#cli_i23pkgrestore_find(value="Include(") Var#cli_v23pkgrestore_entries_start(name=startIndex) } }
+        Let#cli_l23pkgrestore_find(name=includePos) { Call#cli_c23pkgrestore_find(target=find) { Var#cli_v23pkgrestore_entries_text(name=manifestText) Lit#cli_i23pkgrestore_find(value="Include") Var#cli_v23pkgrestore_entries_start(name=startIndex) } }
         If#cli_if23pkgrestore_find {
           Eq#cli_e23pkgrestore_find { Var#cli_v23pkgrestore_include_pos(name=includePos) Lit#cli_i23pkgrestore_notfound(value=-1) }
           Block#cli_b23pkgrestore_done { Return#cli_r23pkgrestore_done { Lit#cli_i23pkgrestore_done(value="") } }
@@ -434,7 +434,7 @@ Program#cli_package_p1 {
   Let#cli_l23pkgrestore_count(name=countIncludes) {
     Fn#cli_f23pkgrestore_count(params=manifestText,startIndex) {
       Block#cli_b23pkgrestore_count {
-        Let#cli_l23pkgrestore_count_find(name=includePos) { Call#cli_c23pkgrestore_count_find(target=find) { Var#cli_v23pkgrestore_count_text(name=manifestText) Lit#cli_i23pkgrestore_count_find(value="Include(") Var#cli_v23pkgrestore_count_start(name=startIndex) } }
+        Let#cli_l23pkgrestore_count_find(name=includePos) { Call#cli_c23pkgrestore_count_find(target=find) { Var#cli_v23pkgrestore_count_text(name=manifestText) Lit#cli_i23pkgrestore_count_find(value="Include") Var#cli_v23pkgrestore_count_start(name=startIndex) } }
         If#cli_if23pkgrestore_count_find {
           Eq#cli_e23pkgrestore_count_find { Var#cli_v23pkgrestore_count_pos(name=includePos) Lit#cli_i23pkgrestore_count_notfound(value=-1) }
           Block#cli_b23pkgrestore_count_done { Return#cli_r23pkgrestore_count_done { Lit#cli_i23pkgrestore_count_zero(value=0) } }
@@ -547,6 +547,7 @@ Program#cli_package_p1 {
                               }
                             }
                             Let#cli_l23pkgentry_target_entries(name=targetEntries) { Call#cli_c23pkgentry_targets(target=restorePackageTargetEntries) { Var#cli_v23pkgentry_name_targets(name=packageName) Var#cli_v23pkgentry_descriptor_text2(name=descriptorText) Lit#cli_i23pkgentry_targets_start(value=0) } }
+                            Let#cli_l23pkgentry_namespaces(name=namespaces) { Call#cli_c23pkgentry_namespaces(target=packageLibraryNamespaces) { Var#cli_v23pkgentry_descriptor_text3(name=descriptorText) Lit#cli_i23pkgentry_namespaces_start(value=0) } }
                             Return#cli_r23pkgentry {
                               StrConcat#cli_sc23pkgentry1 {
                                 Lit#cli_i23pkgentry1(value="[[package]]\nname = \"")
@@ -573,7 +574,13 @@ Program#cli_package_p1 {
                                                     StrConcat#cli_sc23pkgentry12 {
                                                       Var#cli_v23pkgentry_root2(name=packageRoot)
                                                       StrConcat#cli_sc23pkgentry13 {
-                                                        Lit#cli_i23pkgentry7(value="\"\n\n")
+                                                        StrConcat#cli_sc23pkgentry_namespaces1 {
+                                                          Lit#cli_i23pkgentry7(value="\"\nnamespaces = [")
+                                                          StrConcat#cli_sc23pkgentry_namespaces2 {
+                                                            Var#cli_v23pkgentry_namespaces(name=namespaces)
+                                                            Lit#cli_i23pkgentry_namespaces_end(value="]\n\n")
+                                                          }
+                                                        }
                                                         StrConcat#cli_sc23pkgentry14 {
                                                           Var#cli_v23pkgentry_target_entries(name=targetEntries)
                                                           Var#cli_v23pkgentry_dependency_entries(name=dependencyEntries)
@@ -675,6 +682,36 @@ Program#cli_package_p1 {
                 StrConcat#cli_sc23pkgdescriptor_nested2 {
                   Lit#cli_i23pkgdescriptor_slash(value="/")
                   StrConcat#cli_sc23pkgdescriptor_nested3 { Var#cli_v23pkgdescriptor_root2(name=packageRoot) Lit#cli_i23pkgdescriptor_file(value="/package.toml") }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23pkgnamespaces(name=packageLibraryNamespaces) {
+    Fn#cli_f23pkgnamespaces(params=descriptorText,startIndex) {
+      Block#cli_b23pkgnamespaces {
+        Let#cli_l23pkgnamespaces_pos(name=libraryPos) { Call#cli_c23pkgnamespaces_pos(target=find) { Var#cli_v23pkgnamespaces_text(name=descriptorText) Lit#cli_i23pkgnamespaces_header(value="[libraries.") Var#cli_v23pkgnamespaces_start(name=startIndex) } }
+        If#cli_if23pkgnamespaces_done {
+          Eq#cli_e23pkgnamespaces_done { Var#cli_v23pkgnamespaces_pos(name=libraryPos) Lit#cli_i23pkgnamespaces_notfound(value=-1) }
+          Block#cli_b23pkgnamespaces_done { Return#cli_r23pkgnamespaces_done { Lit#cli_i23pkgnamespaces_empty(value="") } }
+          Block#cli_b23pkgnamespaces_found {
+            Let#cli_l23pkgnamespaces_close(name=headerClose) { Call#cli_c23pkgnamespaces_close(target=find) { Var#cli_v23pkgnamespaces_text2(name=descriptorText) Lit#cli_i23pkgnamespaces_close(value="]") Var#cli_v23pkgnamespaces_pos2(name=libraryPos) } }
+            Let#cli_l23pkgnamespaces_next(name=nextStart) { Add#cli_a23pkgnamespaces_next { Var#cli_v23pkgnamespaces_close2(name=headerClose) Lit#cli_i23pkgnamespaces_one(value=1) } }
+            Let#cli_l23pkgnamespaces_block(name=libraryBlock) { Call#cli_c23pkgnamespaces_block(target=packageTomlSectionBlock) { Var#cli_v23pkgnamespaces_text3(name=descriptorText) Var#cli_v23pkgnamespaces_next2(name=nextStart) } }
+            Let#cli_l23pkgnamespaces_value(name=namespaceValue) { Call#cli_c23pkgnamespaces_value(target=packageGetTomlStringFixed) { Var#cli_v23pkgnamespaces_block2(name=libraryBlock) Lit#cli_i23pkgnamespaces_key(value="namespace") Lit#cli_i23pkgnamespaces_spaced(value=13) Lit#cli_i23pkgnamespaces_tight(value=11) } }
+            Let#cli_l23pkgnamespaces_rest(name=remaining) { Call#cli_c23pkgnamespaces_rest(target=packageLibraryNamespaces) { Var#cli_v23pkgnamespaces_text4(name=descriptorText) Var#cli_v23pkgnamespaces_next3(name=nextStart) } }
+            If#cli_if23pkgnamespaces_value {
+              Eq#cli_e23pkgnamespaces_value { Var#cli_v23pkgnamespaces_value2(name=namespaceValue) Lit#cli_i23pkgnamespaces_value_empty(value="") }
+              Block#cli_b23pkgnamespaces_skip { Return#cli_r23pkgnamespaces_skip { Var#cli_v23pkgnamespaces_rest2(name=remaining) } }
+              Block#cli_b23pkgnamespaces_append {
+                If#cli_if23pkgnamespaces_rest {
+                  Eq#cli_e23pkgnamespaces_rest { Var#cli_v23pkgnamespaces_rest3(name=remaining) Lit#cli_i23pkgnamespaces_rest_empty(value="") }
+                  Block#cli_b23pkgnamespaces_last { Return#cli_r23pkgnamespaces_last { StrConcat#cli_sc23pkgnamespaces_last1 { Lit#cli_i23pkgnamespaces_quote1(value="\"") StrConcat#cli_sc23pkgnamespaces_last2 { Var#cli_v23pkgnamespaces_value3(name=namespaceValue) Lit#cli_i23pkgnamespaces_quote2(value="\"") } } } }
+                  Block#cli_b23pkgnamespaces_more { Return#cli_r23pkgnamespaces_more { StrConcat#cli_sc23pkgnamespaces_more1 { Lit#cli_i23pkgnamespaces_quote3(value="\"") StrConcat#cli_sc23pkgnamespaces_more2 { Var#cli_v23pkgnamespaces_value4(name=namespaceValue) StrConcat#cli_sc23pkgnamespaces_more3 { Lit#cli_i23pkgnamespaces_comma(value="\", ") Var#cli_v23pkgnamespaces_rest4(name=remaining) } } } } }
                 }
               }
             }

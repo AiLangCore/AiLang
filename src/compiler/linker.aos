@@ -100,6 +100,13 @@ Program#linker_p1 {
                         Lit#linker_i_pkg2(value=0)
                       }
                     }
+                    Let#linker_l_sdk1(name=sdkName) {
+                      Call#linker_c_sdk1(target=linker.getAttr) {
+                        Var#linker_v11sdk(name=child)
+                        Lit#linker_i_sdk1(value="sdk")
+                        Lit#linker_i_sdk2(value=0)
+                      }
+                    }
                     Let#linker_l_pkg_path1(name=packagePath) {
                       Call#linker_c_pkg_path1(target=linker.packagePath) {
                         Var#linker_v_lock_pkg1(name=lockText)
@@ -144,12 +151,14 @@ Program#linker_p1 {
                         Var#linker_v_read_root_current(name=readRoot)
                         Var#linker_v_pkg_base2(name=packageBase)
                         Var#linker_v_pkg_name4(name=packageName)
+                        Var#linker_v_sdk_name1(name=sdkName)
                       }
                     }
                     Let#linker_l_import_prefix(name=importDisplayPrefix) {
                       Call#linker_c_import_prefix(target=linker.importDisplayPrefix) {
                         Var#linker_v_display_prefix_current(name=displayPrefix)
                         Var#linker_v_pkg_name5(name=packageName)
+                        Var#linker_v_sdk_name2(name=sdkName)
                       }
                     }
                     Let#linker_l_display_path(name=displayPath) {
@@ -382,11 +391,17 @@ Program#linker_p1 {
   }
 
   Let#linker_l_import_read_root(name=linker.importReadRoot) {
-    Fn#linker_f_import_read_root(params=readRoot,packageBase,packageName) {
+    Fn#linker_f_import_read_root(params=readRoot,packageBase,packageName,sdkName) {
       Block#linker_b_import_read_root {
         If#linker_if_import_read_root {
           Eq#linker_e_import_read_root { Var#linker_v_import_read_root1(name=packageName) Lit#linker_i_import_read_root1(value="") }
-          Block#linker_b_import_read_root1 { Return#linker_r_import_read_root1 { Var#linker_v_import_read_root2(name=readRoot) } }
+          Block#linker_b_import_read_root1 {
+            If#linker_if_import_read_root_sdk {
+              Eq#linker_e_import_read_root_sdk { Var#linker_v_import_read_root_sdk(name=sdkName) Lit#linker_i_import_read_root_sdk(value="ailang") }
+              Block#linker_b_import_read_root_sdk { Return#linker_r_import_read_root_sdk { Call#linker_c_import_read_root_sdk(target=sys.process.env.get) { Lit#linker_i_import_read_root_sdk_env(value="AILANG_SDK_ROOT") } } }
+              Block#linker_b_import_read_root_project { Return#linker_r_import_read_root1 { Var#linker_v_import_read_root2(name=readRoot) } }
+            }
+          }
           Block#linker_b_import_read_root2 { Return#linker_r_import_read_root2 { Var#linker_v_import_read_root3(name=packageBase) } }
         }
       }
@@ -394,11 +409,17 @@ Program#linker_p1 {
   }
 
   Let#linker_l_import_prefix(name=linker.importDisplayPrefix) {
-    Fn#linker_f_import_prefix(params=displayPrefix,packageName) {
+    Fn#linker_f_import_prefix(params=displayPrefix,packageName,sdkName) {
       Block#linker_b_import_prefix {
         If#linker_if_import_prefix {
           Eq#linker_e_import_prefix { Var#linker_v_import_prefix1(name=packageName) Lit#linker_i_import_prefix1(value="") }
-          Block#linker_b_import_prefix1 { Return#linker_r_import_prefix1 { Var#linker_v_import_prefix2(name=displayPrefix) } }
+          Block#linker_b_import_prefix1 {
+            If#linker_if_import_prefix_sdk {
+              Eq#linker_e_import_prefix_sdk { Var#linker_v_import_prefix_sdk(name=sdkName) Lit#linker_i_import_prefix_sdk(value="ailang") }
+              Block#linker_b_import_prefix_sdk { Return#linker_r_import_prefix_sdk { Lit#linker_i_import_prefix_sdk_value(value="sdk:ailang/") } }
+              Block#linker_b_import_prefix_project { Return#linker_r_import_prefix1 { Var#linker_v_import_prefix2(name=displayPrefix) } }
+            }
+          }
           Block#linker_b_import_prefix2 {
             Return#linker_r_import_prefix2 {
               StrConcat#linker_s_import_prefix1 {

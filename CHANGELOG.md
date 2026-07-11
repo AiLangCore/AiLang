@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.32] - 2026-07-11
+
+### Fixed
+
+- Removed the duplicate CI release publisher that created empty immutable
+  releases before the SDK release workflow could attach its archives.
+
 ## [0.0.1-beta.31] - 2026-07-11
 
 ### Fixed

@@ -5,6 +5,7 @@ Program {
   Import(path="../compiler/linker.aos")
   Import(path="../compiler/bundle.aos")
   Import(path="../compiler/bytecode.aos")
+  Import(path="../compiler/object.aos")
   Import(path="package.aos")
   Import(path="target_packages.aos")
   Export(name=main)
@@ -1134,6 +1135,12 @@ Program {
               Lit(value="/app.bytecode.aos")
             }
           }
+          Let(name=objectPath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/entry.aibco")
+            }
+          }
           Let(name=bytecodeBinaryPath) {
             StrConcat {
               Var(name=objDir)
@@ -1213,6 +1220,13 @@ Program {
                       Var(name=projectName)
                       Var(name=entryExport)
                       Var(name=modulePaths)
+                    }
+                  }
+                  Call(target=writeTextFile) {
+                    Var(name=objectPath)
+                    Call(target=object.emitModuleText) {
+                      Var(name=entryProgram)
+                      Var(name=entryFile)
                     }
                   }
                   Let(name=bytecodeResult) {

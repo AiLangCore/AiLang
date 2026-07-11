@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.33] - 2026-07-11
+
+### Fixed
+
+- Copy supported AiLang-emitted `obj/app.aibc1` directly into the build output
+  instead of recursively invoking the removed bootstrap compiler.
+
 ## [0.0.1-beta.32] - 2026-07-11
 
 ### Fixed

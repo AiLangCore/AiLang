@@ -962,11 +962,39 @@ Program#cli_p1 {
                                       Var#cli_v40bpbi1(name=path)
                                     }
                                   }
-                                  Return#cli_r40bp1 {
-                                    Call#cli_c40bpb(target=runBootstrapBuild) {
+                                  Let#cli_l40bpbc(name=bytecodeInput) {
+                                    StrConcat#cli_sc40bpbc {
+                                      Var#cli_v40bpbc1(name=path)
+                                      Lit#cli_i40bpbc(value="/obj/app.aibc1")
+                                    }
+                                  }
+                                  If#cli_if40bpbc {
+                                    Eq#cli_e40bpbc {
                                       Var#cli_v40bpbi2(name=bootstrapInput)
-                                      Var#cli_v40bp8(name=resolvedOutDir)
-                                      Var#cli_v40bp9(name=outFile)
+                                      Var#cli_v40bpbc2(name=bytecodeInput)
+                                    }
+                                    Block#cli_b40bpbc {
+                                      Call#cli_c40bpbc_mkdir(target=sys.fs.dir.create) { Var#cli_v40bp8(name=resolvedOutDir) }
+                                      Call#cli_c40bpbc_copy(target=copyFileBytes) {
+                                        Var#cli_v40bpbc3(name=bytecodeInput)
+                                        Var#cli_v40bp9(name=outFile)
+                                      }
+                                      Call#cli_c40bpbc_out(target=sys.stdout.writeLine) {
+                                        StrConcat#cli_sc40bpbc_out {
+                                          Lit#cli_i40bpbc_out1(value="Ok#ok1(type=string value=\"")
+                                          StrConcat#cli_sc40bpbc_out2 { Var#cli_v40bp9(name=outFile) Lit#cli_i40bpbc_out3(value="\")") }
+                                        }
+                                      }
+                                      Return#cli_r40bpbc { Lit#cli_i40bpbc(value=0) }
+                                    }
+                                    Block#cli_b40bp_source {
+                                      Return#cli_r40bp1 {
+                                        Call#cli_c40bpb(target=runBootstrapBuild) {
+                                          Var#cli_v40bpbi2(name=bootstrapInput)
+                                          Var#cli_v40bp8(name=resolvedOutDir)
+                                          Var#cli_v40bp9(name=outFile)
+                                        }
+                                      }
                                     }
                                   }
                                 }

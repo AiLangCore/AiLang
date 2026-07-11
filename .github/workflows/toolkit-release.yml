@@ -713,11 +713,11 @@ jobs:
             exit 1
           fi
           if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" "${release_files[@]}" --clobber
-          else
-            gh "${args[@]}"
-            gh release upload "${TAG}" "${release_files[@]}" --clobber
+            echo "Release ${TAG} already exists; immutable releases cannot be republished." >&2
+            exit 1
           fi
+          args+=("${release_files[@]}")
+          gh "${args[@]}"
           publish_args=(release edit "${TAG}" --draft=false --latest=false)
           if [[ "${PRERELEASE}" == "true" ]]; then
             publish_args+=(--prerelease)

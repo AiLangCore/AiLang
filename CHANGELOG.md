@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.31] - 2026-07-11
+
+### Fixed
+
+- Attach all SDK archives during immutable GitHub release draft creation before
+  publishing the prerelease.
+
 ## [0.0.1-beta.30] - 2026-07-10
 
 ### Fixed

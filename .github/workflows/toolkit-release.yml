@@ -761,6 +761,7 @@ jobs:
           ailang build "${APP_DIR}"
           ailang run "${APP_DIR}"
           ./scripts/test-installed-package-workflow.sh
+          ./scripts/test-installed-weather-workflow.sh
 
       - name: Beta channel install smoke
         shell: bash
@@ -779,6 +780,7 @@ jobs:
           ailang build "${APP_DIR}"
           ailang run "${APP_DIR}"
           ./scripts/test-installed-package-workflow.sh
+          ./scripts/test-installed-weather-workflow.sh
 
   install-smoke-windows:
     name: install-smoke-windows

@@ -1229,6 +1229,20 @@ Program {
                       Var(name=entryFile)
                     }
                   }
+                  Let(name=objectEmission) {
+                    Call(target=emitModuleObjects) {
+                      Var(name=modulePaths)
+                      Var(name=projectDir)
+                      Var(name=lockText)
+                      Var(name=objDir)
+                      Lit(value=0)
+                    }
+                  }
+                  If {
+                    Eq { NodeKind { Var(name=objectEmission) } Lit(value="Err") }
+                    Block { Return { Var(name=objectEmission) } }
+                    Block { Lit(value=0) }
+                  }
                   Let(name=bytecodeResult) {
                     Call(target=bytecode.buildEntryReturnIntMainText) {
                       Var(name=entryProgram)
@@ -1307,6 +1321,39 @@ Program {
               Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
             }
             Return { Call(target=buildError) { Lit(value="AILANG014") Lit(value="Bootstrap compiler build failed.") Lit(value="build") } }
+          }
+        }
+      }
+    }
+
+    Let(name=emitModuleObjects) {
+      Fn(params=modulePaths,projectDir,lockText,objDir,index) {
+        Block {
+          If {
+            Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+            Block { Return { Lit(value=0) } }
+            Block {
+              Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+              Let(name=readPath) { Call(target=linker.resolveModuleReadPath) { Var(name=projectDir) Var(name=modulePath) Var(name=lockText) } }
+              If {
+                Eq { Var(name=readPath) Lit(value="") }
+                Block { Return { Call(target=buildError) { Lit(value="AILANG022") Lit(value="Linked module could not be resolved for object emission.") Var(name=modulePath) } } }
+                Block {
+                  Let(name=moduleProgram) { Call(target=parse.parseDocument) { Call(target=io.readFile) { Var(name=readPath) } } }
+                  If {
+                    Eq { NodeKind { Var(name=moduleProgram) } Lit(value="Err") }
+                    Block { Return { Call(target=buildError) { Lit(value="AILANG023") Lit(value="Linked module could not be parsed for object emission.") Var(name=modulePath) } } }
+                    Block {
+                      Call(target=writeTextFile) {
+                        StrConcat { Var(name=objDir) StrConcat { Lit(value="/module-") StrConcat { ToString { Var(name=index) } Lit(value=".aibco") } } }
+                        Call(target=object.emitModuleText) { Var(name=moduleProgram) Var(name=modulePath) }
+                      }
+                      Return { Call(target=emitModuleObjects) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=objDir) Add { Var(name=index) Lit(value=1) } } }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

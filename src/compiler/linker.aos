@@ -4,6 +4,7 @@ Program {
   Export(name=linker.collectProjectModulePaths)
   Export(name=linker.buildLinkReportText)
   Export(name=linker.collectProjectModulePathsWithLock)
+  Export(name=linker.resolveModuleReadPath)
 
   Let(name=linker.collectProjectModulePaths) {
     Fn(params=dir,entryProgram,entryFile) {
@@ -482,6 +483,35 @@ Program {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.resolveModuleReadPath) {
+    Fn(params=projectDir,displayPath,lockText) {
+      Block {
+        If {
+          Eq { Call(target=find) { Var(name=displayPath) Lit(value="package:") Lit(value=0) } Lit(value=0) }
+          Block {
+            Let(name=tail) { Call(target=substring) { Var(name=displayPath) Lit(value=8) Lit(value=2147483647) } }
+            Let(name=slash) { Call(target=find) { Var(name=tail) Lit(value="/") Lit(value=0) } }
+            If {
+              Eq { Var(name=slash) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block {
+                Let(name=packageName) { Call(target=substring) { Var(name=tail) Lit(value=0) Var(name=slash) } }
+                Let(name=relativePath) { Call(target=substring) { Var(name=tail) Add { Var(name=slash) Lit(value=1) } Lit(value=2147483647) } }
+                Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=lockText) Var(name=packageName) } }
+                If {
+                  Eq { Var(name=basePath) Lit(value="") }
+                  Block { Return { Lit(value="") } }
+                  Block { Return { StrConcat { Var(name=basePath) StrConcat { Lit(value="/") Var(name=relativePath) } } } }
+                }
+              }
+            }
+          }
+          Block { Return { StrConcat { Var(name=projectDir) StrConcat { Lit(value="/") Var(name=displayPath) } } } }
         }
       }
     }

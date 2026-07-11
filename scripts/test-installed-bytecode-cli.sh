@@ -23,6 +23,7 @@ PACKAGE_REGISTRY_DIR="${TMP_DIR}/registry"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${SDK_ROOT}/bin" "${SDK_ROOT}/libexec/ailang/cli" "${SDK_ROOT}/runtimes/host" "${CLI_BYTECODE_DIR}" "${PACKAGE_REGISTRY_DIR}/packages"
+cp "${ROOT_DIR}/sdk-runtime.toml" "${SDK_ROOT}/sdk-runtime.toml"
 
 ./tools/ailang build src/cli/ailang.aos --out "${CLI_BYTECODE_DIR}" --no-cache >/dev/null
 cp "${CLI_BYTECODE_DIR}/app.aibc1" "${SDK_ROOT}/libexec/ailang/cli/app.aibc1"
@@ -66,6 +67,7 @@ PROJECT_VERSION_OUT="$("${SDK_ROOT}/bin/ailang" project version "${APP_DIR}")"
 printf '%s\n' "${PROJECT_VERSION_OUT}" | rg -q '^0\.0\.1$'
 AILANG_PACKAGE_REGISTRY="${PACKAGE_REGISTRY_DIR}" "${SDK_ROOT}/bin/ailang" package restore "${APP_DIR}" | rg -q 'Ok#ok1\(type=int value=0\)'
 test -f "${APP_DIR}/ailang.lock.toml"
+rg -q '^aivmVersion = "0\.0\.1-rc\.4"$' "${SDK_ROOT}/sdk-runtime.toml"
 
 AILANG_INSTALL_ROOT="${TMP_DIR}/sdk" "${SDK_ROOT}/bin/ailang" build "${APP_DIR}" --out "${BUILD_DIR}" >/dev/null
 test -f "${BUILD_DIR}/app.aibc1"

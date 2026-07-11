@@ -300,6 +300,14 @@ ailang toolchain use 0.0.1-alpha.12
 ailang toolchain doctor
 ```
 
+## Runtime Compatibility Pin
+
+Every released AiLang SDK includes `sdk-runtime.toml`. Its
+`runtime.aivmVersion` is the AiVM release validated with that self-hosted CLI
+payload. Installers must use this version when the user has not explicitly
+provided `AIVM_VERSION`; they must not infer an arbitrary same-channel AiVM
+release. This keeps the compiler payload and VM ABI/runtime behavior aligned.
+
 ## Current Independence Rules
 
 - AiVM must build and test without AiLang or AiVectra.

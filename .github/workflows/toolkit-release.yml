@@ -377,6 +377,7 @@ jobs:
           test -f "${PACKAGE_DIR}/libexec/ailang/cli/app.aibc1"
           cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
+          cp ./sdk-runtime.toml "${PACKAGE_DIR}/sdk-runtime.toml"
           mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
@@ -418,6 +419,7 @@ jobs:
           if (-not (Test-Path "$packageDir\libexec\ailang\cli\app.aibc1")) { throw 'missing bytecode CLI payload' }
           Copy-Item .\src\std "$packageDir\std" -Recurse
           Copy-Item .\templates $packageDir -Recurse
+          Copy-Item .\sdk-runtime.toml "$packageDir\sdk-runtime.toml"
           New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm "$packageDir\.artifacts\aivm-wasm32\"
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm "$packageDir\.artifacts\aivm-wasm32\"

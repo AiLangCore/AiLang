@@ -73,7 +73,7 @@ done < <(
   printf '%s\n' README.md CONTRIBUTING.md BETA_READINESS.md ROADMAP.md
 )
 
-expected_format='Program#p1 { Lit#l1(value=1) }'
+expected_format='Program { Lit(value=1) }'
 actual_format="$(tr -d '\r\n' < examples/golden/fmt_basic.out.aos)"
 if [[ "${actual_format}" != "${expected_format}" ]]; then
   echo "canonical formatting check failed: examples/golden/fmt_basic.out.aos drifted" >&2

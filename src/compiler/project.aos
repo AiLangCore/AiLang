@@ -1,41 +1,41 @@
-Program#project_p1 {
-  Export#project_e1(name=project.isProjectManifest)
-  Export#project_e2(name=project.buildDefaultManifest)
+Program {
+  Export(name=project.isProjectManifest)
+  Export(name=project.buildDefaultManifest)
 
-  Let#project_l1(name=project.isProjectManifest) {
-    Fn#project_f1(params=parsed) {
-      Block#project_b1 {
-        If#project_if1 {
-          Eq#project_e1a { NodeKind#project_nk1 { Var#project_v1(name=parsed) } Lit#project_i1(value="Program") }
-          Block#project_b2 {
-            If#project_if2 {
-              Eq#project_e2a { ChildCount#project_cc1 { Var#project_v2(name=parsed) } Lit#project_i2(value=1) }
-              Block#project_b3 {
-                Return#project_r1 {
-                  Eq#project_e3a {
-                    NodeKind#project_nk2 { ChildAt#project_ca1 { Var#project_v3(name=parsed) Lit#project_i3(value=0) } }
-                    Lit#project_i4(value="Project")
+  Let(name=project.isProjectManifest) {
+    Fn(params=parsed) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=parsed) } Lit(value="Program") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=parsed) } Lit(value=1) }
+              Block {
+                Return {
+                  Eq {
+                    NodeKind { ChildAt { Var(name=parsed) Lit(value=0) } }
+                    Lit(value="Project")
                   }
                 }
               }
-              Block#project_b4 { Return#project_r2 { Lit#project_i5(value=false) } }
+              Block { Return { Lit(value=false) } }
             }
           }
-          Block#project_b5 { Return#project_r3 { Lit#project_i6(value=false) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#project_l2(name=project.buildDefaultManifest) {
-    Fn#project_f2(params=name) {
-      Block#project_b6 {
-        Return#project_r4 {
-          StrConcat#project_s1 {
-            Lit#project_i7(value="Program#p1 {\nProject#proj1(\nname=\"")
-            StrConcat#project_s2 {
-              StrEscape#project_se1 { Var#project_v4(name=name) }
-              Lit#project_i8(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
+  Let(name=project.buildDefaultManifest) {
+    Fn(params=name) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Program#p1 {\nProject#proj1(\nname=\"")
+            StrConcat {
+              StrEscape { Var(name=name) }
+              Lit(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
             }
           }
         }

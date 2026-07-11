@@ -13,7 +13,9 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Required Structural Rules
 
-- Source may omit node ids (`Kind(...)` / `Kind { ... }`); parser/canonicalizer assigns deterministic ids before validation.
+- Source must not assign node ids. Authorable source uses `Kind(...)` / `Kind { ... }`; parser/canonicalizer assigns deterministic ids before validation.
+- Generated node ids are compilation-local metadata. They are unique within each parsed module, immutable after parsing, and must not be used as durable application, storage, protocol, or UI identities.
+- Diagnostic and tooling views may render generated node ids explicitly, but normal formatting must omit them.
 - Node ids in the canonical tree must be unique (`VAL001`).
 - Required attributes must exist (for example `Let.name`, `Var.name`, `Lit.value`, `Call.target`).
 - Module nodes require:

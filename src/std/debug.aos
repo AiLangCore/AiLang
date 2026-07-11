@@ -1,27 +1,27 @@
-Program#std_debug_p1 {
-  Let#std_debug_l1(name=debugMode) {
-    Fn#std_debug_f1(params=_) {
-      Block#std_debug_b1 {
-        Return#std_debug_r1 {
-          Call#std_debug_c1(target=sys.debug.mode) { }
+Program {
+  Let(name=debugMode) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=sys.debug.mode) { }
         }
       }
     }
   }
 
-  Let#std_debug_l2(name=log) {
-    Fn#std_debug_f2(params=level,message) {
-      Block#std_debug_b2 {
-        Return#std_debug_r2 {
-          Call#std_debug_c2(target=sys.console.writeErrLine) {
-            StrConcat#std_debug_s1 {
-              StrConcat#std_debug_s2 {
-                Lit#std_debug_i1(value="[")
-                Var#std_debug_v1(name=level)
+  Let(name=log) {
+    Fn(params=level,message) {
+      Block {
+        Return {
+          Call(target=sys.console.writeErrLine) {
+            StrConcat {
+              StrConcat {
+                Lit(value="[")
+                Var(name=level)
               }
-              StrConcat#std_debug_s3 {
-                Lit#std_debug_i2(value="] ")
-                Var#std_debug_v2(name=message)
+              StrConcat {
+                Lit(value="] ")
+                Var(name=message)
               }
             }
           }
@@ -30,73 +30,73 @@ Program#std_debug_p1 {
     }
   }
 
-  Let#std_debug_l3(name=info) {
-    Fn#std_debug_f3(params=message) {
-      Block#std_debug_b3 {
-        Return#std_debug_r3 {
-          Call#std_debug_c3(target=log) {
-            Lit#std_debug_i3(value="info")
-            Var#std_debug_v3(name=message)
+  Let(name=info) {
+    Fn(params=message) {
+      Block {
+        Return {
+          Call(target=log) {
+            Lit(value="info")
+            Var(name=message)
           }
         }
       }
     }
   }
 
-  Let#std_debug_l4(name=warn) {
-    Fn#std_debug_f4(params=message) {
-      Block#std_debug_b4 {
-        Return#std_debug_r4 {
-          Call#std_debug_c4(target=log) {
-            Lit#std_debug_i4(value="warn")
-            Var#std_debug_v4(name=message)
+  Let(name=warn) {
+    Fn(params=message) {
+      Block {
+        Return {
+          Call(target=log) {
+            Lit(value="warn")
+            Var(name=message)
           }
         }
       }
     }
   }
 
-  Let#std_debug_l5(name=error) {
-    Fn#std_debug_f5(params=message) {
-      Block#std_debug_b5 {
-        Return#std_debug_r5 {
-          Call#std_debug_c5(target=log) {
-            Lit#std_debug_i5(value="error")
-            Var#std_debug_v5(name=message)
+  Let(name=error) {
+    Fn(params=message) {
+      Block {
+        Return {
+          Call(target=log) {
+            Lit(value="error")
+            Var(name=message)
           }
         }
       }
     }
   }
 
-  Let#std_debug_l6(name=debugAssert) {
-    Fn#std_debug_f6(params=cond,code,message) {
-      Block#std_debug_b6 {
-        If#std_debug_if1 {
-          Var#std_debug_v6(name=cond)
-          Block#std_debug_b7 { Return#std_debug_r6 { Var#std_debug_v7(name=cond) } }
-          Block#std_debug_b8 {
-            Call#std_debug_c6(target=log) {
-              Lit#std_debug_i6(value="assert")
-              StrConcat#std_debug_s4 {
-                Var#std_debug_v8(name=code)
-                StrConcat#std_debug_s5 {
-                  Lit#std_debug_i7(value=" ")
-                  Var#std_debug_v9(name=message)
+  Let(name=debugAssert) {
+    Fn(params=cond,code,message) {
+      Block {
+        If {
+          Var(name=cond)
+          Block { Return { Var(name=cond) } }
+          Block {
+            Call(target=log) {
+              Lit(value="assert")
+              StrConcat {
+                Var(name=code)
+                StrConcat {
+                  Lit(value=" ")
+                  Var(name=message)
                 }
               }
             }
-            Return#std_debug_r7 { Var#std_debug_v10(name=cond) }
+            Return { Var(name=cond) }
           }
         }
       }
     }
   }
 
-  Export#std_debug_e1(name=debugMode)
-  Export#std_debug_e2(name=log)
-  Export#std_debug_e3(name=info)
-  Export#std_debug_e4(name=warn)
-  Export#std_debug_e5(name=error)
-  Export#std_debug_e6(name=debugAssert)
+  Export(name=debugMode)
+  Export(name=log)
+  Export(name=info)
+  Export(name=warn)
+  Export(name=error)
+  Export(name=debugAssert)
 }

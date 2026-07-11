@@ -1,41 +1,41 @@
-Program#module_graph_p1 {
-  Import#module_graph_i1(path="parser.aos")
-  Import#module_graph_i2(path="resolve.aos")
-  Import#module_graph_i3(path="../std/bytes.aos")
-  Export#module_graph_e1(name=moduleGraph.detectSimpleCycleNodeId)
+Program {
+  Import(path="parser.aos")
+  Import(path="resolve.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=moduleGraph.detectSimpleCycleNodeId)
 
-  Let#module_graph_l1(name=moduleGraph.detectSimpleCycleNodeId) {
-    Fn#module_graph_f1(params=dir,firstImport,entryFile) {
-      Block#module_graph_b1 {
-        If#module_graph_if1 {
-          Eq#module_graph_e1a { Var#module_graph_v1(name=firstImport) Lit#module_graph_i3(value="") }
-          Block#module_graph_b2 { Return#module_graph_r1 { Lit#module_graph_i4(value="") } }
-          Block#module_graph_b3 {
-            Let#module_graph_l2(name=depPath) {
-              StrConcat#module_graph_s1 {
-                Var#module_graph_v2(name=dir)
-                StrConcat#module_graph_s2 { Lit#module_graph_i5(value="/") Var#module_graph_v3(name=firstImport) }
+  Let(name=moduleGraph.detectSimpleCycleNodeId) {
+    Fn(params=dir,firstImport,entryFile) {
+      Block {
+        If {
+          Eq { Var(name=firstImport) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=depPath) {
+              StrConcat {
+                Var(name=dir)
+                StrConcat { Lit(value="/") Var(name=firstImport) }
               }
             }
-            Let#module_graph_l4(name=depText) {
-              Call#module_graph_c4(target=bytes.toUtf8String) {
-                Call#module_graph_c2(target=io.readFile) { Var#module_graph_v4(name=depPath) }
+            Let(name=depText) {
+              Call(target=bytes.toUtf8String) {
+                Call(target=io.readFile) { Var(name=depPath) }
               }
             }
-            Let#module_graph_l3(name=depParsed) {
-              Call#module_graph_c1(target=parse.parseDocument) {
-                Var#module_graph_v8(name=depText)
+            Let(name=depParsed) {
+              Call(target=parse.parseDocument) {
+                Var(name=depText)
               }
             }
-            If#module_graph_if2 {
-              Eq#module_graph_e2a { NodeKind#module_graph_nk1 { Var#module_graph_v5(name=depParsed) } Lit#module_graph_i6(value="Err") }
-              Block#module_graph_b4 { Return#module_graph_r2 { Lit#module_graph_i7(value="") } }
-              Block#module_graph_b5 {
-                Return#module_graph_r3 {
-                  Call#module_graph_c3(target=resolve.findImportNodeIdByPath) {
-                    Var#module_graph_v6(name=depParsed)
-                    Var#module_graph_v7(name=entryFile)
-                    Lit#module_graph_i8(value=0)
+            If {
+              Eq { NodeKind { Var(name=depParsed) } Lit(value="Err") }
+              Block { Return { Lit(value="") } }
+              Block {
+                Return {
+                  Call(target=resolve.findImportNodeIdByPath) {
+                    Var(name=depParsed)
+                    Var(name=entryFile)
+                    Lit(value=0)
                   }
                 }
               }

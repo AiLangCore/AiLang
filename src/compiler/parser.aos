@@ -1,67 +1,67 @@
-Program#parser_p1 {
-  Import#parser_im1(path="../std/str.aos")
+Program {
+  Import(path="../std/str.aos")
 
-  Let#parser_l1(name=parse.charAt) {
-    Fn#parser_f1(params=text,index) {
-      Block#parser_b1 {
-        Return#parser_r1 {
-          Call#parser_c1(target=substring) {
-            Var#parser_v1(name=text)
-            Var#parser_v2(name=index)
-            Lit#parser_i1(value=1)
+  Let(name=parse.charAt) {
+    Fn(params=text,index) {
+      Block {
+        Return {
+          Call(target=substring) {
+            Var(name=text)
+            Var(name=index)
+            Lit(value=1)
           }
         }
       }
     }
   }
 
-  Let#parser_l2(name=parse.isWhitespace) {
-    Fn#parser_f2(params=ch) {
-      Block#parser_b2 {
-        If#parser_if1 {
-          Eq#parser_e1 { Var#parser_v3(name=ch) Lit#parser_i2(value=" ") }
-          Block#parser_b3 { Return#parser_r2 { Lit#parser_i3(value=true) } }
-          Block#parser_b4 { Lit#parser_i4(value=0) }
+  Let(name=parse.isWhitespace) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value=" ") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if2 {
-          Eq#parser_e2 { Var#parser_v4(name=ch) Lit#parser_i5(value="
+        If {
+          Eq { Var(name=ch) Lit(value="
 ") }
-          Block#parser_b5 { Return#parser_r3 { Lit#parser_i6(value=true) } }
-          Block#parser_b6 { Lit#parser_i7(value=0) }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if3 {
-          Eq#parser_e3 { Var#parser_v5(name=ch) Lit#parser_i8(value="\t") }
-          Block#parser_b7 { Return#parser_r4 { Lit#parser_i9(value=true) } }
-          Block#parser_b8 { Lit#parser_i10(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="\t") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if4 {
-          Eq#parser_e4 { Var#parser_v6(name=ch) Lit#parser_i11(value="\r") }
-          Block#parser_b9 { Return#parser_r5 { Lit#parser_i12(value=true) } }
-          Block#parser_b10 { Return#parser_r6 { Lit#parser_i13(value=false) } }
+        If {
+          Eq { Var(name=ch) Lit(value="\r") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#parser_l3(name=parse.skipWhitespace) {
-    Fn#parser_f3(params=text,index) {
-      Block#parser_b11 {
-        Let#parser_l4(name=ch) { Call#parser_c2(target=parse.charAt) { Var#parser_v7(name=text) Var#parser_v8(name=index) } }
-        If#parser_if5 {
-          Eq#parser_e5 { Var#parser_v9(name=ch) Lit#parser_i14(value="") }
-          Block#parser_b12 { Return#parser_r7 { Var#parser_v10(name=index) } }
-          Block#parser_b13 {
-            If#parser_if6 {
-              Call#parser_c3(target=parse.isWhitespace) { Var#parser_v11(name=ch) }
-              Block#parser_b14 {
-                Return#parser_r8 {
-                  Call#parser_c4(target=parse.skipWhitespace) {
-                    Var#parser_v12(name=text)
-                    Add#parser_a1 { Var#parser_v13(name=index) Lit#parser_i15(value=1) }
+  Let(name=parse.skipWhitespace) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Var(name=index) } }
+          Block {
+            If {
+              Call(target=parse.isWhitespace) { Var(name=ch) }
+              Block {
+                Return {
+                  Call(target=parse.skipWhitespace) {
+                    Var(name=text)
+                    Add { Var(name=index) Lit(value=1) }
                   }
                 }
               }
-              Block#parser_b15 { Return#parser_r9 { Var#parser_v14(name=index) } }
+              Block { Return { Var(name=index) } }
             }
           }
         }
@@ -69,70 +69,70 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l5(name=parse.isDelimiter) {
-    Fn#parser_f4(params=ch) {
-      Block#parser_b16 {
-        If#parser_if7 {
-          Eq#parser_e6 { Var#parser_v15(name=ch) Lit#parser_i16(value="") }
-          Block#parser_b17 { Return#parser_r10 { Lit#parser_i17(value=true) } }
-          Block#parser_b18 { Lit#parser_i18(value=0) }
+  Let(name=parse.isDelimiter) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if8 {
-          Call#parser_c5(target=parse.isWhitespace) { Var#parser_v16(name=ch) }
-          Block#parser_b19 { Return#parser_r11 { Lit#parser_i19(value=true) } }
-          Block#parser_b20 { Lit#parser_i20(value=0) }
+        If {
+          Call(target=parse.isWhitespace) { Var(name=ch) }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if9 {
-          Eq#parser_e7 { Var#parser_v17(name=ch) Lit#parser_i21(value="#") }
-          Block#parser_b21 { Return#parser_r12 { Lit#parser_i22(value=true) } }
-          Block#parser_b22 { Lit#parser_i23(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="#") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if10 {
-          Eq#parser_e8 { Var#parser_v18(name=ch) Lit#parser_i24(value="(") }
-          Block#parser_b23 { Return#parser_r13 { Lit#parser_i25(value=true) } }
-          Block#parser_b24 { Lit#parser_i26(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="(") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if11 {
-          Eq#parser_e9 { Var#parser_v19(name=ch) Lit#parser_i27(value=")") }
-          Block#parser_b25 { Return#parser_r14 { Lit#parser_i28(value=true) } }
-          Block#parser_b26 { Lit#parser_i29(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value=")") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if12 {
-          Eq#parser_e10 { Var#parser_v20(name=ch) Lit#parser_i30(value="{") }
-          Block#parser_b27 { Return#parser_r15 { Lit#parser_i31(value=true) } }
-          Block#parser_b28 { Lit#parser_i32(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="{") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if13 {
-          Eq#parser_e11 { Var#parser_v21(name=ch) Lit#parser_i33(value="}") }
-          Block#parser_b29 { Return#parser_r16 { Lit#parser_i34(value=true) } }
-          Block#parser_b30 { Lit#parser_i35(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="}") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if14 {
-          Eq#parser_e12 { Var#parser_v22(name=ch) Lit#parser_i36(value="=") }
-          Block#parser_b31 { Return#parser_r17 { Lit#parser_i37(value=true) } }
-          Block#parser_b32 { Lit#parser_i38(value=0) }
+        If {
+          Eq { Var(name=ch) Lit(value="=") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
         }
-        If#parser_if15 {
-          Eq#parser_e13 { Var#parser_v23(name=ch) Lit#parser_i39(value="\"") }
-          Block#parser_b33 { Return#parser_r18 { Lit#parser_i40(value=true) } }
-          Block#parser_b34 { Return#parser_r19 { Lit#parser_i41(value=false) } }
+        If {
+          Eq { Var(name=ch) Lit(value="\"") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#parser_l6(name=parse.readNameEnd) {
-    Fn#parser_f5(params=text,index) {
-      Block#parser_b35 {
-        Let#parser_l7(name=ch) { Call#parser_c6(target=parse.charAt) { Var#parser_v24(name=text) Var#parser_v25(name=index) } }
-        If#parser_if16 {
-          Call#parser_c7(target=parse.isDelimiter) { Var#parser_v26(name=ch) }
-          Block#parser_b36 { Return#parser_r20 { Var#parser_v27(name=index) } }
-          Block#parser_b37 {
-            Return#parser_r21 {
-              Call#parser_c8(target=parse.readNameEnd) {
-                Var#parser_v28(name=text)
-                Add#parser_a2 { Var#parser_v29(name=index) Lit#parser_i42(value=1) }
+  Let(name=parse.readNameEnd) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Call(target=parse.isDelimiter) { Var(name=ch) }
+          Block { Return { Var(name=index) } }
+          Block {
+            Return {
+              Call(target=parse.readNameEnd) {
+                Var(name=text)
+                Add { Var(name=index) Lit(value=1) }
               }
             }
           }
@@ -141,20 +141,20 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l7(name=parse.readNameText) {
-    Fn#parser_f6(params=text,index) {
-      Block#parser_b38 {
-        Let#parser_l8(name=ch) { Call#parser_c9(target=parse.charAt) { Var#parser_v30(name=text) Var#parser_v31(name=index) } }
-        If#parser_if17 {
-          Call#parser_c10(target=parse.isDelimiter) { Var#parser_v32(name=ch) }
-          Block#parser_b39 { Return#parser_r22 { Lit#parser_i43(value="") } }
-          Block#parser_b40 {
-            Return#parser_r23 {
-              StrConcat#parser_sc1 {
-                Var#parser_v33(name=ch)
-                Call#parser_c11(target=parse.readNameText) {
-                  Var#parser_v34(name=text)
-                  Add#parser_a3 { Var#parser_v35(name=index) Lit#parser_i44(value=1) }
+  Let(name=parse.readNameText) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Call(target=parse.isDelimiter) { Var(name=ch) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=ch)
+                Call(target=parse.readNameText) {
+                  Var(name=text)
+                  Add { Var(name=index) Lit(value=1) }
                 }
               }
             }
@@ -164,33 +164,33 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l60(name=parse.readStringEnd) {
-    Fn#parser_f60(params=text,index) {
-      Block#parser_b100 {
-        Let#parser_l61(name=ch) { Call#parser_c200(target=parse.charAt) { Var#parser_v200(name=text) Var#parser_v201(name=index) } }
-        If#parser_if60 {
-          Eq#parser_e60 { Var#parser_v202(name=ch) Lit#parser_i200(value="") }
-          Block#parser_b101 { Return#parser_r100 { Var#parser_v203(name=index) } }
-          Block#parser_b102 {
-            If#parser_if61 {
-              Eq#parser_e61 { Var#parser_v204(name=ch) Lit#parser_i201(value="\"") }
-              Block#parser_b103 { Return#parser_r101 { Add#parser_a100 { Var#parser_v205(name=index) Lit#parser_i202(value=1) } } }
-              Block#parser_b104 {
-                If#parser_if96 {
-                  Eq#parser_e94 { Var#parser_v206(name=ch) Lit#parser_i281(value="\\") }
-                  Block#parser_b183 {
-                    Return#parser_r147 {
-                      Call#parser_c263(target=parse.readStringEnd) {
-                        Var#parser_v207(name=text)
-                        Add#parser_a113 { Var#parser_v208(name=index) Lit#parser_i282(value=2) }
+  Let(name=parse.readStringEnd) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Var(name=index) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block { Return { Add { Var(name=index) Lit(value=1) } } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\\") }
+                  Block {
+                    Return {
+                      Call(target=parse.readStringEnd) {
+                        Var(name=text)
+                        Add { Var(name=index) Lit(value=2) }
                       }
                     }
                   }
-                  Block#parser_b184 {
-                    Return#parser_r102 {
-                      Call#parser_c201(target=parse.readStringEnd) {
-                        Var#parser_v209(name=text)
-                        Add#parser_a101 { Var#parser_v210(name=index) Lit#parser_i203(value=1) }
+                  Block {
+                    Return {
+                      Call(target=parse.readStringEnd) {
+                        Var(name=text)
+                        Add { Var(name=index) Lit(value=1) }
                       }
                     }
                   }
@@ -203,43 +203,43 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l62(name=parse.readStringText) {
-    Fn#parser_f61(params=text,index) {
-      Block#parser_b105 {
-        Let#parser_l63(name=ch) { Call#parser_c202(target=parse.charAt) { Var#parser_v211(name=text) Var#parser_v212(name=index) } }
-        If#parser_if62 {
-          Eq#parser_e62 { Var#parser_v213(name=ch) Lit#parser_i204(value="") }
-          Block#parser_b106 { Return#parser_r103 { Lit#parser_i205(value="") } }
-          Block#parser_b107 {
-            If#parser_if63 {
-              Eq#parser_e63 { Var#parser_v214(name=ch) Lit#parser_i206(value="\"") }
-              Block#parser_b108 { Return#parser_r104 { Lit#parser_i207(value="") } }
-              Block#parser_b109 {
-                If#parser_if97 {
-                  Eq#parser_e95 { Var#parser_v215(name=ch) Lit#parser_i283(value="\\") }
-                  Block#parser_b185 {
-                    Return#parser_r148 {
-                      StrConcat#parser_sc3 {
-                        Call#parser_c264(target=parse.decodeEscape) {
-                          Call#parser_c265(target=parse.charAt) {
-                            Var#parser_v216(name=text)
-                            Add#parser_a114 { Var#parser_v217(name=index) Lit#parser_i284(value=1) }
+  Let(name=parse.readStringText) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block { Return { Lit(value="") } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\\") }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Call(target=parse.decodeEscape) {
+                          Call(target=parse.charAt) {
+                            Var(name=text)
+                            Add { Var(name=index) Lit(value=1) }
                           }
                         }
-                        Call#parser_c266(target=parse.readStringText) {
-                          Var#parser_v218(name=text)
-                          Add#parser_a115 { Var#parser_v219(name=index) Lit#parser_i285(value=2) }
+                        Call(target=parse.readStringText) {
+                          Var(name=text)
+                          Add { Var(name=index) Lit(value=2) }
                         }
                       }
                     }
                   }
-                  Block#parser_b186 {
-                    Return#parser_r105 {
-                      StrConcat#parser_sc2 {
-                        Var#parser_v220(name=ch)
-                        Call#parser_c203(target=parse.readStringText) {
-                          Var#parser_v221(name=text)
-                          Add#parser_a102 { Var#parser_v222(name=index) Lit#parser_i208(value=1) }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Var(name=ch)
+                        Call(target=parse.readStringText) {
+                          Var(name=text)
+                          Add { Var(name=index) Lit(value=1) }
                         }
                       }
                     }
@@ -253,22 +253,22 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l84(name=parse.decodeEscape) {
-    Fn#parser_f71(params=ch) {
-      Block#parser_b187 {
-        If#parser_if98 {
-          Eq#parser_e96 { Var#parser_v350(name=ch) Lit#parser_i286(value="n") }
-          Block#parser_b188 { Return#parser_r149 { Lit#parser_i287(value="
+  Let(name=parse.decodeEscape) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="n") }
+          Block { Return { Lit(value="
 ") } }
-          Block#parser_b189 {
-            If#parser_if99 {
-              Eq#parser_e97 { Var#parser_v351(name=ch) Lit#parser_i288(value="t") }
-              Block#parser_b190 { Return#parser_r150 { Lit#parser_i289(value="\t") } }
-              Block#parser_b191 {
-                If#parser_if100 {
-                  Eq#parser_e98 { Var#parser_v352(name=ch) Lit#parser_i290(value="r") }
-                  Block#parser_b192 { Return#parser_r151 { Lit#parser_i291(value="\r") } }
-                  Block#parser_b193 { Return#parser_r152 { Var#parser_v353(name=ch) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="t") }
+              Block { Return { Lit(value="\t") } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="r") }
+                  Block { Return { Lit(value="\r") } }
+                  Block { Return { Var(name=ch) } }
                 }
               }
             }
@@ -278,19 +278,19 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l9(name=parse.makeToken) {
-    Fn#parser_f7(params=kind,value,nextIndex) {
-      Block#parser_b41 {
-        Return#parser_r24 {
-          StrConcat#parser_token_sc1 {
-            Var#parser_v36(name=kind)
-            StrConcat#parser_token_sc2 {
-              Lit#parser_token_sep1(value="|")
-              StrConcat#parser_token_sc3 {
-                ToString#parser_token_ts1 { Var#parser_v38(name=nextIndex) }
-                StrConcat#parser_token_sc4 {
-                  Lit#parser_token_sep2(value="|")
-                  Var#parser_v37(name=value)
+  Let(name=parse.makeToken) {
+    Fn(params=kind,value,nextIndex) {
+      Block {
+        Return {
+          StrConcat {
+            Var(name=kind)
+            StrConcat {
+              Lit(value="|")
+              StrConcat {
+                ToString { Var(name=nextIndex) }
+                StrConcat {
+                  Lit(value="|")
+                  Var(name=value)
                 }
               }
             }
@@ -300,110 +300,110 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_token_l1(name=parse.tokenSep1) {
-    Fn#parser_token_f1(params=token) {
-      Block#parser_token_b1 {
-        Return#parser_token_r1 {
-          Call#parser_token_c1(target=find) {
-            Var#parser_token_v1(name=token)
-            Lit#parser_token_i1(value="|")
-            Lit#parser_token_i2(value=0)
+  Let(name=parse.tokenSep1) {
+    Fn(params=token) {
+      Block {
+        Return {
+          Call(target=find) {
+            Var(name=token)
+            Lit(value="|")
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#parser_token_l2(name=parse.tokenSep2) {
-    Fn#parser_token_f2(params=token) {
-      Block#parser_token_b2 {
-        Let#parser_token_l3(name=sep1) { Call#parser_token_c2(target=parse.tokenSep1) { Var#parser_token_v2(name=token) } }
-        Return#parser_token_r2 {
-          Call#parser_token_c3(target=find) {
-            Var#parser_token_v3(name=token)
-            Lit#parser_token_i3(value="|")
-            Add#parser_token_a1 { Var#parser_token_v4(name=sep1) Lit#parser_token_i4(value=1) }
+  Let(name=parse.tokenSep2) {
+    Fn(params=token) {
+      Block {
+        Let(name=sep1) { Call(target=parse.tokenSep1) { Var(name=token) } }
+        Return {
+          Call(target=find) {
+            Var(name=token)
+            Lit(value="|")
+            Add { Var(name=sep1) Lit(value=1) }
           }
         }
       }
     }
   }
 
-  Let#parser_l10(name=parse.tokenKind) {
-    Fn#parser_f8(params=token) {
-      Block#parser_b42 {
-        Return#parser_r25 {
-          Call#parser_token_c4(target=substring) {
-            Var#parser_v39(name=token)
-            Lit#parser_token_i5(value=0)
-            Call#parser_token_c5(target=parse.tokenSep1) { Var#parser_v39b(name=token) }
+  Let(name=parse.tokenKind) {
+    Fn(params=token) {
+      Block {
+        Return {
+          Call(target=substring) {
+            Var(name=token)
+            Lit(value=0)
+            Call(target=parse.tokenSep1) { Var(name=token) }
           }
         }
       }
     }
   }
 
-  Let#parser_l11(name=parse.tokenValue) {
-    Fn#parser_f9(params=token) {
-      Block#parser_b43 {
-        Return#parser_r26 {
-          Call#parser_token_c6(target=substring) {
-            Var#parser_v40(name=token)
-            Add#parser_token_a2 {
-              Call#parser_token_c7(target=parse.tokenSep2) { Var#parser_v40b(name=token) }
-              Lit#parser_token_i6(value=1)
+  Let(name=parse.tokenValue) {
+    Fn(params=token) {
+      Block {
+        Return {
+          Call(target=substring) {
+            Var(name=token)
+            Add {
+              Call(target=parse.tokenSep2) { Var(name=token) }
+              Lit(value=1)
             }
-            Lit#parser_token_i7(value=2147483647)
+            Lit(value=2147483647)
           }
         }
       }
     }
   }
 
-  Let#parser_l12(name=parse.tokenNext) {
-    Fn#parser_f10(params=token) {
-      Block#parser_b44 {
-        Let#parser_token_l4(name=sep1) { Call#parser_token_c8(target=parse.tokenSep1) { Var#parser_v41(name=token) } }
-        Let#parser_token_l5(name=sep2) { Call#parser_token_c9(target=parse.tokenSep2) { Var#parser_v41b(name=token) } }
-        Return#parser_r27 {
-          Call#parser_token_c10(target=parse.parseIntText) {
-            Var#parser_v41c(name=token)
-            Add#parser_token_a3 { Var#parser_token_v5(name=sep1) Lit#parser_token_i8(value=1) }
-            Var#parser_token_v6(name=sep2)
-            Lit#parser_token_i9(value=0)
+  Let(name=parse.tokenNext) {
+    Fn(params=token) {
+      Block {
+        Let(name=sep1) { Call(target=parse.tokenSep1) { Var(name=token) } }
+        Let(name=sep2) { Call(target=parse.tokenSep2) { Var(name=token) } }
+        Return {
+          Call(target=parse.parseIntText) {
+            Var(name=token)
+            Add { Var(name=sep1) Lit(value=1) }
+            Var(name=sep2)
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#parser_l13(name=parse.nextSymbolToken) {
-    Fn#parser_f11(params=ch,index) {
-      Block#parser_b45 {
-        If#parser_if18 {
-          Eq#parser_e14 { Var#parser_v42(name=ch) Lit#parser_i55(value="#") }
-          Block#parser_b46 { Return#parser_r28 { Call#parser_c12(target=parse.makeToken) { Lit#parser_i56(value="hash") Var#parser_v43(name=ch) Add#parser_a4 { Var#parser_v44(name=index) Lit#parser_i57(value=1) } } } }
-          Block#parser_b47 {
-            If#parser_if19 {
-              Eq#parser_e15 { Var#parser_v45(name=ch) Lit#parser_i58(value="{") }
-              Block#parser_b48 { Return#parser_r29 { Call#parser_c13(target=parse.makeToken) { Lit#parser_i59(value="lbrace") Var#parser_v46(name=ch) Add#parser_a5 { Var#parser_v47(name=index) Lit#parser_i60(value=1) } } } }
-              Block#parser_b49 {
-                If#parser_if20 {
-                  Eq#parser_e16 { Var#parser_v48(name=ch) Lit#parser_i61(value="}") }
-                  Block#parser_b50 { Return#parser_r30 { Call#parser_c14(target=parse.makeToken) { Lit#parser_i62(value="rbrace") Var#parser_v49(name=ch) Add#parser_a6 { Var#parser_v50(name=index) Lit#parser_i63(value=1) } } } }
-                  Block#parser_b51 {
-                    If#parser_if21 {
-                      Eq#parser_e17 { Var#parser_v51(name=ch) Lit#parser_i64(value="(") }
-                      Block#parser_b52 { Return#parser_r31 { Call#parser_c15(target=parse.makeToken) { Lit#parser_i65(value="lparen") Var#parser_v52(name=ch) Add#parser_a7 { Var#parser_v53(name=index) Lit#parser_i66(value=1) } } } }
-                      Block#parser_b53 {
-                        If#parser_if22 {
-                          Eq#parser_e18 { Var#parser_v54(name=ch) Lit#parser_i67(value=")") }
-                          Block#parser_b54 { Return#parser_r32 { Call#parser_c16(target=parse.makeToken) { Lit#parser_i68(value="rparen") Var#parser_v55(name=ch) Add#parser_a8 { Var#parser_v56(name=index) Lit#parser_i69(value=1) } } } }
-                          Block#parser_b55 {
-                            If#parser_if23 {
-                              Eq#parser_e19 { Var#parser_v57(name=ch) Lit#parser_i70(value="=") }
-                              Block#parser_b56 { Return#parser_r33 { Call#parser_c17(target=parse.makeToken) { Lit#parser_i71(value="equals") Var#parser_v58(name=ch) Add#parser_a9 { Var#parser_v59(name=index) Lit#parser_i72(value=1) } } } }
-                              Block#parser_b57 { Return#parser_r34 { Call#parser_c18(target=parse.makeToken) { Lit#parser_i73(value="quote") Var#parser_v60(name=ch) Add#parser_a10 { Var#parser_v61(name=index) Lit#parser_i74(value=1) } } } }
+  Let(name=parse.nextSymbolToken) {
+    Fn(params=ch,index) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="#") }
+          Block { Return { Call(target=parse.makeToken) { Lit(value="hash") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="{") }
+              Block { Return { Call(target=parse.makeToken) { Lit(value="lbrace") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="}") }
+                  Block { Return { Call(target=parse.makeToken) { Lit(value="rbrace") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="(") }
+                      Block { Return { Call(target=parse.makeToken) { Lit(value="lparen") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value=")") }
+                          Block { Return { Call(target=parse.makeToken) { Lit(value="rparen") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="=") }
+                              Block { Return { Call(target=parse.makeToken) { Lit(value="equals") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                              Block { Return { Call(target=parse.makeToken) { Lit(value="quote") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
                             }
                           }
                         }
@@ -419,42 +419,42 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l14(name=parse.nextToken) {
-    Fn#parser_f12(params=text,index) {
-      Block#parser_b58 {
-        Let#parser_l15(name=start) { Call#parser_c19(target=parse.skipWhitespace) { Var#parser_v62(name=text) Var#parser_v63(name=index) } }
-        Let#parser_l16(name=ch) { Call#parser_c20(target=parse.charAt) { Var#parser_v64(name=text) Var#parser_v65(name=start) } }
-        If#parser_if24 {
-          Eq#parser_e20 { Var#parser_v66(name=ch) Lit#parser_i75(value="") }
-          Block#parser_b59 { Return#parser_r35 { Call#parser_c21(target=parse.makeToken) { Lit#parser_i76(value="eof") Lit#parser_i77(value="") Var#parser_v67(name=start) } } }
-          Block#parser_b60 {
-            If#parser_if25 {
-              Eq#parser_e64 { Var#parser_v68(name=ch) Lit#parser_i209(value="\"") }
-              Block#parser_b61 {
-                Return#parser_r36 {
-                  Call#parser_c204(target=parse.makeToken) {
-                    Lit#parser_i210(value="string")
-                    Call#parser_c205(target=parse.readStringText) {
-                      Var#parser_v215(name=text)
-                      Add#parser_a103 { Var#parser_v216(name=start) Lit#parser_i211(value=1) }
+  Let(name=parse.nextToken) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=start) { Call(target=parse.skipWhitespace) { Var(name=text) Var(name=index) } }
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=start) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Call(target=parse.makeToken) { Lit(value="eof") Lit(value="") Var(name=start) } } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block {
+                Return {
+                  Call(target=parse.makeToken) {
+                    Lit(value="string")
+                    Call(target=parse.readStringText) {
+                      Var(name=text)
+                      Add { Var(name=start) Lit(value=1) }
                     }
-                    Call#parser_c206(target=parse.readStringEnd) {
-                      Var#parser_v217(name=text)
-                      Add#parser_a104 { Var#parser_v218(name=start) Lit#parser_i212(value=1) }
+                    Call(target=parse.readStringEnd) {
+                      Var(name=text)
+                      Add { Var(name=start) Lit(value=1) }
                     }
                   }
                 }
               }
-              Block#parser_b62 {
-                If#parser_if64 {
-                  Call#parser_c22(target=parse.isDelimiter) { Var#parser_v69(name=ch) }
-                  Block#parser_b110 { Return#parser_r106 { Call#parser_c23(target=parse.nextSymbolToken) { Var#parser_v70(name=ch) Var#parser_v71(name=start) } } }
-                  Block#parser_b111 {
-                    Return#parser_r37 {
-                      Call#parser_c24(target=parse.makeToken) {
-                        Lit#parser_i78(value="name")
-                        Call#parser_c25(target=parse.readNameText) { Var#parser_v72(name=text) Var#parser_v73(name=start) }
-                        Call#parser_c26(target=parse.readNameEnd) { Var#parser_v74(name=text) Var#parser_v75(name=start) }
+              Block {
+                If {
+                  Call(target=parse.isDelimiter) { Var(name=ch) }
+                  Block { Return { Call(target=parse.nextSymbolToken) { Var(name=ch) Var(name=start) } } }
+                  Block {
+                    Return {
+                      Call(target=parse.makeToken) {
+                        Lit(value="name")
+                        Call(target=parse.readNameText) { Var(name=text) Var(name=start) }
+                        Call(target=parse.readNameEnd) { Var(name=text) Var(name=start) }
                       }
                     }
                   }
@@ -467,112 +467,112 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l17(name=parse.parseEmptyNode) {
-    Fn#parser_f13(params=text) {
-      Block#parser_b63 {
-        Let#parser_l18(name=kindToken) {
-          Call#parser_c27(target=parse.nextToken) {
-            Var#parser_v75(name=text)
-            Lit#parser_i79(value=0)
+  Let(name=parse.parseEmptyNode) {
+    Fn(params=text) {
+      Block {
+        Let(name=kindToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Lit(value=0)
           }
         }
-        Let#parser_l19(name=hashToken) {
-          Call#parser_c28(target=parse.nextToken) {
-            Var#parser_v76(name=text)
-            Call#parser_c29(target=parse.tokenNext) { Var#parser_v77(name=kindToken) }
+        Let(name=hashToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=kindToken) }
           }
         }
-        Let#parser_l20(name=idToken) {
-          Call#parser_c30(target=parse.nextToken) {
-            Var#parser_v78(name=text)
-            Call#parser_c31(target=parse.tokenNext) { Var#parser_v79(name=hashToken) }
+        Let(name=idToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=hashToken) }
           }
         }
-        Return#parser_r38 {
-          MakeNode#parser_mn1 {
-            Call#parser_c32(target=parse.tokenValue) { Var#parser_v80(name=kindToken) }
-            Call#parser_c33(target=parse.tokenValue) { Var#parser_v81(name=idToken) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#parser_l21(name=parse.parseNodeWithNameAttr) {
-    Fn#parser_f14(params=text) {
-      Block#parser_b64 {
-        Return#parser_r40 {
-          Call#parser_c51(target=parse.parseNodeWithNameAttrAt) {
-            Var#parser_v99(name=text)
-            Lit#parser_i81(value=0)
+        Return {
+          MakeNode {
+            Call(target=parse.tokenValue) { Var(name=kindToken) }
+            Call(target=parse.tokenValue) { Var(name=idToken) }
           }
         }
       }
     }
   }
 
-  Let#parser_l64(name=parse.makeAttrLit) {
-    Fn#parser_f62(params=keyToken,valueToken) {
-      Block#parser_b112 {
-        If#parser_if65 {
-          Eq#parser_e65 {
-            Call#parser_c207(target=parse.tokenValue) { Var#parser_v219(name=valueToken) }
-            Lit#parser_i213(value="true")
+  Let(name=parse.parseNodeWithNameAttr) {
+    Fn(params=text) {
+      Block {
+        Return {
+          Call(target=parse.parseNodeWithNameAttrAt) {
+            Var(name=text)
+            Lit(value=0)
           }
-          Block#parser_b113 {
-            Return#parser_r107 {
-              MakeLitBool#parser_mlb1 {
-                Call#parser_c208(target=parse.tokenValue) { Var#parser_v220(name=keyToken) }
-                Lit#parser_i214(value=true)
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeAttrLit) {
+    Fn(params=keyToken,valueToken) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.tokenValue) { Var(name=valueToken) }
+            Lit(value="true")
+          }
+          Block {
+            Return {
+              MakeLitBool {
+                Call(target=parse.tokenValue) { Var(name=keyToken) }
+                Lit(value=true)
               }
             }
           }
-          Block#parser_b114 {
-            If#parser_if66 {
-              Eq#parser_e66 {
-                Call#parser_c209(target=parse.tokenValue) { Var#parser_v221(name=valueToken) }
-                Lit#parser_i215(value="false")
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenValue) { Var(name=valueToken) }
+                Lit(value="false")
               }
-              Block#parser_b115 {
-                Return#parser_r108 {
-                  MakeLitBool#parser_mlb2 {
-                    Call#parser_c210(target=parse.tokenValue) { Var#parser_v222(name=keyToken) }
-                    Lit#parser_i216(value=false)
+              Block {
+                Return {
+                  MakeLitBool {
+                    Call(target=parse.tokenValue) { Var(name=keyToken) }
+                    Lit(value=false)
                   }
                 }
               }
-              Block#parser_b116 {
-                If#parser_if67 {
-                  Eq#parser_e67 {
-                    Call#parser_c215(target=parse.tokenKind) { Var#parser_v225(name=valueToken) }
-                    Lit#parser_i217(value="name")
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=valueToken) }
+                    Lit(value="name")
                   }
-                  Block#parser_b117 {
-                    If#parser_if68 {
-                      Call#parser_c216(target=parse.isIntToken) { Var#parser_v226(name=valueToken) }
-                      Block#parser_b118 {
-                        Return#parser_r110 {
-                          MakeLitInt#parser_mli2 {
-                            Call#parser_c219(target=parse.tokenValue) { Var#parser_v227(name=keyToken) }
-                            Call#parser_c220(target=parse.parseIntToken) { Var#parser_v228(name=valueToken) }
+                  Block {
+                    If {
+                      Call(target=parse.isIntToken) { Var(name=valueToken) }
+                      Block {
+                        Return {
+                          MakeLitInt {
+                            Call(target=parse.tokenValue) { Var(name=keyToken) }
+                            Call(target=parse.parseIntToken) { Var(name=valueToken) }
                           }
                         }
                       }
-                      Block#parser_b119 {
-                        Return#parser_r109 {
-                          MakeLitString#parser_mls5 {
-                            Call#parser_c211(target=parse.tokenValue) { Var#parser_v223(name=keyToken) }
-                            Call#parser_c212(target=parse.tokenValue) { Var#parser_v224(name=valueToken) }
+                      Block {
+                        Return {
+                          MakeLitString {
+                            Call(target=parse.tokenValue) { Var(name=keyToken) }
+                            Call(target=parse.tokenValue) { Var(name=valueToken) }
                           }
                         }
                       }
                     }
                   }
-                  Block#parser_b120 {
-                    Return#parser_r111 {
-                      MakeLitString#parser_mls6 {
-                        Call#parser_c221(target=parse.tokenValue) { Var#parser_v229(name=keyToken) }
-                        Call#parser_c222(target=parse.tokenValue) { Var#parser_v230(name=valueToken) }
+                  Block {
+                    Return {
+                      MakeLitString {
+                        Call(target=parse.tokenValue) { Var(name=keyToken) }
+                        Call(target=parse.tokenValue) { Var(name=valueToken) }
                       }
                     }
                   }
@@ -585,28 +585,28 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l80(name=parse.isIntToken) {
-    Fn#parser_f69(params=token) {
-      Block#parser_b173 {
-        Let#parser_l81(name=value) { Call#parser_c253(target=parse.tokenValue) { Var#parser_v292(name=token) } }
-        Let#parser_l82(name=first) { Call#parser_c254(target=parse.charAt) { Var#parser_v293(name=value) Lit#parser_i267(value=0) } }
-        If#parser_if92 {
-          Call#parser_c255(target=parse.isDigit) { Var#parser_v294(name=first) }
-          Block#parser_b174 { Return#parser_r141 { Lit#parser_i268(value=true) } }
-          Block#parser_b175 {
-            If#parser_if93 {
-              Eq#parser_e91 { Var#parser_v295(name=first) Lit#parser_i269(value="-") }
-              Block#parser_b176 {
-                Return#parser_r142 {
-                  Call#parser_c256(target=parse.isDigit) {
-                    Call#parser_c257(target=parse.charAt) {
-                      Var#parser_v296(name=value)
-                      Lit#parser_i270(value=1)
+  Let(name=parse.isIntToken) {
+    Fn(params=token) {
+      Block {
+        Let(name=value) { Call(target=parse.tokenValue) { Var(name=token) } }
+        Let(name=first) { Call(target=parse.charAt) { Var(name=value) Lit(value=0) } }
+        If {
+          Call(target=parse.isDigit) { Var(name=first) }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=first) Lit(value="-") }
+              Block {
+                Return {
+                  Call(target=parse.isDigit) {
+                    Call(target=parse.charAt) {
+                      Var(name=value)
+                      Lit(value=1)
                     }
                   }
                 }
               }
-              Block#parser_b177 { Return#parser_r143 { Lit#parser_i271(value=false) } }
+              Block { Return { Lit(value=false) } }
             }
           }
         }
@@ -614,49 +614,49 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l65(name=parse.isDigit) {
-    Fn#parser_f63(params=ch) {
-      Block#parser_b121 {
-        If#parser_if69 {
-          Eq#parser_e68 { Var#parser_v231(name=ch) Lit#parser_i219(value="0") }
-          Block#parser_b122 { Return#parser_r112 { Lit#parser_i220(value=true) } }
-          Block#parser_b123 {
-            If#parser_if70 {
-              Eq#parser_e69 { Var#parser_v232(name=ch) Lit#parser_i221(value="1") }
-              Block#parser_b124 { Return#parser_r113 { Lit#parser_i222(value=true) } }
-              Block#parser_b125 {
-                If#parser_if71 {
-                  Eq#parser_e70 { Var#parser_v233(name=ch) Lit#parser_i223(value="2") }
-                  Block#parser_b126 { Return#parser_r114 { Lit#parser_i224(value=true) } }
-                  Block#parser_b127 {
-                    If#parser_if72 {
-                      Eq#parser_e71 { Var#parser_v234(name=ch) Lit#parser_i225(value="3") }
-                      Block#parser_b128 { Return#parser_r115 { Lit#parser_i226(value=true) } }
-                      Block#parser_b129 {
-                        If#parser_if73 {
-                          Eq#parser_e72 { Var#parser_v235(name=ch) Lit#parser_i227(value="4") }
-                          Block#parser_b130 { Return#parser_r116 { Lit#parser_i228(value=true) } }
-                          Block#parser_b131 {
-                            If#parser_if74 {
-                              Eq#parser_e73 { Var#parser_v236(name=ch) Lit#parser_i229(value="5") }
-                              Block#parser_b132 { Return#parser_r117 { Lit#parser_i230(value=true) } }
-                              Block#parser_b133 {
-                                If#parser_if75 {
-                                  Eq#parser_e74 { Var#parser_v237(name=ch) Lit#parser_i231(value="6") }
-                                  Block#parser_b134 { Return#parser_r118 { Lit#parser_i232(value=true) } }
-                                  Block#parser_b135 {
-                                    If#parser_if76 {
-                                      Eq#parser_e75 { Var#parser_v238(name=ch) Lit#parser_i233(value="7") }
-                                      Block#parser_b136 { Return#parser_r119 { Lit#parser_i234(value=true) } }
-                                      Block#parser_b137 {
-                                        If#parser_if77 {
-                                          Eq#parser_e76 { Var#parser_v239(name=ch) Lit#parser_i235(value="8") }
-                                          Block#parser_b138 { Return#parser_r120 { Lit#parser_i236(value=true) } }
-                                          Block#parser_b139 {
-                                            If#parser_if78 {
-                                              Eq#parser_e77 { Var#parser_v240(name=ch) Lit#parser_i237(value="9") }
-                                              Block#parser_b140 { Return#parser_r121 { Lit#parser_i238(value=true) } }
-                                              Block#parser_b141 { Return#parser_r122 { Lit#parser_i239(value=false) } }
+  Let(name=parse.isDigit) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="0") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="1") }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="2") }
+                  Block { Return { Lit(value=true) } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="3") }
+                      Block { Return { Lit(value=true) } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="4") }
+                          Block { Return { Lit(value=true) } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="5") }
+                              Block { Return { Lit(value=true) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=ch) Lit(value="6") }
+                                  Block { Return { Lit(value=true) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=ch) Lit(value="7") }
+                                      Block { Return { Lit(value=true) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=ch) Lit(value="8") }
+                                          Block { Return { Lit(value=true) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=ch) Lit(value="9") }
+                                              Block { Return { Lit(value=true) } }
+                                              Block { Return { Lit(value=false) } }
                                             }
                                           }
                                         }
@@ -680,49 +680,49 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l66(name=parse.digitValue) {
-    Fn#parser_f64(params=ch) {
-      Block#parser_b142 {
-        If#parser_if79 {
-          Eq#parser_e78 { Var#parser_v241(name=ch) Lit#parser_i240(value="0") }
-          Block#parser_b143 { Return#parser_r123 { Lit#parser_i241(value=0) } }
-          Block#parser_b144 {
-            If#parser_if80 {
-              Eq#parser_e79 { Var#parser_v242(name=ch) Lit#parser_i242(value="1") }
-              Block#parser_b145 { Return#parser_r124 { Lit#parser_i243(value=1) } }
-              Block#parser_b146 {
-                If#parser_if81 {
-                  Eq#parser_e80 { Var#parser_v243(name=ch) Lit#parser_i244(value="2") }
-                  Block#parser_b147 { Return#parser_r125 { Lit#parser_i245(value=2) } }
-                  Block#parser_b148 {
-                    If#parser_if82 {
-                      Eq#parser_e81 { Var#parser_v244(name=ch) Lit#parser_i246(value="3") }
-                      Block#parser_b149 { Return#parser_r126 { Lit#parser_i247(value=3) } }
-                      Block#parser_b150 {
-                        If#parser_if83 {
-                          Eq#parser_e82 { Var#parser_v245(name=ch) Lit#parser_i248(value="4") }
-                          Block#parser_b151 { Return#parser_r127 { Lit#parser_i249(value=4) } }
-                          Block#parser_b152 {
-                            If#parser_if84 {
-                              Eq#parser_e83 { Var#parser_v246(name=ch) Lit#parser_i250(value="5") }
-                              Block#parser_b153 { Return#parser_r128 { Lit#parser_i251(value=5) } }
-                              Block#parser_b154 {
-                                If#parser_if85 {
-                                  Eq#parser_e84 { Var#parser_v247(name=ch) Lit#parser_i252(value="6") }
-                                  Block#parser_b155 { Return#parser_r129 { Lit#parser_i253(value=6) } }
-                                  Block#parser_b156 {
-                                    If#parser_if86 {
-                                      Eq#parser_e85 { Var#parser_v248(name=ch) Lit#parser_i254(value="7") }
-                                      Block#parser_b157 { Return#parser_r130 { Lit#parser_i255(value=7) } }
-                                      Block#parser_b158 {
-                                        If#parser_if87 {
-                                          Eq#parser_e86 { Var#parser_v249(name=ch) Lit#parser_i256(value="8") }
-                                          Block#parser_b159 { Return#parser_r131 { Lit#parser_i257(value=8) } }
-                                          Block#parser_b160 {
-                                            If#parser_if88 {
-                                              Eq#parser_e87 { Var#parser_v250(name=ch) Lit#parser_i258(value="9") }
-                                              Block#parser_b161 { Return#parser_r132 { Lit#parser_i259(value=9) } }
-                                              Block#parser_b162 { Return#parser_r133 { Lit#parser_i260(value=0) } }
+  Let(name=parse.digitValue) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="0") }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="1") }
+              Block { Return { Lit(value=1) } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="2") }
+                  Block { Return { Lit(value=2) } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="3") }
+                      Block { Return { Lit(value=3) } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="4") }
+                          Block { Return { Lit(value=4) } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="5") }
+                              Block { Return { Lit(value=5) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=ch) Lit(value="6") }
+                                  Block { Return { Lit(value=6) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=ch) Lit(value="7") }
+                                      Block { Return { Lit(value=7) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=ch) Lit(value="8") }
+                                          Block { Return { Lit(value=8) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=ch) Lit(value="9") }
+                                              Block { Return { Lit(value=9) } }
+                                              Block { Return { Lit(value=0) } }
                                             }
                                           }
                                         }
@@ -746,33 +746,33 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l67(name=parse.mul10) {
-    Fn#parser_f65(params=value) {
-      Block#parser_b163 {
-        Let#parser_l68(name=two) { Add#parser_a105 { Var#parser_v251(name=value) Var#parser_v252(name=value) } }
-        Let#parser_l69(name=four) { Add#parser_a106 { Var#parser_v253(name=two) Var#parser_v254(name=two) } }
-        Let#parser_l70(name=eight) { Add#parser_a107 { Var#parser_v255(name=four) Var#parser_v256(name=four) } }
-        Return#parser_r134 { Add#parser_a108 { Var#parser_v257(name=eight) Var#parser_v258(name=two) } }
+  Let(name=parse.mul10) {
+    Fn(params=value) {
+      Block {
+        Let(name=two) { Add { Var(name=value) Var(name=value) } }
+        Let(name=four) { Add { Var(name=two) Var(name=two) } }
+        Let(name=eight) { Add { Var(name=four) Var(name=four) } }
+        Return { Add { Var(name=eight) Var(name=two) } }
       }
     }
   }
 
-  Let#parser_l71(name=parse.parseIntText) {
-    Fn#parser_f66(params=text,index,end,acc) {
-      Block#parser_b164 {
-        If#parser_if89 {
-          Eq#parser_e88 { Var#parser_v259(name=index) Var#parser_v260(name=end) }
-          Block#parser_b165 { Return#parser_r135 { Var#parser_v261(name=acc) } }
-          Block#parser_b166 {
-            Return#parser_r136 {
-              Call#parser_c223(target=parse.parseIntText) {
-                Var#parser_v262(name=text)
-                Add#parser_a109 { Var#parser_v263(name=index) Lit#parser_i261(value=1) }
-                Var#parser_v264(name=end)
-                Add#parser_a110 {
-                  Call#parser_c224(target=parse.mul10) { Var#parser_v265(name=acc) }
-                  Call#parser_c225(target=parse.digitValue) {
-                    Call#parser_c226(target=parse.charAt) { Var#parser_v266(name=text) Var#parser_v267(name=index) }
+  Let(name=parse.parseIntText) {
+    Fn(params=text,index,end,acc) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=end) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=parse.parseIntText) {
+                Var(name=text)
+                Add { Var(name=index) Lit(value=1) }
+                Var(name=end)
+                Add {
+                  Call(target=parse.mul10) { Var(name=acc) }
+                  Call(target=parse.digitValue) {
+                    Call(target=parse.charAt) { Var(name=text) Var(name=index) }
                   }
                 }
               }
@@ -783,17 +783,17 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l83(name=parse.negateInt) {
-    Fn#parser_f70(params=value,acc) {
-      Block#parser_b178 {
-        If#parser_if94 {
-          Eq#parser_e92 { Var#parser_v297(name=value) Lit#parser_i272(value=0) }
-          Block#parser_b179 { Return#parser_r144 { Var#parser_v298(name=acc) } }
-          Block#parser_b180 {
-            Return#parser_r145 {
-              Call#parser_c258(target=parse.negateInt) {
-                Add#parser_a111 { Var#parser_v299(name=value) Lit#parser_i273(value=-1) }
-                Add#parser_a112 { Var#parser_v300(name=acc) Lit#parser_i274(value=-1) }
+  Let(name=parse.negateInt) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Eq { Var(name=value) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=parse.negateInt) {
+                Add { Var(name=value) Lit(value=-1) }
+                Add { Var(name=acc) Lit(value=-1) }
               }
             }
           }
@@ -802,35 +802,35 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l72(name=parse.parseIntToken) {
-    Fn#parser_f67(params=token) {
-      Block#parser_b167 {
-        Let#parser_l73(name=value) { Call#parser_c227(target=parse.tokenValue) { Var#parser_v268(name=token) } }
-        If#parser_if95 {
-          Eq#parser_e93 {
-            Call#parser_c259(target=parse.charAt) { Var#parser_v301(name=value) Lit#parser_i275(value=0) }
-            Lit#parser_i276(value="-")
+  Let(name=parse.parseIntToken) {
+    Fn(params=token) {
+      Block {
+        Let(name=value) { Call(target=parse.tokenValue) { Var(name=token) } }
+        If {
+          Eq {
+            Call(target=parse.charAt) { Var(name=value) Lit(value=0) }
+            Lit(value="-")
           }
-          Block#parser_b181 {
-            Return#parser_r146 {
-              Call#parser_c260(target=parse.negateInt) {
-                Call#parser_c261(target=parse.parseIntText) {
-                  Var#parser_v302(name=value)
-                  Lit#parser_i277(value=1)
-                  Call#parser_c262(target=parse.readNameEnd) { Var#parser_v303(name=value) Lit#parser_i278(value=0) }
-                  Lit#parser_i279(value=0)
+          Block {
+            Return {
+              Call(target=parse.negateInt) {
+                Call(target=parse.parseIntText) {
+                  Var(name=value)
+                  Lit(value=1)
+                  Call(target=parse.readNameEnd) { Var(name=value) Lit(value=0) }
+                  Lit(value=0)
                 }
-                Lit#parser_i280(value=0)
+                Lit(value=0)
               }
             }
           }
-          Block#parser_b182 {
-            Return#parser_r137 {
-              Call#parser_c228(target=parse.parseIntText) {
-                Var#parser_v269(name=value)
-                Lit#parser_i262(value=0)
-                Call#parser_c229(target=parse.readNameEnd) { Var#parser_v270(name=value) Lit#parser_i263(value=0) }
-                Lit#parser_i264(value=0)
+          Block {
+            Return {
+              Call(target=parse.parseIntText) {
+                Var(name=value)
+                Lit(value=0)
+                Call(target=parse.readNameEnd) { Var(name=value) Lit(value=0) }
+                Lit(value=0)
               }
             }
           }
@@ -839,20 +839,20 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l29(name=parse.parseNodeWithNameAttrAt) {
-    Fn#parser_f15(params=text,index) {
-      Block#parser_b65 {
-        Let#parser_l22(name=kindToken) { Call#parser_c34(target=parse.nextToken) { Var#parser_v82(name=text) Var#parser_v100(name=index) } }
-        Let#parser_l23(name=hashToken) { Call#parser_c35(target=parse.nextToken) { Var#parser_v83(name=text) Call#parser_c36(target=parse.tokenNext) { Var#parser_v84(name=kindToken) } } }
-        Let#parser_l24(name=idToken) { Call#parser_c37(target=parse.nextToken) { Var#parser_v85(name=text) Call#parser_c38(target=parse.tokenNext) { Var#parser_v86(name=hashToken) } } }
-        Let#parser_l25(name=lparenToken) { Call#parser_c39(target=parse.nextToken) { Var#parser_v87(name=text) Call#parser_c40(target=parse.tokenNext) { Var#parser_v88(name=idToken) } } }
-        Return#parser_r39 {
-          Call#parser_c230(target=parse.resultNode) {
-            Call#parser_c231(target=parse.parseAttrNodeFromTokens) {
-              Var#parser_v89(name=text)
-              Var#parser_v90(name=kindToken)
-              Var#parser_v91(name=idToken)
-              Var#parser_v92(name=lparenToken)
+  Let(name=parse.parseNodeWithNameAttrAt) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        Let(name=hashToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+        Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=hashToken) } } }
+        Let(name=lparenToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+        Return {
+          Call(target=parse.resultNode) {
+            Call(target=parse.parseAttrNodeFromTokens) {
+              Var(name=text)
+              Var(name=kindToken)
+              Var(name=idToken)
+              Var(name=lparenToken)
             }
           }
         }
@@ -860,77 +860,22 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l30(name=parse.parseProgramWithOneChild) {
-    Fn#parser_f16(params=text) {
-      Block#parser_b66 {
-        Let#parser_l31(name=kindToken) { Call#parser_c52(target=parse.nextToken) { Var#parser_v101(name=text) Lit#parser_i82(value=0) } }
-        Let#parser_l32(name=hashToken) { Call#parser_c53(target=parse.nextToken) { Var#parser_v102(name=text) Call#parser_c54(target=parse.tokenNext) { Var#parser_v103(name=kindToken) } } }
-        Let#parser_l33(name=idToken) { Call#parser_c55(target=parse.nextToken) { Var#parser_v104(name=text) Call#parser_c56(target=parse.tokenNext) { Var#parser_v105(name=hashToken) } } }
-        Let#parser_l34(name=lbraceToken) { Call#parser_c57(target=parse.nextToken) { Var#parser_v106(name=text) Call#parser_c58(target=parse.tokenNext) { Var#parser_v107(name=idToken) } } }
-        Return#parser_r41 {
-          AppendChild#parser_ap4 {
-            MakeNode#parser_mn3 {
-              Call#parser_c59(target=parse.tokenValue) { Var#parser_v108(name=kindToken) }
-              Call#parser_c60(target=parse.tokenValue) { Var#parser_v109(name=idToken) }
+  Let(name=parse.parseProgramWithOneChild) {
+    Fn(params=text) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Lit(value=0) } }
+        Let(name=hashToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+        Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=hashToken) } } }
+        Let(name=lbraceToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+        Return {
+          AppendChild {
+            MakeNode {
+              Call(target=parse.tokenValue) { Var(name=kindToken) }
+              Call(target=parse.tokenValue) { Var(name=idToken) }
             }
-            Call#parser_c61(target=parse.parseNodeWithNameAttrAt) {
-              Var#parser_v110(name=text)
-              Call#parser_c62(target=parse.tokenNext) { Var#parser_v111(name=lbraceToken) }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#parser_l35(name=parse.makeResult) {
-    Fn#parser_f17(params=node,nextIndex) {
-      Block#parser_b67 {
-        Return#parser_r42 {
-          MakePair#parser_pair_result {
-            Var#parser_v113(name=node)
-            Var#parser_v112(name=nextIndex)
-          }
-        }
-      }
-    }
-  }
-
-  Let#parser_l36(name=parse.resultNode) {
-    Fn#parser_f18(params=result) {
-      Block#parser_b68 {
-        Return#parser_r43 {
-          PairFirst#parser_pair_first {
-            Var#parser_v114(name=result)
-          }
-        }
-      }
-    }
-  }
-
-  Let#parser_l37(name=parse.resultNext) {
-    Fn#parser_f19(params=result) {
-      Block#parser_b69 {
-        Return#parser_r44 {
-          PairSecond#parser_pair_second {
-            Var#parser_v115(name=result)
-          }
-        }
-      }
-    }
-  }
-
-  Let#parser_l_synth_id1(name=parse.makeSyntheticId) {
-    Fn#parser_f_synth_id1(params=kindToken) {
-      Block#parser_b_synth_id1 {
-        Return#parser_r_synth_id1 {
-          StrConcat#parser_sc_synth_id1 {
-            StrConcat#parser_sc_synth_id2 {
-              Call#parser_c_synth_id1(target=parse.tokenValue) { Var#parser_v_synth_id1(name=kindToken) }
-              Lit#parser_i_synth_id1(value="_")
-            }
-            ToString#parser_ts_synth_id1 {
-              Call#parser_c_synth_id2(target=parse.tokenNext) { Var#parser_v_synth_id2(name=kindToken) }
+            Call(target=parse.parseNodeWithNameAttrAt) {
+              Var(name=text)
+              Call(target=parse.tokenNext) { Var(name=lbraceToken) }
             }
           }
         }
@@ -938,129 +883,184 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l38(name=parse.parseNodeAt) {
-    Fn#parser_f20(params=text,index) {
-      Block#parser_b70 {
-        Let#parser_l39(name=kindToken) { Call#parser_c63(target=parse.nextToken) { Var#parser_v116(name=text) Var#parser_v117(name=index) } }
-        If#parser_if26 {
-          Eq#parser_eof1 {
-            Call#parser_c70(target=parse.tokenKind) { Var#parser_v116(name=kindToken) }
-            Lit#parser_eof1(value="eof")
+  Let(name=parse.makeResult) {
+    Fn(params=node,nextIndex) {
+      Block {
+        Return {
+          MakePair {
+            Var(name=node)
+            Var(name=nextIndex)
           }
-          Block#parser_b71 {
-            Return#parser_r45 {
-              Call#parser_eof_c1(target=parse.makeResult) {
-                MakeErr#parser_eof_err1 {
-                  Lit#parser_eof_i1(value="parse_eof")
-                  Lit#parser_eof_i2(value="PARSE001")
-                  Lit#parser_eof_i3(value="Unexpected end of input.")
-                  Lit#parser_eof_i4(value="parser")
+        }
+      }
+    }
+  }
+
+  Let(name=parse.resultNode) {
+    Fn(params=result) {
+      Block {
+        Return {
+          PairFirst {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.resultNext) {
+    Fn(params=result) {
+      Block {
+        Return {
+          PairSecond {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeSyntheticId) {
+    Fn(params=kindToken) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat {
+              Call(target=parse.tokenValue) { Var(name=kindToken) }
+              Lit(value="_")
+            }
+            ToString {
+              Call(target=parse.tokenNext) { Var(name=kindToken) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseNodeAt) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=kindToken) }
+            Lit(value="eof")
+          }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                MakeErr {
+                  Lit(value="parse_eof")
+                  Lit(value="PARSE001")
+                  Lit(value="Unexpected end of input.")
+                  Lit(value="parser")
                 }
-                Call#parser_eof_c2(target=parse.tokenNext) { Var#parser_v116(name=kindToken) }
+                Call(target=parse.tokenNext) { Var(name=kindToken) }
               }
             }
           }
-          Block#parser_b72 {
-            If#parser_if_node_start1 {
-              Eq#parser_e_node_start1 {
-                Call#parser_c_node_start1(target=parse.tokenKind) { Var#parser_v_node_start1(name=kindToken) }
-                Lit#parser_i_node_start1(value="name")
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=kindToken) }
+                Lit(value="name")
               }
-              Block#parser_b_node_start_ok1 {
-                Let#parser_l40(name=lookaheadToken) { Call#parser_c64(target=parse.nextToken) { Var#parser_v118(name=text) Call#parser_c65(target=parse.tokenNext) { Var#parser_v119(name=kindToken) } } }
-                If#parser_if27 {
-                  Eq#parser_e21 {
-                    Call#parser_c70(target=parse.tokenKind) { Var#parser_v124(name=lookaheadToken) }
-                    Lit#parser_i88(value="lparen")
+              Block {
+                Let(name=lookaheadToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                    Lit(value="lparen")
                   }
-                  Block#parser_b73 {
-                    Return#parser_r46 {
-                      Call#parser_c71(target=parse.parseAttrNodeFromTokens) {
-                        Var#parser_v125(name=text)
-                        Var#parser_v126(name=kindToken)
-                        Call#parser_c71b(target=parse.makeToken) {
-                          Lit#parser_i88b(value="name")
-                          Call#parser_c_synth_id3(target=parse.makeSyntheticId) { Var#parser_v_synth_id3(name=kindToken) }
-                          Call#parser_c71c(target=parse.tokenNext) { Var#parser_v128b(name=kindToken) }
+                  Block {
+                    Return {
+                      Call(target=parse.parseAttrNodeFromTokens) {
+                        Var(name=text)
+                        Var(name=kindToken)
+                        Call(target=parse.makeToken) {
+                          Lit(value="name")
+                          Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
+                          Call(target=parse.tokenNext) { Var(name=kindToken) }
                         }
-                        Var#parser_v128(name=lookaheadToken)
+                        Var(name=lookaheadToken)
                       }
                     }
                   }
-                  Block#parser_b74 {
-                    If#parser_if92b {
-                      Eq#parser_e22 {
-                        Call#parser_c72(target=parse.tokenKind) { Var#parser_v129(name=lookaheadToken) }
-                        Lit#parser_i89(value="lbrace")
+                  Block {
+                    If {
+                      Eq {
+                        Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                        Lit(value="lbrace")
                       }
-                      Block#parser_b73b {
-                        Return#parser_r46b {
-                          Call#parser_c73(target=parse.parseChildrenInto) {
-                            Var#parser_v130(name=text)
-                            Call#parser_c74(target=parse.tokenNext) { Var#parser_v131(name=lookaheadToken) }
-                            MakeNode#parser_mn5 {
-                              Call#parser_c75(target=parse.tokenValue) { Var#parser_v132(name=kindToken) }
-                              Call#parser_c_synth_id4(target=parse.makeSyntheticId) { Var#parser_v_synth_id4(name=kindToken) }
+                      Block {
+                        Return {
+                          Call(target=parse.parseChildrenInto) {
+                            Var(name=text)
+                            Call(target=parse.tokenNext) { Var(name=lookaheadToken) }
+                            MakeNode {
+                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                              Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
                             }
                           }
                         }
                       }
-                      Block#parser_b74b {
-                        If#parser_if93b {
-                          Eq#parser_e93b {
-                            Call#parser_c72b(target=parse.tokenKind) { Var#parser_v129b(name=lookaheadToken) }
-                            Lit#parser_i89c(value="hash")
+                      Block {
+                        If {
+                          Eq {
+                            Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                            Lit(value="hash")
                           }
-                          Block#parser_b73c {
-                            Let#parser_l41(name=idToken) { Call#parser_c66(target=parse.nextToken) { Var#parser_v120(name=text) Call#parser_c67(target=parse.tokenNext) { Var#parser_v121(name=lookaheadToken) } } }
-                            If#parser_if_node_id1 {
-                              Eq#parser_e_node_id1 {
-                                Call#parser_c_node_id1(target=parse.tokenKind) { Var#parser_v_node_id1(name=idToken) }
-                                Lit#parser_i_node_id1(value="name")
+                          Block {
+                            Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=lookaheadToken) } } }
+                            If {
+                              Eq {
+                                Call(target=parse.tokenKind) { Var(name=idToken) }
+                                Lit(value="name")
                               }
-                              Block#parser_b_node_id_ok1 {
-                                Let#parser_l42(name=afterIdToken) { Call#parser_c68(target=parse.nextToken) { Var#parser_v122(name=text) Call#parser_c69(target=parse.tokenNext) { Var#parser_v123(name=idToken) } } }
-                                If#parser_if94b {
-                                  Eq#parser_e94b {
-                                    Call#parser_c70b(target=parse.tokenKind) { Var#parser_v124b(name=afterIdToken) }
-                                    Lit#parser_i89d(value="lparen")
+                              Block {
+                                Let(name=afterIdToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+                                If {
+                                  Eq {
+                                    Call(target=parse.tokenKind) { Var(name=afterIdToken) }
+                                    Lit(value="lparen")
                                   }
-                                  Block#parser_b73d {
-                                    Return#parser_r46c {
-                                      Call#parser_c71d(target=parse.parseAttrNodeFromTokens) {
-                                        Var#parser_v125b(name=text)
-                                        Var#parser_v126b(name=kindToken)
-                                        Var#parser_v127b(name=idToken)
-                                        Var#parser_v128c(name=afterIdToken)
+                                  Block {
+                                    Return {
+                                      Call(target=parse.parseAttrNodeFromTokens) {
+                                        Var(name=text)
+                                        Var(name=kindToken)
+                                        Var(name=idToken)
+                                        Var(name=afterIdToken)
                                       }
                                     }
                                   }
-                                  Block#parser_b74c {
-                                    If#parser_if95b {
-                                      Eq#parser_e95b {
-                                        Call#parser_c72c(target=parse.tokenKind) { Var#parser_v129c(name=afterIdToken) }
-                                        Lit#parser_i89e(value="lbrace")
+                                  Block {
+                                    If {
+                                      Eq {
+                                        Call(target=parse.tokenKind) { Var(name=afterIdToken) }
+                                        Lit(value="lbrace")
                                       }
-                                      Block#parser_b73e {
-                                        Return#parser_r46d {
-                                          Call#parser_c73b(target=parse.parseChildrenInto) {
-                                            Var#parser_v130b(name=text)
-                                            Call#parser_c74b(target=parse.tokenNext) { Var#parser_v131b(name=afterIdToken) }
-                                            MakeNode#parser_mn5b {
-                                              Call#parser_c75b(target=parse.tokenValue) { Var#parser_v132b(name=kindToken) }
-                                              Call#parser_c76b(target=parse.tokenValue) { Var#parser_v133b(name=idToken) }
+                                      Block {
+                                        Return {
+                                          Call(target=parse.parseChildrenInto) {
+                                            Var(name=text)
+                                            Call(target=parse.tokenNext) { Var(name=afterIdToken) }
+                                            MakeNode {
+                                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                              Call(target=parse.tokenValue) { Var(name=idToken) }
                                             }
                                           }
                                         }
                                       }
-                                      Block#parser_b74d {
-                                        Return#parser_r47 {
-                                          Call#parser_c77(target=parse.makeResult) {
-                                            MakeNode#parser_mn6 {
-                                              Call#parser_c78(target=parse.tokenValue) { Var#parser_v134(name=kindToken) }
-                                              Call#parser_c79(target=parse.tokenValue) { Var#parser_v135(name=idToken) }
+                                      Block {
+                                        Return {
+                                          Call(target=parse.makeResult) {
+                                            MakeNode {
+                                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                              Call(target=parse.tokenValue) { Var(name=idToken) }
                                             }
-                                            Call#parser_c80(target=parse.tokenNext) { Var#parser_v136(name=idToken) }
+                                            Call(target=parse.tokenNext) { Var(name=idToken) }
                                           }
                                         }
                                       }
@@ -1068,29 +1068,29 @@ Program#parser_p1 {
                                   }
                                 }
                               }
-                              Block#parser_b_node_id_err1 {
-                                Return#parser_r_node_id_err1 {
-                                  Call#parser_c_node_id_err1(target=parse.makeResult) {
-                                    MakeErr#parser_me_node_id1 {
-                                      Lit#parser_i_node_id2(value="parse_node_id")
-                                      Lit#parser_i_node_id3(value="PARSE007")
-                                      Lit#parser_i_node_id4(value="Expected node id after '#'.")
-                                      Lit#parser_i_node_id5(value="parser")
+                              Block {
+                                Return {
+                                  Call(target=parse.makeResult) {
+                                    MakeErr {
+                                      Lit(value="parse_node_id")
+                                      Lit(value="PARSE007")
+                                      Lit(value="Expected node id after '#'.")
+                                      Lit(value="parser")
                                     }
-                                    Call#parser_c_node_id_err2(target=parse.tokenNext) { Var#parser_v_node_id2(name=idToken) }
+                                    Call(target=parse.tokenNext) { Var(name=idToken) }
                                   }
                                 }
                               }
                             }
                           }
-                          Block#parser_b74e {
-                            Return#parser_r47b {
-                              Call#parser_c77b(target=parse.makeResult) {
-                                MakeNode#parser_mn6b {
-                                  Call#parser_c78b(target=parse.tokenValue) { Var#parser_v134b(name=kindToken) }
-                                  Call#parser_c_synth_id5(target=parse.makeSyntheticId) { Var#parser_v_synth_id5(name=kindToken) }
+                          Block {
+                            Return {
+                              Call(target=parse.makeResult) {
+                                MakeNode {
+                                  Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                  Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
                                 }
-                                Call#parser_c80b(target=parse.tokenNext) { Var#parser_v136b(name=kindToken) }
+                                Call(target=parse.tokenNext) { Var(name=kindToken) }
                               }
                             }
                           }
@@ -1100,16 +1100,16 @@ Program#parser_p1 {
                   }
                 }
               }
-              Block#parser_b_node_start_err1 {
-                Return#parser_r_node_start_err1 {
-                  Call#parser_c_node_start_err1(target=parse.makeResult) {
-                    MakeErr#parser_me_node_start1 {
-                      Lit#parser_i_node_start2(value="parse_node_start")
-                      Lit#parser_i_node_start3(value="PARSE005")
-                      Lit#parser_i_node_start4(value="Expected node kind.")
-                      Lit#parser_i_node_start5(value="parser")
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_node_start")
+                      Lit(value="PARSE005")
+                      Lit(value="Expected node kind.")
+                      Lit(value="parser")
                     }
-                    Call#parser_c_node_start_err2(target=parse.tokenNext) { Var#parser_v_node_start2(name=kindToken) }
+                    Call(target=parse.tokenNext) { Var(name=kindToken) }
                   }
                 }
               }
@@ -1120,42 +1120,42 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l43(name=parse.parseAttrNodeFromTokens) {
-    Fn#parser_f21(params=text,kindToken,idToken,lparenToken) {
-      Block#parser_b75 {
-        Let#parser_l78(name=attrResult) {
-          Call#parser_c232(target=parse.parseAttrsInto) {
-            Var#parser_v137(name=text)
-            Call#parser_c233(target=parse.tokenNext) { Var#parser_v138(name=lparenToken) }
-            MakeNode#parser_mn7 {
-              Call#parser_c234(target=parse.tokenValue) { Var#parser_v139(name=kindToken) }
-              Call#parser_c235(target=parse.tokenValue) { Var#parser_v140(name=idToken) }
+  Let(name=parse.parseAttrNodeFromTokens) {
+    Fn(params=text,kindToken,idToken,lparenToken) {
+      Block {
+        Let(name=attrResult) {
+          Call(target=parse.parseAttrsInto) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=lparenToken) }
+            MakeNode {
+              Call(target=parse.tokenValue) { Var(name=kindToken) }
+              Call(target=parse.tokenValue) { Var(name=idToken) }
             }
           }
         }
-        Let#parser_l79(name=afterAttrsToken) {
-          Call#parser_c247(target=parse.nextToken) {
-            Var#parser_v285(name=text)
-            Call#parser_c248(target=parse.resultNext) { Var#parser_v286(name=attrResult) }
+        Let(name=afterAttrsToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.resultNext) { Var(name=attrResult) }
           }
         }
-        If#parser_if91 {
-          Eq#parser_e90 {
-            Call#parser_c249(target=parse.tokenKind) { Var#parser_v287(name=afterAttrsToken) }
-            Lit#parser_i266(value="lbrace")
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=afterAttrsToken) }
+            Lit(value="lbrace")
           }
-          Block#parser_b171 {
-            Return#parser_r140 {
-              Call#parser_c250(target=parse.parseChildrenInto) {
-                Var#parser_v288(name=text)
-                Call#parser_c251(target=parse.tokenNext) { Var#parser_v289(name=afterAttrsToken) }
-                Call#parser_c252(target=parse.resultNode) { Var#parser_v290(name=attrResult) }
+          Block {
+            Return {
+              Call(target=parse.parseChildrenInto) {
+                Var(name=text)
+                Call(target=parse.tokenNext) { Var(name=afterAttrsToken) }
+                Call(target=parse.resultNode) { Var(name=attrResult) }
               }
             }
           }
-          Block#parser_b172 {
-            Return#parser_r48 {
-              Var#parser_v291(name=attrResult)
+          Block {
+            Return {
+              Var(name=attrResult)
             }
           }
         }
@@ -1163,23 +1163,23 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l_attr_pred1(name=parse.isAttrListUnexpectedEndToken) {
-    Fn#parser_f_attr_pred1(params=token) {
-      Block#parser_b_attr_pred1 {
-        If#parser_if_attr_pred1 {
-          Eq#parser_e_attr_pred1 {
-            Call#parser_c_attr_pred1(target=parse.tokenKind) { Var#parser_v_attr_pred1(name=token) }
-            Lit#parser_i_attr_pred1(value="eof")
+  Let(name=parse.isAttrListUnexpectedEndToken) {
+    Fn(params=token) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=token) }
+            Lit(value="eof")
           }
-          Block#parser_b_attr_pred2 { Return#parser_r_attr_pred1 { Lit#parser_i_attr_pred2(value=true) } }
-          Block#parser_b_attr_pred3 {
-            If#parser_if_attr_pred2 {
-              Eq#parser_e_attr_pred2 {
-                Call#parser_c_attr_pred2(target=parse.tokenKind) { Var#parser_v_attr_pred2(name=token) }
-                Lit#parser_i_attr_pred3(value="rbrace")
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=token) }
+                Lit(value="rbrace")
               }
-              Block#parser_b_attr_pred4 { Return#parser_r_attr_pred2 { Lit#parser_i_attr_pred4(value=true) } }
-              Block#parser_b_attr_pred5 { Return#parser_r_attr_pred3 { Lit#parser_i_attr_pred5(value=false) } }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Lit(value=false) } }
             }
           }
         }
@@ -1187,30 +1187,30 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l_attr_pred2(name=parse.isAttrValueMissingToken) {
-    Fn#parser_f_attr_pred2(params=token) {
-      Block#parser_b_attr_pred6 {
-        If#parser_if_attr_pred3 {
-          Eq#parser_e_attr_pred3 {
-            Call#parser_c_attr_pred3(target=parse.tokenKind) { Var#parser_v_attr_pred3(name=token) }
-            Lit#parser_i_attr_pred6(value="eof")
+  Let(name=parse.isAttrValueMissingToken) {
+    Fn(params=token) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=token) }
+            Lit(value="eof")
           }
-          Block#parser_b_attr_pred7 { Return#parser_r_attr_pred4 { Lit#parser_i_attr_pred7(value=true) } }
-          Block#parser_b_attr_pred8 {
-            If#parser_if_attr_pred4 {
-              Eq#parser_e_attr_pred4 {
-                Call#parser_c_attr_pred4(target=parse.tokenKind) { Var#parser_v_attr_pred4(name=token) }
-                Lit#parser_i_attr_pred8(value="rparen")
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=token) }
+                Lit(value="rparen")
               }
-              Block#parser_b_attr_pred9 { Return#parser_r_attr_pred5 { Lit#parser_i_attr_pred9(value=true) } }
-              Block#parser_b_attr_pred10 {
-                If#parser_if_attr_pred5 {
-                  Eq#parser_e_attr_pred5 {
-                    Call#parser_c_attr_pred5(target=parse.tokenKind) { Var#parser_v_attr_pred5(name=token) }
-                    Lit#parser_i_attr_pred10(value="rbrace")
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=token) }
+                    Lit(value="rbrace")
                   }
-                  Block#parser_b_attr_pred11 { Return#parser_r_attr_pred6 { Lit#parser_i_attr_pred11(value=true) } }
-                  Block#parser_b_attr_pred12 { Return#parser_r_attr_pred7 { Lit#parser_i_attr_pred12(value=false) } }
+                  Block { Return { Lit(value=true) } }
+                  Block { Return { Lit(value=false) } }
                 }
               }
             }
@@ -1220,89 +1220,89 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l74(name=parse.parseAttrsInto) {
-    Fn#parser_f68(params=text,index,node) {
-      Block#parser_b168 {
-        Let#parser_l75(name=nextToken) { Call#parser_c236(target=parse.nextToken) { Var#parser_v271(name=text) Var#parser_v272(name=index) } }
-        If#parser_if90 {
-          Eq#parser_e89 {
-            Call#parser_c237(target=parse.tokenKind) { Var#parser_v273(name=nextToken) }
-            Lit#parser_i265(value="rparen")
+  Let(name=parse.parseAttrsInto) {
+    Fn(params=text,index,node) {
+      Block {
+        Let(name=nextToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=nextToken) }
+            Lit(value="rparen")
           }
-          Block#parser_b169 {
-            Return#parser_r138 {
-              Call#parser_c238(target=parse.makeResult) {
-                Var#parser_v274(name=node)
-                Call#parser_c239(target=parse.tokenNext) { Var#parser_v275(name=nextToken) }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                Var(name=node)
+                Call(target=parse.tokenNext) { Var(name=nextToken) }
               }
             }
           }
-          Block#parser_b170 {
-            If#parser_if_attr_eof1 {
-              Call#parser_c_attr_pred6(target=parse.isAttrListUnexpectedEndToken) { Var#parser_v273b(name=nextToken) }
-              Block#parser_b_attr_eof1 {
-                Return#parser_r_attr_eof1 {
-                  Call#parser_c_attr_eof2(target=parse.makeResult) {
-                    MakeErr#parser_me_attr_eof1 {
-                      Lit#parser_i_attr_eof2(value="parse_attr")
-                      Lit#parser_i_attr_eof3(value="PARSE002")
-                      Lit#parser_i_attr_eof4(value="Expected attribute or ')'.")
-                      Lit#parser_i_attr_eof5(value="parser")
+          Block {
+            If {
+              Call(target=parse.isAttrListUnexpectedEndToken) { Var(name=nextToken) }
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_attr")
+                      Lit(value="PARSE002")
+                      Lit(value="Expected attribute or ')'.")
+                      Lit(value="parser")
                     }
-                    Call#parser_c_attr_eof3(target=parse.tokenNext) { Var#parser_v273d(name=nextToken) }
+                    Call(target=parse.tokenNext) { Var(name=nextToken) }
                   }
                 }
               }
-              Block#parser_b_attr_continue1 {
-                If#parser_if_attr_key1 {
-                  Eq#parser_e_attr_key1 {
-                    Call#parser_c_attr_key1(target=parse.tokenKind) { Var#parser_v_attr_key1(name=nextToken) }
-                    Lit#parser_i_attr_key1(value="name")
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=nextToken) }
+                    Lit(value="name")
                   }
-                  Block#parser_b_attr_key_ok1 {
-                    Let#parser_l76(name=equalsToken) {
-                      Call#parser_c240(target=parse.nextToken) {
-                        Var#parser_v276(name=text)
-                        Call#parser_c241(target=parse.tokenNext) { Var#parser_v277(name=nextToken) }
+                  Block {
+                    Let(name=equalsToken) {
+                      Call(target=parse.nextToken) {
+                        Var(name=text)
+                        Call(target=parse.tokenNext) { Var(name=nextToken) }
                       }
                     }
-                    If#parser_if_attr_eq1 {
-                      Eq#parser_e_attr_eq1 {
-                        Call#parser_c_attr_eq1(target=parse.tokenKind) { Var#parser_v_eq1(name=equalsToken) }
-                        Lit#parser_i_attr_eq1(value="equals")
+                    If {
+                      Eq {
+                        Call(target=parse.tokenKind) { Var(name=equalsToken) }
+                        Lit(value="equals")
                       }
-                      Block#parser_b_attr_eq_ok1 {
-                        Let#parser_l77(name=valueToken) {
-                          Call#parser_c242(target=parse.nextToken) {
-                            Var#parser_v278(name=text)
-                            Call#parser_c243(target=parse.tokenNext) { Var#parser_v279(name=equalsToken) }
+                      Block {
+                        Let(name=valueToken) {
+                          Call(target=parse.nextToken) {
+                            Var(name=text)
+                            Call(target=parse.tokenNext) { Var(name=equalsToken) }
                           }
                         }
-                        If#parser_if_attr_value1 {
-                          Call#parser_c_attr_pred7(target=parse.isAttrValueMissingToken) { Var#parser_v_attr_value1(name=valueToken) }
-                          Block#parser_b_attr_value_err1 {
-                            Return#parser_r_attr_value_err1 {
-                              Call#parser_c_attr_value_err1(target=parse.makeResult) {
-                                MakeErr#parser_me_attr_value1 {
-                                  Lit#parser_i_attr_value4(value="parse_attr_value")
-                                  Lit#parser_i_attr_value5(value="PARSE004")
-                                  Lit#parser_i_attr_value6(value="Expected attribute value.")
-                                  Lit#parser_i_attr_value7(value="parser")
+                        If {
+                          Call(target=parse.isAttrValueMissingToken) { Var(name=valueToken) }
+                          Block {
+                            Return {
+                              Call(target=parse.makeResult) {
+                                MakeErr {
+                                  Lit(value="parse_attr_value")
+                                  Lit(value="PARSE004")
+                                  Lit(value="Expected attribute value.")
+                                  Lit(value="parser")
                                 }
-                                Call#parser_c_attr_value_err2(target=parse.tokenNext) { Var#parser_v_attr_value4(name=valueToken) }
+                                Call(target=parse.tokenNext) { Var(name=valueToken) }
                               }
                             }
                           }
-                          Block#parser_b_attr_value_ok1 {
-                            Return#parser_r139 {
-                              Call#parser_c244(target=parse.parseAttrsInto) {
-                                Var#parser_v280(name=text)
-                                Call#parser_c245(target=parse.tokenNext) { Var#parser_v281(name=valueToken) }
-                                AppendAttr#parser_aa4 {
-                                  Var#parser_v282(name=node)
-                                  Call#parser_c246(target=parse.makeAttrLit) {
-                                    Var#parser_v283(name=nextToken)
-                                    Var#parser_v284(name=valueToken)
+                          Block {
+                            Return {
+                              Call(target=parse.parseAttrsInto) {
+                                Var(name=text)
+                                Call(target=parse.tokenNext) { Var(name=valueToken) }
+                                AppendAttr {
+                                  Var(name=node)
+                                  Call(target=parse.makeAttrLit) {
+                                    Var(name=nextToken)
+                                    Var(name=valueToken)
                                   }
                                 }
                               }
@@ -1310,31 +1310,31 @@ Program#parser_p1 {
                           }
                         }
                       }
-                      Block#parser_b_attr_eq_err1 {
-                        Return#parser_r_attr_eq_err1 {
-                          Call#parser_c_attr_eq_err1(target=parse.makeResult) {
-                            MakeErr#parser_me_attr_eq1 {
-                              Lit#parser_i_attr_eq2(value="parse_attr_equals")
-                              Lit#parser_i_attr_eq3(value="PARSE003")
-                              Lit#parser_i_attr_eq4(value="Expected '=' after attribute name.")
-                              Lit#parser_i_attr_eq5(value="parser")
+                      Block {
+                        Return {
+                          Call(target=parse.makeResult) {
+                            MakeErr {
+                              Lit(value="parse_attr_equals")
+                              Lit(value="PARSE003")
+                              Lit(value="Expected '=' after attribute name.")
+                              Lit(value="parser")
                             }
-                            Call#parser_c_attr_eq_err2(target=parse.tokenNext) { Var#parser_v_attr_eq2(name=equalsToken) }
+                            Call(target=parse.tokenNext) { Var(name=equalsToken) }
                           }
                         }
                       }
                     }
                   }
-                  Block#parser_b_attr_key_err1 {
-                    Return#parser_r_attr_key_err1 {
-                      Call#parser_c_attr_key_err1(target=parse.makeResult) {
-                        MakeErr#parser_me_attr_key1 {
-                          Lit#parser_i_attr_key2(value="parse_attr_key")
-                          Lit#parser_i_attr_key3(value="PARSE008")
-                          Lit#parser_i_attr_key4(value="Expected attribute name.")
-                          Lit#parser_i_attr_key5(value="parser")
+                  Block {
+                    Return {
+                      Call(target=parse.makeResult) {
+                        MakeErr {
+                          Lit(value="parse_attr_key")
+                          Lit(value="PARSE008")
+                          Lit(value="Expected attribute name.")
+                          Lit(value="parser")
                         }
-                        Call#parser_c_attr_key_err2(target=parse.tokenNext) { Var#parser_v_attr_key2(name=nextToken) }
+                        Call(target=parse.tokenNext) { Var(name=nextToken) }
                       }
                     }
                   }
@@ -1347,65 +1347,65 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l48(name=parse.parseChildrenInto) {
-    Fn#parser_f22(params=text,index,parent) {
-      Block#parser_b76 {
-        Let#parser_l49(name=nextToken) { Call#parser_c95(target=parse.nextToken) { Var#parser_v150(name=text) Var#parser_v151(name=index) } }
-        If#parser_if28 {
-          Eq#parser_e23 {
-            Call#parser_c96(target=parse.tokenKind) { Var#parser_v152(name=nextToken) }
-            Lit#parser_i90(value="rbrace")
+  Let(name=parse.parseChildrenInto) {
+    Fn(params=text,index,parent) {
+      Block {
+        Let(name=nextToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=nextToken) }
+            Lit(value="rbrace")
           }
-          Block#parser_b77 {
-            Return#parser_r49 {
-              Call#parser_c97(target=parse.makeResult) {
-                Var#parser_v153(name=parent)
-                Call#parser_c98(target=parse.tokenNext) { Var#parser_v154(name=nextToken) }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                Var(name=parent)
+                Call(target=parse.tokenNext) { Var(name=nextToken) }
               }
             }
           }
-          Block#parser_b78 {
-            If#parser_if_eof_children1 {
-              Eq#parser_eof_children1 {
-                Call#parser_c96b(target=parse.tokenKind) { Var#parser_v152(name=nextToken) }
-                Lit#parser_i90b(value="eof")
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=nextToken) }
+                Lit(value="eof")
               }
-              Block#parser_b_eof_children1 {
-                Return#parser_r_eof_children1 {
-                  Call#parser_c97b(target=parse.makeResult) {
-                    MakeErr#parser_me_children_eof1 {
-                      Lit#parser_i_children_eof1(value="parse_children_eof")
-                      Lit#parser_i_children_eof2(value="PARSE006")
-                      Lit#parser_i_children_eof3(value="Expected '}' before end of input.")
-                      Lit#parser_i_children_eof4(value="parser")
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_children_eof")
+                      Lit(value="PARSE006")
+                      Lit(value="Expected '}' before end of input.")
+                      Lit(value="parser")
                     }
-                    Call#parser_c98b(target=parse.tokenNext) { Var#parser_v154b(name=nextToken) }
+                    Call(target=parse.tokenNext) { Var(name=nextToken) }
                   }
                 }
               }
-              Block#parser_b78b {
-                Let#parser_l50(name=childResult) {
-                  Call#parser_c99(target=parse.parseNodeAt) {
-                    Var#parser_v155(name=text)
-                    Var#parser_v156(name=index)
+              Block {
+                Let(name=childResult) {
+                  Call(target=parse.parseNodeAt) {
+                    Var(name=text)
+                    Var(name=index)
                   }
                 }
-                If#parser_if_child_err1 {
-                  Eq#parser_e_child_err1 {
-                    NodeKind#parser_nk_child_err1 {
-                      Call#parser_c_child_err1(target=parse.resultNode) { Var#parser_v_child_err1(name=childResult) }
+                If {
+                  Eq {
+                    NodeKind {
+                      Call(target=parse.resultNode) { Var(name=childResult) }
                     }
-                    Lit#parser_i_child_err1(value="Err")
+                    Lit(value="Err")
                   }
-                  Block#parser_b_child_err1 { Return#parser_r_child_err1 { Var#parser_v_child_err2(name=childResult) } }
-                  Block#parser_b_child_ok1 {
-                    Return#parser_r50 {
-                      Call#parser_c100(target=parse.parseChildrenInto) {
-                        Var#parser_v157(name=text)
-                        Call#parser_c101(target=parse.resultNext) { Var#parser_v158(name=childResult) }
-                        AppendChild#parser_ap6 {
-                          Var#parser_v159(name=parent)
-                          Call#parser_c102(target=parse.resultNode) { Var#parser_v160(name=childResult) }
+                  Block { Return { Var(name=childResult) } }
+                  Block {
+                    Return {
+                      Call(target=parse.parseChildrenInto) {
+                        Var(name=text)
+                        Call(target=parse.resultNext) { Var(name=childResult) }
+                        AppendChild {
+                          Var(name=parent)
+                          Call(target=parse.resultNode) { Var(name=childResult) }
                         }
                       }
                     }
@@ -1419,14 +1419,14 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l51(name=parse.parseNode) {
-    Fn#parser_f23(params=text) {
-      Block#parser_b79 {
-        Return#parser_r51 {
-          Call#parser_c103(target=parse.resultNode) {
-            Call#parser_c104(target=parse.parseNodeAt) {
-              Var#parser_v161(name=text)
-              Lit#parser_i91(value=0)
+  Let(name=parse.parseNode) {
+    Fn(params=text) {
+      Block {
+        Return {
+          Call(target=parse.resultNode) {
+            Call(target=parse.parseNodeAt) {
+              Var(name=text)
+              Lit(value=0)
             }
           }
         }
@@ -1434,48 +1434,48 @@ Program#parser_p1 {
     }
   }
 
-  Let#parser_l52(name=parse.parseDocument) {
-    Fn#parser_f24(params=text) {
-      Block#parser_b80 {
-        Let#parser_l53(name=rootResult) {
-          Call#parser_c105(target=parse.parseNodeAt) {
-            Var#parser_v162(name=text)
-            Lit#parser_i92(value=0)
+  Let(name=parse.parseDocument) {
+    Fn(params=text) {
+      Block {
+        Let(name=rootResult) {
+          Call(target=parse.parseNodeAt) {
+            Var(name=text)
+            Lit(value=0)
           }
         }
-        Let#parser_l54(name=rootNode) {
-          Call#parser_c106(target=parse.resultNode) {
-            Var#parser_v163(name=rootResult)
+        Let(name=rootNode) {
+          Call(target=parse.resultNode) {
+            Var(name=rootResult)
           }
         }
-        If#parser_if_doc1 {
-          Eq#parser_e_doc1 {
-            NodeKind#parser_nk_doc1 { Var#parser_v164(name=rootNode) }
-            Lit#parser_i_doc1(value="Err")
+        If {
+          Eq {
+            NodeKind { Var(name=rootNode) }
+            Lit(value="Err")
           }
-          Block#parser_b_doc1 { Return#parser_r_doc1 { Var#parser_v165(name=rootNode) } }
-          Block#parser_b_doc2 {
-            Let#parser_l55(name=afterRootToken) {
-              Call#parser_c107(target=parse.nextToken) {
-                Var#parser_v166(name=text)
-                Call#parser_c108(target=parse.resultNext) {
-                  Var#parser_v167(name=rootResult)
+          Block { Return { Var(name=rootNode) } }
+          Block {
+            Let(name=afterRootToken) {
+              Call(target=parse.nextToken) {
+                Var(name=text)
+                Call(target=parse.resultNext) {
+                  Var(name=rootResult)
                 }
               }
             }
-            If#parser_if_doc2 {
-              Eq#parser_e_doc2 {
-                Call#parser_c109(target=parse.tokenKind) { Var#parser_v168(name=afterRootToken) }
-                Lit#parser_i_doc2(value="eof")
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=afterRootToken) }
+                Lit(value="eof")
               }
-              Block#parser_b_doc3 { Return#parser_r_doc2 { Var#parser_v169(name=rootNode) } }
-              Block#parser_b_doc4 {
-                Return#parser_r_doc3 {
-                  MakeErr#parser_me_doc1 {
-                    Lit#parser_i_doc3(value="parse_trailing_input")
-                    Lit#parser_i_doc4(value="PARSE009")
-                    Lit#parser_i_doc5(value="Unexpected trailing input after root node.")
-                    Lit#parser_i_doc6(value="parser")
+              Block { Return { Var(name=rootNode) } }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="parse_trailing_input")
+                    Lit(value="PARSE009")
+                    Lit(value="Unexpected trailing input after root node.")
+                    Lit(value="parser")
                   }
                 }
               }
@@ -1486,31 +1486,31 @@ Program#parser_p1 {
     }
   }
 
-  Export#parser_e1(name=parse.charAt)
-  Export#parser_e2(name=parse.isWhitespace)
-  Export#parser_e3(name=parse.skipWhitespace)
-  Export#parser_e4(name=parse.isDelimiter)
-  Export#parser_e5(name=parse.readNameEnd)
-  Export#parser_e6(name=parse.readNameText)
-  Export#parser_e7(name=parse.readStringEnd)
-  Export#parser_e8(name=parse.readStringText)
-  Export#parser_e9(name=parse.decodeEscape)
-  Export#parser_e10(name=parse.makeToken)
-  Export#parser_e11(name=parse.tokenKind)
-  Export#parser_e12(name=parse.tokenValue)
-  Export#parser_e13(name=parse.tokenNext)
-  Export#parser_e14(name=parse.nextToken)
-  Export#parser_e15(name=parse.parseEmptyNode)
-  Export#parser_e16(name=parse.parseNodeWithNameAttr)
-  Export#parser_e17(name=parse.makeAttrLit)
-  Export#parser_e18(name=parse.isIntToken)
-  Export#parser_e19(name=parse.isDigit)
-  Export#parser_e20(name=parse.digitValue)
-  Export#parser_e21(name=parse.mul10)
-  Export#parser_e22(name=parse.parseIntText)
-  Export#parser_e23(name=parse.negateInt)
-  Export#parser_e24(name=parse.parseIntToken)
-  Export#parser_e26(name=parse.parseProgramWithOneChild)
-  Export#parser_e34(name=parse.parseNode)
-  Export#parser_e35(name=parse.parseDocument)
+  Export(name=parse.charAt)
+  Export(name=parse.isWhitespace)
+  Export(name=parse.skipWhitespace)
+  Export(name=parse.isDelimiter)
+  Export(name=parse.readNameEnd)
+  Export(name=parse.readNameText)
+  Export(name=parse.readStringEnd)
+  Export(name=parse.readStringText)
+  Export(name=parse.decodeEscape)
+  Export(name=parse.makeToken)
+  Export(name=parse.tokenKind)
+  Export(name=parse.tokenValue)
+  Export(name=parse.tokenNext)
+  Export(name=parse.nextToken)
+  Export(name=parse.parseEmptyNode)
+  Export(name=parse.parseNodeWithNameAttr)
+  Export(name=parse.makeAttrLit)
+  Export(name=parse.isIntToken)
+  Export(name=parse.isDigit)
+  Export(name=parse.digitValue)
+  Export(name=parse.mul10)
+  Export(name=parse.parseIntText)
+  Export(name=parse.negateInt)
+  Export(name=parse.parseIntToken)
+  Export(name=parse.parseProgramWithOneChild)
+  Export(name=parse.parseNode)
+  Export(name=parse.parseDocument)
 }

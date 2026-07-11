@@ -1,210 +1,191 @@
-Program#std_core_p1 {
-  Let#std_core_l0(name=equals) {
-    Fn#std_core_f0(params=a,b) {
-      Block#std_core_b0 {
-        Return#std_core_r0 {
-          Eq#std_core_eq0 { Var#std_core_v0a(name=a) Var#std_core_v0b(name=b) }
+Program {
+  Let(name=equals) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Eq { Var(name=a) Var(name=b) }
         }
       }
     }
   }
 
-  Let#std_core_l1(name=assert) {
-    Fn#std_core_f1(params=condition,code,message) {
-      Block#std_core_b1 {
-        Call#std_core_c1(target=sys.debug.assert) {
-          Var#std_core_v1(name=condition)
-          Var#std_core_v2(name=code)
-          Var#std_core_v3(name=message)
+  Let(name=assert) {
+    Fn(params=condition,code,message) {
+      Block {
+        Call(target=sys.debug.assert) {
+          Var(name=condition)
+          Var(name=code)
+          Var(name=message)
         }
-        Return#std_core_r1 { Var#std_core_v4(name=condition) }
+        Return { Var(name=condition) }
       }
     }
   }
 
-  Let#std_core_l2(name=resultOkString) {
-    Fn#std_core_f2(params=value) {
-      Block#std_core_b2 {
-        Let#std_core_l3(name=base) { MakeBlock#std_core_mb1 { Lit#std_core_i1(value="result") } }
-        Let#std_core_l4(name=withOk) {
-          AppendChild#std_core_ap1 {
-            Var#std_core_v5(name=base)
-            MakeLitBool#std_core_mlb1 { Lit#std_core_i2(value="ok") Lit#std_core_i3(value=true) }
+  Let(name=resultOkString) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
           }
         }
-        Return#std_core_r2 {
-          AppendChild#std_core_ap2 {
-            Var#std_core_v6(name=withOk)
-            MakeLitString#std_core_mls1 { Lit#std_core_i4(value="value") Var#std_core_v7(name=value) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l22(name=resultOkInt) {
-    Fn#std_core_f14(params=value) {
-      Block#std_core_b18 {
-        Let#std_core_l23(name=base) { MakeBlock#std_core_mb6 { Lit#std_core_i25(value="result") } }
-        Let#std_core_l24(name=withOk) {
-          AppendChild#std_core_ap12 {
-            Var#std_core_v35(name=base)
-            MakeLitBool#std_core_mlb6 { Lit#std_core_i26(value="ok") Lit#std_core_i27(value=true) }
-          }
-        }
-        Return#std_core_r16 {
-          AppendChild#std_core_ap13 {
-            Var#std_core_v36(name=withOk)
-            MakeLitInt#std_core_mli2 { Lit#std_core_i28(value="value") Var#std_core_v37(name=value) }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitString { Lit(value="value") Var(name=value) }
           }
         }
       }
     }
   }
 
-  Let#std_core_l25(name=resultOkBool) {
-    Fn#std_core_f15(params=value) {
-      Block#std_core_b19 {
-        Let#std_core_l26(name=base) { MakeBlock#std_core_mb7 { Lit#std_core_i29(value="result") } }
-        Let#std_core_l27(name=withOk) {
-          AppendChild#std_core_ap14 {
-            Var#std_core_v38(name=base)
-            MakeLitBool#std_core_mlb7 { Lit#std_core_i30(value="ok") Lit#std_core_i31(value=true) }
+  Let(name=resultOkInt) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
           }
         }
-        Return#std_core_r17 {
-          AppendChild#std_core_ap15 {
-            Var#std_core_v39(name=withOk)
-            MakeLitBool#std_core_mlb8 { Lit#std_core_i32(value="value") Var#std_core_v40(name=value) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l30(name=resultOkNode) {
-    Fn#std_core_f18(params=valueNode) {
-      Block#std_core_b26 {
-        Let#std_core_l31(name=base) { MakeBlock#std_core_mb8 { Lit#std_core_i37(value="result") } }
-        Let#std_core_l32(name=withOk) {
-          AppendChild#std_core_ap16 {
-            Var#std_core_v47(name=base)
-            MakeLitBool#std_core_mlb9 { Lit#std_core_i38(value="ok") Lit#std_core_i39(value=true) }
-          }
-        }
-        Return#std_core_r22 { AppendChild#std_core_ap17 { Var#std_core_v48(name=withOk) Var#std_core_v49(name=valueNode) } }
-      }
-    }
-  }
-
-  Let#std_core_l30a(name=resultOkNull) {
-    Fn#std_core_f18a(params=_) {
-      Block#std_core_b26a {
-        Let#std_core_l31a(name=base) { MakeBlock#std_core_mb8a { Lit#std_core_i37a(value="result") } }
-        Let#std_core_l32a(name=withOk) {
-          AppendChild#std_core_ap17a {
-            Var#std_core_v49a(name=base)
-            MakeLitBool#std_core_mlb9a { Lit#std_core_i38a(value="ok") Lit#std_core_i39a(value=true) }
-          }
-        }
-        Return#std_core_r22a {
-          AppendChild#std_core_ap17b {
-            Var#std_core_v49b(name=withOk)
-            Lit#std_core_i39b(value=null)
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitInt { Lit(value="value") Var(name=value) }
           }
         }
       }
     }
   }
 
-  Let#std_core_l5(name=resultErr) {
-    Fn#std_core_f3(params=code,message) {
-      Block#std_core_b3 {
-        Let#std_core_l6(name=base) { MakeBlock#std_core_mb2 { Lit#std_core_i5(value="result") } }
-        Let#std_core_l7(name=withOk) {
-          AppendChild#std_core_ap3 {
-            Var#std_core_v8(name=base)
-            MakeLitBool#std_core_mlb2 { Lit#std_core_i6(value="ok") Lit#std_core_i7(value=false) }
+  Let(name=resultOkBool) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
           }
         }
-        Let#std_core_l8(name=withCode) {
-          AppendChild#std_core_ap4 {
-            Var#std_core_v9(name=withOk)
-            MakeLitString#std_core_mls2 { Lit#std_core_i8(value="code") Var#std_core_v10(name=code) }
-          }
-        }
-        Return#std_core_r3 {
-          AppendChild#std_core_ap5 {
-            Var#std_core_v11(name=withCode)
-            MakeLitString#std_core_mls3 { Lit#std_core_i9(value="message") Var#std_core_v12(name=message) }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitBool { Lit(value="value") Var(name=value) }
           }
         }
       }
     }
   }
 
-  Let#std_core_l9(name=resultIsOk) {
-    Fn#std_core_f4(params=resultNode) {
-      Block#std_core_b4 {
-        Return#std_core_r4 {
-          AttrValueBool#std_core_avb1 {
-            ChildAt#std_core_ca1 { Var#std_core_v13(name=resultNode) Lit#std_core_i10(value=0) }
-            Lit#std_core_i11(value=0)
+  Let(name=resultOkNode) {
+    Fn(params=valueNode) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return { AppendChild { Var(name=withOk) Var(name=valueNode) } }
+      }
+    }
+  }
+
+  Let(name=resultOkNull) {
+    Fn(params=_) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            Lit(value=null)
           }
         }
       }
     }
   }
 
-  Let#std_core_l10(name=resultValueOr) {
-    Fn#std_core_f5(params=resultNode,fallback) {
-      Block#std_core_b5 {
-        If#std_core_if1 {
-          Call#std_core_c2(target=resultIsOk) { Var#std_core_v14(name=resultNode) }
-          Block#std_core_b6 {
-            Return#std_core_r5 {
-              AttrValueString#std_core_avs1 {
-                ChildAt#std_core_ca2 { Var#std_core_v15(name=resultNode) Lit#std_core_i12(value=1) }
-                Lit#std_core_i13(value=0)
+  Let(name=resultErr) {
+    Fn(params=code,message) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=false) }
+          }
+        }
+        Let(name=withCode) {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitString { Lit(value="code") Var(name=code) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withCode)
+            MakeLitString { Lit(value="message") Var(name=message) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultIsOk) {
+    Fn(params=resultNode) {
+      Block {
+        Return {
+          AttrValueBool {
+            ChildAt { Var(name=resultNode) Lit(value=0) }
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultValueOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=1) }
+                Lit(value=0)
               }
             }
           }
-          Block#std_core_b7 { Return#std_core_r6 { Var#std_core_v16(name=fallback) } }
+          Block { Return { Var(name=fallback) } }
         }
       }
     }
   }
 
-  Let#std_core_l28(name=resultCodeOr) {
-    Fn#std_core_f16(params=resultNode,fallback) {
-      Block#std_core_b20 {
-        If#std_core_if3 {
-          Call#std_core_c7(target=resultIsOk) { Var#std_core_v41(name=resultNode) }
-          Block#std_core_b21 { Return#std_core_r18 { Var#std_core_v42(name=fallback) } }
-          Block#std_core_b22 {
-            Return#std_core_r19 {
-              AttrValueString#std_core_avs3 {
-                ChildAt#std_core_ca5 { Var#std_core_v43(name=resultNode) Lit#std_core_i33(value=1) }
-                Lit#std_core_i34(value=0)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l29(name=resultMessageOr) {
-    Fn#std_core_f17(params=resultNode,fallback) {
-      Block#std_core_b23 {
-        If#std_core_if4 {
-          Call#std_core_c8(target=resultIsOk) { Var#std_core_v44(name=resultNode) }
-          Block#std_core_b24 { Return#std_core_r20 { Var#std_core_v45(name=fallback) } }
-          Block#std_core_b25 {
-            Return#std_core_r21 {
-              AttrValueString#std_core_avs4 {
-                ChildAt#std_core_ca6 { Var#std_core_v46(name=resultNode) Lit#std_core_i35(value=2) }
-                Lit#std_core_i36(value=0)
+  Let(name=resultCodeOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=1) }
+                Lit(value=0)
               }
             }
           }
@@ -213,194 +194,213 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l33(name=resultNodeOr) {
-    Fn#std_core_f19(params=resultNode,fallback) {
-      Block#std_core_b27 {
-        If#std_core_if5 {
-          Call#std_core_c9(target=resultIsOk) { Var#std_core_v50(name=resultNode) }
-          Block#std_core_b28 { Return#std_core_r23 { ChildAt#std_core_ca7 { Var#std_core_v51(name=resultNode) Lit#std_core_i40(value=1) } } }
-          Block#std_core_b29 { Return#std_core_r24 { Var#std_core_v52(name=fallback) } }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l11(name=optionSomeString) {
-    Fn#std_core_f6(params=value) {
-      Block#std_core_b8 {
-        Let#std_core_l12(name=base) { MakeBlock#std_core_mb3 { Lit#std_core_i14(value="option") } }
-        Let#std_core_l13(name=withHas) {
-          AppendChild#std_core_ap6 {
-            Var#std_core_v17(name=base)
-            MakeLitBool#std_core_mlb3 { Lit#std_core_i15(value="has") Lit#std_core_i16(value=true) }
-          }
-        }
-        Return#std_core_r7 {
-          AppendChild#std_core_ap7 {
-            Var#std_core_v18(name=withHas)
-            MakeLitString#std_core_mls4 { Lit#std_core_i17(value="value") Var#std_core_v19(name=value) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l14(name=optionNone) {
-    Fn#std_core_f7(params=_) {
-      Block#std_core_b9 {
-        Let#std_core_l15(name=base) { MakeBlock#std_core_mb4 { Lit#std_core_i18(value="option") } }
-        Return#std_core_r8 {
-          AppendChild#std_core_ap8 {
-            Var#std_core_v20(name=base)
-            MakeLitBool#std_core_mlb4 { Lit#std_core_i19(value="has") Lit#std_core_i20(value=false) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l16(name=optionHas) {
-    Fn#std_core_f8(params=optionNode) {
-      Block#std_core_b10 {
-        Return#std_core_r9 {
-          AttrValueBool#std_core_avb2 {
-            ChildAt#std_core_ca3 { Var#std_core_v21(name=optionNode) Lit#std_core_i21(value=0) }
-            Lit#std_core_i22(value=0)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l17(name=optionValueOr) {
-    Fn#std_core_f9(params=optionNode,fallback) {
-      Block#std_core_b11 {
-        If#std_core_if2 {
-          Call#std_core_c3(target=optionHas) { Var#std_core_v22(name=optionNode) }
-          Block#std_core_b12 {
-            Return#std_core_r10 {
-              AttrValueString#std_core_avs2 {
-                ChildAt#std_core_ca4 { Var#std_core_v23(name=optionNode) Lit#std_core_i23(value=1) }
-                Lit#std_core_i24(value=0)
+  Let(name=resultMessageOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=2) }
+                Lit(value=0)
               }
             }
           }
-          Block#std_core_b13 { Return#std_core_r11 { Var#std_core_v24(name=fallback) } }
         }
       }
     }
   }
 
-  Let#std_core_l18(name=nodeEmpty) {
-    Fn#std_core_f10(params=kind) {
-      Block#std_core_b14 { Return#std_core_r12 { MakeBlock#std_core_mb5 { Var#std_core_v25(name=kind) } } }
+  Let(name=resultNodeOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { ChildAt { Var(name=resultNode) Lit(value=1) } } }
+          Block { Return { Var(name=fallback) } }
+        }
+      }
     }
   }
 
-  Let#std_core_l19(name=nodeWithString) {
-    Fn#std_core_f11(params=kind,key,value) {
-      Block#std_core_b15 {
-        Return#std_core_r13 {
-          AppendChild#std_core_ap9 {
-            Call#std_core_c4(target=nodeEmpty) { Var#std_core_v26(name=kind) }
-            MakeLitString#std_core_mls5 {
-              Var#std_core_v27(name=key)
-              Var#std_core_v28(name=value)
-            }
+  Let(name=optionSomeString) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="option") } }
+        Let(name=withHas) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="has") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withHas)
+            MakeLitString { Lit(value="value") Var(name=value) }
           }
         }
       }
     }
   }
 
-  Let#std_core_l20(name=nodeWithInt) {
-    Fn#std_core_f12(params=kind,key,value) {
-      Block#std_core_b16 {
-        Return#std_core_r14 {
-          AppendChild#std_core_ap10 {
-            Call#std_core_c5(target=nodeEmpty) { Var#std_core_v29(name=kind) }
-            MakeLitInt#std_core_mli1 {
-              Var#std_core_v30(name=key)
-              Var#std_core_v31(name=value)
-            }
+  Let(name=optionNone) {
+    Fn(params=_) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="option") } }
+        Return {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="has") Lit(value=false) }
           }
         }
       }
     }
   }
 
-  Let#std_core_l21(name=nodeWithBool) {
-    Fn#std_core_f13(params=kind,key,value) {
-      Block#std_core_b17 {
-        Return#std_core_r15 {
-          AppendChild#std_core_ap11 {
-            Call#std_core_c6(target=nodeEmpty) { Var#std_core_v32(name=kind) }
-            MakeLitBool#std_core_mlb5 {
-              Var#std_core_v33(name=key)
-              Var#std_core_v34(name=value)
-            }
+  Let(name=optionHas) {
+    Fn(params=optionNode) {
+      Block {
+        Return {
+          AttrValueBool {
+            ChildAt { Var(name=optionNode) Lit(value=0) }
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#std_core_l34(name=mapFieldKey) {
-    Fn#std_core_f20(params=field) {
-      Block#std_core_b30 {
-        Return#std_core_r25 {
-          AttrValueString#std_core_avs5 {
-            Var#std_core_v53(name=field)
-            Lit#std_core_i41(value=0)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l35(name=mapFieldValue) {
-    Fn#std_core_f21(params=field) {
-      Block#std_core_b31 {
-        Return#std_core_r26 {
-          ChildAt#std_core_ca8 {
-            Var#std_core_v54(name=field)
-            Lit#std_core_i42(value=0)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_core_l36(name=mapHasAt) {
-    Fn#std_core_f22(params=mapNode,key,index) {
-      Block#std_core_b32 {
-        If#std_core_if6 {
-          Eq#std_core_eq1 {
-            Var#std_core_v55(name=index)
-            ChildCount#std_core_cc1 { Var#std_core_v56(name=mapNode) }
-          }
-          Block#std_core_b33 { Return#std_core_r27 { Lit#std_core_i43(value=false) } }
-          Block#std_core_b34 {
-            Let#std_core_l37(name=field) {
-              ChildAt#std_core_ca9 {
-                Var#std_core_v57(name=mapNode)
-                Var#std_core_v58(name=index)
+  Let(name=optionValueOr) {
+    Fn(params=optionNode,fallback) {
+      Block {
+        If {
+          Call(target=optionHas) { Var(name=optionNode) }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=optionNode) Lit(value=1) }
+                Lit(value=0)
               }
             }
-            If#std_core_if7 {
-              Eq#std_core_eq2 {
-                Call#std_core_c10(target=mapFieldKey) { Var#std_core_v59(name=field) }
-                Var#std_core_v60(name=key)
+          }
+          Block { Return { Var(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeEmpty) {
+    Fn(params=kind) {
+      Block { Return { MakeBlock { Var(name=kind) } } }
+    }
+  }
+
+  Let(name=nodeWithString) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitString {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeWithInt) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitInt {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeWithBool) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitBool {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapFieldKey) {
+    Fn(params=field) {
+      Block {
+        Return {
+          AttrValueString {
+            Var(name=field)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapFieldValue) {
+    Fn(params=field) {
+      Block {
+        Return {
+          ChildAt {
+            Var(name=field)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapHasAt) {
+    Fn(params=mapNode,key,index) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
-              Block#std_core_b35 { Return#std_core_r28 { Lit#std_core_i44(value=true) } }
-              Block#std_core_b36 {
-                Return#std_core_r29 {
-                  Call#std_core_c11(target=mapHasAt) {
-                    Var#std_core_v61(name=mapNode)
-                    Var#std_core_v62(name=key)
-                    Add#std_core_a1 {
-                      Var#std_core_v63(name=index)
-                      Lit#std_core_i45(value=1)
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=mapHasAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
                   }
                 }
@@ -412,54 +412,54 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l38(name=mapHas) {
-    Fn#std_core_f23(params=mapNode,key) {
-      Block#std_core_b37 {
-        Return#std_core_r30 {
-          Call#std_core_c12(target=mapHasAt) {
-            Var#std_core_v64(name=mapNode)
-            Var#std_core_v65(name=key)
-            Lit#std_core_i46(value=0)
+  Let(name=mapHas) {
+    Fn(params=mapNode,key) {
+      Block {
+        Return {
+          Call(target=mapHasAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#std_core_l39(name=mapGetNodeOrAt) {
-    Fn#std_core_f24(params=mapNode,key,index,fallback) {
-      Block#std_core_b38 {
-        If#std_core_if8 {
-          Eq#std_core_eq3 {
-            Var#std_core_v66(name=index)
-            ChildCount#std_core_cc2 { Var#std_core_v67(name=mapNode) }
+  Let(name=mapGetNodeOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
           }
-          Block#std_core_b39 { Return#std_core_r31 { Var#std_core_v68(name=fallback) } }
-          Block#std_core_b40 {
-            Let#std_core_l40(name=field) {
-              ChildAt#std_core_ca10 {
-                Var#std_core_v69(name=mapNode)
-                Var#std_core_v70(name=index)
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
             }
-            If#std_core_if9 {
-              Eq#std_core_eq4 {
-                Call#std_core_c13(target=mapFieldKey) { Var#std_core_v71(name=field) }
-                Var#std_core_v72(name=key)
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
               }
-              Block#std_core_b41 {
-                Return#std_core_r32 { Call#std_core_c14(target=mapFieldValue) { Var#std_core_v73(name=field) } }
+              Block {
+                Return { Call(target=mapFieldValue) { Var(name=field) } }
               }
-              Block#std_core_b42 {
-                Return#std_core_r33 {
-                  Call#std_core_c15(target=mapGetNodeOrAt) {
-                    Var#std_core_v74(name=mapNode)
-                    Var#std_core_v75(name=key)
-                    Add#std_core_a2 {
-                      Var#std_core_v76(name=index)
-                      Lit#std_core_i47(value=1)
+              Block {
+                Return {
+                  Call(target=mapGetNodeOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    Var#std_core_v77(name=fallback)
+                    Var(name=fallback)
                   }
                 }
               }
@@ -470,75 +470,75 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l41(name=mapGetNodeOr) {
-    Fn#std_core_f25(params=mapNode,key,fallback) {
-      Block#std_core_b43 {
-        Return#std_core_r34 {
-          Call#std_core_c16(target=mapGetNodeOrAt) {
-            Var#std_core_v78(name=mapNode)
-            Var#std_core_v79(name=key)
-            Lit#std_core_i48(value=0)
-            Var#std_core_v80(name=fallback)
+  Let(name=mapGetNodeOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetNodeOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l42(name=mapGetStringOrAt) {
-    Fn#std_core_f26(params=mapNode,key,index,fallback) {
-      Block#std_core_b44 {
-        If#std_core_if10 {
-          Eq#std_core_eq5 {
-            Var#std_core_v81(name=index)
-            ChildCount#std_core_cc3 { Var#std_core_v82(name=mapNode) }
+  Let(name=mapGetStringOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
           }
-          Block#std_core_b45 { Return#std_core_r35 { Var#std_core_v83(name=fallback) } }
-          Block#std_core_b46 {
-            Let#std_core_l43(name=field) {
-              ChildAt#std_core_ca11 {
-                Var#std_core_v84(name=mapNode)
-                Var#std_core_v85(name=index)
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
             }
-            If#std_core_if11 {
-              Eq#std_core_eq6 {
-                Call#std_core_c17(target=mapFieldKey) { Var#std_core_v86(name=field) }
-                Var#std_core_v87(name=key)
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
               }
-              Block#std_core_b47 {
-                Let#std_core_l54(name=valueNode) {
-                  Call#std_core_c18(target=mapFieldValue) { Var#std_core_v88(name=field) }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
                 }
-                If#std_core_if19 {
-                  Eq#std_core_eq13 {
-                    AttrValueKind#std_core_avk1 {
-                      Var#std_core_v154(name=valueNode)
-                      Lit#std_core_i49(value=0)
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
                     }
-                    Lit#std_core_i64(value="string")
+                    Lit(value="string")
                   }
-                  Block#std_core_b70 {
-                    Return#std_core_r36 {
-                      AttrValueString#std_core_avs6 {
-                        Var#std_core_v154(name=valueNode)
-                        Lit#std_core_i65(value=0)
+                  Block {
+                    Return {
+                      AttrValueString {
+                        Var(name=valueNode)
+                        Lit(value=0)
                       }
                     }
                   }
-                  Block#std_core_b71 { Return#std_core_r52 { Var#std_core_v83(name=fallback) } }
+                  Block { Return { Var(name=fallback) } }
                 }
               }
-              Block#std_core_b48 {
-                Return#std_core_r37 {
-                  Call#std_core_c19(target=mapGetStringOrAt) {
-                    Var#std_core_v89(name=mapNode)
-                    Var#std_core_v90(name=key)
-                    Add#std_core_a3 {
-                      Var#std_core_v91(name=index)
-                      Lit#std_core_i50(value=1)
+              Block {
+                Return {
+                  Call(target=mapGetStringOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    Var#std_core_v92(name=fallback)
+                    Var(name=fallback)
                   }
                 }
               }
@@ -549,75 +549,75 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l44(name=mapGetStringOr) {
-    Fn#std_core_f27(params=mapNode,key,fallback) {
-      Block#std_core_b49 {
-        Return#std_core_r38 {
-          Call#std_core_c20(target=mapGetStringOrAt) {
-            Var#std_core_v93(name=mapNode)
-            Var#std_core_v94(name=key)
-            Lit#std_core_i51(value=0)
-            Var#std_core_v95(name=fallback)
+  Let(name=mapGetStringOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetStringOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l45(name=mapGetIntOrAt) {
-    Fn#std_core_f28(params=mapNode,key,index,fallback) {
-      Block#std_core_b50 {
-        If#std_core_if12 {
-          Eq#std_core_eq7 {
-            Var#std_core_v96(name=index)
-            ChildCount#std_core_cc4 { Var#std_core_v97(name=mapNode) }
+  Let(name=mapGetIntOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
           }
-          Block#std_core_b51 { Return#std_core_r39 { Var#std_core_v98(name=fallback) } }
-          Block#std_core_b52 {
-            Let#std_core_l46(name=field) {
-              ChildAt#std_core_ca12 {
-                Var#std_core_v99(name=mapNode)
-                Var#std_core_v100(name=index)
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
             }
-            If#std_core_if13 {
-              Eq#std_core_eq8 {
-                Call#std_core_c21(target=mapFieldKey) { Var#std_core_v101(name=field) }
-                Var#std_core_v102(name=key)
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
               }
-              Block#std_core_b53 {
-                Let#std_core_l55(name=valueNode) {
-                  Call#std_core_c22(target=mapFieldValue) { Var#std_core_v103(name=field) }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
                 }
-                If#std_core_if20 {
-                  Eq#std_core_eq14 {
-                    AttrValueKind#std_core_avk2 {
-                      Var#std_core_v155(name=valueNode)
-                      Lit#std_core_i52(value=0)
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
                     }
-                    Lit#std_core_i66(value="int")
+                    Lit(value="int")
                   }
-                  Block#std_core_b72 {
-                    Return#std_core_r40 {
-                      AttrValueInt#std_core_avi1 {
-                        Var#std_core_v155(name=valueNode)
-                        Lit#std_core_i67(value=0)
+                  Block {
+                    Return {
+                      AttrValueInt {
+                        Var(name=valueNode)
+                        Lit(value=0)
                       }
                     }
                   }
-                  Block#std_core_b73 { Return#std_core_r53 { Var#std_core_v98(name=fallback) } }
+                  Block { Return { Var(name=fallback) } }
                 }
               }
-              Block#std_core_b54 {
-                Return#std_core_r41 {
-                  Call#std_core_c23(target=mapGetIntOrAt) {
-                    Var#std_core_v104(name=mapNode)
-                    Var#std_core_v105(name=key)
-                    Add#std_core_a4 {
-                      Var#std_core_v106(name=index)
-                      Lit#std_core_i53(value=1)
+              Block {
+                Return {
+                  Call(target=mapGetIntOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    Var#std_core_v107(name=fallback)
+                    Var(name=fallback)
                   }
                 }
               }
@@ -628,75 +628,75 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l47(name=mapGetIntOr) {
-    Fn#std_core_f29(params=mapNode,key,fallback) {
-      Block#std_core_b55 {
-        Return#std_core_r42 {
-          Call#std_core_c24(target=mapGetIntOrAt) {
-            Var#std_core_v108(name=mapNode)
-            Var#std_core_v109(name=key)
-            Lit#std_core_i54(value=0)
-            Var#std_core_v110(name=fallback)
+  Let(name=mapGetIntOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetIntOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l48(name=mapGetBoolOrAt) {
-    Fn#std_core_f30(params=mapNode,key,index,fallback) {
-      Block#std_core_b56 {
-        If#std_core_if14 {
-          Eq#std_core_eq9 {
-            Var#std_core_v111(name=index)
-            ChildCount#std_core_cc5 { Var#std_core_v112(name=mapNode) }
+  Let(name=mapGetBoolOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
           }
-          Block#std_core_b57 { Return#std_core_r43 { Var#std_core_v113(name=fallback) } }
-          Block#std_core_b58 {
-            Let#std_core_l49(name=field) {
-              ChildAt#std_core_ca13 {
-                Var#std_core_v114(name=mapNode)
-                Var#std_core_v115(name=index)
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
             }
-            If#std_core_if15 {
-              Eq#std_core_eq10 {
-                Call#std_core_c25(target=mapFieldKey) { Var#std_core_v116(name=field) }
-                Var#std_core_v117(name=key)
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
               }
-              Block#std_core_b59 {
-                Let#std_core_l56(name=valueNode) {
-                  Call#std_core_c26(target=mapFieldValue) { Var#std_core_v118(name=field) }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
                 }
-                If#std_core_if21 {
-                  Eq#std_core_eq15 {
-                    AttrValueKind#std_core_avk3 {
-                      Var#std_core_v156(name=valueNode)
-                      Lit#std_core_i55(value=0)
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
                     }
-                    Lit#std_core_i68(value="bool")
+                    Lit(value="bool")
                   }
-                  Block#std_core_b74 {
-                    Return#std_core_r44 {
-                      AttrValueBool#std_core_avb3 {
-                        Var#std_core_v156(name=valueNode)
-                        Lit#std_core_i69(value=0)
+                  Block {
+                    Return {
+                      AttrValueBool {
+                        Var(name=valueNode)
+                        Lit(value=0)
                       }
                     }
                   }
-                  Block#std_core_b75 { Return#std_core_r54 { Var#std_core_v113(name=fallback) } }
+                  Block { Return { Var(name=fallback) } }
                 }
               }
-              Block#std_core_b60 {
-                Return#std_core_r45 {
-                  Call#std_core_c27(target=mapGetBoolOrAt) {
-                    Var#std_core_v119(name=mapNode)
-                    Var#std_core_v120(name=key)
-                    Add#std_core_a5 {
-                      Var#std_core_v121(name=index)
-                      Lit#std_core_i56(value=1)
+              Block {
+                Return {
+                  Call(target=mapGetBoolOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    Var#std_core_v122(name=fallback)
+                    Var(name=fallback)
                   }
                 }
               }
@@ -707,94 +707,94 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l50(name=mapGetBoolOr) {
-    Fn#std_core_f31(params=mapNode,key,fallback) {
-      Block#std_core_b61 {
-        Return#std_core_r46 {
-          Call#std_core_c28(target=mapGetBoolOrAt) {
-            Var#std_core_v123(name=mapNode)
-            Var#std_core_v124(name=key)
-            Lit#std_core_i57(value=0)
-            Var#std_core_v125(name=fallback)
+  Let(name=mapGetBoolOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetBoolOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l51(name=mapSetFold) {
-    Fn#std_core_f32(params=mapNode,key,value,index,acc,replaced) {
-      Block#std_core_b62 {
-        If#std_core_if16 {
-          Eq#std_core_eq11 {
-            Var#std_core_v126(name=index)
-            ChildCount#std_core_cc6 { Var#std_core_v127(name=mapNode) }
+  Let(name=mapSetFold) {
+    Fn(params=mapNode,key,value,index,acc,replaced) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
           }
-          Block#std_core_b63 {
-            If#std_core_if17 {
-              Var#std_core_v128(name=replaced)
-              Block#std_core_b64 { Return#std_core_r47 { Var#std_core_v129(name=acc) } }
-              Block#std_core_b65 {
-                Return#std_core_r48 {
-                  AppendChild#std_core_ap12 {
-                    Var#std_core_v130(name=acc)
-                    MakeFieldString#std_core_mfs1 {
-                      Var#std_core_v131(name=key)
-                      Var#std_core_v132(name=value)
+          Block {
+            If {
+              Var(name=replaced)
+              Block { Return { Var(name=acc) } }
+              Block {
+                Return {
+                  AppendChild {
+                    Var(name=acc)
+                    MakeFieldString {
+                      Var(name=key)
+                      Var(name=value)
                     }
                   }
                 }
               }
             }
           }
-          Block#std_core_b66 {
-            Let#std_core_l52(name=field) {
-              ChildAt#std_core_ca14 {
-                Var#std_core_v133(name=mapNode)
-                Var#std_core_v134(name=index)
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
               }
             }
-            If#std_core_if18 {
-              Eq#std_core_eq12 {
-                Call#std_core_c29(target=mapFieldKey) { Var#std_core_v135(name=field) }
-                Var#std_core_v136(name=key)
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
               }
-              Block#std_core_b67 {
-                Return#std_core_r49 {
-                  Call#std_core_c30(target=mapSetFold) {
-                    Var#std_core_v137(name=mapNode)
-                    Var#std_core_v138(name=key)
-                    Var#std_core_v139(name=value)
-                    Add#std_core_a6 {
-                      Var#std_core_v140(name=index)
-                      Lit#std_core_i58(value=1)
+              Block {
+                Return {
+                  Call(target=mapSetFold) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Var(name=value)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    AppendChild#std_core_ap13 {
-                      Var#std_core_v141(name=acc)
-                      MakeFieldString#std_core_mfs2 {
-                        Var#std_core_v142(name=key)
-                        Var#std_core_v143(name=value)
+                    AppendChild {
+                      Var(name=acc)
+                      MakeFieldString {
+                        Var(name=key)
+                        Var(name=value)
                       }
                     }
-                    Lit#std_core_i59(value=true)
+                    Lit(value=true)
                   }
                 }
               }
-              Block#std_core_b68 {
-                Return#std_core_r50 {
-                  Call#std_core_c31(target=mapSetFold) {
-                    Var#std_core_v144(name=mapNode)
-                    Var#std_core_v145(name=key)
-                    Var#std_core_v146(name=value)
-                    Add#std_core_a7 {
-                      Var#std_core_v147(name=index)
-                      Lit#std_core_i60(value=1)
+              Block {
+                Return {
+                  Call(target=mapSetFold) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Var(name=value)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
                     }
-                    AppendChild#std_core_ap14 {
-                      Var#std_core_v148(name=acc)
-                      Var#std_core_v149(name=field)
+                    AppendChild {
+                      Var(name=acc)
+                      Var(name=field)
                     }
-                    Var#std_core_v150(name=replaced)
+                    Var(name=replaced)
                   }
                 }
               }
@@ -805,158 +805,158 @@ Program#std_core_p1 {
     }
   }
 
-  Let#std_core_l53(name=mapSet) {
-    Fn#std_core_f33(params=mapNode,key,value) {
-      Block#std_core_b69 {
-        Return#std_core_r51 {
-          Call#std_core_c32(target=mapSetFold) {
-            Var#std_core_v151(name=mapNode)
-            Var#std_core_v152(name=key)
-            Var#std_core_v153(name=value)
-            Lit#std_core_i61(value=0)
-            MakeBlock#std_core_mb9 { Lit#std_core_i62(value="Map") }
-            Lit#std_core_i63(value=false)
+  Let(name=mapSet) {
+    Fn(params=mapNode,key,value) {
+      Block {
+        Return {
+          Call(target=mapSetFold) {
+            Var(name=mapNode)
+            Var(name=key)
+            Var(name=value)
+            Lit(value=0)
+            MakeBlock { Lit(value="Map") }
+            Lit(value=false)
           }
         }
       }
     }
   }
 
-  Let#std_core_l54(name=recordEmpty) {
-    Fn#std_core_f34(params=kind) {
-      Block#std_core_b70 {
-        Return#std_core_r52 {
-          Call#std_core_c33(target=nodeEmpty) {
-            Var#std_core_v154(name=kind)
+  Let(name=recordEmpty) {
+    Fn(params=kind) {
+      Block {
+        Return {
+          Call(target=nodeEmpty) {
+            Var(name=kind)
           }
         }
       }
     }
   }
 
-  Let#std_core_l55(name=recordHas) {
-    Fn#std_core_f35(params=recordNode,key) {
-      Block#std_core_b71 {
-        Return#std_core_r53 {
-          Call#std_core_c34(target=mapHas) {
-            Var#std_core_v155(name=recordNode)
-            Var#std_core_v156(name=key)
+  Let(name=recordHas) {
+    Fn(params=recordNode,key) {
+      Block {
+        Return {
+          Call(target=mapHas) {
+            Var(name=recordNode)
+            Var(name=key)
           }
         }
       }
     }
   }
 
-  Let#std_core_l56(name=recordGetNodeOr) {
-    Fn#std_core_f36(params=recordNode,key,fallback) {
-      Block#std_core_b72 {
-        Return#std_core_r54 {
-          Call#std_core_c35(target=mapGetNodeOr) {
-            Var#std_core_v157(name=recordNode)
-            Var#std_core_v158(name=key)
-            Var#std_core_v159(name=fallback)
+  Let(name=recordGetNodeOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetNodeOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l57(name=recordGetStringOr) {
-    Fn#std_core_f37(params=recordNode,key,fallback) {
-      Block#std_core_b73 {
-        Return#std_core_r55 {
-          Call#std_core_c36(target=mapGetStringOr) {
-            Var#std_core_v160(name=recordNode)
-            Var#std_core_v161(name=key)
-            Var#std_core_v162(name=fallback)
+  Let(name=recordGetStringOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l58(name=recordGetIntOr) {
-    Fn#std_core_f38(params=recordNode,key,fallback) {
-      Block#std_core_b74 {
-        Return#std_core_r56 {
-          Call#std_core_c37(target=mapGetIntOr) {
-            Var#std_core_v163(name=recordNode)
-            Var#std_core_v164(name=key)
-            Var#std_core_v165(name=fallback)
+  Let(name=recordGetIntOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l59(name=recordGetBoolOr) {
-    Fn#std_core_f39(params=recordNode,key,fallback) {
-      Block#std_core_b75 {
-        Return#std_core_r57 {
-          Call#std_core_c38(target=mapGetBoolOr) {
-            Var#std_core_v166(name=recordNode)
-            Var#std_core_v167(name=key)
-            Var#std_core_v168(name=fallback)
+  Let(name=recordGetBoolOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetBoolOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
           }
         }
       }
     }
   }
 
-  Let#std_core_l60(name=recordSet) {
-    Fn#std_core_f40(params=recordNode,key,value) {
-      Block#std_core_b76 {
-        Return#std_core_r58 {
-          Call#std_core_c39(target=mapSet) {
-            Var#std_core_v169(name=recordNode)
-            Var#std_core_v170(name=key)
-            Var#std_core_v171(name=value)
+  Let(name=recordSet) {
+    Fn(params=recordNode,key,value) {
+      Block {
+        Return {
+          Call(target=mapSet) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=value)
           }
         }
       }
     }
   }
 
-  Export#std_core_e0(name=equals)
-  Export#std_core_e1(name=assert)
-  Export#std_core_e2(name=resultOkString)
-  Export#std_core_e14(name=resultOkInt)
-  Export#std_core_e15(name=resultOkBool)
-  Export#std_core_e18(name=resultOkNode)
-  Export#std_core_e18a(name=resultOkNull)
-  Export#std_core_e3(name=resultErr)
-  Export#std_core_e4(name=resultIsOk)
-  Export#std_core_e5(name=resultValueOr)
-  Export#std_core_e16(name=resultCodeOr)
-  Export#std_core_e17(name=resultMessageOr)
-  Export#std_core_e19(name=resultNodeOr)
-  Export#std_core_e6(name=optionSomeString)
-  Export#std_core_e7(name=optionNone)
-  Export#std_core_e8(name=optionHas)
-  Export#std_core_e9(name=optionValueOr)
-  Export#std_core_e10(name=nodeEmpty)
-  Export#std_core_e11(name=nodeWithString)
-  Export#std_core_e12(name=nodeWithInt)
-  Export#std_core_e13(name=nodeWithBool)
-  Export#std_core_e20(name=mapFieldKey)
-  Export#std_core_e21(name=mapFieldValue)
-  Export#std_core_e22(name=mapHasAt)
-  Export#std_core_e23(name=mapHas)
-  Export#std_core_e24(name=mapGetNodeOrAt)
-  Export#std_core_e25(name=mapGetNodeOr)
-  Export#std_core_e26(name=mapGetStringOrAt)
-  Export#std_core_e27(name=mapGetStringOr)
-  Export#std_core_e28(name=mapGetIntOrAt)
-  Export#std_core_e29(name=mapGetIntOr)
-  Export#std_core_e30(name=mapGetBoolOrAt)
-  Export#std_core_e31(name=mapGetBoolOr)
-  Export#std_core_e32(name=mapSetFold)
-  Export#std_core_e33(name=mapSet)
-  Export#std_core_e34(name=recordEmpty)
-  Export#std_core_e35(name=recordHas)
-  Export#std_core_e36(name=recordGetNodeOr)
-  Export#std_core_e37(name=recordGetStringOr)
-  Export#std_core_e38(name=recordGetIntOr)
-  Export#std_core_e39(name=recordGetBoolOr)
-  Export#std_core_e40(name=recordSet)
+  Export(name=equals)
+  Export(name=assert)
+  Export(name=resultOkString)
+  Export(name=resultOkInt)
+  Export(name=resultOkBool)
+  Export(name=resultOkNode)
+  Export(name=resultOkNull)
+  Export(name=resultErr)
+  Export(name=resultIsOk)
+  Export(name=resultValueOr)
+  Export(name=resultCodeOr)
+  Export(name=resultMessageOr)
+  Export(name=resultNodeOr)
+  Export(name=optionSomeString)
+  Export(name=optionNone)
+  Export(name=optionHas)
+  Export(name=optionValueOr)
+  Export(name=nodeEmpty)
+  Export(name=nodeWithString)
+  Export(name=nodeWithInt)
+  Export(name=nodeWithBool)
+  Export(name=mapFieldKey)
+  Export(name=mapFieldValue)
+  Export(name=mapHasAt)
+  Export(name=mapHas)
+  Export(name=mapGetNodeOrAt)
+  Export(name=mapGetNodeOr)
+  Export(name=mapGetStringOrAt)
+  Export(name=mapGetStringOr)
+  Export(name=mapGetIntOrAt)
+  Export(name=mapGetIntOr)
+  Export(name=mapGetBoolOrAt)
+  Export(name=mapGetBoolOr)
+  Export(name=mapSetFold)
+  Export(name=mapSet)
+  Export(name=recordEmpty)
+  Export(name=recordHas)
+  Export(name=recordGetNodeOr)
+  Export(name=recordGetStringOr)
+  Export(name=recordGetIntOr)
+  Export(name=recordGetBoolOr)
+  Export(name=recordSet)
 }

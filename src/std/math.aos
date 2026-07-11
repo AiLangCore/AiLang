@@ -1,17 +1,17 @@
-Program#std_math_p1 {
-  Import#std_math_i1(path="./number.aos")
+Program {
+  Import(path="./number.aos")
 
-  Let#std_math_l1(name=halfFloor) {
-    Fn#std_math_f1(params=value,acc) {
-      Block#std_math_b1 {
-        If#std_math_if1 {
-          Call#std_math_c1(target=lt) { Var#std_math_v1(name=value) Lit#std_math_i1(value=2) }
-          Block#std_math_b2 { Return#std_math_r1 { Var#std_math_v2(name=acc) } }
-          Block#std_math_b3 {
-            Return#std_math_r2 {
-              Call#std_math_c2(target=halfFloor) {
-                Call#std_math_c3(target=sub) { Var#std_math_v3(name=value) Lit#std_math_i2(value=2) }
-                Call#std_math_c4(target=inc) { Var#std_math_v4(name=acc) }
+  Let(name=halfFloor) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Lit(value=2) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=halfFloor) {
+                Call(target=sub) { Var(name=value) Lit(value=2) }
+                Call(target=inc) { Var(name=acc) }
               }
             }
           }
@@ -20,18 +20,18 @@ Program#std_math_p1 {
     }
   }
 
-  Let#std_math_l2(name=divFloor) {
-    Fn#std_math_f2(params=value,step,acc) {
-      Block#std_math_b4 {
-        If#std_math_if2 {
-          Call#std_math_c5(target=lt) { Var#std_math_v5(name=value) Var#std_math_v6(name=step) }
-          Block#std_math_b5 { Return#std_math_r3 { Var#std_math_v7(name=acc) } }
-          Block#std_math_b6 {
-            Return#std_math_r4 {
-              Call#std_math_c6(target=divFloor) {
-                Call#std_math_c7(target=sub) { Var#std_math_v8(name=value) Var#std_math_v9(name=step) }
-                Var#std_math_v10(name=step)
-                Call#std_math_c8(target=inc) { Var#std_math_v11(name=acc) }
+  Let(name=divFloor) {
+    Fn(params=value,step,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=step) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=divFloor) {
+                Call(target=sub) { Var(name=value) Var(name=step) }
+                Var(name=step)
+                Call(target=inc) { Var(name=acc) }
               }
             }
           }
@@ -40,14 +40,14 @@ Program#std_math_p1 {
     }
   }
 
-  Let#std_math_l3(name=subAbs) {
-    Fn#std_math_f3(params=a,b) {
-      Block#std_math_b7 {
-        Return#std_math_r5 {
-          Call#std_math_c9(target=abs) {
-            Call#std_math_c10(target=sub) {
-              Var#std_math_v12(name=a)
-              Var#std_math_v13(name=b)
+  Let(name=subAbs) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Call(target=abs) {
+            Call(target=sub) {
+              Var(name=a)
+              Var(name=b)
             }
           }
         }
@@ -55,7 +55,7 @@ Program#std_math_p1 {
     }
   }
 
-  Export#std_math_e1(name=halfFloor)
-  Export#std_math_e2(name=divFloor)
-  Export#std_math_e3(name=subAbs)
+  Export(name=halfFloor)
+  Export(name=divFloor)
+  Export(name=subAbs)
 }

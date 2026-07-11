@@ -1,36 +1,36 @@
-Program#bootstrap_io_p1 {
-  Import#bootstrap_io_i1(path="../std/bytes.aos")
-  Export#bootstrap_io_e1(name=bootstrapIo.pathExists)
-  Export#bootstrap_io_e2(name=bootstrapIo.makeDir)
-  Export#bootstrap_io_e3(name=bootstrapIo.writeFile)
+Program {
+  Import(path="../std/bytes.aos")
+  Export(name=bootstrapIo.pathExists)
+  Export(name=bootstrapIo.makeDir)
+  Export(name=bootstrapIo.writeFile)
 
-  Let#bootstrap_io_l1(name=bootstrapIo.pathExists) {
-    Fn#bootstrap_io_f1(params=path) {
-      Block#bootstrap_io_b1 {
-        Return#bootstrap_io_r1 {
-          Call#bootstrap_io_c1(target=sys.fs.path.exists) { Var#bootstrap_io_v1(name=path) }
+  Let(name=bootstrapIo.pathExists) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
         }
       }
     }
   }
 
-  Let#bootstrap_io_l5(name=bootstrapIo.makeDir) {
-    Fn#bootstrap_io_f2(params=path) {
-      Block#bootstrap_io_b6 {
-        Return#bootstrap_io_r4 {
-          Call#bootstrap_io_c2(target=sys.fs.dir.create) { Var#bootstrap_io_v7(name=path) }
+  Let(name=bootstrapIo.makeDir) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=sys.fs.dir.create) { Var(name=path) }
         }
       }
     }
   }
 
-  Let#bootstrap_io_l8(name=bootstrapIo.writeFile) {
-    Fn#bootstrap_io_f3(params=path,text) {
-      Block#bootstrap_io_b9 {
-        Return#bootstrap_io_r6 {
-          Call#bootstrap_io_c3(target=sys.fs.file.write) {
-            Var#bootstrap_io_v11(name=path)
-            Call#bootstrap_io_c4(target=bytes.fromUtf8String) { Var#bootstrap_io_v12(name=text) }
+  Let(name=bootstrapIo.writeFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
           }
         }
       }

@@ -1,83 +1,83 @@
-Program#cli_targets_p1 {
-  Import#cli_im1(path="../std/str.aos")
-  Import#cli_im2(path="../std/bytes.aos")
+Program {
+  Import(path="../std/str.aos")
+  Import(path="../std/bytes.aos")
 
-  Export#cli_targets_e1(name=isPackageTarget)
-  Export#cli_targets_e2(name=targetPackageName)
-  Export#cli_targets_e3(name=targetDefaultRunner)
-  Export#cli_targets_e4(name=targetSupportsArtifactType)
-  Export#cli_targets_e5(name=targetRequiredTool)
-  Export#cli_targets_e6(name=targetRequiredCommand)
-  Export#cli_targets_e7(name=targetMissingRequirementDiagnostic)
-  Export#cli_targets_e8(name=resolveTargetRunner)
+  Export(name=isPackageTarget)
+  Export(name=targetPackageName)
+  Export(name=targetDefaultRunner)
+  Export(name=targetSupportsArtifactType)
+  Export(name=targetRequiredTool)
+  Export(name=targetRequiredCommand)
+  Export(name=targetMissingRequirementDiagnostic)
+  Export(name=resolveTargetRunner)
 
-  Let#cli_targets_l1(name=isPackageTarget) {
-    Fn#cli_targets_f1(params=target,projectPath) {
-      Block#cli_targets_b1 {
-        Let#cli_targets_l1_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc1 { Var#cli_targets_v1(name=projectPath) Lit#cli_targets_i1(value="/ailang.lock.toml") } }
-        If#cli_targets_if1 {
-          Call#cli_targets_c1(target=sys.fs.path.exists) { Var#cli_targets_v2(name=lockfilePath) }
-          Block#cli_targets_b2 {
-            Let#cli_targets_l1_lockfileText(name=lockfileText) { Call#cli_targets_c2(target=readTextFile) { Var#cli_targets_v3(name=lockfilePath) } }
-            Return#cli_targets_r1 { Call#cli_targets_c3(target=hasTarget) { Var#cli_targets_v4(name=lockfileText) Var#cli_targets_v5(name=target) } }
+  Let(name=isPackageTarget) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Return { Call(target=hasTarget) { Var(name=lockfileText) Var(name=target) } }
           }
-          Block#cli_targets_b3 { Return#cli_targets_r2 { Lit#cli_targets_i2(value=false) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l_hasTarget(name=hasTarget) {
-    Fn#cli_targets_f_hasTarget(params=text,target) {
-      Block#cli_targets_b_hasTarget {
-        Let#cli_targets_l_ht1(name=targetSection) { Call#cli_targets_c_ht1(target=findTargetSection) { Var#cli_targets_v_ht1(name=text) Var#cli_targets_v_ht2(name=target) } }
-        If#cli_targets_if_ht1 {
-          Eq#cli_targets_eq_ht1 { Var#cli_targets_v_ht3(name=targetSection) Lit#cli_targets_i_ht2(value="") }
-          Block#cli_targets_b_ht1 { Return#cli_targets_r_ht1 { Lit#cli_targets_i_ht3(value=false) } }
-          Block#cli_targets_b_ht2 { Return#cli_targets_r_ht3 { Lit#cli_targets_i_ht8(value=true) } }
+  Let(name=hasTarget) {
+    Fn(params=text,target) {
+      Block {
+        Let(name=targetSection) { Call(target=findTargetSection) { Var(name=text) Var(name=target) } }
+        If {
+          Eq { Var(name=targetSection) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l_findTargetSection(name=findTargetSection) {
-    Fn#cli_targets_f_findTargetSection(params=text,target) {
-      Block#cli_targets_b_findTargetSection {
-        Let#cli_targets_l_fts1(name=needle) { StrConcat#cli_targets_sc_fts1 { Lit#cli_targets_i_fts1(value="id = \"") Var#cli_targets_v_fts1(name=target) Lit#cli_targets_i_fts2(value="\"") } }
-        Let#cli_targets_l_fts2(name=aliasNeedle) { StrConcat#cli_targets_sc_fts2 { Lit#cli_targets_i_fts3(value="\"") Var#cli_targets_v_fts2(name=target) Lit#cli_targets_i_fts4(value="\"") } }
-        Let#cli_targets_l_fts3(name=section) { Call#cli_targets_c_fts1(target=findTargetSectionFrom) { Var#cli_targets_v_fts3(name=text) Var#cli_targets_v_fts4(name=needle) Var#cli_targets_v_fts5(name=aliasNeedle) Lit#cli_targets_i_fts5(value=0) } }
-        Return#cli_targets_r_fts1 { Var#cli_targets_v_fts6(name=section) }
+  Let(name=findTargetSection) {
+    Fn(params=text,target) {
+      Block {
+        Let(name=needle) { StrConcat { Lit(value="id = \"") Var(name=target) Lit(value="\"") } }
+        Let(name=aliasNeedle) { StrConcat { Lit(value="\"") Var(name=target) Lit(value="\"") } }
+        Let(name=section) { Call(target=findTargetSectionFrom) { Var(name=text) Var(name=needle) Var(name=aliasNeedle) Lit(value=0) } }
+        Return { Var(name=section) }
       }
     }
   }
 
-  Let#cli_targets_l_findTargetSectionFrom(name=findTargetSectionFrom) {
-    Fn#cli_targets_f_findTargetSectionFrom(params=text,needle,aliasNeedle,startIndex) {
-      Block#cli_targets_b_findTargetSectionFrom {
-        Let#cli_targets_l_ftsf1(name=start) { Call#cli_targets_c_ftsf1(target=find) { Var#cli_targets_v_ftsf1(name=text) Lit#cli_targets_i_ftsf1(value="[[target]]") Var#cli_targets_v_ftsf2(name=startIndex) } }
-        If#cli_targets_if_ftsf1 {
-          Eq#cli_targets_eq_ftsf1 { Var#cli_targets_v_ftsf3(name=start) Lit#cli_targets_i_ftsf2(value=-1) }
-          Block#cli_targets_b_ftsf1 { Return#cli_targets_r_ftsf1 { Lit#cli_targets_i_ftsf3(value="") } }
-          Block#cli_targets_b_ftsf2 {
-            Let#cli_targets_l_ftsf2(name=rest) { Call#cli_targets_c_ftsf2(target=substring) { Var#cli_targets_v_ftsf4(name=text) Var#cli_targets_v_ftsf5(name=start) Lit#cli_targets_i_ftsf4(value=2147483647) } }
-            Let#cli_targets_l_ftsf3(name=end) { Call#cli_targets_c_ftsf3(target=find) { Var#cli_targets_v_ftsf6(name=rest) Lit#cli_targets_i_ftsf5(value="\n[[") Lit#cli_targets_i_ftsf6(value=1) } }
-            Let#cli_targets_l_ftsf4(name=section) {
-              If#cli_targets_if_ftsf2 {
-                Eq#cli_targets_eq_ftsf2 { Var#cli_targets_v_ftsf7(name=end) Lit#cli_targets_i_ftsf7(value=-1) }
-                Block#cli_targets_b_ftsf3 { Return#cli_targets_r_ftsf2 { Var#cli_targets_v_ftsf8(name=rest) } }
-                Block#cli_targets_b_ftsf4 { Return#cli_targets_r_ftsf3 { Call#cli_targets_c_ftsf4(target=substring) { Var#cli_targets_v_ftsf9(name=rest) Lit#cli_targets_i_ftsf8(value=0) Var#cli_targets_v_ftsf10(name=end) } } }
+  Let(name=findTargetSectionFrom) {
+    Fn(params=text,needle,aliasNeedle,startIndex) {
+      Block {
+        Let(name=start) { Call(target=find) { Var(name=text) Lit(value="[[target]]") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=start) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=2147483647) } }
+            Let(name=end) { Call(target=find) { Var(name=rest) Lit(value="\n[[") Lit(value=1) } }
+            Let(name=section) {
+              If {
+                Eq { Var(name=end) Lit(value=-1) }
+                Block { Return { Var(name=rest) } }
+                Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
               }
             }
-            If#cli_targets_if_ftsf3 {
-              Call#cli_targets_c_ftsf5(target=targetSectionMatches) { Var#cli_targets_v_ftsf11(name=section) Var#cli_targets_v_ftsf12(name=needle) Var#cli_targets_v_ftsf13(name=aliasNeedle) }
-              Block#cli_targets_b_ftsf5 { Return#cli_targets_r_ftsf4 { Var#cli_targets_v_ftsf14(name=section) } }
-              Block#cli_targets_b_ftsf6 {
-                Return#cli_targets_r_ftsf5 {
-                  Call#cli_targets_c_ftsf6(target=findTargetSectionFrom) {
-                    Var#cli_targets_v_ftsf15(name=text)
-                    Var#cli_targets_v_ftsf16(name=needle)
-                    Var#cli_targets_v_ftsf17(name=aliasNeedle)
-                    Add#cli_targets_a_ftsf1 { Var#cli_targets_v_ftsf18(name=start) Lit#cli_targets_i_ftsf9(value=10) }
+            If {
+              Call(target=targetSectionMatches) { Var(name=section) Var(name=needle) Var(name=aliasNeedle) }
+              Block { Return { Var(name=section) } }
+              Block {
+                Return {
+                  Call(target=findTargetSectionFrom) {
+                    Var(name=text)
+                    Var(name=needle)
+                    Var(name=aliasNeedle)
+                    Add { Var(name=start) Lit(value=10) }
                   }
                 }
               }
@@ -88,17 +88,17 @@ Program#cli_targets_p1 {
     }
   }
 
-  Let#cli_targets_l_targetSectionMatches(name=targetSectionMatches) {
-    Fn#cli_targets_f_targetSectionMatches(params=section,needle,aliasNeedle) {
-      Block#cli_targets_b_targetSectionMatches {
-        If#cli_targets_if_tsm1 {
-          Call#cli_targets_c_tsm1(target=contains) { Var#cli_targets_v_tsm1(name=section) Var#cli_targets_v_tsm2(name=needle) }
-          Block#cli_targets_b_tsm1 { Return#cli_targets_r_tsm1 { Lit#cli_targets_i_tsm1(value=true) } }
-          Block#cli_targets_b_tsm2 {
-            Return#cli_targets_r_tsm2 {
-              Call#cli_targets_c_tsm2(target=contains) {
-                Call#cli_targets_c_tsm3(target=getValue) { Var#cli_targets_v_tsm3(name=section) Lit#cli_targets_i_tsm2(value="aliases") }
-                Var#cli_targets_v_tsm4(name=aliasNeedle)
+  Let(name=targetSectionMatches) {
+    Fn(params=section,needle,aliasNeedle) {
+      Block {
+        If {
+          Call(target=contains) { Var(name=section) Var(name=needle) }
+          Block { Return { Lit(value=true) } }
+          Block {
+            Return {
+              Call(target=contains) {
+                Call(target=getValue) { Var(name=section) Lit(value="aliases") }
+                Var(name=aliasNeedle)
               }
             }
           }
@@ -107,20 +107,20 @@ Program#cli_targets_p1 {
     }
   }
 
-  Let#cli_targets_l_findSection(name=findSection) {
-    Fn#cli_targets_f_findSection(params=text,sectionName) {
-      Block#cli_targets_b_findSection {
-        Let#cli_targets_l_fs1(name=start) { Call#cli_targets_c_fs1(target=find) { Var#cli_targets_v_fs1(name=text) Var#cli_targets_v_fs2(name=sectionName) Lit#cli_targets_i_fs1(value=0) } }
-        If#cli_targets_if_fs1 {
-          Eq#cli_targets_eq_fs1 { Var#cli_targets_v_fs3(name=start) Lit#cli_targets_i_fs2(value=-1) }
-          Block#cli_targets_b_fs1 { Return#cli_targets_r_fs1 { Lit#cli_targets_i_fs3(value="") } }
-          Block#cli_targets_b_fs2 {
-            Let#cli_targets_l_fs2(name=rest) { Call#cli_targets_c_fs2(target=substring) { Var#cli_targets_v_fs4(name=text) Var#cli_targets_v_fs5(name=start) Lit#cli_targets_i_fs4(value=2147483647) } }
-            Let#cli_targets_l_fs3(name=end) { Call#cli_targets_c_fs3(target=find) { Var#cli_targets_v_fs6(name=rest) Lit#cli_targets_i_fs5(value="\n[") Lit#cli_targets_i_fs6(value=1) } }
-            If#cli_targets_if_fs2 {
-              Eq#cli_targets_eq_fs2 { Var#cli_targets_v_fs7(name=end) Lit#cli_targets_i_fs7(value=-1) }
-              Block#cli_targets_b_fs3 { Return#cli_targets_r_fs2 { Var#cli_targets_v_fs8(name=rest) } }
-              Block#cli_targets_b_fs4 { Return#cli_targets_r_fs3 { Call#cli_targets_c_fs4(target=substring) { Var#cli_targets_v_fs9(name=rest) Lit#cli_targets_i_fs8(value=0) Var#cli_targets_v_fs10(name=end) } } }
+  Let(name=findSection) {
+    Fn(params=text,sectionName) {
+      Block {
+        Let(name=start) { Call(target=find) { Var(name=text) Var(name=sectionName) Lit(value=0) } }
+        If {
+          Eq { Var(name=start) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=2147483647) } }
+            Let(name=end) { Call(target=find) { Var(name=rest) Lit(value="\n[") Lit(value=1) } }
+            If {
+              Eq { Var(name=end) Lit(value=-1) }
+              Block { Return { Var(name=rest) } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
             }
           }
         }
@@ -128,33 +128,33 @@ Program#cli_targets_p1 {
     }
   }
 
-  Let#cli_targets_l_getValue(name=getValue) {
-    Fn#cli_targets_f_getValue(params=text,key) {
-      Block#cli_targets_b_getValue {
-        If#cli_targets_if_gv_aliases {
-          Eq#cli_targets_eq_gv_aliases { Var#cli_targets_v_gv_key(name=key) Lit#cli_targets_i_gv_aliases(value="aliases") }
-          Block#cli_targets_b_gv_aliases { Return#cli_targets_r_gv_aliases { Call#cli_targets_c_gv_aliases(target=getValueFixed) { Var#cli_targets_v_gv_text(name=text) Lit#cli_targets_i_gv_aliases_key(value="aliases") Lit#cli_targets_i_gv_aliases_len(value=10) } } }
-          Block#cli_targets_b_gv_package_check {
-            If#cli_targets_if_gv_package {
-              Eq#cli_targets_eq_gv_package { Var#cli_targets_v_gv_key2(name=key) Lit#cli_targets_i_gv_package(value="package") }
-              Block#cli_targets_b_gv_package { Return#cli_targets_r_gv_package { Call#cli_targets_c_gv_package(target=getValueFixed) { Var#cli_targets_v_gv_text2(name=text) Lit#cli_targets_i_gv_package_key(value="package") Lit#cli_targets_i_gv_package_len(value=10) } } }
-              Block#cli_targets_b_gv_runner_check {
-                If#cli_targets_if_gv_runner {
-                  Eq#cli_targets_eq_gv_runner { Var#cli_targets_v_gv_key3(name=key) Lit#cli_targets_i_gv_runner(value="defaultRunner") }
-                  Block#cli_targets_b_gv_runner { Return#cli_targets_r_gv_runner { Call#cli_targets_c_gv_runner(target=getValueFixed) { Var#cli_targets_v_gv_text3(name=text) Lit#cli_targets_i_gv_runner_key(value="defaultRunner") Lit#cli_targets_i_gv_runner_len(value=16) } } }
-                  Block#cli_targets_b_gv_artifacts_check {
-                    If#cli_targets_if_gv_artifacts {
-                      Eq#cli_targets_eq_gv_artifacts { Var#cli_targets_v_gv_key4(name=key) Lit#cli_targets_i_gv_artifacts(value="artifactTypes") }
-                      Block#cli_targets_b_gv_artifacts { Return#cli_targets_r_gv_artifacts { Call#cli_targets_c_gv_artifacts(target=getValueFixed) { Var#cli_targets_v_gv_text4(name=text) Lit#cli_targets_i_gv_artifacts_key(value="artifactTypes") Lit#cli_targets_i_gv_artifacts_len(value=16) } } }
-                      Block#cli_targets_b_gv_run_tools_check {
-                        If#cli_targets_if_gv_run_tools {
-                          Eq#cli_targets_eq_gv_run_tools { Var#cli_targets_v_gv_key5(name=key) Lit#cli_targets_i_gv_run_tools(value="runTools") }
-                          Block#cli_targets_b_gv_run_tools { Return#cli_targets_r_gv_run_tools { Call#cli_targets_c_gv_run_tools(target=getValueFixed) { Var#cli_targets_v_gv_text5(name=text) Lit#cli_targets_i_gv_run_tools_key(value="runTools") Lit#cli_targets_i_gv_run_tools_len(value=11) } } }
-                          Block#cli_targets_b_gv_publish_tools_check {
-                            If#cli_targets_if_gv_publish_tools {
-                              Eq#cli_targets_eq_gv_publish_tools { Var#cli_targets_v_gv_key6(name=key) Lit#cli_targets_i_gv_publish_tools(value="publishTools") }
-                              Block#cli_targets_b_gv_publish_tools { Return#cli_targets_r_gv_publish_tools { Call#cli_targets_c_gv_publish_tools(target=getValueFixed) { Var#cli_targets_v_gv_text6(name=text) Lit#cli_targets_i_gv_publish_tools_key(value="publishTools") Lit#cli_targets_i_gv_publish_tools_len(value=15) } } }
-                              Block#cli_targets_b_gv_empty { Return#cli_targets_r_gv_empty { Lit#cli_targets_i_gv_empty(value="") } }
+  Let(name=getValue) {
+    Fn(params=text,key) {
+      Block {
+        If {
+          Eq { Var(name=key) Lit(value="aliases") }
+          Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="aliases") Lit(value=10) } } }
+          Block {
+            If {
+              Eq { Var(name=key) Lit(value="package") }
+              Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="package") Lit(value=10) } } }
+              Block {
+                If {
+                  Eq { Var(name=key) Lit(value="defaultRunner") }
+                  Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="defaultRunner") Lit(value=16) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=key) Lit(value="artifactTypes") }
+                      Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="artifactTypes") Lit(value=16) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=key) Lit(value="runTools") }
+                          Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="runTools") Lit(value=11) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=key) Lit(value="publishTools") }
+                              Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="publishTools") Lit(value=15) } } }
+                              Block { Return { Lit(value="") } }
                             }
                           }
                         }
@@ -170,21 +170,21 @@ Program#cli_targets_p1 {
     }
   }
 
-  Let#cli_targets_l_getValueFixed(name=getValueFixed) {
-    Fn#cli_targets_f_getValueFixed(params=text,key,needleLength) {
-      Block#cli_targets_b_getValueFixed {
-        Let#cli_targets_l_gvf1(name=keyStart) { Call#cli_targets_c_gvf1(target=find) { Var#cli_targets_v_gvf1(name=text) StrConcat#cli_targets_sc_gvf1 { Var#cli_targets_v_gvf2(name=key) Lit#cli_targets_i_gvf1(value=" = ") } Lit#cli_targets_i_gvf2(value=0) } }
-        If#cli_targets_if_gvf1 {
-          Eq#cli_targets_eq_gvf1 { Var#cli_targets_v_gvf3(name=keyStart) Lit#cli_targets_i_gvf3(value=-1) }
-          Block#cli_targets_b_gvf1 { Return#cli_targets_r_gvf1 { Lit#cli_targets_i_gvf4(value="") } }
-          Block#cli_targets_b_gvf2 {
-            Let#cli_targets_l_gvf2(name=valueStart) { Add#cli_targets_a_gvf1 { Var#cli_targets_v_gvf4(name=keyStart) Var#cli_targets_v_gvf5(name=needleLength) } }
-            Let#cli_targets_l_gvf3(name=rest) { Call#cli_targets_c_gvf3(target=substring) { Var#cli_targets_v_gvf6(name=text) Var#cli_targets_v_gvf7(name=valueStart) Lit#cli_targets_i_gvf6(value=2147483647) } }
-            Let#cli_targets_l_gvf4(name=valueEnd) { Call#cli_targets_c_gvf4(target=find) { Var#cli_targets_v_gvf8(name=rest) Lit#cli_targets_i_gvf7(value="\n") Lit#cli_targets_i_gvf8(value=0) } }
-            If#cli_targets_if_gvf2 {
-              Eq#cli_targets_eq_gvf2 { Var#cli_targets_v_gvf9(name=valueEnd) Lit#cli_targets_i_gvf9(value=-1) }
-              Block#cli_targets_b_gvf3 { Return#cli_targets_r_gvf2 { Var#cli_targets_v_gvf10(name=rest) } }
-              Block#cli_targets_b_gvf4 { Return#cli_targets_r_gvf3 { Call#cli_targets_c_gvf5(target=substring) { Var#cli_targets_v_gvf11(name=rest) Lit#cli_targets_i_gvf10(value=0) Var#cli_targets_v_gvf12(name=valueEnd) } } }
+  Let(name=getValueFixed) {
+    Fn(params=text,key,needleLength) {
+      Block {
+        Let(name=keyStart) { Call(target=find) { Var(name=text) StrConcat { Var(name=key) Lit(value=" = ") } Lit(value=0) } }
+        If {
+          Eq { Var(name=keyStart) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=keyStart) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\n") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Var(name=rest) } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
             }
           }
         }
@@ -192,159 +192,159 @@ Program#cli_targets_p1 {
     }
   }
 
-  Let#cli_l35r(name=readTextFile) {
-    Fn#cli_f35r(params=path) {
-      Block#cli_b55r {
-        Return#cli_r45r {
-          Call#cli_c45r(target=bytes.toUtf8String) {
-            Call#cli_c46r(target=sys.fs.file.read) { Var#cli_v45r(name=path) }
+  Let(name=readTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
           }
         }
       }
     }
   }
 
-  Let#cli_targets_l2(name=targetPackageName) {
-    Fn#cli_targets_f2(params=target,projectPath) {
-      Block#cli_targets_b4 {
-        Let#cli_targets_l2_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc2 { Var#cli_targets_v6(name=projectPath) Lit#cli_targets_i3(value="/ailang.lock.toml") } }
-        If#cli_targets_if2 {
-          Call#cli_targets_c4(target=sys.fs.path.exists) { Var#cli_targets_v7(name=lockfilePath) }
-          Block#cli_targets_b5 {
-            Let#cli_targets_l2_lockfileText(name=lockfileText) { Call#cli_targets_c5(target=readTextFile) { Var#cli_targets_v8(name=lockfilePath) } }
-            Let#cli_targets_l2_targetSection(name=targetSection) { Call#cli_targets_c6(target=findTargetSection) { Var#cli_targets_v9(name=lockfileText) Var#cli_targets_v10(name=target) } }
-            Return#cli_targets_r3 { Call#cli_targets_c7(target=getValue) { Var#cli_targets_v11(name=targetSection) Lit#cli_targets_i6(value="package") } }
+  Let(name=targetPackageName) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Return { Call(target=getValue) { Var(name=targetSection) Lit(value="package") } }
           }
-          Block#cli_targets_b6 { Return#cli_targets_r4 { Lit#cli_targets_i7(value="") } }
+          Block { Return { Lit(value="") } }
         }
       }
     }
   }
 
-  Let#cli_targets_l3(name=targetDefaultRunner) {
-    Fn#cli_targets_f3(params=target,projectPath) {
-      Block#cli_targets_b9 {
-        Let#cli_targets_l3_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc4 { Var#cli_targets_v12(name=projectPath) Lit#cli_targets_i8(value="/ailang.lock.toml") } }
-        If#cli_targets_if4 {
-          Call#cli_targets_c8(target=sys.fs.path.exists) { Var#cli_targets_v13(name=lockfilePath) }
-          Block#cli_targets_b10 {
-            Let#cli_targets_l3_lockfileText(name=lockfileText) { Call#cli_targets_c9(target=readTextFile) { Var#cli_targets_v14(name=lockfilePath) } }
-            Let#cli_targets_l3_targetSection(name=targetSection) { Call#cli_targets_c10(target=findTargetSection) { Var#cli_targets_v15(name=lockfileText) Var#cli_targets_v16(name=target) } }
-            Return#cli_targets_r6 { Call#cli_targets_c11(target=getValue) { Var#cli_targets_v17(name=targetSection) Lit#cli_targets_i11(value="defaultRunner") } }
+  Let(name=targetDefaultRunner) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Return { Call(target=getValue) { Var(name=targetSection) Lit(value="defaultRunner") } }
           }
-          Block#cli_targets_b11 { Return#cli_targets_r7 { Lit#cli_targets_i12(value="") } }
+          Block { Return { Lit(value="") } }
         }
       }
     }
   }
 
-  Let#cli_targets_l4(name=targetSupportsArtifactType) {
-    Fn#cli_f4(params=target,artifactType,projectPath) {
-      Block#cli_targets_b12 {
-        Let#cli_targets_l4_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc6 { Var#cli_targets_v18(name=projectPath) Lit#cli_targets_i13(value="/ailang.lock.toml") } }
-        If#cli_targets_if5 {
-          Call#cli_targets_c12(target=sys.fs.path.exists) { Var#cli_targets_v19(name=lockfilePath) }
-          Block#cli_targets_b13 {
-            Let#cli_targets_l4_lockfileText(name=lockfileText) { Call#cli_targets_c13(target=readTextFile) { Var#cli_targets_v20(name=lockfilePath) } }
-            Let#cli_targets_l4_targetSection(name=targetSection) { Call#cli_targets_c14(target=findTargetSection) { Var#cli_targets_v21(name=lockfileText) Var#cli_targets_v22(name=target) } }
-            Let#cli_targets_l4_artifactTypes(name=artifactTypes) { Call#cli_targets_c15(target=getValue) { Var#cli_targets_v23(name=targetSection) Lit#cli_targets_i16(value="artifactTypes") } }
-            Return#cli_targets_r8 { Call#cli_targets_c16(target=contains) { Var#cli_targets_v24(name=artifactTypes) Var#cli_targets_v25(name=artifactType) } }
+  Let(name=targetSupportsArtifactType) {
+    Fn(params=target,artifactType,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Let(name=artifactTypes) { Call(target=getValue) { Var(name=targetSection) Lit(value="artifactTypes") } }
+            Return { Call(target=contains) { Var(name=artifactTypes) Var(name=artifactType) } }
           }
-          Block#cli_targets_b14 { Return#cli_targets_r9 { Lit#cli_targets_i17(value=false) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l_contains(name=contains) {
-    Fn#cli_targets_f_contains(params=text,value) {
-      Block#cli_targets_b_contains {
-        Let#cli_targets_l_c1(name=found) { Call#cli_targets_c_c1(target=find) { Var#cli_targets_v_c1(name=text) Var#cli_targets_v_c2(name=value) Lit#cli_targets_i_c1(value=0) } }
-        If#cli_targets_if_c1 {
-          Eq#cli_targets_eq_c1 { Var#cli_targets_v_c3(name=found) Lit#cli_targets_i_c2(value=-1) }
-          Block#cli_targets_b_c1 { Return#cli_targets_r_c1 { Lit#cli_targets_i_c3(value=false) } }
-          Block#cli_targets_b_c2 { Return#cli_targets_r_c2 { Lit#cli_targets_i_c4(value=true) } }
+  Let(name=contains) {
+    Fn(params=text,value) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=value) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l7(name=targetRequiredTool) {
-    Fn#cli_targets_f7(params=target,operation,projectPath) {
-      Block#cli_targets_b25 {
-        Let#cli_targets_l7_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc8 { Var#cli_targets_v26(name=projectPath) Lit#cli_targets_i18(value="/ailang.lock.toml") } }
-        If#cli_targets_if10 {
-          Call#cli_targets_c17(target=sys.fs.path.exists) { Var#cli_targets_v27(name=lockfilePath) }
-          Block#cli_targets_b26 {
-            Let#cli_targets_l7_lockfileText(name=lockfileText) { Call#cli_targets_c18(target=readTextFile) { Var#cli_targets_v28(name=lockfilePath) } }
-            Let#cli_targets_l7_packageSection(name=packageSection) { Call#cli_targets_c19(target=findTargetSection) { Var#cli_targets_v29(name=lockfileText) Var#cli_targets_v30(name=target) } }
-            Let#cli_targets_l7_requiredFor(name=requiredFor) { Call#cli_targets_c20(target=getValue) { Var#cli_targets_v31(name=packageSection) Lit#cli_targets_i21(value="runTools") } }
-            If#cli_targets_if11 {
-              Eq#cli_targets_eq_req1 { Var#cli_targets_v33(name=operation) Lit#cli_targets_i22a(value="publish") }
-              Block#cli_targets_b27 { Return#cli_targets_r16 { Call#cli_targets_c22(target=getValue) { Var#cli_targets_v34(name=packageSection) Lit#cli_targets_i22(value="publishTools") } } }
-              Block#cli_targets_b28 { Return#cli_targets_r17 { Call#cli_targets_c23a(target=getValue) { Var#cli_targets_v35a(name=packageSection) Lit#cli_targets_i23(value="runTools") } } }
+  Let(name=targetRequiredTool) {
+    Fn(params=target,operation,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=packageSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Let(name=requiredFor) { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } }
+            If {
+              Eq { Var(name=operation) Lit(value="publish") }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="publishTools") } } }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } } }
             }
           }
-          Block#cli_targets_b29 { Return#cli_targets_r18 { Lit#cli_targets_i24(value="") } }
+          Block { Return { Lit(value="") } }
         }
       }
     }
   }
 
-  Let#cli_targets_l8(name=targetRequiredCommand) {
-    Fn#cli_targets_f8(params=target,operation,projectPath) {
-      Block#cli_targets_b30 {
-        Let#cli_targets_l8_lockfilePath(name=lockfilePath) { StrConcat#cli_targets_sc10 { Var#cli_targets_v35(name=projectPath) Lit#cli_targets_i25(value="/ailang.lock.toml") } }
-        If#cli_targets_if12 {
-          Call#cli_targets_c23(target=sys.fs.path.exists) { Var#cli_targets_v36(name=lockfilePath) }
-          Block#cli_targets_b31 {
-            Let#cli_targets_l8_lockfileText(name=lockfileText) { Call#cli_targets_c24(target=readTextFile) { Var#cli_targets_v37(name=lockfilePath) } }
-            Let#cli_targets_l8_packageSection(name=packageSection) { Call#cli_targets_c25(target=findTargetSection) { Var#cli_targets_v38(name=lockfileText) Var#cli_targets_v39(name=target) } }
-            If#cli_targets_if_cmd1 {
-              Eq#cli_targets_eq_cmd1 { Var#cli_targets_v40(name=operation) Lit#cli_targets_i28a(value="publish") }
-              Block#cli_targets_b_cmd1 { Return#cli_targets_r19 { Call#cli_targets_c26(target=getValue) { Var#cli_targets_v41(name=packageSection) Lit#cli_targets_i28(value="publishTools") } } }
-              Block#cli_targets_b_cmd2 { Return#cli_targets_r20a { Call#cli_targets_c27(target=getValue) { Var#cli_targets_v42(name=packageSection) Lit#cli_targets_i29a(value="runTools") } } }
+  Let(name=targetRequiredCommand) {
+    Fn(params=target,operation,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=packageSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            If {
+              Eq { Var(name=operation) Lit(value="publish") }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="publishTools") } } }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } } }
             }
           }
-          Block#cli_targets_b32 { Return#cli_targets_r20 { Lit#cli_targets_i29(value="") } }
+          Block { Return { Lit(value="") } }
         }
       }
     }
   }
 
-  Let#cli_targets_l10(name=resolveTargetRunner) {
-    Fn#cli_targets_f10(params=target,requestedRunner,projectPath) {
-      Block#cli_targets_b36 {
-        If#cli_targets_if14 {
-          Eq#cli_targets_eq14 { Var#cli_targets_v22(name=requestedRunner) Lit#cli_targets_i30(value="") }
-          Block#cli_targets_b37 { Return#cli_targets_r23 { Call#cli_targets_c7(target=targetDefaultRunner) { Var#cli_targets_v23(name=target) Var#cli_targets_v23p(name=projectPath) } } }
-          Block#cli_targets_b38 { Return#cli_targets_r24 { Var#cli_targets_v24(name=requestedRunner) } }
+  Let(name=resolveTargetRunner) {
+    Fn(params=target,requestedRunner,projectPath) {
+      Block {
+        If {
+          Eq { Var(name=requestedRunner) Lit(value="") }
+          Block { Return { Call(target=targetDefaultRunner) { Var(name=target) Var(name=projectPath) } } }
+          Block { Return { Var(name=requestedRunner) } }
         }
       }
     }
   }
 
-  Let#cli_targets_l11(name=targetMissingRequirementDiagnostic) {
-    Fn#cli_targets_f11(params=packageName,target,operation,requirement,command) {
-      Block#cli_targets_b39 {
-        Return#cli_targets_r25 {
-          StrConcat#cli_targets_sc1 {
-            Lit#cli_targets_i31(value="AILANG-PKG-REQ001: ")
-            StrConcat#cli_targets_sc2 {
-              Var#cli_targets_v25(name=packageName)
-              StrConcat#cli_targets_sc3 {
-                Lit#cli_targets_i32(value=" requires ")
-                StrConcat#cli_targets_sc4 {
-                  Var#cli_targets_v26(name=requirement)
-                  StrConcat#cli_targets_sc5 {
-                    Lit#cli_targets_i33(value=" for ")
-                    StrConcat#cli_targets_sc6 {
-                      Var#cli_targets_v27(name=operation)
-                      StrConcat#cli_targets_sc7 {
-                        Lit#cli_targets_i34(value=".\nMissing command: ")
-                        StrConcat#cli_targets_sc8 {
-                          Var#cli_targets_v28(name=command)
-                          Lit#cli_targets_i35(value="\n\nInstall:\n  macOS: brew install qemu\n  Linux: Install qemu-system with the distro package manager.\n  Windows: winget install SoftwareFreedomConservancy.QEMU")
+  Let(name=targetMissingRequirementDiagnostic) {
+    Fn(params=packageName,target,operation,requirement,command) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="AILANG-PKG-REQ001: ")
+            StrConcat {
+              Var(name=packageName)
+              StrConcat {
+                Lit(value=" requires ")
+                StrConcat {
+                  Var(name=requirement)
+                  StrConcat {
+                    Lit(value=" for ")
+                    StrConcat {
+                      Var(name=operation)
+                      StrConcat {
+                        Lit(value=".\nMissing command: ")
+                        StrConcat {
+                          Var(name=command)
+                          Lit(value="\n\nInstall:\n  macOS: brew install qemu\n  Linux: Install qemu-system with the distro package manager.\n  Windows: winget install SoftwareFreedomConservancy.QEMU")
                         }
                       }
                     }

@@ -1,58 +1,58 @@
-Program#std_number_p1 {
-  Import#std_number_im1(path="./str.aos")
-  Import#std_number_im2(path="./core.aos")
+Program {
+  Import(path="./str.aos")
+  Import(path="./core.aos")
 
-  Let#std_number_l1(name=zero) {
-    Fn#std_number_f1(params=_) {
-      Block#std_number_b1 {
-        Return#std_number_r1 { Lit#std_number_i1(value=0) }
+  Let(name=zero) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value=0) }
       }
     }
   }
 
-  Let#std_number_l2(name=one) {
-    Fn#std_number_f2(params=_) {
-      Block#std_number_b2 {
-        Return#std_number_r2 { Lit#std_number_i2(value=1) }
+  Let(name=one) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value=1) }
       }
     }
   }
 
-  Let#std_number_l3(name=add) {
-    Fn#std_number_f3(params=a,b) {
-      Block#std_number_b3 {
-        Return#std_number_r3 { Add#std_number_a1 { Var#std_number_v1(name=a) Var#std_number_v2(name=b) } }
+  Let(name=add) {
+    Fn(params=a,b) {
+      Block {
+        Return { Add { Var(name=a) Var(name=b) } }
       }
     }
   }
 
-  Let#std_number_l4(name=inc) {
-    Fn#std_number_f4(params=value) {
-      Block#std_number_b4 {
-        Return#std_number_r4 { Add#std_number_a2 { Var#std_number_v3(name=value) Lit#std_number_i3(value=1) } }
+  Let(name=inc) {
+    Fn(params=value) {
+      Block {
+        Return { Add { Var(name=value) Lit(value=1) } }
       }
     }
   }
 
-  Let#std_number_l5(name=dec) {
-    Fn#std_number_f5(params=value) {
-      Block#std_number_b5 {
-        Return#std_number_r5 { Add#std_number_a3 { Var#std_number_v4(name=value) Lit#std_number_i4(value=-1) } }
+  Let(name=dec) {
+    Fn(params=value) {
+      Block {
+        Return { Add { Var(name=value) Lit(value=-1) } }
       }
     }
   }
 
-  Let#std_number_l5a(name=negPositiveLoop) {
-    Fn#std_number_f5a(params=value,acc) {
-      Block#std_number_b5a {
-        If#std_number_if5a {
-          Eq#std_number_eq5a { Var#std_number_v4a(name=value) Lit#std_number_i4a0(value=0) }
-          Block#std_number_b5b { Return#std_number_r5a { Var#std_number_v4b(name=acc) } }
-          Block#std_number_b5c {
-            Return#std_number_r5b {
-              Call#std_number_c5a(target=negPositiveLoop) {
-                Add#std_number_a5a { Var#std_number_v4c(name=value) Lit#std_number_i4b0(value=-1) }
-                Add#std_number_a5b { Var#std_number_v4d(name=acc) Lit#std_number_i4c0(value=-1) }
+  Let(name=negPositiveLoop) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Eq { Var(name=value) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=negPositiveLoop) {
+                Add { Var(name=value) Lit(value=-1) }
+                Add { Var(name=acc) Lit(value=-1) }
               }
             }
           }
@@ -61,17 +61,17 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l5b(name=negNegativeLoop) {
-    Fn#std_number_f5b(params=value,acc) {
-      Block#std_number_b5d {
-        If#std_number_if5b {
-          Eq#std_number_eq5b { Var#std_number_v4e(name=value) Lit#std_number_i4d0(value=0) }
-          Block#std_number_b5e { Return#std_number_r5c { Var#std_number_v4f(name=acc) } }
-          Block#std_number_b5f {
-            Return#std_number_r5d {
-              Call#std_number_c5b(target=negNegativeLoop) {
-                Add#std_number_a5c { Var#std_number_v4g(name=value) Lit#std_number_i4e0(value=1) }
-                Add#std_number_a5d { Var#std_number_v4h(name=acc) Lit#std_number_i4f0(value=1) }
+  Let(name=negNegativeLoop) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Eq { Var(name=value) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=negNegativeLoop) {
+                Add { Var(name=value) Lit(value=1) }
+                Add { Var(name=acc) Lit(value=1) }
               }
             }
           }
@@ -80,31 +80,31 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l5c(name=sub) {
-    Fn#std_number_f5c(params=a,b) {
-      Block#std_number_b5g {
-        Return#std_number_r5e {
-          Sub#std_number_sub1 {
-            Var#std_number_v4i(name=a)
-            Var#std_number_v4j(name=b)
+  Let(name=sub) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Sub {
+            Var(name=a)
+            Var(name=b)
           }
         }
       }
     }
   }
 
-  Let#std_number_l5d(name=mulPositiveLoop) {
-    Fn#std_number_f5d(params=a,b,acc) {
-      Block#std_number_b5h {
-        If#std_number_if5c {
-          Eq#std_number_eq5c { Var#std_number_v4k(name=b) Lit#std_number_i4g0(value=0) }
-          Block#std_number_b5i { Return#std_number_r5f { Var#std_number_v4l(name=acc) } }
-          Block#std_number_b5j {
-            Return#std_number_r5g {
-              Call#std_number_c5d(target=mulPositiveLoop) {
-                Var#std_number_v4m(name=a)
-                Add#std_number_a5f { Var#std_number_v4n(name=b) Lit#std_number_i4h0(value=-1) }
-                Add#std_number_a5g { Var#std_number_v4o(name=acc) Var#std_number_v4p(name=a) }
+  Let(name=mulPositiveLoop) {
+    Fn(params=a,b,acc) {
+      Block {
+        If {
+          Eq { Var(name=b) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=mulPositiveLoop) {
+                Var(name=a)
+                Add { Var(name=b) Lit(value=-1) }
+                Add { Var(name=acc) Var(name=a) }
               }
             }
           }
@@ -113,38 +113,38 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l5e(name=mul) {
-    Fn#std_number_f5e(params=a,b) {
-      Block#std_number_b5k {
-        Return#std_number_r5i {
-          Mul#std_number_mul1 {
-            Var#std_number_v4t(name=a)
-            Var#std_number_v4u(name=b)
+  Let(name=mul) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Mul {
+            Var(name=a)
+            Var(name=b)
           }
         }
       }
     }
   }
 
-  Let#std_number_l6n(name=natLt) {
-    Fn#std_number_f6n(params=a,b) {
-      Block#std_number_b6n {
-        If#std_number_ifnat0 {
-          Eq#std_number_eqnat0 { Var#std_number_v6q(name=a) Var#std_number_v6r(name=b) }
-          Block#std_number_b6na { Return#std_number_r6na { Lit#std_number_i3g(value=false) } }
-          Block#std_number_b6nb {
-            If#std_number_ifnat1 {
-              Eq#std_number_eqnat1 { Var#std_number_v6s(name=a) Lit#std_number_i3h(value=0) }
-              Block#std_number_b6nc { Return#std_number_r6nb { Lit#std_number_i3i(value=true) } }
-              Block#std_number_b6nd {
-                If#std_number_ifnat2 {
-                  Eq#std_number_eqnat2 { Var#std_number_v6t(name=b) Lit#std_number_i3j(value=0) }
-                  Block#std_number_b6ne { Return#std_number_r6nc { Lit#std_number_i3k(value=false) } }
-                  Block#std_number_b6nf {
-                    Return#std_number_r6nd {
-                      Call#std_number_c0r(target=natLt) {
-                        Add#std_number_a3c { Var#std_number_v6u(name=a) Lit#std_number_i3l(value=-1) }
-                        Add#std_number_a3d { Var#std_number_v6v(name=b) Lit#std_number_i3m(value=-1) }
+  Let(name=natLt) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Eq { Var(name=a) Var(name=b) }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { Var(name=a) Lit(value=0) }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq { Var(name=b) Lit(value=0) }
+                  Block { Return { Lit(value=false) } }
+                  Block {
+                    Return {
+                      Call(target=natLt) {
+                        Add { Var(name=a) Lit(value=-1) }
+                        Add { Var(name=b) Lit(value=-1) }
                       }
                     }
                   }
@@ -157,21 +157,21 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l6o(name=textLen) {
-    Fn#std_number_f6o(params=textValue) {
-      Block#std_number_b6o {
-        If#std_number_iftextlen0 {
-          Eq#std_number_eqtextlen0 { Var#std_number_v6w(name=textValue) Lit#std_number_i3n(value="") }
-          Block#std_number_b6og { Return#std_number_r6ne { Lit#std_number_i3o(value=0) } }
-          Block#std_number_b6oh {
-            Return#std_number_r6nf {
-              Add#std_number_a3e {
-                Lit#std_number_i3p(value=1)
-                Call#std_number_c0s(target=textLen) {
-                  Call#std_number_c0t(target=remove) {
-                    Var#std_number_v6x(name=textValue)
-                    Lit#std_number_i3q(value=0)
-                    Lit#std_number_i3r(value=1)
+  Let(name=textLen) {
+    Fn(params=textValue) {
+      Block {
+        If {
+          Eq { Var(name=textValue) Lit(value="") }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Return {
+              Add {
+                Lit(value=1)
+                Call(target=textLen) {
+                  Call(target=remove) {
+                    Var(name=textValue)
+                    Lit(value=0)
+                    Lit(value=1)
                   }
                 }
               }
@@ -182,45 +182,45 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l6p(name=textFirst) {
-    Fn#std_number_f6p(params=textValue) {
-      Block#std_number_b6p {
-        Return#std_number_r6ng {
-          Call#std_number_c0u(target=substring) {
-            Var#std_number_v6y(name=textValue)
-            Lit#std_number_i3s(value=0)
-            Lit#std_number_i3t(value=1)
+  Let(name=textFirst) {
+    Fn(params=textValue) {
+      Block {
+        Return {
+          Call(target=substring) {
+            Var(name=textValue)
+            Lit(value=0)
+            Lit(value=1)
           }
         }
       }
     }
   }
 
-  Let#std_number_l6q(name=textRest) {
-    Fn#std_number_f6q(params=textValue) {
-      Block#std_number_b6q {
-        Return#std_number_r6nh {
-          Call#std_number_c0v(target=remove) {
-            Var#std_number_v6z(name=textValue)
-            Lit#std_number_i3u(value=0)
-            Lit#std_number_i3v(value=1)
+  Let(name=textRest) {
+    Fn(params=textValue) {
+      Block {
+        Return {
+          Call(target=remove) {
+            Var(name=textValue)
+            Lit(value=0)
+            Lit(value=1)
           }
         }
       }
     }
   }
 
-  Let#std_number_l6r(name=isNegativeText) {
-    Fn#std_number_f6r(params=textValue) {
-      Block#std_number_b6r {
-        If#std_number_ifnegtext0 {
-          Eq#std_number_eqnegtext0 { Var#std_number_v6aa(name=textValue) Lit#std_number_i3w(value="") }
-          Block#std_number_b6ra { Return#std_number_r6ni { Lit#std_number_i3x(value=false) } }
-          Block#std_number_b6rb {
-            Return#std_number_r6nj {
-              Eq#std_number_eqnegtext1 {
-                Call#std_number_c0w(target=textFirst) { Var#std_number_v6ab(name=textValue) }
-                Lit#std_number_i3y(value="-")
+  Let(name=isNegativeText) {
+    Fn(params=textValue) {
+      Block {
+        If {
+          Eq { Var(name=textValue) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Return {
+              Eq {
+                Call(target=textFirst) { Var(name=textValue) }
+                Lit(value="-")
               }
             }
           }
@@ -229,59 +229,59 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l6s(name=absText) {
-    Fn#std_number_f6s(params=textValue) {
-      Block#std_number_b6s {
-        If#std_number_ifabstext0 {
-          Call#std_number_c0x(target=isNegativeText) { Var#std_number_v6ac(name=textValue) }
-          Block#std_number_b6sa {
-            Return#std_number_r6nk { Call#std_number_c0y(target=textRest) { Var#std_number_v6ad(name=textValue) } }
+  Let(name=absText) {
+    Fn(params=textValue) {
+      Block {
+        If {
+          Call(target=isNegativeText) { Var(name=textValue) }
+          Block {
+            Return { Call(target=textRest) { Var(name=textValue) } }
           }
-          Block#std_number_b6sb { Return#std_number_r6nl { Var#std_number_v6ae(name=textValue) } }
+          Block { Return { Var(name=textValue) } }
         }
       }
     }
   }
 
-  Let#std_number_l6t(name=positiveTextLt) {
-    Fn#std_number_f6t(params=aText,bText) {
-      Block#std_number_b6t {
-        If#std_number_ifpt0 {
-          Eq#std_number_eqpt0 { Var#std_number_v6af(name=aText) Var#std_number_v6ag(name=bText) }
-          Block#std_number_b6ta { Return#std_number_r6nm { Lit#std_number_i3z(value=false) } }
-          Block#std_number_b6tb {
-            Let#std_number_l6u(name=aLen) { Call#std_number_c0z(target=textLen) { Var#std_number_v6ah(name=aText) } }
-            Let#std_number_l6v(name=bLen) { Call#std_number_c1a(target=textLen) { Var#std_number_v6ai(name=bText) } }
-            If#std_number_ifpt1 {
-              Eq#std_number_eqpt1 { Var#std_number_v6aj(name=aLen) Var#std_number_v6ak(name=bLen) }
-              Block#std_number_b6tc {
-                Let#std_number_l6w(name=aDigit) {
-                  Call#std_number_c1b(target=digitValue) {
-                    Call#std_number_c1c(target=textFirst) { Var#std_number_v6al(name=aText) }
+  Let(name=positiveTextLt) {
+    Fn(params=aText,bText) {
+      Block {
+        If {
+          Eq { Var(name=aText) Var(name=bText) }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=aLen) { Call(target=textLen) { Var(name=aText) } }
+            Let(name=bLen) { Call(target=textLen) { Var(name=bText) } }
+            If {
+              Eq { Var(name=aLen) Var(name=bLen) }
+              Block {
+                Let(name=aDigit) {
+                  Call(target=digitValue) {
+                    Call(target=textFirst) { Var(name=aText) }
                   }
                 }
-                Let#std_number_l6x(name=bDigit) {
-                  Call#std_number_c1d(target=digitValue) {
-                    Call#std_number_c1e(target=textFirst) { Var#std_number_v6am(name=bText) }
+                Let(name=bDigit) {
+                  Call(target=digitValue) {
+                    Call(target=textFirst) { Var(name=bText) }
                   }
                 }
-                If#std_number_ifpt2 {
-                  Eq#std_number_eqpt2 { Var#std_number_v6an(name=aDigit) Var#std_number_v6ao(name=bDigit) }
-                  Block#std_number_b6td {
-                    Return#std_number_r6nn {
-                      Call#std_number_c1f(target=positiveTextLt) {
-                        Call#std_number_c1g(target=textRest) { Var#std_number_v6ap(name=aText) }
-                        Call#std_number_c1h(target=textRest) { Var#std_number_v6aq(name=bText) }
+                If {
+                  Eq { Var(name=aDigit) Var(name=bDigit) }
+                  Block {
+                    Return {
+                      Call(target=positiveTextLt) {
+                        Call(target=textRest) { Var(name=aText) }
+                        Call(target=textRest) { Var(name=bText) }
                       }
                     }
                   }
-                  Block#std_number_b6te {
-                    Return#std_number_r6no { Call#std_number_c1i(target=natLt) { Var#std_number_v6ar(name=aDigit) Var#std_number_v6as(name=bDigit) } }
+                  Block {
+                    Return { Call(target=natLt) { Var(name=aDigit) Var(name=bDigit) } }
                   }
                 }
               }
-              Block#std_number_b6tf {
-                Return#std_number_r6np { Call#std_number_c1j(target=natLt) { Var#std_number_v6at(name=aLen) Var#std_number_v6au(name=bLen) } }
+              Block {
+                Return { Call(target=natLt) { Var(name=aLen) Var(name=bLen) } }
               }
             }
           }
@@ -290,127 +290,127 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l6e(name=isZero) {
-    Fn#std_number_f6e(params=value) {
-      Block#std_number_b6i {
-        Return#std_number_r6g { Call#std_number_c0n(target=equals) { Var#std_number_v6m(name=value) Lit#std_number_i3c(value=0) } }
+  Let(name=isZero) {
+    Fn(params=value) {
+      Block {
+        Return { Call(target=equals) { Var(name=value) Lit(value=0) } }
       }
     }
   }
 
-  Let#std_number_l6f(name=isNegative) {
-    Fn#std_number_f6f(params=value) {
-      Block#std_number_b6j {
-        Return#std_number_r6h { Call#std_number_c0o(target=lt) { Var#std_number_v6n(name=value) Lit#std_number_i3d(value=0) } }
+  Let(name=isNegative) {
+    Fn(params=value) {
+      Block {
+        Return { Call(target=lt) { Var(name=value) Lit(value=0) } }
       }
     }
   }
 
-  Let#std_number_l6g(name=isPositive) {
-    Fn#std_number_f6g(params=value) {
-      Block#std_number_b6k {
-        Return#std_number_r6i { Call#std_number_c0p(target=gt) { Var#std_number_v6o(name=value) Lit#std_number_i3e(value=0) } }
+  Let(name=isPositive) {
+    Fn(params=value) {
+      Block {
+        Return { Call(target=gt) { Var(name=value) Lit(value=0) } }
       }
     }
   }
 
-  Let#std_number_l6h(name=isNonNegative) {
-    Fn#std_number_f6h(params=value) {
-      Block#std_number_b6l {
-        Return#std_number_r6j { Call#std_number_c0q(target=gte) { Var#std_number_v6p(name=value) Lit#std_number_i3f(value=0) } }
+  Let(name=isNonNegative) {
+    Fn(params=value) {
+      Block {
+        Return { Call(target=gte) { Var(name=value) Lit(value=0) } }
       }
     }
   }
 
-  Let#std_number_l6a(name=lt) {
-    Fn#std_number_f6a(params=a,b) {
-      Block#std_number_b6a {
-        Return#std_number_r6a {
-          Lt#std_number_lt1 {
-            Var#std_number_v6a(name=a)
-            Var#std_number_v6b(name=b)
+  Let(name=lt) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Lt {
+            Var(name=a)
+            Var(name=b)
           }
         }
       }
     }
   }
 
-  Let#std_number_l6b(name=lte) {
-    Fn#std_number_f6b(params=a,b) {
-      Block#std_number_b6b {
-        If#std_number_iflt1 {
-          Call#std_number_c0i(target=lt) { Var#std_number_v6c(name=a) Var#std_number_v6d(name=b) }
-          Block#std_number_b6c { Return#std_number_r6b { Lit#std_number_i3a(value=true) } }
-          Block#std_number_b6d { Return#std_number_r6c { Call#std_number_c0j(target=equals) { Var#std_number_v6e(name=a) Var#std_number_v6f(name=b) } } }
+  Let(name=lte) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Call(target=equals) { Var(name=a) Var(name=b) } } }
         }
       }
     }
   }
 
-  Let#std_number_l6c(name=gt) {
-    Fn#std_number_f6c(params=a,b) {
-      Block#std_number_b6e {
-        Return#std_number_r6d { Call#std_number_c0k(target=lt) { Var#std_number_v6g(name=b) Var#std_number_v6h(name=a) } }
+  Let(name=gt) {
+    Fn(params=a,b) {
+      Block {
+        Return { Call(target=lt) { Var(name=b) Var(name=a) } }
       }
     }
   }
 
-  Let#std_number_l6d(name=gte) {
-    Fn#std_number_f6d(params=a,b) {
-      Block#std_number_b6f {
-        If#std_number_iflt2 {
-          Call#std_number_c0l(target=gt) { Var#std_number_v6i(name=a) Var#std_number_v6j(name=b) }
-          Block#std_number_b6g { Return#std_number_r6e { Lit#std_number_i3b(value=true) } }
-          Block#std_number_b6h { Return#std_number_r6f { Call#std_number_c0m(target=equals) { Var#std_number_v6k(name=a) Var#std_number_v6l(name=b) } } }
+  Let(name=gte) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=gt) { Var(name=a) Var(name=b) }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Call(target=equals) { Var(name=a) Var(name=b) } } }
         }
       }
     }
   }
 
-  Let#std_number_l7(name=toString) {
-    Fn#std_number_f7(params=value) {
-      Block#std_number_b7 {
-        Return#std_number_r7 { ToString#std_number_t1 { Var#std_number_v7(name=value) } }
+  Let(name=toString) {
+    Fn(params=value) {
+      Block {
+        Return { ToString { Var(name=value) } }
       }
     }
   }
 
-  Let#std_number_l7a(name=negate) {
-    Fn#std_number_f7a(params=value) {
-      Block#std_number_b7a {
-        Return#std_number_r7a1 {
-          Sub#std_number_sub2 {
-            Lit#std_number_i4a(value=0)
-            Var#std_number_v7a(name=value)
+  Let(name=negate) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Sub {
+            Lit(value=0)
+            Var(name=value)
           }
         }
       }
     }
   }
 
-  Let#std_number_l7b(name=abs) {
-    Fn#std_number_f7b(params=value) {
-      Block#std_number_b7b {
-        If#std_number_if0 {
-          Call#std_number_c0(target=lt) { Var#std_number_v7b(name=value) Lit#std_number_i4c(value=0) }
-          Block#std_number_b7c { Return#std_number_r7b { Call#std_number_c0a(target=negate) { Var#std_number_v7c(name=value) } } }
-          Block#std_number_b7d { Return#std_number_r7c { Var#std_number_v7d(name=value) } }
+  Let(name=abs) {
+    Fn(params=value) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Lit(value=0) }
+          Block { Return { Call(target=negate) { Var(name=value) } } }
+          Block { Return { Var(name=value) } }
         }
       }
     }
   }
 
-  Let#std_number_l7c(name=sign) {
-    Fn#std_number_f7c(params=value) {
-      Block#std_number_b7e {
-        If#std_number_if0a {
-          Call#std_number_c0b(target=lt) { Var#std_number_v7e(name=value) Lit#std_number_i4d(value=0) }
-          Block#std_number_b7f { Return#std_number_r7d { Lit#std_number_i4e(value=-1) } }
-          Block#std_number_b7g {
-            If#std_number_if0b {
-              Eq#std_number_eq0 { Var#std_number_v7f(name=value) Lit#std_number_i4f(value=0) }
-              Block#std_number_b7h { Return#std_number_r7e { Lit#std_number_i4g(value=0) } }
-              Block#std_number_b7i { Return#std_number_r7f { Lit#std_number_i4h(value=1) } }
+  Let(name=sign) {
+    Fn(params=value) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Lit(value=0) }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Eq { Var(name=value) Lit(value=0) }
+              Block { Return { Lit(value=0) } }
+              Block { Return { Lit(value=1) } }
             }
           }
         }
@@ -418,94 +418,94 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l7d(name=min) {
-    Fn#std_number_f7d(params=a,b) {
-      Block#std_number_b7j {
-        If#std_number_if0c {
-          Call#std_number_c0c(target=lt) { Var#std_number_v7g(name=a) Var#std_number_v7h(name=b) }
-          Block#std_number_b7k { Return#std_number_r7g { Var#std_number_v7i(name=a) } }
-          Block#std_number_b7l { Return#std_number_r7h { Var#std_number_v7j(name=b) } }
+  Let(name=min) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Var(name=a) } }
+          Block { Return { Var(name=b) } }
         }
       }
     }
   }
 
-  Let#std_number_l7e(name=max) {
-    Fn#std_number_f7e(params=a,b) {
-      Block#std_number_b7m {
-        If#std_number_if0d {
-          Call#std_number_c0d(target=lt) { Var#std_number_v7k(name=a) Var#std_number_v7l(name=b) }
-          Block#std_number_b7n { Return#std_number_r7i { Var#std_number_v7m(name=b) } }
-          Block#std_number_b7o { Return#std_number_r7j { Var#std_number_v7n(name=a) } }
+  Let(name=max) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Var(name=b) } }
+          Block { Return { Var(name=a) } }
         }
       }
     }
   }
 
-  Let#std_number_l7f(name=clamp) {
-    Fn#std_number_f7f(params=value,minimum,maximum) {
-      Block#std_number_b7p {
-        Let#std_number_l7g(name=lowerBounded) {
-          Call#std_number_c0e(target=max) {
-            Var#std_number_v7o(name=value)
-            Var#std_number_v7p(name=minimum)
+  Let(name=clamp) {
+    Fn(params=value,minimum,maximum) {
+      Block {
+        Let(name=lowerBounded) {
+          Call(target=max) {
+            Var(name=value)
+            Var(name=minimum)
           }
         }
-        Return#std_number_r7k {
-          Call#std_number_c0f(target=min) {
-            Var#std_number_v7q(name=lowerBounded)
-            Var#std_number_v7r(name=maximum)
+        Return {
+          Call(target=min) {
+            Var(name=lowerBounded)
+            Var(name=maximum)
           }
         }
       }
     }
   }
 
-  Let#std_number_l7h(name=betweenInclusive) {
-    Fn#std_number_f7g(params=value,minimum,maximum) {
-      Block#std_number_b7q {
-        If#std_number_if7h {
-          Call#std_number_c0g(target=gte) {
-            Var#std_number_v7s(name=value)
-            Var#std_number_v7t(name=minimum)
+  Let(name=betweenInclusive) {
+    Fn(params=value,minimum,maximum) {
+      Block {
+        If {
+          Call(target=gte) {
+            Var(name=value)
+            Var(name=minimum)
           }
-          Block#std_number_b7qa {
-            Return#std_number_r7l {
-              Call#std_number_c0h(target=lte) {
-                Var#std_number_v7u(name=value)
-                Var#std_number_v7v(name=maximum)
+          Block {
+            Return {
+              Call(target=lte) {
+                Var(name=value)
+                Var(name=maximum)
               }
             }
           }
-          Block#std_number_b7qb { Return#std_number_r7la { Lit#std_number_i7h(value=false) } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#std_number_l7i(name=betweenExclusive) {
-    Fn#std_number_f7i(params=value,minimum,maximum) {
-      Block#std_number_b7r {
-        If#std_number_if7i {
-          Call#std_number_c7i(target=gt) { Var#std_number_v7w(name=value) Var#std_number_v7x(name=minimum) }
-          Block#std_number_b7s { Return#std_number_r7m { Call#std_number_c7j(target=lt) { Var#std_number_v7y(name=value) Var#std_number_v7z(name=maximum) } } }
-          Block#std_number_b7t { Return#std_number_r7n { Lit#std_number_i7i(value=false) } }
+  Let(name=betweenExclusive) {
+    Fn(params=value,minimum,maximum) {
+      Block {
+        If {
+          Call(target=gt) { Var(name=value) Var(name=minimum) }
+          Block { Return { Call(target=lt) { Var(name=value) Var(name=maximum) } } }
+          Block { Return { Lit(value=false) } }
         }
       }
     }
   }
 
-  Let#std_number_l7j(name=compare) {
-    Fn#std_number_f7j(params=a,b) {
-      Block#std_number_b7u {
-        If#std_number_if7j {
-          Call#std_number_c7k(target=lt) { Var#std_number_v7aa(name=a) Var#std_number_v7ab(name=b) }
-          Block#std_number_b7v { Return#std_number_r7o { Lit#std_number_i7j(value=-1) } }
-          Block#std_number_b7w {
-            If#std_number_if7k {
-              Call#std_number_c7l(target=gt) { Var#std_number_v7ac(name=a) Var#std_number_v7ad(name=b) }
-              Block#std_number_b7x { Return#std_number_r7p { Lit#std_number_i7k(value=1) } }
-              Block#std_number_b7y { Return#std_number_r7q { Lit#std_number_i7l(value=0) } }
+  Let(name=compare) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=a) Var(name=b) }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Call(target=gt) { Var(name=a) Var(name=b) }
+              Block { Return { Lit(value=1) } }
+              Block { Return { Lit(value=0) } }
             }
           }
         }
@@ -513,37 +513,18 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l7k(name=divPositiveLoop) {
-    Fn#std_number_f7k(params=value,step,acc) {
-      Block#std_number_b7z {
-        If#std_number_if7l {
-          Call#std_number_c7m(target=lt) { Var#std_number_v7ae(name=value) Var#std_number_v7af(name=step) }
-          Block#std_number_b7aa { Return#std_number_r7r { Var#std_number_v7ag(name=acc) } }
-          Block#std_number_b7ab {
-            Return#std_number_r7s {
-              Call#std_number_c7n(target=divPositiveLoop) {
-                Call#std_number_c7o(target=sub) { Var#std_number_v7ah(name=value) Var#std_number_v7ai(name=step) }
-                Var#std_number_v7aj(name=step)
-                Add#std_number_a7a { Var#std_number_v7ak(name=acc) Lit#std_number_i7m(value=1) }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l7l(name=modPositiveLoop) {
-    Fn#std_number_f7l(params=value,step) {
-      Block#std_number_b7ac {
-        If#std_number_if7m {
-          Call#std_number_c7p(target=lt) { Var#std_number_v7al(name=value) Var#std_number_v7am(name=step) }
-          Block#std_number_b7ad { Return#std_number_r7t { Var#std_number_v7an(name=value) } }
-          Block#std_number_b7ae {
-            Return#std_number_r7u {
-              Call#std_number_c7q(target=modPositiveLoop) {
-                Call#std_number_c7r(target=sub) { Var#std_number_v7ao(name=value) Var#std_number_v7ap(name=step) }
-                Var#std_number_v7aq(name=step)
+  Let(name=divPositiveLoop) {
+    Fn(params=value,step,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=step) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=divPositiveLoop) {
+                Call(target=sub) { Var(name=value) Var(name=step) }
+                Var(name=step)
+                Add { Var(name=acc) Lit(value=1) }
               }
             }
           }
@@ -552,44 +533,17 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l7m(name=div) {
-    Fn#std_number_f7m(params=a,b) {
-      Block#std_number_b7af {
-        Return#std_number_r7v {
-          Div#std_number_div1 {
-            Var#std_number_v7ar(name=a)
-            Var#std_number_v7as(name=b)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l7o(name=mod) {
-    Fn#std_number_f7n(params=a,b) {
-      Block#std_number_b7ak {
-        Return#std_number_r7y {
-          Mod#std_number_mod1 {
-            Var#std_number_v7ay(name=a)
-            Var#std_number_v7az(name=b)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l7q(name=powPositiveLoop) {
-    Fn#std_number_f7o(params=base,exponent,acc) {
-      Block#std_number_b7ap {
-        If#std_number_if7r {
-          Eq#std_number_eq7c { Var#std_number_v7be(name=exponent) Lit#std_number_i7q(value=0) }
-          Block#std_number_b7aq { Return#std_number_r7ab { Var#std_number_v7bf(name=acc) } }
-          Block#std_number_b7ar {
-            Return#std_number_r7ac {
-              Call#std_number_c7af(target=powPositiveLoop) {
-                Var#std_number_v7bg(name=base)
-                Add#std_number_a7b { Var#std_number_v7bh(name=exponent) Lit#std_number_i7r(value=-1) }
-                Call#std_number_c7ag(target=mul) { Var#std_number_v7bi(name=acc) Var#std_number_v7bj(name=base) }
+  Let(name=modPositiveLoop) {
+    Fn(params=value,step) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=step) }
+          Block { Return { Var(name=value) } }
+          Block {
+            Return {
+              Call(target=modPositiveLoop) {
+                Call(target=sub) { Var(name=value) Var(name=step) }
+                Var(name=step)
               }
             }
           }
@@ -598,307 +552,197 @@ Program#std_number_p1 {
     }
   }
 
-  Let#std_number_l7r(name=pow) {
-    Fn#std_number_f7p(params=base,exponent) {
-      Block#std_number_b7as {
-        Return#std_number_r7ad {
-          Pow#std_number_pow1 {
-            Var#std_number_v7bk(name=base)
-            Var#std_number_v7bl(name=exponent)
+  Let(name=div) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Div {
+            Var(name=a)
+            Var(name=b)
           }
         }
       }
     }
   }
 
-  Let#std_number_l7s(name=floor) {
-    Fn#std_number_f7q(params=value) { Block#std_number_b7av { Return#std_number_r7af { Var#std_number_v7bn(name=value) } } }
-  }
-
-  Let#std_number_l7t(name=ceil) {
-    Fn#std_number_f7r(params=value) { Block#std_number_b7aw { Return#std_number_r7ag { Var#std_number_v7bo(name=value) } } }
-  }
-
-  Let#std_number_l7u(name=round) {
-    Fn#std_number_f7s(params=value) { Block#std_number_b7ax { Return#std_number_r7ah { Var#std_number_v7bp(name=value) } } }
-  }
-
-  Let#std_number_l7v(name=truncate) {
-    Fn#std_number_f7t(params=value) { Block#std_number_b7ay { Return#std_number_r7ai { Var#std_number_v7bq(name=value) } } }
-  }
-
-
-  Let#std_number_l8(name=digitValue) {
-    Fn#std_number_f8(params=ch) {
-      Block#std_number_b8 {
-        If#std_number_if1 {
-          Eq#std_number_eq1 { Var#std_number_v8(name=ch) Lit#std_number_i5(value="0") }
-          Block#std_number_b9 { Return#std_number_r8 { Lit#std_number_i6(value=0) } }
-          Block#std_number_b10 { Lit#std_number_i7(value=0) }
-        }
-        If#std_number_if2 {
-          Eq#std_number_eq2 { Var#std_number_v9(name=ch) Lit#std_number_i8(value="1") }
-          Block#std_number_b11 { Return#std_number_r9 { Lit#std_number_i9(value=1) } }
-          Block#std_number_b12 { Lit#std_number_i10(value=0) }
-        }
-        If#std_number_if3 {
-          Eq#std_number_eq3 { Var#std_number_v10(name=ch) Lit#std_number_i11(value="2") }
-          Block#std_number_b13 { Return#std_number_r10 { Lit#std_number_i12(value=2) } }
-          Block#std_number_b14 { Lit#std_number_i13(value=0) }
-        }
-        If#std_number_if4 {
-          Eq#std_number_eq4 { Var#std_number_v11(name=ch) Lit#std_number_i14(value="3") }
-          Block#std_number_b15 { Return#std_number_r11 { Lit#std_number_i15(value=3) } }
-          Block#std_number_b16 { Lit#std_number_i16(value=0) }
-        }
-        If#std_number_if5 {
-          Eq#std_number_eq5 { Var#std_number_v12(name=ch) Lit#std_number_i17(value="4") }
-          Block#std_number_b17 { Return#std_number_r12 { Lit#std_number_i18(value=4) } }
-          Block#std_number_b18 { Lit#std_number_i19(value=0) }
-        }
-        If#std_number_if6 {
-          Eq#std_number_eq6 { Var#std_number_v13(name=ch) Lit#std_number_i20(value="5") }
-          Block#std_number_b19 { Return#std_number_r13 { Lit#std_number_i21(value=5) } }
-          Block#std_number_b20 { Lit#std_number_i22(value=0) }
-        }
-        If#std_number_if7 {
-          Eq#std_number_eq7 { Var#std_number_v14(name=ch) Lit#std_number_i23(value="6") }
-          Block#std_number_b21 { Return#std_number_r14 { Lit#std_number_i24(value=6) } }
-          Block#std_number_b22 { Lit#std_number_i25(value=0) }
-        }
-        If#std_number_if8 {
-          Eq#std_number_eq8 { Var#std_number_v15(name=ch) Lit#std_number_i26(value="7") }
-          Block#std_number_b23 { Return#std_number_r15 { Lit#std_number_i27(value=7) } }
-          Block#std_number_b24 { Lit#std_number_i28(value=0) }
-        }
-        If#std_number_if9 {
-          Eq#std_number_eq9 { Var#std_number_v16(name=ch) Lit#std_number_i29(value="8") }
-          Block#std_number_b25 { Return#std_number_r16 { Lit#std_number_i30(value=8) } }
-          Block#std_number_b26 { Lit#std_number_i31(value=0) }
-        }
-        If#std_number_if10 {
-          Eq#std_number_eq10 { Var#std_number_v17(name=ch) Lit#std_number_i32(value="9") }
-          Block#std_number_b27 { Return#std_number_r17 { Lit#std_number_i33(value=9) } }
-          Block#std_number_b28 { Return#std_number_r18 { Lit#std_number_i34(value=-1) } }
+  Let(name=mod) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Mod {
+            Var(name=a)
+            Var(name=b)
+          }
         }
       }
     }
   }
 
-  Let#std_number_l9(name=parseWholeAt) {
-    Fn#std_number_f9(params=text,index,acc) {
-      Block#std_number_b29 {
-        Let#std_number_l10(name=ch) {
-          Call#std_number_c1(target=substring) {
-            Var#std_number_v18(name=text)
-            Var#std_number_v19(name=index)
-            Lit#std_number_i35(value=1)
+  Let(name=powPositiveLoop) {
+    Fn(params=base,exponent,acc) {
+      Block {
+        If {
+          Eq { Var(name=exponent) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=powPositiveLoop) {
+                Var(name=base)
+                Add { Var(name=exponent) Lit(value=-1) }
+                Call(target=mul) { Var(name=acc) Var(name=base) }
+              }
+            }
           }
         }
-        If#std_number_if11 {
-          Eq#std_number_eq11 { Var#std_number_v20(name=ch) Lit#std_number_i36(value="") }
-          Block#std_number_b30 { Return#std_number_r19 { Var#std_number_v21(name=acc) } }
-          Block#std_number_b31 {
-            Let#std_number_l11(name=digit) { Call#std_number_c2(target=digitValue) { Var#std_number_v22(name=ch) } }
-            If#std_number_if12 {
-              Eq#std_number_eq12 { Var#std_number_v23(name=digit) Lit#std_number_i37(value=-1) }
-              Block#std_number_b32 { Return#std_number_r20 { Lit#std_number_i38(value=-1) } }
-              Block#std_number_b33 {
-                Return#std_number_r21 {
-                  Call#std_number_c3(target=parseWholeAt) {
-                    Var#std_number_v24(name=text)
-                    Add#std_number_a4 { Var#std_number_v25(name=index) Lit#std_number_i39(value=1) }
-                    Add#std_number_a5 {
-                      Call#std_number_c3a(target=mul) {
-                        Var#std_number_v26(name=acc)
-                        Lit#std_number_i39a(value=10)
+      }
+    }
+  }
+
+  Let(name=pow) {
+    Fn(params=base,exponent) {
+      Block {
+        Return {
+          Pow {
+            Var(name=base)
+            Var(name=exponent)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=floor) {
+    Fn(params=value) { Block { Return { Var(name=value) } } }
+  }
+
+  Let(name=ceil) {
+    Fn(params=value) { Block { Return { Var(name=value) } } }
+  }
+
+  Let(name=round) {
+    Fn(params=value) { Block { Return { Var(name=value) } } }
+  }
+
+  Let(name=truncate) {
+    Fn(params=value) { Block { Return { Var(name=value) } } }
+  }
+
+
+  Let(name=digitValue) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="0") }
+          Block { Return { Lit(value=0) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="1") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="2") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="3") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="4") }
+          Block { Return { Lit(value=4) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="5") }
+          Block { Return { Lit(value=5) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="6") }
+          Block { Return { Lit(value=6) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="7") }
+          Block { Return { Lit(value=7) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="8") }
+          Block { Return { Lit(value=8) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="9") }
+          Block { Return { Lit(value=9) } }
+          Block { Return { Lit(value=-1) } }
+        }
+      }
+    }
+  }
+
+  Let(name=parseWholeAt) {
+    Fn(params=text,index,acc) {
+      Block {
+        Let(name=ch) {
+          Call(target=substring) {
+            Var(name=text)
+            Var(name=index)
+            Lit(value=1)
+          }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Let(name=digit) { Call(target=digitValue) { Var(name=ch) } }
+            If {
+              Eq { Var(name=digit) Lit(value=-1) }
+              Block { Return { Lit(value=-1) } }
+              Block {
+                Return {
+                  Call(target=parseWholeAt) {
+                    Var(name=text)
+                    Add { Var(name=index) Lit(value=1) }
+                    Add {
+                      Call(target=mul) {
+                        Var(name=acc)
+                        Lit(value=10)
                       }
-                      Var#std_number_v27(name=digit)
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l12(name=isWholeString) {
-    Fn#std_number_f10(params=text) {
-      Block#std_number_b34 {
-        If#std_number_if12a {
-          Eq#std_number_eq12a { Var#std_number_v28a(name=text) Lit#std_number_i40a(value="") }
-          Block#std_number_b34a { Return#std_number_r21a { Lit#std_number_i41a(value=false) } }
-          Block#std_number_b34b {
-            Let#std_number_l13(name=parsed) {
-              Call#std_number_c4(target=parseWholeAt) {
-                Var#std_number_v28(name=text)
-                Lit#std_number_i40(value=0)
-                Lit#std_number_i41(value=0)
-              }
-            }
-            If#std_number_if13 {
-              Eq#std_number_eq13 { Var#std_number_v29(name=parsed) Lit#std_number_i42(value=-1) }
-              Block#std_number_b35 { Return#std_number_r22 { Lit#std_number_i43(value=false) } }
-              Block#std_number_b36 { Return#std_number_r23 { Lit#std_number_i44(value=true) } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l14(name=parseWholeOr) {
-    Fn#std_number_f11(params=text,fallback) {
-      Block#std_number_b37 {
-        Let#std_number_l15(name=parsed) {
-          Call#std_number_c5(target=parseWholeAt) {
-            Var#std_number_v32(name=text)
-            Lit#std_number_i45(value=0)
-            Lit#std_number_i46(value=0)
-          }
-        }
-        If#std_number_if14 {
-          Eq#std_number_eq14 { Var#std_number_v33(name=parsed) Lit#std_number_i47(value=-1) }
-          Block#std_number_b38 { Return#std_number_r24 { Var#std_number_v34(name=fallback) } }
-          Block#std_number_b39 { Return#std_number_r25 { Var#std_number_v35(name=parsed) } }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l16(name=parseSignedWholeCore) {
-    Fn#std_number_f12(params=text,index,negative) {
-      Block#std_number_b40 {
-        Let#std_number_l17(name=parsed) {
-          Call#std_number_c6(target=parseWholeAt) {
-            Var#std_number_v36(name=text)
-            Var#std_number_v37(name=index)
-            Lit#std_number_i48(value=0)
-          }
-        }
-        If#std_number_if15 {
-          Eq#std_number_eq15 { Var#std_number_v38(name=parsed) Lit#std_number_i49(value=-1) }
-          Block#std_number_b41 { Return#std_number_r26 { Lit#std_number_i50(value=-1) } }
-          Block#std_number_b42 {
-            If#std_number_if16 {
-              Var#std_number_v39(name=negative)
-              Block#std_number_b43 {
-                Return#std_number_r27 {
-                  Call#std_number_c6a(target=negate) { Var#std_number_v40(name=parsed) }
-                }
-              }
-              Block#std_number_b44 { Return#std_number_r28 { Var#std_number_v41(name=parsed) } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_number_l18(name=isSignedWholeString) {
-    Fn#std_number_f13(params=text) {
-      Block#std_number_b45 {
-        Let#std_number_l19(name=first) {
-          Call#std_number_c7(target=substring) {
-            Var#std_number_v42(name=text)
-            Lit#std_number_i54(value=0)
-            Lit#std_number_i55(value=1)
-          }
-        }
-        If#std_number_if17 {
-          Eq#std_number_eq16 { Var#std_number_v43(name=first) Lit#std_number_i56(value="-") }
-          Block#std_number_b46 {
-            If#std_number_if18 {
-              Eq#std_number_eq17 {
-                Call#std_number_c8(target=substring) {
-                  Var#std_number_v44(name=text)
-                  Lit#std_number_i57(value=1)
-                  Lit#std_number_i58(value=1)
-                }
-                Lit#std_number_i59(value="")
-              }
-              Block#std_number_b47 { Return#std_number_r29 { Lit#std_number_i60(value=false) } }
-              Block#std_number_b48 {
-                Return#std_number_r30 {
-                  Call#std_number_c9(target=isWholeString) {
-                    Call#std_number_c10(target=substring) {
-                      Var#std_number_v45(name=text)
-                      Lit#std_number_i61(value=1)
-                      Call#std_number_c11(target=sub) {
-                        Call#std_number_c12(target=textLen) { Var#std_number_v46(name=text) }
-                        Lit#std_number_i62(value=1)
-                      }
+                      Var(name=digit)
                     }
                   }
                 }
               }
             }
           }
-          Block#std_number_b49 { Return#std_number_r31 { Call#std_number_c13(target=isWholeString) { Var#std_number_v47(name=text) } } }
         }
       }
     }
   }
 
-  Let#std_number_l20(name=isNumberString) {
-    Fn#std_number_f14(params=text) {
-      Block#std_number_b50 { Return#std_number_r32 { Call#std_number_c14(target=isSignedWholeString) { Var#std_number_v48(name=text) } } }
-    }
-  }
-
-  Let#std_number_l21(name=parseNumberOr) {
-    Fn#std_number_f15(params=text,fallback) {
-      Block#std_number_b51 {
-        Let#std_number_l22(name=first) {
-          Call#std_number_c15(target=substring) {
-            Var#std_number_v49(name=text)
-            Lit#std_number_i63(value=0)
-            Lit#std_number_i64(value=1)
-          }
-        }
-        If#std_number_if19 {
-          Eq#std_number_eq18 { Var#std_number_v50(name=first) Lit#std_number_i65(value="-") }
-          Block#std_number_b52 {
-            Let#std_number_l23(name=rest) {
-              Call#std_number_c16(target=substring) {
-                Var#std_number_v51(name=text)
-                Lit#std_number_i66(value=1)
-                Call#std_number_c17(target=sub) {
-                  Call#std_number_c18(target=textLen) { Var#std_number_v52(name=text) }
-                  Lit#std_number_i67(value=1)
-                }
+  Let(name=isWholeString) {
+    Fn(params=text) {
+      Block {
+        If {
+          Eq { Var(name=text) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=parsed) {
+              Call(target=parseWholeAt) {
+                Var(name=text)
+                Lit(value=0)
+                Lit(value=0)
               }
             }
-            If#std_number_if20 {
-              Call#std_number_c19(target=isWholeString) { Var#std_number_v53(name=rest) }
-              Block#std_number_b53 {
-                Return#std_number_r33 {
-                  Call#std_number_c20(target=parseSignedWholeCore) {
-                    Var#std_number_v54(name=text)
-                    Lit#std_number_i68(value=1)
-                    Lit#std_number_i69(value=true)
-                  }
-                }
-              }
-              Block#std_number_b54 { Return#std_number_r34 { Var#std_number_v55(name=fallback) } }
-            }
-          }
-          Block#std_number_b55 {
-            If#std_number_if21 {
-              Call#std_number_c21(target=isWholeString) { Var#std_number_v56(name=text) }
-              Block#std_number_b56 {
-                Return#std_number_r35 {
-                  Call#std_number_c22(target=parseSignedWholeCore) {
-                    Var#std_number_v57(name=text)
-                    Lit#std_number_i70(value=0)
-                    Lit#std_number_i71(value=false)
-                  }
-                }
-              }
-              Block#std_number_b57 { Return#std_number_r36 { Var#std_number_v58(name=fallback) } }
+            If {
+              Eq { Var(name=parsed) Lit(value=-1) }
+              Block { Return { Lit(value=false) } }
+              Block { Return { Lit(value=true) } }
             }
           }
         }
@@ -906,42 +750,198 @@ Program#std_number_p1 {
     }
   }
 
-  Export#std_number_e1(name=zero)
-  Export#std_number_e2(name=one)
-  Export#std_number_e3(name=add)
-  Export#std_number_e4(name=inc)
-  Export#std_number_e5(name=dec)
-  Export#std_number_e5a(name=sub)
-  Export#std_number_e5b(name=mul)
-  Export#std_number_e5c(name=div)
-  Export#std_number_e5d(name=mod)
-  Export#std_number_e5e(name=pow)
-  Export#std_number_e6e(name=isZero)
-  Export#std_number_e6f(name=isNegative)
-  Export#std_number_e6g(name=isPositive)
-  Export#std_number_e6h(name=isNonNegative)
-  Export#std_number_e6a(name=lt)
-  Export#std_number_e6b(name=lte)
-  Export#std_number_e6c(name=gt)
-  Export#std_number_e6d(name=gte)
-  Export#std_number_e6i(name=compare)
-  Export#std_number_e7(name=toString)
-  Export#std_number_e7a(name=negate)
-  Export#std_number_e7b(name=abs)
-  Export#std_number_e7c(name=sign)
-  Export#std_number_e7d(name=min)
-  Export#std_number_e7e(name=max)
-  Export#std_number_e7f(name=clamp)
-  Export#std_number_e7g(name=betweenInclusive)
-  Export#std_number_e7h(name=betweenExclusive)
-  Export#std_number_e7i(name=floor)
-  Export#std_number_e7j(name=ceil)
-  Export#std_number_e7k(name=round)
-  Export#std_number_e7l(name=truncate)
-  Export#std_number_e8(name=digitValue)
-  Export#std_number_e9(name=isWholeString)
-  Export#std_number_e10(name=parseWholeOr)
-  Export#std_number_e11(name=isSignedWholeString)
-  Export#std_number_e12(name=isNumberString)
-  Export#std_number_e13(name=parseNumberOr)
+  Let(name=parseWholeOr) {
+    Fn(params=text,fallback) {
+      Block {
+        Let(name=parsed) {
+          Call(target=parseWholeAt) {
+            Var(name=text)
+            Lit(value=0)
+            Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=parsed) Lit(value=-1) }
+          Block { Return { Var(name=fallback) } }
+          Block { Return { Var(name=parsed) } }
+        }
+      }
+    }
+  }
+
+  Let(name=parseSignedWholeCore) {
+    Fn(params=text,index,negative) {
+      Block {
+        Let(name=parsed) {
+          Call(target=parseWholeAt) {
+            Var(name=text)
+            Var(name=index)
+            Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=parsed) Lit(value=-1) }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Var(name=negative)
+              Block {
+                Return {
+                  Call(target=negate) { Var(name=parsed) }
+                }
+              }
+              Block { Return { Var(name=parsed) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isSignedWholeString) {
+    Fn(params=text) {
+      Block {
+        Let(name=first) {
+          Call(target=substring) {
+            Var(name=text)
+            Lit(value=0)
+            Lit(value=1)
+          }
+        }
+        If {
+          Eq { Var(name=first) Lit(value="-") }
+          Block {
+            If {
+              Eq {
+                Call(target=substring) {
+                  Var(name=text)
+                  Lit(value=1)
+                  Lit(value=1)
+                }
+                Lit(value="")
+              }
+              Block { Return { Lit(value=false) } }
+              Block {
+                Return {
+                  Call(target=isWholeString) {
+                    Call(target=substring) {
+                      Var(name=text)
+                      Lit(value=1)
+                      Call(target=sub) {
+                        Call(target=textLen) { Var(name=text) }
+                        Lit(value=1)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=isWholeString) { Var(name=text) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=isNumberString) {
+    Fn(params=text) {
+      Block { Return { Call(target=isSignedWholeString) { Var(name=text) } } }
+    }
+  }
+
+  Let(name=parseNumberOr) {
+    Fn(params=text,fallback) {
+      Block {
+        Let(name=first) {
+          Call(target=substring) {
+            Var(name=text)
+            Lit(value=0)
+            Lit(value=1)
+          }
+        }
+        If {
+          Eq { Var(name=first) Lit(value="-") }
+          Block {
+            Let(name=rest) {
+              Call(target=substring) {
+                Var(name=text)
+                Lit(value=1)
+                Call(target=sub) {
+                  Call(target=textLen) { Var(name=text) }
+                  Lit(value=1)
+                }
+              }
+            }
+            If {
+              Call(target=isWholeString) { Var(name=rest) }
+              Block {
+                Return {
+                  Call(target=parseSignedWholeCore) {
+                    Var(name=text)
+                    Lit(value=1)
+                    Lit(value=true)
+                  }
+                }
+              }
+              Block { Return { Var(name=fallback) } }
+            }
+          }
+          Block {
+            If {
+              Call(target=isWholeString) { Var(name=text) }
+              Block {
+                Return {
+                  Call(target=parseSignedWholeCore) {
+                    Var(name=text)
+                    Lit(value=0)
+                    Lit(value=false)
+                  }
+                }
+              }
+              Block { Return { Var(name=fallback) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Export(name=zero)
+  Export(name=one)
+  Export(name=add)
+  Export(name=inc)
+  Export(name=dec)
+  Export(name=sub)
+  Export(name=mul)
+  Export(name=div)
+  Export(name=mod)
+  Export(name=pow)
+  Export(name=isZero)
+  Export(name=isNegative)
+  Export(name=isPositive)
+  Export(name=isNonNegative)
+  Export(name=lt)
+  Export(name=lte)
+  Export(name=gt)
+  Export(name=gte)
+  Export(name=compare)
+  Export(name=toString)
+  Export(name=negate)
+  Export(name=abs)
+  Export(name=sign)
+  Export(name=min)
+  Export(name=max)
+  Export(name=clamp)
+  Export(name=betweenInclusive)
+  Export(name=betweenExclusive)
+  Export(name=floor)
+  Export(name=ceil)
+  Export(name=round)
+  Export(name=truncate)
+  Export(name=digitValue)
+  Export(name=isWholeString)
+  Export(name=parseWholeOr)
+  Export(name=isSignedWholeString)
+  Export(name=isNumberString)
+  Export(name=parseNumberOr)
 }

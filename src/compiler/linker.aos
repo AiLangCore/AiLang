@@ -1,282 +1,282 @@
-Program#linker_p1 {
-  Import#linker_i1(path="parser.aos")
-  Import#linker_i2(path="../std/bytes.aos")
-  Export#linker_e1(name=linker.collectProjectModulePaths)
-  Export#linker_e2(name=linker.buildLinkReportText)
-  Export#linker_e3(name=linker.collectProjectModulePathsWithLock)
+Program {
+  Import(path="parser.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=linker.collectProjectModulePaths)
+  Export(name=linker.buildLinkReportText)
+  Export(name=linker.collectProjectModulePathsWithLock)
 
-  Let#linker_l1(name=linker.collectProjectModulePaths) {
-    Fn#linker_f1(params=dir,entryProgram,entryFile) {
-      Block#linker_b1 {
-        Return#linker_r0 {
-          Call#linker_c0(target=linker.collectProjectModulePathsWithLock) {
-            Var#linker_v_dir0(name=dir)
-            Var#linker_v2_0(name=entryProgram)
-            Var#linker_v3_0(name=entryFile)
-            Lit#linker_i0(value="")
+  Let(name=linker.collectProjectModulePaths) {
+    Fn(params=dir,entryProgram,entryFile) {
+      Block {
+        Return {
+          Call(target=linker.collectProjectModulePathsWithLock) {
+            Var(name=dir)
+            Var(name=entryProgram)
+            Var(name=entryFile)
+            Lit(value="")
           }
         }
       }
     }
   }
 
-  Let#linker_l1w(name=linker.collectProjectModulePathsWithLock) {
-    Fn#linker_f1w(params=dir,entryProgram,entryFile,lockText) {
-      Block#linker_b1w {
-        Let#linker_l2(name=paths) {
-          AppendChild#linker_ap1 {
-            MakeBlock#linker_mb1 { Lit#linker_i1(value="modules") }
-            MakeLitString#linker_mls1 {
-              Lit#linker_i2(value="module0")
-              Var#linker_v1(name=entryFile)
+  Let(name=linker.collectProjectModulePathsWithLock) {
+    Fn(params=dir,entryProgram,entryFile,lockText) {
+      Block {
+        Let(name=paths) {
+          AppendChild {
+            MakeBlock { Lit(value="modules") }
+            MakeLitString {
+              Lit(value="module0")
+              Var(name=entryFile)
             }
           }
         }
-        Let#linker_l2a(name=active) {
-          AppendChild#linker_ap1a {
-            MakeBlock#linker_mb1a { Lit#linker_i1a(value="active") }
-            MakeLitString#linker_mls1a {
-              Lit#linker_i2a(value="active0")
-              Var#linker_v1a(name=entryFile)
+        Let(name=active) {
+          AppendChild {
+            MakeBlock { Lit(value="active") }
+            MakeLitString {
+              Lit(value="active0")
+              Var(name=entryFile)
             }
           }
         }
-        Return#linker_r1 {
-          Call#linker_c1(target=linker.collectImportPaths) {
-            Var#linker_v_dir1(name=dir)
-            Var#linker_v_read_root1(name=dir)
-            Lit#linker_i_prefix1(value="")
-            Var#linker_v2(name=entryProgram)
-            Lit#linker_i3(value=0)
-            Var#linker_v3(name=paths)
-            Var#linker_v_active1(name=active)
-            Var#linker_v_lock1(name=lockText)
+        Return {
+          Call(target=linker.collectImportPaths) {
+            Var(name=dir)
+            Var(name=dir)
+            Lit(value="")
+            Var(name=entryProgram)
+            Lit(value=0)
+            Var(name=paths)
+            Var(name=active)
+            Var(name=lockText)
           }
         }
       }
     }
   }
 
-  Let#linker_l3(name=linker.collectImportPaths) {
-    Fn#linker_f2(params=projectDir,readRoot,displayPrefix,program,index,paths,active,lockText) {
-      Block#linker_b2 {
-        If#linker_if1 {
-          Eq#linker_e1 { Var#linker_v4(name=index) ChildCount#linker_cc1 { Var#linker_v5(name=program) } }
-          Block#linker_b3 { Return#linker_r2 { Var#linker_v6(name=paths) } }
-          Block#linker_b4 {
-            Let#linker_l4(name=child) { ChildAt#linker_ca1 { Var#linker_v7(name=program) Var#linker_v8(name=index) } }
-            Let#linker_l5(name=nextIndex) { Add#linker_a1 { Var#linker_v9(name=index) Lit#linker_i4(value=1) } }
-            If#linker_if2 {
-              Eq#linker_e2 { NodeKind#linker_nk1 { Var#linker_v10(name=child) } Lit#linker_i5(value="Import") }
-              Block#linker_b5 {
-                Let#linker_l6(name=path) {
-                  Call#linker_c2(target=linker.getAttr) {
-                    Var#linker_v11(name=child)
-                    Lit#linker_i6(value="path")
-                    Lit#linker_i7(value=0)
+  Let(name=linker.collectImportPaths) {
+    Fn(params=projectDir,readRoot,displayPrefix,program,index,paths,active,lockText) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=paths) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block {
+                Let(name=path) {
+                  Call(target=linker.getAttr) {
+                    Var(name=child)
+                    Lit(value="path")
+                    Lit(value=0)
                   }
                 }
-                If#linker_if3 {
-                  Eq#linker_e3 { Var#linker_v12(name=path) Lit#linker_i8(value="") }
-                  Block#linker_b6 {
-                    Return#linker_r3 {
-                      Call#linker_c3(target=linker.collectImportPaths) {
-                        Var#linker_v_dir2(name=projectDir)
-                        Var#linker_v_read_root2(name=readRoot)
-                        Var#linker_v_prefix2(name=displayPrefix)
-                        Var#linker_v13(name=program)
-                        Var#linker_v14(name=nextIndex)
-                        Var#linker_v15(name=paths)
-                        Var#linker_v_active2(name=active)
-                        Var#linker_v_lock2(name=lockText)
+                If {
+                  Eq { Var(name=path) Lit(value="") }
+                  Block {
+                    Return {
+                      Call(target=linker.collectImportPaths) {
+                        Var(name=projectDir)
+                        Var(name=readRoot)
+                        Var(name=displayPrefix)
+                        Var(name=program)
+                        Var(name=nextIndex)
+                        Var(name=paths)
+                        Var(name=active)
+                        Var(name=lockText)
                       }
                     }
                   }
-                  Block#linker_b7 {
-                    Let#linker_l_pkg1(name=packageName) {
-                      Call#linker_c_pkg1(target=linker.getAttr) {
-                        Var#linker_v11p(name=child)
-                        Lit#linker_i_pkg1(value="package")
-                        Lit#linker_i_pkg2(value=0)
+                  Block {
+                    Let(name=packageName) {
+                      Call(target=linker.getAttr) {
+                        Var(name=child)
+                        Lit(value="package")
+                        Lit(value=0)
                       }
                     }
-                    Let#linker_l_sdk1(name=sdkName) {
-                      Call#linker_c_sdk1(target=linker.getAttr) {
-                        Var#linker_v11sdk(name=child)
-                        Lit#linker_i_sdk1(value="sdk")
-                        Lit#linker_i_sdk2(value=0)
+                    Let(name=sdkName) {
+                      Call(target=linker.getAttr) {
+                        Var(name=child)
+                        Lit(value="sdk")
+                        Lit(value=0)
                       }
                     }
-                    Let#linker_l_pkg_path1(name=packagePath) {
-                      Call#linker_c_pkg_path1(target=linker.packagePath) {
-                        Var#linker_v_lock_pkg1(name=lockText)
-                        Var#linker_v_pkg_name1(name=packageName)
+                    Let(name=packagePath) {
+                      Call(target=linker.packagePath) {
+                        Var(name=lockText)
+                        Var(name=packageName)
                       }
                     }
-                    Let#linker_l_pkg_root1(name=packageRoot) {
-                      Call#linker_c_pkg_root1(target=linker.packageRoot) {
-                        Var#linker_v_lock_pkg2(name=lockText)
-                        Var#linker_v_pkg_name2(name=packageName)
+                    Let(name=packageRoot) {
+                      Call(target=linker.packageRoot) {
+                        Var(name=lockText)
+                        Var(name=packageName)
                       }
                     }
-                    If#linker_if_pkg_missing1 {
-                      Eq#linker_e_pkg_missing1 { Var#linker_v_pkg_name3(name=packageName) Lit#linker_i_pkg_missing1(value="") }
-                      Block#linker_b_pkg_missing1 { Lit#linker_i_pkg_missing2(value=0) }
-                      Block#linker_b_pkg_missing2 {
-                        If#linker_if_pkg_missing2 {
-                          Eq#linker_e_pkg_missing2 { Var#linker_v_pkg_path2(name=packagePath) Lit#linker_i_pkg_missing3(value="") }
-                          Block#linker_b_pkg_missing3 {
-                            Return#linker_r_pkg_missing1 {
-                              MakeErr#linker_me_pkg_missing1 {
-                                Lit#linker_i_pkg_missing4(value="linker_err")
-                                Lit#linker_i_pkg_missing5(value="LINK002")
-                                Lit#linker_i_pkg_missing6(value="Package import is not present in ailang.lock.toml.")
-                                NodeId#linker_nid_pkg_missing1 { Var#linker_v11pm(name=child) }
+                    If {
+                      Eq { Var(name=packageName) Lit(value="") }
+                      Block { Lit(value=0) }
+                      Block {
+                        If {
+                          Eq { Var(name=packagePath) Lit(value="") }
+                          Block {
+                            Return {
+                              MakeErr {
+                                Lit(value="linker_err")
+                                Lit(value="LINK002")
+                                Lit(value="Package import is not present in ailang.lock.toml.")
+                                NodeId { Var(name=child) }
                               }
                             }
                           }
-                          Block#linker_b_pkg_missing4 { Lit#linker_i_pkg_missing7(value=0) }
+                          Block { Lit(value=0) }
                         }
                       }
                     }
-                    Let#linker_l_pkg_base1(name=packageBase) {
-                      Call#linker_c_pkg_base1(target=linker.packageBasePath) {
-                        Var#linker_v_pkg_project1(name=projectDir)
-                        Var#linker_v_pkg_path3(name=packagePath)
-                        Var#linker_v_pkg_root3(name=packageRoot)
+                    Let(name=packageBase) {
+                      Call(target=linker.packageBasePath) {
+                        Var(name=projectDir)
+                        Var(name=packagePath)
+                        Var(name=packageRoot)
                       }
                     }
-                    Let#linker_l_import_read_root(name=importReadRoot) {
-                      Call#linker_c_import_read_root(target=linker.importReadRoot) {
-                        Var#linker_v_read_root_current(name=readRoot)
-                        Var#linker_v_pkg_base2(name=packageBase)
-                        Var#linker_v_pkg_name4(name=packageName)
-                        Var#linker_v_sdk_name1(name=sdkName)
+                    Let(name=importReadRoot) {
+                      Call(target=linker.importReadRoot) {
+                        Var(name=readRoot)
+                        Var(name=packageBase)
+                        Var(name=packageName)
+                        Var(name=sdkName)
                       }
                     }
-                    Let#linker_l_import_prefix(name=importDisplayPrefix) {
-                      Call#linker_c_import_prefix(target=linker.importDisplayPrefix) {
-                        Var#linker_v_display_prefix_current(name=displayPrefix)
-                        Var#linker_v_pkg_name5(name=packageName)
-                        Var#linker_v_sdk_name2(name=sdkName)
+                    Let(name=importDisplayPrefix) {
+                      Call(target=linker.importDisplayPrefix) {
+                        Var(name=displayPrefix)
+                        Var(name=packageName)
+                        Var(name=sdkName)
                       }
                     }
-                    Let#linker_l_display_path(name=displayPath) {
-                      StrConcat#linker_s_display_path1 {
-                        Var#linker_v_import_prefix1(name=importDisplayPrefix)
-                        Var#linker_v_path_display1(name=path)
+                    Let(name=displayPath) {
+                      StrConcat {
+                        Var(name=importDisplayPrefix)
+                        Var(name=path)
                       }
                     }
-                    If#linker_if_cycle1 {
-                      Call#linker_c_cycle1(target=linker.containsPath) {
-                        Var#linker_v_active3(name=active)
-                        Var#linker_v20(name=displayPath)
-                        Lit#linker_i_cycle1(value=0)
+                    If {
+                      Call(target=linker.containsPath) {
+                        Var(name=active)
+                        Var(name=displayPath)
+                        Lit(value=0)
                       }
-                      Block#linker_b_cycle1 {
-                        Return#linker_r_cycle1 {
-                          MakeErr#linker_me1 {
-                            Lit#linker_i_cycle2(value="linker_err")
-                            Lit#linker_i_cycle3(value="LINK001")
-                            Lit#linker_i_cycle4(value="Circular import detected.")
-                            NodeId#linker_nid1 { Var#linker_v11(name=child) }
+                      Block {
+                        Return {
+                          MakeErr {
+                            Lit(value="linker_err")
+                            Lit(value="LINK001")
+                            Lit(value="Circular import detected.")
+                            NodeId { Var(name=child) }
                           }
                         }
                       }
-                      Block#linker_b_not_cycle1 {
-                        If#linker_if_seen1 {
-                          Call#linker_c_seen1(target=linker.containsPath) {
-                            Var#linker_v18(name=paths)
-                            Var#linker_v20(name=displayPath)
-                            Lit#linker_i_seen1(value=0)
+                      Block {
+                        If {
+                          Call(target=linker.containsPath) {
+                            Var(name=paths)
+                            Var(name=displayPath)
+                            Lit(value=0)
                           }
-                          Block#linker_b_seen1 {
-                            Return#linker_r_seen1 {
-                              Call#linker_c_seen2(target=linker.collectImportPaths) {
-                                Var#linker_v_dir3(name=projectDir)
-                                Var#linker_v_read_root3(name=readRoot)
-                                Var#linker_v_prefix3(name=displayPrefix)
-                                Var#linker_v16(name=program)
-                                Var#linker_v17(name=nextIndex)
-                                Var#linker_v18a(name=paths)
-                                Var#linker_v_active4(name=active)
-                                Var#linker_v_lock3(name=lockText)
+                          Block {
+                            Return {
+                              Call(target=linker.collectImportPaths) {
+                                Var(name=projectDir)
+                                Var(name=readRoot)
+                                Var(name=displayPrefix)
+                                Var(name=program)
+                                Var(name=nextIndex)
+                                Var(name=paths)
+                                Var(name=active)
+                                Var(name=lockText)
                               }
                             }
                           }
-                          Block#linker_b_new1 {
-                            Let#linker_l_import_path(name=importFilePath) {
-                              StrConcat#linker_s_path1 {
-                                Var#linker_v_dir4(name=importReadRoot)
-                                StrConcat#linker_s_path2 {
-                                  Lit#linker_i_path1(value="/")
-                                  Var#linker_v20a(name=path)
+                          Block {
+                            Let(name=importFilePath) {
+                              StrConcat {
+                                Var(name=importReadRoot)
+                                StrConcat {
+                                  Lit(value="/")
+                                  Var(name=path)
                                 }
                               }
                             }
-                            Let#linker_l_import_text(name=importText) {
-                              Call#linker_c_read1(target=bytes.toUtf8String) {
-                                Call#linker_c_read2(target=io.readFile) {
-                                  Var#linker_v_path1(name=importFilePath)
+                            Let(name=importText) {
+                              Call(target=bytes.toUtf8String) {
+                                Call(target=io.readFile) {
+                                  Var(name=importFilePath)
                                 }
                               }
                             }
-                            Let#linker_l_import_program(name=importProgram) {
-                              Call#linker_c_parse1(target=parse.parseDocument) {
-                                Var#linker_v_text1(name=importText)
+                            Let(name=importProgram) {
+                              Call(target=parse.parseDocument) {
+                                Var(name=importText)
                               }
                             }
-                            If#linker_if_parse1 {
-                              Eq#linker_e_parse1 { NodeKind#linker_nk_parse1 { Var#linker_v_import_program1(name=importProgram) } Lit#linker_i_parse1(value="Err") }
-                              Block#linker_b_parse_err1 { Return#linker_r_parse_err1 { Var#linker_v_import_program2(name=importProgram) } }
-                              Block#linker_b_parse_ok1 {
-                                Let#linker_l_new_paths(name=newPaths) {
-                                  AppendChild#linker_ap2 {
-                                    Var#linker_v18b(name=paths)
-                                    MakeLitString#linker_mls2 {
-                                      StrConcat#linker_s1 {
-                                        Lit#linker_i9(value="module")
-                                        ToString#linker_ts1 { ChildCount#linker_cc_paths1 { Var#linker_v18c(name=paths) } }
+                            If {
+                              Eq { NodeKind { Var(name=importProgram) } Lit(value="Err") }
+                              Block { Return { Var(name=importProgram) } }
+                              Block {
+                                Let(name=newPaths) {
+                                  AppendChild {
+                                    Var(name=paths)
+                                    MakeLitString {
+                                      StrConcat {
+                                        Lit(value="module")
+                                        ToString { ChildCount { Var(name=paths) } }
                                       }
-                                      Var#linker_v20b(name=displayPath)
+                                      Var(name=displayPath)
                                     }
                                   }
                                 }
-                                Let#linker_l_dep_paths(name=depPaths) {
-                                  Call#linker_c_recurse1(target=linker.collectImportPaths) {
-                                    Var#linker_v_dir5(name=projectDir)
-                                    Var#linker_v_read_root5(name=importReadRoot)
-                                    Var#linker_v_prefix5(name=importDisplayPrefix)
-                                    Var#linker_v_import_program3(name=importProgram)
-                                    Lit#linker_i_recurse1(value=0)
-                                    Var#linker_v_new_paths1(name=newPaths)
-                                    AppendChild#linker_ap_active2 {
-                                      Var#linker_v_active5(name=active)
-                                      MakeLitString#linker_mls_active2 {
-                                        StrConcat#linker_s_active1 {
-                                          Lit#linker_i_active1(value="active")
-                                          ToString#linker_ts_active1 { ChildCount#linker_cc_active1 { Var#linker_v_active6(name=active) } }
+                                Let(name=depPaths) {
+                                  Call(target=linker.collectImportPaths) {
+                                    Var(name=projectDir)
+                                    Var(name=importReadRoot)
+                                    Var(name=importDisplayPrefix)
+                                    Var(name=importProgram)
+                                    Lit(value=0)
+                                    Var(name=newPaths)
+                                    AppendChild {
+                                      Var(name=active)
+                                      MakeLitString {
+                                        StrConcat {
+                                          Lit(value="active")
+                                          ToString { ChildCount { Var(name=active) } }
                                         }
-                                        Var#linker_v20c(name=displayPath)
+                                        Var(name=displayPath)
                                       }
                                     }
-                                    Var#linker_v_lock5(name=lockText)
+                                    Var(name=lockText)
                                   }
                                 }
-                                If#linker_if_dep_err1 {
-                                  Eq#linker_e_dep_err1 { NodeKind#linker_nk_dep_err1 { Var#linker_v_dep_paths1(name=depPaths) } Lit#linker_i_dep_err1(value="Err") }
-                                  Block#linker_b_dep_err1 { Return#linker_r_dep_err1 { Var#linker_v_dep_paths2(name=depPaths) } }
-                                  Block#linker_b_dep_ok1 {
-                                    Return#linker_r4 {
-                                      Call#linker_c4(target=linker.collectImportPaths) {
-                                        Var#linker_v_dir6(name=projectDir)
-                                        Var#linker_v_read_root6(name=readRoot)
-                                        Var#linker_v_prefix6(name=displayPrefix)
-                                        Var#linker_v16a(name=program)
-                                        Var#linker_v17a(name=nextIndex)
-                                        Var#linker_v_dep_paths3(name=depPaths)
-                                        Var#linker_v_active7(name=active)
-                                        Var#linker_v_lock6(name=lockText)
+                                If {
+                                  Eq { NodeKind { Var(name=depPaths) } Lit(value="Err") }
+                                  Block { Return { Var(name=depPaths) } }
+                                  Block {
+                                    Return {
+                                      Call(target=linker.collectImportPaths) {
+                                        Var(name=projectDir)
+                                        Var(name=readRoot)
+                                        Var(name=displayPrefix)
+                                        Var(name=program)
+                                        Var(name=nextIndex)
+                                        Var(name=depPaths)
+                                        Var(name=active)
+                                        Var(name=lockText)
                                       }
                                     }
                                   }
@@ -290,17 +290,17 @@ Program#linker_p1 {
                   }
                 }
               }
-              Block#linker_b8 {
-                Return#linker_r5 {
-                  Call#linker_c5(target=linker.collectImportPaths) {
-                    Var#linker_v_dir7(name=projectDir)
-                    Var#linker_v_read_root7(name=readRoot)
-                    Var#linker_v_prefix7(name=displayPrefix)
-                    Var#linker_v21(name=program)
-                    Var#linker_v22(name=nextIndex)
-                    Var#linker_v23(name=paths)
-                    Var#linker_v_active8(name=active)
-                    Var#linker_v_lock7(name=lockText)
+              Block {
+                Return {
+                  Call(target=linker.collectImportPaths) {
+                    Var(name=projectDir)
+                    Var(name=readRoot)
+                    Var(name=displayPrefix)
+                    Var(name=program)
+                    Var(name=nextIndex)
+                    Var(name=paths)
+                    Var(name=active)
+                    Var(name=lockText)
                   }
                 }
               }
@@ -311,22 +311,22 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l7(name=linker.getAttr) {
-    Fn#linker_f3(params=node,key,index) {
-      Block#linker_b9 {
-        If#linker_if4 {
-          Eq#linker_e4 { Var#linker_v24(name=index) AttrCount#linker_ac1 { Var#linker_v25(name=node) } }
-          Block#linker_b10 { Return#linker_r6 { Lit#linker_i10(value="") } }
-          Block#linker_b11 {
-            If#linker_if5 {
-              Eq#linker_e5 { AttrKey#linker_ak1 { Var#linker_v26(name=node) Var#linker_v27(name=index) } Var#linker_v28(name=key) }
-              Block#linker_b12 { Return#linker_r7 { AttrValueString#linker_avs1 { Var#linker_v29(name=node) Var#linker_v30(name=index) } } }
-              Block#linker_b13 {
-                Return#linker_r8 {
-                  Call#linker_c6(target=linker.getAttr) {
-                    Var#linker_v31(name=node)
-                    Var#linker_v32(name=key)
-                    Add#linker_a2 { Var#linker_v33(name=index) Lit#linker_i11(value=1) }
+  Let(name=linker.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=linker.getAttr) {
+                    Var(name=node)
+                    Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
                   }
                 }
               }
@@ -337,28 +337,28 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_contains1(name=linker.containsPath) {
-    Fn#linker_f_contains1(params=paths,path,index) {
-      Block#linker_b_contains1 {
-        If#linker_if_contains1 {
-          Eq#linker_e_contains1 { Var#linker_v_contains1(name=index) ChildCount#linker_cc_contains1 { Var#linker_v_contains2(name=paths) } }
-          Block#linker_b_contains2 { Return#linker_r_contains1 { Lit#linker_i_contains1(value=false) } }
-          Block#linker_b_contains3 {
-            If#linker_if_contains2 {
-              Eq#linker_e_contains2 {
-                AttrValueString#linker_avs_contains1 {
-                  ChildAt#linker_ca_contains1 { Var#linker_v_contains3(name=paths) Var#linker_v_contains4(name=index) }
-                  Lit#linker_i_contains2(value=0)
+  Let(name=linker.containsPath) {
+    Fn(params=paths,path,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=paths) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString {
+                  ChildAt { Var(name=paths) Var(name=index) }
+                  Lit(value=0)
                 }
-                Var#linker_v_contains5(name=path)
+                Var(name=path)
               }
-              Block#linker_b_contains4 { Return#linker_r_contains2 { Lit#linker_i_contains3(value=true) } }
-              Block#linker_b_contains5 {
-                Return#linker_r_contains3 {
-                  Call#linker_c_contains1(target=linker.containsPath) {
-                    Var#linker_v_contains6(name=paths)
-                    Var#linker_v_contains7(name=path)
-                    Add#linker_a_contains1 { Var#linker_v_contains8(name=index) Lit#linker_i_contains4(value=1) }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=linker.containsPath) {
+                    Var(name=paths)
+                    Var(name=path)
+                    Add { Var(name=index) Lit(value=1) }
                   }
                 }
               }
@@ -369,19 +369,19 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_pkg_path(name=linker.packagePath) {
-    Fn#linker_f_pkg_path(params=lockText,packageName) {
-      Block#linker_b_pkg_path {
-        If#linker_if_pkg_path1 {
-          Eq#linker_e_pkg_path1 { Var#linker_v_pkg_path1(name=packageName) Lit#linker_i_pkg_path1(value="") }
-          Block#linker_b_pkg_path1 { Return#linker_r_pkg_path1 { Lit#linker_i_pkg_path2(value="") } }
-          Block#linker_b_pkg_path2 {
-            Return#linker_r_pkg_path2 {
-              Call#linker_c_pkg_path(target=linker.lockPackageValue) {
-                Var#linker_v_pkg_path2(name=lockText)
-                Var#linker_v_pkg_path3(name=packageName)
-                Lit#linker_i_pkg_path3(value="path = \"")
-                Lit#linker_i_pkg_path4(value=8)
+  Let(name=linker.packagePath) {
+    Fn(params=lockText,packageName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              Call(target=linker.lockPackageValue) {
+                Var(name=lockText)
+                Var(name=packageName)
+                Lit(value="path = \"")
+                Lit(value=8)
               }
             }
           }
@@ -390,43 +390,43 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_import_read_root(name=linker.importReadRoot) {
-    Fn#linker_f_import_read_root(params=readRoot,packageBase,packageName,sdkName) {
-      Block#linker_b_import_read_root {
-        If#linker_if_import_read_root {
-          Eq#linker_e_import_read_root { Var#linker_v_import_read_root1(name=packageName) Lit#linker_i_import_read_root1(value="") }
-          Block#linker_b_import_read_root1 {
-            If#linker_if_import_read_root_sdk {
-              Eq#linker_e_import_read_root_sdk { Var#linker_v_import_read_root_sdk(name=sdkName) Lit#linker_i_import_read_root_sdk(value="ailang") }
-              Block#linker_b_import_read_root_sdk { Return#linker_r_import_read_root_sdk { Call#linker_c_import_read_root_sdk(target=sys.process.env.get) { Lit#linker_i_import_read_root_sdk_env(value="AILANG_SDK_ROOT") } } }
-              Block#linker_b_import_read_root_project { Return#linker_r_import_read_root1 { Var#linker_v_import_read_root2(name=readRoot) } }
+  Let(name=linker.importReadRoot) {
+    Fn(params=readRoot,packageBase,packageName,sdkName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=sdkName) Lit(value="ailang") }
+              Block { Return { Call(target=sys.process.env.get) { Lit(value="AILANG_SDK_ROOT") } } }
+              Block { Return { Var(name=readRoot) } }
             }
           }
-          Block#linker_b_import_read_root2 { Return#linker_r_import_read_root2 { Var#linker_v_import_read_root3(name=packageBase) } }
+          Block { Return { Var(name=packageBase) } }
         }
       }
     }
   }
 
-  Let#linker_l_import_prefix(name=linker.importDisplayPrefix) {
-    Fn#linker_f_import_prefix(params=displayPrefix,packageName,sdkName) {
-      Block#linker_b_import_prefix {
-        If#linker_if_import_prefix {
-          Eq#linker_e_import_prefix { Var#linker_v_import_prefix1(name=packageName) Lit#linker_i_import_prefix1(value="") }
-          Block#linker_b_import_prefix1 {
-            If#linker_if_import_prefix_sdk {
-              Eq#linker_e_import_prefix_sdk { Var#linker_v_import_prefix_sdk(name=sdkName) Lit#linker_i_import_prefix_sdk(value="ailang") }
-              Block#linker_b_import_prefix_sdk { Return#linker_r_import_prefix_sdk { Lit#linker_i_import_prefix_sdk_value(value="sdk:ailang/") } }
-              Block#linker_b_import_prefix_project { Return#linker_r_import_prefix1 { Var#linker_v_import_prefix2(name=displayPrefix) } }
+  Let(name=linker.importDisplayPrefix) {
+    Fn(params=displayPrefix,packageName,sdkName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=sdkName) Lit(value="ailang") }
+              Block { Return { Lit(value="sdk:ailang/") } }
+              Block { Return { Var(name=displayPrefix) } }
             }
           }
-          Block#linker_b_import_prefix2 {
-            Return#linker_r_import_prefix2 {
-              StrConcat#linker_s_import_prefix1 {
-                Lit#linker_i_import_prefix2(value="package:")
-                StrConcat#linker_s_import_prefix2 {
-                  Var#linker_v_import_prefix3(name=packageName)
-                  Lit#linker_i_import_prefix3(value="/")
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="package:")
+                StrConcat {
+                  Var(name=packageName)
+                  Lit(value="/")
                 }
               }
             }
@@ -436,48 +436,48 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_pkg_root(name=linker.packageRoot) {
-    Fn#linker_f_pkg_root(params=lockText,packageName) {
-      Block#linker_b_pkg_root {
-        Let#linker_l_pkg_root_value(name=rootValue) {
-          Call#linker_c_pkg_root(target=linker.lockPackageValue) {
-            Var#linker_v_pkg_root1(name=lockText)
-            Var#linker_v_pkg_root2(name=packageName)
-            Lit#linker_i_pkg_root1(value="packageRoot = \"")
-            Lit#linker_i_pkg_root2(value=15)
+  Let(name=linker.packageRoot) {
+    Fn(params=lockText,packageName) {
+      Block {
+        Let(name=rootValue) {
+          Call(target=linker.lockPackageValue) {
+            Var(name=lockText)
+            Var(name=packageName)
+            Lit(value="packageRoot = \"")
+            Lit(value=15)
           }
         }
-        If#linker_if_pkg_root1 {
-          Eq#linker_e_pkg_root1 { Var#linker_v_pkg_root3(name=rootValue) Lit#linker_i_pkg_root3(value="") }
-          Block#linker_b_pkg_root1 { Return#linker_r_pkg_root1 { Lit#linker_i_pkg_root4(value=".") } }
-          Block#linker_b_pkg_root2 { Return#linker_r_pkg_root2 { Var#linker_v_pkg_root4(name=rootValue) } }
+        If {
+          Eq { Var(name=rootValue) Lit(value="") }
+          Block { Return { Lit(value=".") } }
+          Block { Return { Var(name=rootValue) } }
         }
       }
     }
   }
 
-  Let#linker_l_pkg_base(name=linker.packageBasePath) {
-    Fn#linker_f_pkg_base(params=projectDir,packagePath,packageRoot) {
-      Block#linker_b_pkg_base {
-        Let#linker_l_pkg_base1(name=basePath) {
-          StrConcat#linker_s_pkg_base1 {
-            Var#linker_v_pkg_base1(name=projectDir)
-            StrConcat#linker_s_pkg_base2 {
-              Lit#linker_i_pkg_base1(value="/")
-              Var#linker_v_pkg_base2(name=packagePath)
+  Let(name=linker.packageBasePath) {
+    Fn(params=projectDir,packagePath,packageRoot) {
+      Block {
+        Let(name=basePath) {
+          StrConcat {
+            Var(name=projectDir)
+            StrConcat {
+              Lit(value="/")
+              Var(name=packagePath)
             }
           }
         }
-        If#linker_if_pkg_base1 {
-          Eq#linker_e_pkg_base1 { Var#linker_v_pkg_base3(name=packageRoot) Lit#linker_i_pkg_base2(value=".") }
-          Block#linker_b_pkg_base1 { Return#linker_r_pkg_base1 { Var#linker_v_pkg_base4(name=basePath) } }
-          Block#linker_b_pkg_base2 {
-            Return#linker_r_pkg_base2 {
-              StrConcat#linker_s_pkg_base3 {
-                Var#linker_v_pkg_base5(name=basePath)
-                StrConcat#linker_s_pkg_base4 {
-                  Lit#linker_i_pkg_base3(value="/")
-                  Var#linker_v_pkg_base6(name=packageRoot)
+        If {
+          Eq { Var(name=packageRoot) Lit(value=".") }
+          Block { Return { Var(name=basePath) } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=basePath)
+                StrConcat {
+                  Lit(value="/")
+                  Var(name=packageRoot)
                 }
               }
             }
@@ -487,70 +487,70 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_lock_value(name=linker.lockPackageValue) {
-    Fn#linker_f_lock_value(params=lockText,packageName,valuePrefix,prefixLength) {
-      Block#linker_b_lock_value {
-        Let#linker_l_lock_value1(name=nameNeedle) {
-          StrConcat#linker_s_lock_value1 {
-            Lit#linker_i_lock_value1(value="name = \"")
-            StrConcat#linker_s_lock_value2 {
-              Var#linker_v_lock_value1(name=packageName)
-              Lit#linker_i_lock_value2(value="\"")
+  Let(name=linker.lockPackageValue) {
+    Fn(params=lockText,packageName,valuePrefix,prefixLength) {
+      Block {
+        Let(name=nameNeedle) {
+          StrConcat {
+            Lit(value="name = \"")
+            StrConcat {
+              Var(name=packageName)
+              Lit(value="\"")
             }
           }
         }
-        Let#linker_l_lock_value2(name=namePos) {
-          Call#linker_c_lock_value1(target=find) {
-            Var#linker_v_lock_value2(name=lockText)
-            Var#linker_v_lock_value3(name=nameNeedle)
-            Lit#linker_i_lock_value3(value=0)
+        Let(name=namePos) {
+          Call(target=find) {
+            Var(name=lockText)
+            Var(name=nameNeedle)
+            Lit(value=0)
           }
         }
-        If#linker_if_lock_value1 {
-          Eq#linker_e_lock_value1 { Var#linker_v_lock_value4(name=namePos) Lit#linker_i_lock_value4(value=-1) }
-          Block#linker_b_lock_value1 { Return#linker_r_lock_value1 { Lit#linker_i_lock_value5(value="") } }
-          Block#linker_b_lock_value2 {
-            Let#linker_l_lock_value3(name=afterName) {
-              Call#linker_c_lock_value2(target=substring) {
-                Var#linker_v_lock_value5(name=lockText)
-                Var#linker_v_lock_value6(name=namePos)
-                Lit#linker_i_lock_value6(value=2147483647)
+        If {
+          Eq { Var(name=namePos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterName) {
+              Call(target=substring) {
+                Var(name=lockText)
+                Var(name=namePos)
+                Lit(value=2147483647)
               }
             }
-            Let#linker_l_lock_value4(name=valuePos) {
-              Call#linker_c_lock_value3(target=find) {
-                Var#linker_v_lock_value7(name=afterName)
-                Var#linker_v_lock_value8(name=valuePrefix)
-                Lit#linker_i_lock_value7(value=0)
+            Let(name=valuePos) {
+              Call(target=find) {
+                Var(name=afterName)
+                Var(name=valuePrefix)
+                Lit(value=0)
               }
             }
-            If#linker_if_lock_value2 {
-              Eq#linker_e_lock_value2 { Var#linker_v_lock_value9(name=valuePos) Lit#linker_i_lock_value8(value=-1) }
-              Block#linker_b_lock_value3 { Return#linker_r_lock_value2 { Lit#linker_i_lock_value9(value="") } }
-              Block#linker_b_lock_value4 {
-                Let#linker_l_lock_value5(name=afterValue) {
-                  Call#linker_c_lock_value4(target=substring) {
-                    Var#linker_v_lock_value10(name=afterName)
-                    Add#linker_a_lock_value1 { Var#linker_v_lock_value11(name=valuePos) Var#linker_v_lock_value12(name=prefixLength) }
-                    Lit#linker_i_lock_value10(value=2147483647)
+            If {
+              Eq { Var(name=valuePos) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block {
+                Let(name=afterValue) {
+                  Call(target=substring) {
+                    Var(name=afterName)
+                    Add { Var(name=valuePos) Var(name=prefixLength) }
+                    Lit(value=2147483647)
                   }
                 }
-                Let#linker_l_lock_value6(name=endPos) {
-                  Call#linker_c_lock_value5(target=find) {
-                    Var#linker_v_lock_value13(name=afterValue)
-                    Lit#linker_i_lock_value11(value="\"")
-                    Lit#linker_i_lock_value12(value=0)
+                Let(name=endPos) {
+                  Call(target=find) {
+                    Var(name=afterValue)
+                    Lit(value="\"")
+                    Lit(value=0)
                   }
                 }
-                If#linker_if_lock_value3 {
-                  Eq#linker_e_lock_value3 { Var#linker_v_lock_value14(name=endPos) Lit#linker_i_lock_value13(value=-1) }
-                  Block#linker_b_lock_value5 { Return#linker_r_lock_value3 { Lit#linker_i_lock_value14(value="") } }
-                  Block#linker_b_lock_value6 {
-                    Return#linker_r_lock_value4 {
-                      Call#linker_c_lock_value6(target=substring) {
-                        Var#linker_v_lock_value15(name=afterValue)
-                        Lit#linker_i_lock_value15(value=0)
-                        Var#linker_v_lock_value16(name=endPos)
+                If {
+                  Eq { Var(name=endPos) Lit(value=-1) }
+                  Block { Return { Lit(value="") } }
+                  Block {
+                    Return {
+                      Call(target=substring) {
+                        Var(name=afterValue)
+                        Lit(value=0)
+                        Var(name=endPos)
                       }
                     }
                   }
@@ -563,18 +563,18 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_report1(name=linker.buildLinkReportText) {
-    Fn#linker_f_report1(params=paths) {
-      Block#linker_b_report1 {
-        Return#linker_r_report1 {
-          Call#linker_c_report1(target=linker.appendLinkReportModules) {
-            Var#linker_v_report1(name=paths)
-            Lit#linker_i_report1(value=0)
-            StrConcat#linker_s_report1 {
-              Lit#linker_i_report2(value="LinkReport#linker_report(moduleCount=")
-              StrConcat#linker_s_report2 {
-                ToString#linker_ts_report1 { ChildCount#linker_cc_report1 { Var#linker_v_report2(name=paths) } }
-                Lit#linker_i_report3(value=") { ")
+  Let(name=linker.buildLinkReportText) {
+    Fn(params=paths) {
+      Block {
+        Return {
+          Call(target=linker.appendLinkReportModules) {
+            Var(name=paths)
+            Lit(value=0)
+            StrConcat {
+              Lit(value="LinkReport#linker_report(moduleCount=")
+              StrConcat {
+                ToString { ChildCount { Var(name=paths) } }
+                Lit(value=") { ")
               }
             }
           }
@@ -583,41 +583,41 @@ Program#linker_p1 {
     }
   }
 
-  Let#linker_l_report2(name=linker.appendLinkReportModules) {
-    Fn#linker_f_report2(params=paths,index,text) {
-      Block#linker_b_report2 {
-        If#linker_if_report1 {
-          Eq#linker_e_report1 { Var#linker_v_report3(name=index) ChildCount#linker_cc_report2 { Var#linker_v_report4(name=paths) } }
-          Block#linker_b_report3 {
-            Return#linker_r_report2 {
-              StrConcat#linker_s_report3 {
-                Var#linker_v_report5(name=text)
-                Lit#linker_i_report4(value="}")
+  Let(name=linker.appendLinkReportModules) {
+    Fn(params=paths,index,text) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=paths) } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=text)
+                Lit(value="}")
               }
             }
           }
-          Block#linker_b_report4 {
-            Let#linker_l_report3(name=modulePath) {
-              AttrValueString#linker_avs_report1 {
-                ChildAt#linker_ca_report1 { Var#linker_v_report6(name=paths) Var#linker_v_report7(name=index) }
-                Lit#linker_i_report5(value=0)
+          Block {
+            Let(name=modulePath) {
+              AttrValueString {
+                ChildAt { Var(name=paths) Var(name=index) }
+                Lit(value=0)
               }
             }
-            Return#linker_r_report3 {
-              Call#linker_c_report2(target=linker.appendLinkReportModules) {
-                Var#linker_v_report8(name=paths)
-                Add#linker_a_report1 { Var#linker_v_report9(name=index) Lit#linker_i_report6(value=1) }
-                StrConcat#linker_s_report4 {
-                  Var#linker_v_report10(name=text)
-                  StrConcat#linker_s_report5 {
-                    Lit#linker_i_report7(value="Module#index")
-                    StrConcat#linker_s_report6 {
-                      ToString#linker_ts_report2 { Var#linker_v_report11(name=index) }
-                      StrConcat#linker_s_report7 {
-                        Lit#linker_i_report8(value="(path=\"")
-                        StrConcat#linker_s_report8 {
-                          Var#linker_v_report12(name=modulePath)
-                          Lit#linker_i_report9(value="\") ")
+            Return {
+              Call(target=linker.appendLinkReportModules) {
+                Var(name=paths)
+                Add { Var(name=index) Lit(value=1) }
+                StrConcat {
+                  Var(name=text)
+                  StrConcat {
+                    Lit(value="Module#index")
+                    StrConcat {
+                      ToString { Var(name=index) }
+                      StrConcat {
+                        Lit(value="(path=\"")
+                        StrConcat {
+                          Var(name=modulePath)
+                          Lit(value="\") ")
                         }
                       }
                     }

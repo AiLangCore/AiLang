@@ -1,151 +1,151 @@
-Program#std_time_p1 {
-  Import#std_time_im1(path="./core.aos")
+Program {
+  Import(path="./core.aos")
 
-  Let#std_time_l1(name=nowUnixMs) {
-    Fn#std_time_f1(params=_) {
-      Block#std_time_b1 {
-        Return#std_time_r1 { Call#std_time_c1(target=sys.time.nowUnixMs) }
+  Let(name=nowUnixMs) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.nowUnixMs) }
       }
     }
   }
 
-  Let#std_time_l2(name=monotonicMs) {
-    Fn#std_time_f2(params=_) {
-      Block#std_time_b2 {
-        Return#std_time_r2 { Call#std_time_c2(target=sys.time.monotonicMs) }
+  Let(name=monotonicMs) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.monotonicMs) }
       }
     }
   }
 
-  Let#std_time_l3(name=sleepMs) {
-    Fn#std_time_f3(params=durationMs) {
-      Block#std_time_b3 {
-        Return#std_time_r3 { Call#std_time_c3(target=sys.time.sleepMs) { Var#std_time_v1(name=durationMs) } }
+  Let(name=sleepMs) {
+    Fn(params=durationMs) {
+      Block {
+        Return { Call(target=sys.time.sleepMs) { Var(name=durationMs) } }
       }
     }
   }
 
-  Let#std_time_l4(name=timeZoneId) {
-    Fn#std_time_f4(params=_) {
-      Block#std_time_b4 {
-        Return#std_time_r4 { Call#std_time_c4(target=sys.time.timeZoneId) }
+  Let(name=timeZoneId) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.timeZoneId) }
       }
     }
   }
 
-  Let#std_time_l5(name=timeZoneOffsetMinutesAt) {
-    Fn#std_time_f5(params=unixMs) {
-      Block#std_time_b5 {
-        Return#std_time_r5 {
-          Call#std_time_c5(target=sys.time.timeZoneOffsetMinutesAt) { Var#std_time_v2(name=unixMs) }
+  Let(name=timeZoneOffsetMinutesAt) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=sys.time.timeZoneOffsetMinutesAt) { Var(name=unixMs) }
         }
       }
     }
   }
 
-  Let#std_time_l6(name=timeFromUnixMs) {
-    Fn#std_time_f6(params=unixMs,zoneId,offsetMinutes) {
-      Block#std_time_b6 {
-        Let#std_time_l7(name=base) { Map#std_time_m1 { } }
-        Let#std_time_l8(name=withType) {
-          Call#std_time_c6(target=mapSet) {
-            Var#std_time_v3(name=base)
-            Lit#std_time_s1(value="type")
-            Lit#std_time_s2(value="time")
+  Let(name=timeFromUnixMs) {
+    Fn(params=unixMs,zoneId,offsetMinutes) {
+      Block {
+        Let(name=base) { Map { } }
+        Let(name=withType) {
+          Call(target=mapSet) {
+            Var(name=base)
+            Lit(value="type")
+            Lit(value="time")
           }
         }
-        Let#std_time_l9(name=withUnixMs) {
-          Call#std_time_c7(target=mapSet) {
-            Var#std_time_v4(name=withType)
-            Lit#std_time_s3(value="unixMs")
-            Var#std_time_v5(name=unixMs)
+        Let(name=withUnixMs) {
+          Call(target=mapSet) {
+            Var(name=withType)
+            Lit(value="unixMs")
+            Var(name=unixMs)
           }
         }
-        Let#std_time_l10(name=withZone) {
-          Call#std_time_c8(target=mapSet) {
-            Var#std_time_v6(name=withUnixMs)
-            Lit#std_time_s4(value="zoneId")
-            Var#std_time_v7(name=zoneId)
+        Let(name=withZone) {
+          Call(target=mapSet) {
+            Var(name=withUnixMs)
+            Lit(value="zoneId")
+            Var(name=zoneId)
           }
         }
-        Return#std_time_r6 {
-          Call#std_time_c9(target=mapSet) {
-            Var#std_time_v8(name=withZone)
-            Lit#std_time_s5(value="offsetMinutes")
-            Var#std_time_v9(name=offsetMinutes)
-          }
-        }
-      }
-    }
-  }
-
-  Let#std_time_l11(name=now) {
-    Fn#std_time_f7(params=_) {
-      Block#std_time_b7 {
-        Let#std_time_l12(name=unixMs) { Call#std_time_c10(target=nowUnixMs) { } }
-        Let#std_time_l13(name=zoneId) { Call#std_time_c11(target=timeZoneId) { } }
-        Let#std_time_l14(name=offsetMinutes) {
-          Call#std_time_c12(target=timeZoneOffsetMinutesAt) { Var#std_time_v10(name=unixMs) }
-        }
-        Return#std_time_r7 {
-          Call#std_time_c13(target=timeFromUnixMs) {
-            Var#std_time_v11(name=unixMs)
-            Var#std_time_v12(name=zoneId)
-            Var#std_time_v13(name=offsetMinutes)
+        Return {
+          Call(target=mapSet) {
+            Var(name=withZone)
+            Lit(value="offsetMinutes")
+            Var(name=offsetMinutes)
           }
         }
       }
     }
   }
 
-  Let#std_time_l14a(name=nowUtc) {
-    Fn#std_time_f7a(params=_) {
-      Block#std_time_b7a {
-        Return#std_time_r7a {
-          Call#std_time_c12a(target=timeUtc) {
-            Call#std_time_c12b(target=nowUnixMs) { }
+  Let(name=now) {
+    Fn(params=_) {
+      Block {
+        Let(name=unixMs) { Call(target=nowUnixMs) { } }
+        Let(name=zoneId) { Call(target=timeZoneId) { } }
+        Let(name=offsetMinutes) {
+          Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+        }
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Var(name=zoneId)
+            Var(name=offsetMinutes)
           }
         }
       }
     }
   }
 
-  Let#std_time_l14b(name=timeLocal) {
-    Fn#std_time_f7b(params=unixMs) {
-      Block#std_time_b7b {
-        Return#std_time_r7b {
-          Call#std_time_c12c(target=timeFromUnixMs) {
-            Var#std_time_v13a(name=unixMs)
-            Call#std_time_c12d(target=timeZoneId) { }
-            Call#std_time_c12e(target=timeZoneOffsetMinutesAt) { Var#std_time_v13b(name=unixMs) }
+  Let(name=nowUtc) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=timeUtc) {
+            Call(target=nowUnixMs) { }
           }
         }
       }
     }
   }
 
-  Let#std_time_l15(name=timeUnixMs) {
-    Fn#std_time_f8(params=timeValue) {
-      Block#std_time_b8 {
-        Return#std_time_r8 {
-          Call#std_time_c14(target=mapGetIntOr) {
-            Var#std_time_v14(name=timeValue)
-            Lit#std_time_s8(value="unixMs")
-            Lit#std_time_i1(value=0)
+  Let(name=timeLocal) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Call(target=timeZoneId) { }
+            Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
           }
         }
       }
     }
   }
 
-  Let#std_time_l16(name=timeZone) {
-    Fn#std_time_f9(params=timeValue) {
-      Block#std_time_b9 {
-        Return#std_time_r9 {
-          Call#std_time_c15(target=mapGetStringOr) {
-            Var#std_time_v15(name=timeValue)
-            Lit#std_time_s9(value="zoneId")
-            Lit#std_time_s10(value="")
+  Let(name=timeUnixMs) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=timeValue)
+            Lit(value="unixMs")
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeZone) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=timeValue)
+            Lit(value="zoneId")
+            Lit(value="")
           }
         }
       }
@@ -153,59 +153,59 @@ Program#std_time_p1 {
   }
 
 
-  Let#std_time_l17a(name=timeUtc) {
-    Fn#std_time_f10a(params=unixMs) {
-      Block#std_time_b10a {
-        Return#std_time_r10a {
-          Call#std_time_c16a(target=timeFromUnixMs) {
-            Var#std_time_v16a(name=unixMs)
-            Lit#std_time_s11a(value="UTC")
-            Lit#std_time_i2a(value=0)
+  Let(name=timeUtc) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Lit(value="UTC")
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#std_time_l17b(name=timeIsUtc) {
-    Fn#std_time_f10b(params=timeValue) {
-      Block#std_time_b10b {
-        Return#std_time_r10b {
-          Eq#std_time_eq1 {
-            Call#std_time_c16b(target=timeOffsetMinutes) { Var#std_time_v16b(name=timeValue) }
-            Lit#std_time_i2b(value=0)
+  Let(name=timeIsUtc) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Eq {
+            Call(target=timeOffsetMinutes) { Var(name=timeValue) }
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Let#std_time_l17(name=timeOffsetMinutes) {
-    Fn#std_time_f10(params=timeValue) {
-      Block#std_time_b10 {
-        Return#std_time_r10 {
-          Call#std_time_c16(target=mapGetIntOr) {
-            Var#std_time_v16(name=timeValue)
-            Lit#std_time_s11(value="offsetMinutes")
-            Lit#std_time_i2(value=0)
+  Let(name=timeOffsetMinutes) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=timeValue)
+            Lit(value="offsetMinutes")
+            Lit(value=0)
           }
         }
       }
     }
   }
 
-  Export#std_time_e1(name=nowUnixMs)
-  Export#std_time_e2(name=monotonicMs)
-  Export#std_time_e3(name=sleepMs)
-  Export#std_time_e4(name=timeZoneId)
-  Export#std_time_e5(name=timeZoneOffsetMinutesAt)
-  Export#std_time_e6(name=timeFromUnixMs)
-  Export#std_time_e7(name=now)
-  Export#std_time_e8(name=nowUtc)
-  Export#std_time_e9(name=timeLocal)
-  Export#std_time_e10(name=timeUnixMs)
-  Export#std_time_e11(name=timeZone)
-  Export#std_time_e12(name=timeUtc)
-  Export#std_time_e13(name=timeIsUtc)
-  Export#std_time_e14(name=timeOffsetMinutes)
+  Export(name=nowUnixMs)
+  Export(name=monotonicMs)
+  Export(name=sleepMs)
+  Export(name=timeZoneId)
+  Export(name=timeZoneOffsetMinutesAt)
+  Export(name=timeFromUnixMs)
+  Export(name=now)
+  Export(name=nowUtc)
+  Export(name=timeLocal)
+  Export(name=timeUnixMs)
+  Export(name=timeZone)
+  Export(name=timeUtc)
+  Export(name=timeIsUtc)
+  Export(name=timeOffsetMinutes)
 }

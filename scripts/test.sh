@@ -16,12 +16,14 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
 ./scripts/test-parser-selfhost-stdlib-files.sh
+./scripts/test-no-authored-node-ids.sh
 ./scripts/test-compiler-document-parse.sh
 ./scripts/test-project-manifest-module.sh
 ./scripts/test-template-module.sh
 ./scripts/test-bundle-module.sh
 ./scripts/test-bootstrap-io-module.sh
 ./scripts/test-value-module.sh
+./scripts/test-format-node-ids.sh
 ./scripts/test-linker-module.sh
 ./scripts/test-bytecode-emitter-module.sh
 ./scripts/test-local-toolchain-shim.sh

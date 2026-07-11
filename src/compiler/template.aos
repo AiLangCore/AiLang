@@ -1,93 +1,93 @@
-Program#template_p1 {
-  Export#template_e1(name=template.buildGitIgnore)
-  Export#template_e2(name=template.buildLocaleSeedData)
-  Export#template_e3(name=template.resolveName)
-  Export#template_e4(name=template.isSupported)
-  Export#template_e5(name=template.buildAgentsDoc)
-  Export#template_e6(name=template.buildCliApp)
-  Export#template_e7(name=template.buildHttpApp)
-  Export#template_e8(name=template.buildGuiApp)
-  Export#template_e9(name=template.buildLibApp)
+Program {
+  Export(name=template.buildGitIgnore)
+  Export(name=template.buildLocaleSeedData)
+  Export(name=template.resolveName)
+  Export(name=template.isSupported)
+  Export(name=template.buildAgentsDoc)
+  Export(name=template.buildCliApp)
+  Export(name=template.buildHttpApp)
+  Export(name=template.buildGuiApp)
+  Export(name=template.buildLibApp)
 
-  Let#template_l1(name=template.buildGitIgnore) {
-    Fn#template_f1(params=_) {
-      Block#template_b1 {
-        Return#template_r1 { Lit#template_i1(value=".toolchain/\n") }
+  Let(name=template.buildGitIgnore) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value=".toolchain/\n") }
       }
     }
   }
 
-  Let#template_l2(name=template.buildLocaleSeedData) {
-    Fn#template_f2(params=_) {
-      Block#template_b2 {
-        Return#template_r2 { Lit#template_i2(value="app.title = \"AiLang App\"\n") }
+  Let(name=template.buildLocaleSeedData) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="app.title = \"AiLang App\"\n") }
       }
     }
   }
 
-  Let#template_l3(name=template.buildCliApp) {
-    Fn#template_f3(params=_) {
-      Block#template_b3 {
-        Return#template_r3 { Lit#template_i3(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+  Let(name=template.buildCliApp) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
       }
     }
   }
 
-  Let#template_l4(name=template.buildHttpApp) {
-    Fn#template_f4(params=_) {
-      Block#template_b4 {
-        Return#template_r4 { Lit#template_i4(value="Program#p1 {\nExport#e1(name=\"init\")\nExport#e2(name=\"update\")\nLet#l1(name=\"init\") {\nFn#f1(params=\"args\") {\nBlock#b1 { Return#r1 { Lit#s1(value=\"state\") } }\n}\n}\nLet#l2(name=\"update\") {\nFn#f2(params=\"state,event\") {\nBlock#b2 {\nReturn#r2 {\nBlock#b3 {\nVar#v1(name=state)\nCommand#c1(type=\"Emit\" payload=\"ok\")\n}\n}\n}\n}\n}\n}\n") }
+  Let(name=template.buildHttpApp) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="Program#p1 {\nExport#e1(name=\"init\")\nExport#e2(name=\"update\")\nLet#l1(name=\"init\") {\nFn#f1(params=\"args\") {\nBlock#b1 { Return#r1 { Lit#s1(value=\"state\") } }\n}\n}\nLet#l2(name=\"update\") {\nFn#f2(params=\"state,event\") {\nBlock#b2 {\nReturn#r2 {\nBlock#b3 {\nVar#v1(name=state)\nCommand#c1(type=\"Emit\" payload=\"ok\")\n}\n}\n}\n}\n}\n}\n") }
       }
     }
   }
 
-  Let#template_l5(name=template.buildGuiApp) {
-    Fn#template_f5(params=_) {
-      Block#template_b5 {
-        Return#template_r5 { Lit#template_i5(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"GUI template placeholder\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+  Let(name=template.buildGuiApp) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"GUI template placeholder\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
       }
     }
   }
 
-  Let#template_l6(name=template.buildLibApp) {
-    Fn#template_f6(params=_) {
-      Block#template_b6 {
-        Return#template_r6 { Lit#template_i6(value="Program#p1 {\nExport#e1(name=\"hello\")\nExport#e2(name=\"start\")\nLet#l1(name=\"hello\") {\nFn#f1(params=\"name\") {\nBlock#b1 {\nReturn#r1 {\nStrConcat#s1 {\nLit#s2(value=\"hello \")\nVar#v1(name=name)\n}\n}\n}\n}\n}\nLet#l2(name=\"start\") {\nFn#f2(params=\"args\") {\nBlock#b2 {\nCall#print1(target=io.print) {\nCall#c1(target=hello) { Lit#s3(value=\"library\") }\n}\nReturn#r2 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+  Let(name=template.buildLibApp) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="Program#p1 {\nExport#e1(name=\"hello\")\nExport#e2(name=\"start\")\nLet#l1(name=\"hello\") {\nFn#f1(params=\"name\") {\nBlock#b1 {\nReturn#r1 {\nStrConcat#s1 {\nLit#s2(value=\"hello \")\nVar#v1(name=name)\n}\n}\n}\n}\n}\nLet#l2(name=\"start\") {\nFn#f2(params=\"args\") {\nBlock#b2 {\nCall#print1(target=io.print) {\nCall#c1(target=hello) { Lit#s3(value=\"library\") }\n}\nReturn#r2 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
       }
     }
   }
 
-  Let#template_l8(name=template.resolveName) {
-    Fn#template_f8(params=templateName) {
-      Block#template_b14 {
-        If#template_if4 {
-          Eq#template_e4a { Var#template_v4(name=templateName) Lit#template_i14(value="") }
-          Block#template_b15 { Return#template_r11 { Lit#template_i15(value="cli") } }
-          Block#template_b16 { Return#template_r12 { Var#template_v5(name=templateName) } }
+  Let(name=template.resolveName) {
+    Fn(params=templateName) {
+      Block {
+        If {
+          Eq { Var(name=templateName) Lit(value="") }
+          Block { Return { Lit(value="cli") } }
+          Block { Return { Var(name=templateName) } }
         }
       }
     }
   }
 
-  Let#template_l9(name=template.isSupported) {
-    Fn#template_f9(params=templateName) {
-      Block#template_b17 {
-        If#template_if5 {
-          Eq#template_e5a { Var#template_v6(name=templateName) Lit#template_i16(value="cli") }
-          Block#template_b18 { Return#template_r13 { Lit#template_i17(value=true) } }
-          Block#template_b19 {
-            If#template_if6 {
-              Eq#template_e6a { Var#template_v7(name=templateName) Lit#template_i18(value="http") }
-              Block#template_b20 { Return#template_r14 { Lit#template_i19(value=true) } }
-              Block#template_b21 {
-                If#template_if7 {
-                  Eq#template_e7a { Var#template_v8(name=templateName) Lit#template_i20(value="gui") }
-                  Block#template_b22 { Return#template_r15 { Lit#template_i21(value=true) } }
-                  Block#template_b23 {
-                    If#template_if8 {
-                      Eq#template_e8a { Var#template_v9(name=templateName) Lit#template_i22(value="lib") }
-                      Block#template_b24 { Return#template_r16 { Lit#template_i23(value=true) } }
-                      Block#template_b25 { Return#template_r17 { Lit#template_i24(value=false) } }
+  Let(name=template.isSupported) {
+    Fn(params=templateName) {
+      Block {
+        If {
+          Eq { Var(name=templateName) Lit(value="cli") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=templateName) Lit(value="http") }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq { Var(name=templateName) Lit(value="gui") }
+                  Block { Return { Lit(value=true) } }
+                  Block {
+                    If {
+                      Eq { Var(name=templateName) Lit(value="lib") }
+                      Block { Return { Lit(value=true) } }
+                      Block { Return { Lit(value=false) } }
                     }
                   }
                 }
@@ -99,10 +99,10 @@ Program#template_p1 {
     }
   }
 
-  Let#template_l10(name=template.buildAgentsDoc) {
-    Fn#template_f10(params=_) {
-      Block#template_b26 {
-        Return#template_r18 { Lit#template_i25(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tProject layout: src/app.aos for code, Assets/locale/*.toml for data.\n\t•\tNo JSON.\n") }
+  Let(name=template.buildAgentsDoc) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tProject layout: src/app.aos for code, Assets/locale/*.toml for data.\n\t•\tNo JSON.\n") }
       }
     }
   }

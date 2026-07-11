@@ -1,14 +1,14 @@
-Program#p1 {
-  Let#v1(name=validate) {
-    Fn#v2(params=node) {
-      Block#v3 {
-        Return#v4 {
-          Call#v5(target=stateErrors) {
-            Call#v6(target=validateNode) {
-              Var#v7(name=node)
-              Call#v8(target=makeState) {
-                MakeBlock#v9 { Lit#v10(value="errs") }
-                Lit#v12(value="\n")
+Program {
+  Let(name=validate) {
+    Fn(params=node) {
+      Block {
+        Return {
+          Call(target=stateErrors) {
+            Call(target=validateNode) {
+              Var(name=node)
+              Call(target=makeState) {
+                MakeBlock { Lit(value="errs") }
+                Lit(value="\n")
               }
             }
           }
@@ -17,81 +17,81 @@ Program#p1 {
     }
   }
 
-  Let#s1(name=makeErrors) {
-    Fn#s2(params=seed) {
-      Block#s3 { Return#s4 { MakeBlock#s5 { Var#s6(name=seed) } } }
+  Let(name=makeErrors) {
+    Fn(params=seed) {
+      Block { Return { MakeBlock { Var(name=seed) } } }
     }
   }
 
-  Let#s7(name=makeIds) {
-    Fn#s8(params=seed) {
-      Block#s9 { Return#s10 { Var#s12(name=seed) } }
+  Let(name=makeIds) {
+    Fn(params=seed) {
+      Block { Return { Var(name=seed) } }
     }
   }
 
-  Let#s13(name=makeState) {
-    Fn#s14(params=errors,ids) {
-      Block#s15 {
-        Return#s16 {
-          MakePair#s17 {
-            Var#s21(name=errors)
-            Var#s22(name=ids)
+  Let(name=makeState) {
+    Fn(params=errors,ids) {
+      Block {
+        Return {
+          MakePair {
+            Var(name=errors)
+            Var(name=ids)
           }
         }
       }
     }
   }
 
-  Let#s25(name=stateErrors) {
-    Fn#s26(params=state) {
-      Block#s27 { Return#s28 { PairFirst#s29 { Var#s30(name=state) } } }
+  Let(name=stateErrors) {
+    Fn(params=state) {
+      Block { Return { PairFirst { Var(name=state) } } }
     }
   }
 
-  Let#s32(name=stateIds) {
-    Fn#s33(params=state) {
-      Block#s34 { Return#s35 { PairSecond#s36 { Var#s37(name=state) } } }
+  Let(name=stateIds) {
+    Fn(params=state) {
+      Block { Return { PairSecond { Var(name=state) } } }
     }
   }
 
-  Let#u1(name=validateNode) {
-    Fn#u2(params=node,state) {
-      Block#u3 {
-        Let#u4(name=errors) { Call#u5(target=stateErrors) { Var#u6(name=state) } }
-        Let#u7(name=ids) { Call#u8(target=stateIds) { Var#u9(name=state) } }
-        Let#u10(name=nodeId) { NodeId#u11 { Var#u12(name=node) } }
+  Let(name=validateNode) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=errors) { Call(target=stateErrors) { Var(name=state) } }
+        Let(name=ids) { Call(target=stateIds) { Var(name=state) } }
+        Let(name=nodeId) { NodeId { Var(name=node) } }
 
-        Let#u13(name=errorsAfterId) {
-          If#u14 {
-            Call#u15(target=idExists) { Var#u16(name=ids) Var#u17(name=nodeId) Lit#u18(value=0) }
-            Block#u19 { Call#u21(target=addErr) { Var#u22(name=errors) Lit#u23(value="VAL001") Call#u24(target=dupMessage) { Var#u25(name=nodeId) } Var#u26(name=nodeId) } }
-            Block#u27 { Var#u29(name=errors) }
+        Let(name=errorsAfterId) {
+          If {
+            Call(target=idExists) { Var(name=ids) Var(name=nodeId) Lit(value=0) }
+            Block { Call(target=addErr) { Var(name=errors) Lit(value="VAL001") Call(target=dupMessage) { Var(name=nodeId) } Var(name=nodeId) } }
+            Block { Var(name=errors) }
           }
         }
 
-        Let#u30(name=idsAfter) { Call#u31(target=addId) { Var#u32(name=ids) Var#u33(name=nodeId) } }
-        Let#u34(name=stateAfterSelf) { Call#u35(target=makeState) { Var#u36(name=errorsAfterId) Var#u37(name=idsAfter) } }
-        Let#u38(name=stateAfterKind) { Call#u39(target=validateKind) { Var#u40(name=node) Var#u41(name=stateAfterSelf) } }
-        Return#u42 { Call#u43(target=validateChildren) { Var#u44(name=node) Var#u45(name=stateAfterKind) Lit#u46(value=0) } }
+        Let(name=idsAfter) { Call(target=addId) { Var(name=ids) Var(name=nodeId) } }
+        Let(name=stateAfterSelf) { Call(target=makeState) { Var(name=errorsAfterId) Var(name=idsAfter) } }
+        Let(name=stateAfterKind) { Call(target=validateKind) { Var(name=node) Var(name=stateAfterSelf) } }
+        Return { Call(target=validateChildren) { Var(name=node) Var(name=stateAfterKind) Lit(value=0) } }
       }
     }
   }
 
-  Let#u47(name=validateChildren) {
-    Fn#u48(params=node,state,index) {
-      Block#u49 {
-        Return#u70 {
-          If#u50 {
-            Eq#u51 { Var#u52(name=index) ChildCount#u53 { Var#u54(name=node) } }
-            Block#u55 { Var#u57(name=state) }
-            Block#u58 {
-              Call#u60(target=validateChildren) {
-                Var#u61(name=node)
-                Call#u62(target=validateNode) {
-                  ChildAt#u63 { Var#u64(name=node) Var#u65(name=index) }
-                  Var#u66(name=state)
+  Let(name=validateChildren) {
+    Fn(params=node,state,index) {
+      Block {
+        Return {
+          If {
+            Eq { Var(name=index) ChildCount { Var(name=node) } }
+            Block { Var(name=state) }
+            Block {
+              Call(target=validateChildren) {
+                Var(name=node)
+                Call(target=validateNode) {
+                  ChildAt { Var(name=node) Var(name=index) }
+                  Var(name=state)
                 }
-                Add#u67 { Var#u68(name=index) Lit#u69(value=1) }
+                Add { Var(name=index) Lit(value=1) }
               }
             }
           }
@@ -100,121 +100,121 @@ Program#p1 {
     }
   }
 
-  Let#k1(name=validateKind) {
-    Fn#k2(params=node,state) {
-      Block#k3 {
-        Let#k4(name=kind) { NodeKind#k5 { Var#k6(name=node) } }
-        Let#k7(name=errors) { Call#k8(target=stateErrors) { Var#k9(name=state) } }
-        Let#k10(name=ids) { Call#k11(target=stateIds) { Var#k12(name=state) } }
-        Let#k13(name=stateAfter) {
-          If#k14 {
-            Eq#k15 { Var#k16(name=kind) Lit#k17(value="Program") }
-            Block#k18 { Var#k20(name=state) }
-            Block#k21 {
-              If#k22 {
-                Eq#k23 { Var#k24(name=kind) Lit#k25(value="Let") }
-                Block#k26 { Call#k28(target=requireAttrAndChildren) { Var#k29(name=node) Var#k30(name=state) Lit#k31(value="name") Lit#k32(value=1) } }
-                Block#k33 {
-                  If#k34 {
-                    Eq#k35 { Var#k36(name=kind) Lit#k37(value="Var") }
-                    Block#k38 { Call#k40(target=requireAttrAndChildren) { Var#k41(name=node) Var#k42(name=state) Lit#k43(value="name") Lit#k44(value=0) } }
-                    Block#k45 {
-                      If#k46 {
-                        Eq#k47 { Var#k48(name=kind) Lit#k49(value="Lit") }
-                        Block#k50 { Call#k52(target=requireAttrAndChildren) { Var#k53(name=node) Var#k54(name=state) Lit#k55(value="value") Lit#k56(value=0) } }
-                        Block#k57 {
-                          If#k58 {
-                            Eq#k59 { Var#k60(name=kind) Lit#k61(value="Call") }
-                            Block#k62 { Call#k64(target=requireAttr) { Var#k65(name=node) Var#k66(name=state) Lit#k67(value="target") } }
-                            Block#k68 {
-                              If#k69 {
-                                Eq#k70 { Var#k71(name=kind) Lit#k72(value="If") }
-                                Block#k73 { Call#k75(target=requireIfShape) { Var#k76(name=node) Var#k77(name=state) } }
-                                Block#k78 {
-                                  If#k79 {
-                                    Eq#k80 { Var#k81(name=kind) Lit#k82(value="Block") }
-                                    Block#k83 { Var#k85(name=state) }
-                                    Block#k86 {
-                                      If#k87 {
-                                        Eq#k88 { Var#k89(name=kind) Lit#k90(value="Return") }
-                                        Block#k91 { Call#k93(target=requireReturnShape) { Var#k94(name=node) Var#k95(name=state) } }
-                                        Block#k96 {
-                                          If#k97 {
-                                            Eq#k98 { Var#k99(name=kind) Lit#k100(value="Fn") }
-                                            Block#k101 { Call#k103(target=requireFnShape) { Var#k104(name=node) Var#k105(name=state) } }
-                                            Block#k106 {
-                                              If#k107 {
-                                                Eq#k108 { Var#k109(name=kind) Lit#k110(value="Eq") }
-                                                Block#k111 { Call#k113(target=requireChildCount) { Var#k114(name=node) Var#k115(name=state) Lit#k116(value=2) } }
-                                                Block#k117 {
-                                                  If#k118 {
-                                                    Eq#k119 { Var#k120(name=kind) Lit#k121(value="Add") }
-                                                    Block#k122 { Call#k124(target=requireChildCount) { Var#k125(name=node) Var#k126(name=state) Lit#k127(value=2) } }
-                                                    Block#k128 {
-                                                      If#k129 {
-                                                        Eq#k130 { Var#k131(name=kind) Lit#k132(value="ToString") }
-                                                        Block#k133 { Call#k135(target=requireChildCount) { Var#k136(name=node) Var#k137(name=state) Lit#k138(value=1) } }
-                                                        Block#k139 {
-                                                          If#k140 {
-                                                            Eq#k141 { Var#k142(name=kind) Lit#k143(value="NodeKind") }
-                                                            Block#k144 { Call#k146(target=requireChildCount) { Var#k147(name=node) Var#k148(name=state) Lit#k149(value=1) } }
-                                                            Block#k150 {
-                                                              If#k151 {
-                                                                Eq#k152 { Var#k153(name=kind) Lit#k154(value="NodeId") }
-                                                                Block#k155 { Call#k157(target=requireChildCount) { Var#k158(name=node) Var#k159(name=state) Lit#k160(value=1) } }
-                                                                Block#k161 {
-                                                                  If#k162 {
-                                                                    Eq#k163 { Var#k164(name=kind) Lit#k165(value="AttrCount") }
-                                                                    Block#k166 { Call#k168(target=requireChildCount) { Var#k169(name=node) Var#k170(name=state) Lit#k171(value=1) } }
-                                                                    Block#k172 {
-                                                                      If#k173 {
-                                                                        Eq#k174 { Var#k175(name=kind) Lit#k176(value="AttrKey") }
-                                                                        Block#k177 { Call#k179(target=requireChildCount) { Var#k180(name=node) Var#k181(name=state) Lit#k182(value=2) } }
-                                                                        Block#k183 {
-                                                                          If#k184 {
-                                                                            Eq#k185 { Var#k186(name=kind) Lit#k187(value="AttrValueKind") }
-                                                                            Block#k188 { Call#k190(target=requireChildCount) { Var#k191(name=node) Var#k192(name=state) Lit#k193(value=2) } }
-                                                                            Block#k194 {
-                                                                              If#k195 {
-                                                                                Eq#k196 { Var#k197(name=kind) Lit#k198(value="AttrValueString") }
-                                                                                Block#k199 { Call#k201(target=requireChildCount) { Var#k202(name=node) Var#k203(name=state) Lit#k204(value=2) } }
-                                                                                Block#k205 {
-                                                                                  If#k206 {
-                                                                                    Eq#k207 { Var#k208(name=kind) Lit#k209(value="AttrValueInt") }
-                                                                                    Block#k210 { Call#k212(target=requireChildCount) { Var#k213(name=node) Var#k214(name=state) Lit#k215(value=2) } }
-                                                                                    Block#k216 {
-                                                                                      If#k217 {
-                                                                                        Eq#k218 { Var#k219(name=kind) Lit#k220(value="AttrValueBool") }
-                                                                                        Block#k221 { Call#k223(target=requireChildCount) { Var#k224(name=node) Var#k225(name=state) Lit#k226(value=2) } }
-                                                                                        Block#k227 {
-                                                                                          If#k228 {
-                                                                                            Eq#k229 { Var#k230(name=kind) Lit#k231(value="ChildCount") }
-                                                                                            Block#k232 { Call#k234(target=requireChildCount) { Var#k235(name=node) Var#k236(name=state) Lit#k237(value=1) } }
-                                                                                            Block#k238 {
-                                                                                              If#k239 {
-                                                                                                Eq#k240 { Var#k241(name=kind) Lit#k242(value="ChildAt") }
-                                                                                                Block#k243 { Call#k245(target=requireChildCount) { Var#k246(name=node) Var#k247(name=state) Lit#k248(value=2) } }
-                                                                                                Block#k249 {
-                                                                                                  If#k250 {
-                                                                                                    Eq#k251 { Var#k252(name=kind) Lit#k253(value="StrConcat") }
-                                                                                                    Block#k254 { Call#k256(target=requireChildCount) { Var#k257(name=node) Var#k258(name=state) Lit#k259(value=2) } }
-                                                                                                    Block#k260 {
-                                                                                                      If#k261 {
-                                                                                                        Eq#k262 { Var#k263(name=kind) Lit#k264(value="StrEscape") }
-                                                                                                        Block#k265 { Call#k267(target=requireChildCount) { Var#k268(name=node) Var#k269(name=state) Lit#k270(value=1) } }
-                                                                                                        Block#k271 {
-                                                                                                          If#k276 {
-                                                                                                            Eq#k277 { Var#k278(name=kind) Lit#k279(value="Import") }
-                                                                                                            Block#k280 {
-                                                                                                              Call#k281(target=requireAttrAndChildren) { Var#k282(name=node) Var#k283(name=state) Lit#k284(value="path") Lit#k285(value=0) }
+  Let(name=validateKind) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=node) } }
+        Let(name=errors) { Call(target=stateErrors) { Var(name=state) } }
+        Let(name=ids) { Call(target=stateIds) { Var(name=state) } }
+        Let(name=stateAfter) {
+          If {
+            Eq { Var(name=kind) Lit(value="Program") }
+            Block { Var(name=state) }
+            Block {
+              If {
+                Eq { Var(name=kind) Lit(value="Let") }
+                Block { Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="name") Lit(value=1) } }
+                Block {
+                  If {
+                    Eq { Var(name=kind) Lit(value="Var") }
+                    Block { Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="name") Lit(value=0) } }
+                    Block {
+                      If {
+                        Eq { Var(name=kind) Lit(value="Lit") }
+                        Block { Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="value") Lit(value=0) } }
+                        Block {
+                          If {
+                            Eq { Var(name=kind) Lit(value="Call") }
+                            Block { Call(target=requireAttr) { Var(name=node) Var(name=state) Lit(value="target") } }
+                            Block {
+                              If {
+                                Eq { Var(name=kind) Lit(value="If") }
+                                Block { Call(target=requireIfShape) { Var(name=node) Var(name=state) } }
+                                Block {
+                                  If {
+                                    Eq { Var(name=kind) Lit(value="Block") }
+                                    Block { Var(name=state) }
+                                    Block {
+                                      If {
+                                        Eq { Var(name=kind) Lit(value="Return") }
+                                        Block { Call(target=requireReturnShape) { Var(name=node) Var(name=state) } }
+                                        Block {
+                                          If {
+                                            Eq { Var(name=kind) Lit(value="Fn") }
+                                            Block { Call(target=requireFnShape) { Var(name=node) Var(name=state) } }
+                                            Block {
+                                              If {
+                                                Eq { Var(name=kind) Lit(value="Eq") }
+                                                Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                Block {
+                                                  If {
+                                                    Eq { Var(name=kind) Lit(value="Add") }
+                                                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                    Block {
+                                                      If {
+                                                        Eq { Var(name=kind) Lit(value="ToString") }
+                                                        Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                        Block {
+                                                          If {
+                                                            Eq { Var(name=kind) Lit(value="NodeKind") }
+                                                            Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                            Block {
+                                                              If {
+                                                                Eq { Var(name=kind) Lit(value="NodeId") }
+                                                                Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                                Block {
+                                                                  If {
+                                                                    Eq { Var(name=kind) Lit(value="AttrCount") }
+                                                                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                                    Block {
+                                                                      If {
+                                                                        Eq { Var(name=kind) Lit(value="AttrKey") }
+                                                                        Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                        Block {
+                                                                          If {
+                                                                            Eq { Var(name=kind) Lit(value="AttrValueKind") }
+                                                                            Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                            Block {
+                                                                              If {
+                                                                                Eq { Var(name=kind) Lit(value="AttrValueString") }
+                                                                                Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                                Block {
+                                                                                  If {
+                                                                                    Eq { Var(name=kind) Lit(value="AttrValueInt") }
+                                                                                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                                    Block {
+                                                                                      If {
+                                                                                        Eq { Var(name=kind) Lit(value="AttrValueBool") }
+                                                                                        Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                                        Block {
+                                                                                          If {
+                                                                                            Eq { Var(name=kind) Lit(value="ChildCount") }
+                                                                                            Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                                                            Block {
+                                                                                              If {
+                                                                                                Eq { Var(name=kind) Lit(value="ChildAt") }
+                                                                                                Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                                                Block {
+                                                                                                  If {
+                                                                                                    Eq { Var(name=kind) Lit(value="StrConcat") }
+                                                                                                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                                                                    Block {
+                                                                                                      If {
+                                                                                                        Eq { Var(name=kind) Lit(value="StrEscape") }
+                                                                                                        Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                                                                        Block {
+                                                                                                          If {
+                                                                                                            Eq { Var(name=kind) Lit(value="Import") }
+                                                                                                            Block {
+                                                                                                              Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="path") Lit(value=0) }
                                                                                                             }
-                                                                                                            Block#k286 {
-                                                                                                              If#k287 {
-                                                                                                                Eq#k288 { Var#k289(name=kind) Lit#k290(value="Export") }
-                                                                                                                Block#k291 {
-                                                                                                                  Call#k292(target=requireAttrAndChildren) { Var#k293(name=node) Var#k294(name=state) Lit#k295(value="name") Lit#k296(value=0) }
+                                                                                                            Block {
+                                                                                                              If {
+                                                                                                                Eq { Var(name=kind) Lit(value="Export") }
+                                                                                                                Block {
+                                                                                                                  Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="name") Lit(value=0) }
                                                                                                                 }
-                                                                                                                Block#k297 { Var#k298(name=state) }
+                                                                                                                Block { Var(name=state) }
                                                                                                               }
                                                                                                             }
                                                                                                           }
@@ -267,252 +267,252 @@ Program#p1 {
             }
           }
         }
-        Let#k276(name=stateAfterProject) {
-          If#k277 {
-            Eq#k278 { Var#k16(name=kind) Lit#k279(value="Project") }
-            Block#k280 { Call#k281(target=requireProjectShape) { Var#k282(name=node) Var#k283(name=stateAfter) } }
-            Block#k284 { Var#k285(name=stateAfter) }
+        Let(name=stateAfterProject) {
+          If {
+            Eq { Var(name=kind) Lit(value="Project") }
+            Block { Call(target=requireProjectShape) { Var(name=node) Var(name=stateAfter) } }
+            Block { Var(name=stateAfter) }
           }
         }
-        Let#k286(name=stateAfterInclude) {
-          If#k287 {
-            Eq#k288 { Var#k16(name=kind) Lit#k289(value="Include") }
-            Block#k290 { Call#k291(target=requireIncludeShape) { Var#k292(name=node) Var#k293(name=stateAfterProject) } }
-            Block#k294 { Var#k295(name=stateAfterProject) }
+        Let(name=stateAfterInclude) {
+          If {
+            Eq { Var(name=kind) Lit(value="Include") }
+            Block { Call(target=requireIncludeShape) { Var(name=node) Var(name=stateAfterProject) } }
+            Block { Var(name=stateAfterProject) }
           }
         }
-        Let#k300(name=stateAfterLoopControls) {
-          If#k301 {
-            Eq#k302 { Var#k16(name=kind) Lit#k303(value="Loop") }
-            Block#k304 { Call#k305(target=requireChildCount) { Var#k306(name=node) Var#k307(name=stateAfterInclude) Lit#k308(value=1) } }
-            Block#k309 {
-              If#k310 {
-                Eq#k311 { Var#k16(name=kind) Lit#k312(value="Break") }
-                Block#k313 { Call#k314(target=requireChildCount) { Var#k315(name=node) Var#k316(name=stateAfterInclude) Lit#k317(value=0) } }
-                Block#k318 {
-                  If#k319 {
-                    Eq#k320 { Var#k16(name=kind) Lit#k321(value="Continue") }
-                    Block#k322 { Call#k323(target=requireChildCount) { Var#k324(name=node) Var#k325(name=stateAfterInclude) Lit#k326(value=0) } }
-                    Block#k327 { Var#k328(name=stateAfterInclude) }
+        Let(name=stateAfterLoopControls) {
+          If {
+            Eq { Var(name=kind) Lit(value="Loop") }
+            Block { Call(target=requireChildCount) { Var(name=node) Var(name=stateAfterInclude) Lit(value=1) } }
+            Block {
+              If {
+                Eq { Var(name=kind) Lit(value="Break") }
+                Block { Call(target=requireChildCount) { Var(name=node) Var(name=stateAfterInclude) Lit(value=0) } }
+                Block {
+                  If {
+                    Eq { Var(name=kind) Lit(value="Continue") }
+                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=stateAfterInclude) Lit(value=0) } }
+                    Block { Var(name=stateAfterInclude) }
                   }
                 }
               }
             }
           }
         }
-        Let#k330(name=primitiveArity) { Call#k331(target=textBytesPrimitiveArity) { Var#k16(name=kind) } }
-        Let#k332(name=stateAfterTextBytesPrimitives) {
-          If#k333 {
-            Eq#k334 { Var#k335(name=primitiveArity) Lit#k336(value=-1) }
-            Block#k337 { Var#k338(name=stateAfterLoopControls) }
-            Block#k339 { Call#k340(target=requireChildCount) { Var#k341(name=node) Var#k342(name=stateAfterLoopControls) Var#k343(name=primitiveArity) } }
+        Let(name=primitiveArity) { Call(target=textBytesPrimitiveArity) { Var(name=kind) } }
+        Let(name=stateAfterTextBytesPrimitives) {
+          If {
+            Eq { Var(name=primitiveArity) Lit(value=-1) }
+            Block { Var(name=stateAfterLoopControls) }
+            Block { Call(target=requireChildCount) { Var(name=node) Var(name=stateAfterLoopControls) Var(name=primitiveArity) } }
           }
         }
-        Let#k345(name=stateAfterUnknownKind) {
-          If#k346 {
-            Eq#k347 { Var#k348(name=primitiveArity) Lit#k349(value=-1) }
-            Block#k350 {
-              If#k351 {
-                Call#k352(target=isKnownBaseKind) { Var#k353(name=kind) }
-                Block#k354 { Var#k355(name=stateAfterTextBytesPrimitives) }
-                Block#k356 {
-                  Call#k357(target=addErrForNode) {
-                    Var#k358(name=stateAfterTextBytesPrimitives)
-                    Lit#k359(value="VAL004")
-                    Call#k360(target=unknownKindMessage) { Var#k361(name=kind) }
-                    Var#k362(name=node)
+        Let(name=stateAfterUnknownKind) {
+          If {
+            Eq { Var(name=primitiveArity) Lit(value=-1) }
+            Block {
+              If {
+                Call(target=isKnownBaseKind) { Var(name=kind) }
+                Block { Var(name=stateAfterTextBytesPrimitives) }
+                Block {
+                  Call(target=addErrForNode) {
+                    Var(name=stateAfterTextBytesPrimitives)
+                    Lit(value="VAL004")
+                    Call(target=unknownKindMessage) { Var(name=kind) }
+                    Var(name=node)
                   }
                 }
               }
             }
-            Block#k363 { Var#k364(name=stateAfterTextBytesPrimitives) }
+            Block { Var(name=stateAfterTextBytesPrimitives) }
           }
         }
-        Return#k274 { Var#k344(name=stateAfterUnknownKind) }
+        Return { Var(name=stateAfterUnknownKind) }
       }
     }
   }
 
-  Let#k370(name=knownBaseKindText) {
-    Fn#k371(params=_) {
-      Block#k372 {
-        Return#k373 {
-          Lit#k374(value="|Program|Let|Var|Lit|Call|If|Block|Return|Fn|Eq|Add|ToString|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|Import|Export|Project|Include|Loop|Break|Continue|")
+  Let(name=knownBaseKindText) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Lit(value="|Program|Let|Var|Lit|Call|If|Block|Return|Fn|Eq|Add|ToString|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|Import|Export|Project|Include|Loop|Break|Continue|")
         }
       }
     }
   }
 
-  Let#k380(name=isKnownBaseKind) {
-    Fn#k381(params=kind) {
-      Block#k382 {
-        If#k383 {
-          Eq#k384 {
-            StringFind#k385 {
-              Call#k386(target=knownBaseKindText) { Lit#k387(value=0) }
-              StrConcat#k388 {
-                StrConcat#k389 { Lit#k390(value="|") Var#k391(name=kind) }
-                Lit#k392(value="|")
+  Let(name=isKnownBaseKind) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq {
+            StringFind {
+              Call(target=knownBaseKindText) { Lit(value=0) }
+              StrConcat {
+                StrConcat { Lit(value="|") Var(name=kind) }
+                Lit(value="|")
               }
-              Lit#k393(value=0)
+              Lit(value=0)
             }
-            Lit#k394(value=-1)
+            Lit(value=-1)
           }
-          Block#k395 { Return#k396 { Lit#k397(value=false) } }
-          Block#k398 { Return#k399 { Lit#k400(value=true) } }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
         }
       }
     }
   }
 
-  Let#k410(name=unknownKindMessage) {
-    Fn#k411(params=kind) {
-      Block#k412 {
-        Return#k413 {
-          StrConcat#k414 {
-            StrConcat#k415 { Lit#k416(value="Unsupported node kind '") Var#k417(name=kind) }
-            Lit#k418(value="'.")
+  Let(name=unknownKindMessage) {
+    Fn(params=kind) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat { Lit(value="Unsupported node kind '") Var(name=kind) }
+            Lit(value="'.")
           }
         }
       }
     }
   }
 
-  Let#k450(name=textBytesPrimitiveArity) {
-    Fn#k451(params=kind) {
-      Block#k452 {
-        If#k535 {
-          Eq#k536 { Var#k537(name=kind) Lit#k538(value="StringSlice") }
-          Block#k539 { Return#k540 { Lit#k541(value=3) } }
-          Block#k542 { Lit#k543(value=0) }
+  Let(name=textBytesPrimitiveArity) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="StringSlice") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
         }
-        If#k544 {
-          Eq#k545 { Var#k546(name=kind) Lit#k547(value="StringRemove") }
-          Block#k548 { Return#k549 { Lit#k550(value=3) } }
-          Block#k551 { Lit#k552(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringRemove") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
         }
-        If#k553 {
-          Eq#k554 { Var#k555(name=kind) Lit#k556(value="StringUtf8ByteCount") }
-          Block#k557 { Return#k558 { Lit#k559(value=1) } }
-          Block#k560 { Lit#k561(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringUtf8ByteCount") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k562 {
-          Eq#k563 { Var#k564(name=kind) Lit#k565(value="StringFind") }
-          Block#k566 { Return#k567 { Lit#k568(value=3) } }
-          Block#k569 { Lit#k570(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringFind") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
         }
-        If#k571 {
-          Eq#k572 { Var#k573(name=kind) Lit#k574(value="StringDecodeUnicodeHex4") }
-          Block#k575 { Return#k576 { Lit#k577(value=1) } }
-          Block#k578 { Lit#k579(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringDecodeUnicodeHex4") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k580 {
-          Eq#k581 { Var#k582(name=kind) Lit#k583(value="StringDecodeUnicodeSurrogatePairHex4") }
-          Block#k584 { Return#k585 { Lit#k586(value=2) } }
-          Block#k587 { Lit#k588(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringDecodeUnicodeSurrogatePairHex4") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
         }
-        If#k453 {
-          Eq#k454 { Var#k455(name=kind) Lit#k456(value="StringScalarLength") }
-          Block#k457 { Return#k458 { Lit#k459(value=1) } }
-          Block#k460 { Lit#k461(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringScalarLength") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k462 {
-          Eq#k463 { Var#k464(name=kind) Lit#k465(value="StringScalarAt") }
-          Block#k466 { Return#k467 { Lit#k468(value=2) } }
-          Block#k469 { Lit#k470(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringScalarAt") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
         }
-        If#k471 {
-          Eq#k472 { Var#k473(name=kind) Lit#k474(value="StringFromCodePoint") }
-          Block#k475 { Return#k476 { Lit#k477(value=1) } }
-          Block#k478 { Lit#k479(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="StringFromCodePoint") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k480 {
-          Eq#k481 { Var#k482(name=kind) Lit#k483(value="BytesLength") }
-          Block#k484 { Return#k485 { Lit#k486(value=1) } }
-          Block#k487 { Lit#k488(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesLength") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k489 {
-          Eq#k490 { Var#k491(name=kind) Lit#k492(value="BytesAt") }
-          Block#k493 { Return#k494 { Lit#k495(value=2) } }
-          Block#k496 { Lit#k497(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesAt") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
         }
-        If#k498 {
-          Eq#k499 { Var#k500(name=kind) Lit#k501(value="BytesSlice") }
-          Block#k502 { Return#k503 { Lit#k504(value=3) } }
-          Block#k505 { Lit#k506(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesSlice") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
         }
-        If#k507 {
-          Eq#k508 { Var#k509(name=kind) Lit#k510(value="BytesConcat") }
-          Block#k511 { Return#k512 { Lit#k513(value=2) } }
-          Block#k514 { Lit#k515(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesConcat") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
         }
-        If#k516 {
-          Eq#k517 { Var#k518(name=kind) Lit#k519(value="BytesFromUtf8String") }
-          Block#k520 { Return#k521 { Lit#k522(value=1) } }
-          Block#k523 { Lit#k524(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesFromUtf8String") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k525 {
-          Eq#k526 { Var#k527(name=kind) Lit#k528(value="BytesToUtf8String") }
-          Block#k529 { Return#k530 { Lit#k531(value=1) } }
-          Block#k532 { Lit#k533(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesToUtf8String") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k590 {
-          Eq#k591 { Var#k592(name=kind) Lit#k593(value="BytesFromBase64") }
-          Block#k594 { Return#k595 { Lit#k596(value=1) } }
-          Block#k597 { Lit#k598(value=0) }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesFromBase64") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
         }
-        If#k599 {
-          Eq#k600 { Var#k601(name=kind) Lit#k602(value="BytesToBase64") }
-          Block#k603 { Return#k604 { Lit#k605(value=1) } }
-          Block#k606 {
-            If#k900 {
-              Eq#k901 { Var#k902(name=kind) Lit#k903(value="BytesFromByte") }
-              Block#k904 { Return#k905 { Lit#k906(value=1) } }
-              Block#k907 {
-                If#k908 {
-                  Eq#k909 { Var#k910(name=kind) Lit#k911(value="BytesU32LE") }
-                  Block#k912 { Return#k913 { Lit#k914(value=1) } }
-                  Block#k915 {
-                    If#k916 {
-                      Eq#k917 { Var#k918(name=kind) Lit#k919(value="BytesI64LE") }
-                      Block#k920 { Return#k921 { Lit#k922(value=1) } }
-                      Block#k923 {
-            If#k609 {
-              Eq#k610 { Var#k611(name=kind) Lit#k612(value="MakePair") }
-              Block#k613 { Return#k614 { Lit#k615(value=2) } }
-              Block#k616 {
-                If#k617 {
-                  Eq#k618 { Var#k619(name=kind) Lit#k620(value="PairFirst") }
-                  Block#k621 { Return#k622 { Lit#k623(value=1) } }
-                  Block#k624 {
-                    If#k625 {
-                      Eq#k626 { Var#k627(name=kind) Lit#k628(value="PairSecond") }
-                      Block#k629 { Return#k630 { Lit#k631(value=1) } }
-                      Block#k632 {
-                        If#k633 {
-                          Eq#k634 { Var#k635(name=kind) Lit#k636(value="Sub") }
-                          Block#k637 { Return#k638 { Lit#k639(value=2) } }
-                          Block#k640 {
-                            If#k641 {
-                              Eq#k642 { Var#k643(name=kind) Lit#k644(value="Mul") }
-                              Block#k645 { Return#k646 { Lit#k647(value=2) } }
-                              Block#k648 {
-                                If#k649 {
-                                  Eq#k650 { Var#k651(name=kind) Lit#k652(value="Div") }
-                                  Block#k653 { Return#k654 { Lit#k655(value=2) } }
-                                  Block#k656 {
-                                    If#k657 {
-                                      Eq#k658 { Var#k659(name=kind) Lit#k660(value="Mod") }
-                                      Block#k661 { Return#k662 { Lit#k663(value=2) } }
-                                      Block#k664 {
-                                        If#k665 {
-                                          Eq#k666 { Var#k667(name=kind) Lit#k668(value="Pow") }
-                                          Block#k669 { Return#k670 { Lit#k671(value=2) } }
-                                          Block#k672 {
-                                            If#k673 {
-                                              Eq#k674 { Var#k675(name=kind) Lit#k676(value="Lt") }
-                                              Block#k677 { Return#k678 { Lit#k679(value=2) } }
-                                              Block#k680 { Return#k607 { Lit#k608(value=-1) } }
+        If {
+          Eq { Var(name=kind) Lit(value="BytesToBase64") }
+          Block { Return { Lit(value=1) } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="BytesFromByte") }
+              Block { Return { Lit(value=1) } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="BytesU32LE") }
+                  Block { Return { Lit(value=1) } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="BytesI64LE") }
+                      Block { Return { Lit(value=1) } }
+                      Block {
+            If {
+              Eq { Var(name=kind) Lit(value="MakePair") }
+              Block { Return { Lit(value=2) } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="PairFirst") }
+                  Block { Return { Lit(value=1) } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="PairSecond") }
+                      Block { Return { Lit(value=1) } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="Sub") }
+                          Block { Return { Lit(value=2) } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="Mul") }
+                              Block { Return { Lit(value=2) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=kind) Lit(value="Div") }
+                                  Block { Return { Lit(value=2) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=kind) Lit(value="Mod") }
+                                      Block { Return { Lit(value=2) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=kind) Lit(value="Pow") }
+                                          Block { Return { Lit(value=2) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=kind) Lit(value="Lt") }
+                                              Block { Return { Lit(value=2) } }
+                                              Block { Return { Lit(value=-1) } }
                                             }
                                           }
                                         }
@@ -542,132 +542,132 @@ Program#p1 {
     }
   }
 
-  Let#h1(name=dupMessage) {
-    Fn#h2(params=id) {
-      Block#h3 {
-        Return#h4 {
-          StrConcat#h5 {
-            StrConcat#h6 { Lit#h7(value="Duplicate node id '") Var#h8(name=id) }
-            Lit#h9(value="'.")
+  Let(name=dupMessage) {
+    Fn(params=id) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat { Lit(value="Duplicate node id '") Var(name=id) }
+            Lit(value="'.")
           }
         }
       }
     }
   }
 
-  Let#h10(name=requireAttr) {
-    Fn#h11(params=node,state,key) {
-      Block#h12 {
-        If#h13 {
-          Call#h14(target=hasAttr) { Var#h15(name=node) Var#h16(name=key) Lit#h17(value=0) }
-          Block#h18 { Return#h19 { Var#h20(name=state) } }
-          Block#h21 { Return#h22 { Call#h23(target=addErrForNode) { Var#h24(name=state) Lit#h25(value="VAL002") StrConcat#h26 { StrConcat#h27 { Lit#h28(value="Missing attribute '") Var#h29(name=key) } Lit#h30(value="'.") } Var#h31(name=node) } } }
+  Let(name=requireAttr) {
+    Fn(params=node,state,key) {
+      Block {
+        If {
+          Call(target=hasAttr) { Var(name=node) Var(name=key) Lit(value=0) }
+          Block { Return { Var(name=state) } }
+          Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL002") StrConcat { StrConcat { Lit(value="Missing attribute '") Var(name=key) } Lit(value="'.") } Var(name=node) } } }
         }
       }
     }
   }
 
-  Let#h32(name=requireAttrAndChildren) {
-    Fn#h33(params=node,state,key,count) {
-      Block#h34 {
-        Return#h35 {
-          Call#h36(target=requireChildCount) {
-            Var#h37(name=node)
-            Call#h38(target=requireAttr) { Var#h39(name=node) Var#h40(name=state) Var#h41(name=key) }
-            Var#h42(name=count)
+  Let(name=requireAttrAndChildren) {
+    Fn(params=node,state,key,count) {
+      Block {
+        Return {
+          Call(target=requireChildCount) {
+            Var(name=node)
+            Call(target=requireAttr) { Var(name=node) Var(name=state) Var(name=key) }
+            Var(name=count)
           }
         }
       }
     }
   }
 
-  Let#h43(name=requireChildCount) {
-    Fn#h44(params=node,state,count) {
-      Block#h45 {
-        If#h46 {
-          Eq#h47 { ChildCount#h48 { Var#h49(name=node) } Var#h50(name=count) }
-          Block#h51 { Return#h52 { Var#h53(name=state) } }
-          Block#h54 { Return#h55 { Call#h56(target=addErrForNode) { Var#h57(name=state) Lit#h58(value="VAL003") Call#h59(target=countMessage) { Var#h60(name=node) Var#h61(name=count) } Var#h62(name=node) } } }
+  Let(name=requireChildCount) {
+    Fn(params=node,state,count) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=node) } Var(name=count) }
+          Block { Return { Var(name=state) } }
+          Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL003") Call(target=countMessage) { Var(name=node) Var(name=count) } Var(name=node) } } }
         }
       }
     }
   }
 
-  Let#h63(name=countMessage) {
-    Fn#h64(params=node,count) {
-      Block#h65 {
-        Return#h66 {
-          StrConcat#h67c {
-            StrConcat#h68c {
-              StrConcat#h69c {
-                StrConcat#h70c {
-                  StrConcat#h71c { NodeKind#h72c { Var#h73c(name=node) } Lit#h74c(value=" expects ") }
-                  ToString#h75c { Var#h76c(name=count) }
+  Let(name=countMessage) {
+    Fn(params=node,count) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat {
+              StrConcat {
+                StrConcat {
+                  StrConcat { NodeKind { Var(name=node) } Lit(value=" expects ") }
+                  ToString { Var(name=count) }
                 }
-                Lit#h77c(value="-")
+                Lit(value="-")
               }
-              ToString#h78c { Var#h79c(name=count) }
+              ToString { Var(name=count) }
             }
-            Lit#h80c(value=" children.")
+            Lit(value=" children.")
           }
         }
       }
     }
   }
 
-  Let#h76(name=requireIfShape) {
-    Fn#h77(params=node,state) {
-      Block#h78 {
-        Let#h79(name=count) { ChildCount#h80 { Var#h81(name=node) } }
-        Let#h82(name=stateAfterCount) {
-          If#h83 {
-            Eq#h84 { Var#h85(name=count) Lit#h86(value=2) }
-            Block#h87 { Var#h89(name=state) }
-            Block#h90 {
-              If#h91 {
-                Eq#h92 { Var#h93(name=count) Lit#h94(value=3) }
-                Block#h95 { Var#h97(name=state) }
-                Block#h98 { Call#h100(target=addErrForNode) { Var#h101(name=state) Lit#h102(value="VAL003") Lit#h103(value="If expects 2-3 children.") Var#h104(name=node) } }
-              }
-            }
-          }
-        }
-        Let#h105(name=stateAfterThen) {
-          If#h106 {
-            Eq#h107 { Var#h108(name=count) Lit#h109(value=2) }
-            Block#h110 { Call#h112(target=requireChildKind) { Var#h113(name=node) Var#h114(name=stateAfterCount) Lit#h115(value=1) Lit#h116(value="Block") Lit#h117(value="VAL021") Lit#h118(value="If then-branch must be Block.") } }
-            Block#h119 {
-              If#h120 {
-                Eq#h121 { Var#h122(name=count) Lit#h123(value=3) }
-                Block#h124 { Call#h126(target=requireChildKind) { Var#h127(name=node) Var#h128(name=stateAfterCount) Lit#h129(value=1) Lit#h130(value="Block") Lit#h131(value="VAL021") Lit#h132(value="If then-branch must be Block.") } }
-                Block#h133 { Var#h135(name=stateAfterCount) }
+  Let(name=requireIfShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=count) { ChildCount { Var(name=node) } }
+        Let(name=stateAfterCount) {
+          If {
+            Eq { Var(name=count) Lit(value=2) }
+            Block { Var(name=state) }
+            Block {
+              If {
+                Eq { Var(name=count) Lit(value=3) }
+                Block { Var(name=state) }
+                Block { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL003") Lit(value="If expects 2-3 children.") Var(name=node) } }
               }
             }
           }
         }
-        Return#h136 {
-          If#h137 {
-            Eq#h138 { Var#h139(name=count) Lit#h140(value=3) }
-            Block#h141 { Call#h143(target=requireChildKind) { Var#h144(name=node) Var#h145(name=stateAfterThen) Lit#h146(value=2) Lit#h147(value="Block") Lit#h148(value="VAL022") Lit#h149(value="If else-branch must be Block.") } }
-            Block#h150 { Var#h152(name=stateAfterThen) }
+        Let(name=stateAfterThen) {
+          If {
+            Eq { Var(name=count) Lit(value=2) }
+            Block { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterCount) Lit(value=1) Lit(value="Block") Lit(value="VAL021") Lit(value="If then-branch must be Block.") } }
+            Block {
+              If {
+                Eq { Var(name=count) Lit(value=3) }
+                Block { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterCount) Lit(value=1) Lit(value="Block") Lit(value="VAL021") Lit(value="If then-branch must be Block.") } }
+                Block { Var(name=stateAfterCount) }
+              }
+            }
+          }
+        }
+        Return {
+          If {
+            Eq { Var(name=count) Lit(value=3) }
+            Block { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterThen) Lit(value=2) Lit(value="Block") Lit(value="VAL022") Lit(value="If else-branch must be Block.") } }
+            Block { Var(name=stateAfterThen) }
           }
         }
       }
     }
   }
 
-  Let#h153(name=requireReturnShape) {
-    Fn#h154(params=node,state) {
-      Block#h155 {
-        Let#h156(name=count) { ChildCount#h157 { Var#h158(name=node) } }
-        If#h159 {
-          Eq#h160 { Var#h161(name=count) Lit#h162(value=0) }
-          Block#h163 { Return#h164 { Var#h165(name=state) } }
-          Block#h166 {
-            If#h167 {
-              Eq#h168 { Var#h169(name=count) Lit#h170(value=1) }
-              Block#h171 { Return#h172 { Var#h173(name=state) } }
-              Block#h174 { Return#h175 { Call#h176(target=addErrForNode) { Var#h177(name=state) Lit#h178(value="VAL003") Lit#h179(value="Return expects 0-1 children.") Var#h180(name=node) } } }
+  Let(name=requireReturnShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=count) { ChildCount { Var(name=node) } }
+        If {
+          Eq { Var(name=count) Lit(value=0) }
+          Block { Return { Var(name=state) } }
+          Block {
+            If {
+              Eq { Var(name=count) Lit(value=1) }
+              Block { Return { Var(name=state) } }
+              Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL003") Lit(value="Return expects 0-1 children.") Var(name=node) } } }
             }
           }
         }
@@ -675,27 +675,27 @@ Program#p1 {
     }
   }
 
-  Let#h181(name=requireFnShape) {
-    Fn#h182(params=node,state) {
-      Block#h183 {
-        Let#h184(name=stateAfterCount) { Call#h185(target=requireChildCount) { Var#h186(name=node) Var#h187(name=state) Lit#h188(value=1) } }
-        Let#h189(name=stateAfterAttr) { Call#h190(target=requireAttr) { Var#h191(name=node) Var#h192(name=stateAfterCount) Lit#h193(value="params") } }
-        Return#h194 { Call#h195(target=requireChildKind) { Var#h196(name=node) Var#h197(name=stateAfterAttr) Lit#h198(value=0) Lit#h199(value="Block") Lit#h200(value="VAL050") Lit#h201(value="Fn body must be Block.") } }
+  Let(name=requireFnShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=stateAfterCount) { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+        Let(name=stateAfterAttr) { Call(target=requireAttr) { Var(name=node) Var(name=stateAfterCount) Lit(value="params") } }
+        Return { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterAttr) Lit(value=0) Lit(value="Block") Lit(value="VAL050") Lit(value="Fn body must be Block.") } }
       }
     }
   }
 
-  Let#h202(name=requireChildKind) {
-    Fn#h203(params=node,state,index,expected,code,message) {
-      Block#h204 {
-        If#h205 {
-          Eq#h206 { Var#h207(name=index) ChildCount#h208 { Var#h209(name=node) } }
-          Block#h210 { Return#h211 { Var#h212(name=state) } }
-          Block#h213 {
-            If#h214 {
-              Eq#h215 { NodeKind#h216 { ChildAt#h217 { Var#h218(name=node) Var#h219(name=index) } } Var#h220(name=expected) }
-              Block#h221 { Return#h222 { Var#h223(name=state) } }
-              Block#h224 { Return#h225 { Call#h226(target=addErrForNode) { Var#h227(name=state) Var#h228(name=code) Var#h229(name=message) Var#h230(name=node) } } }
+  Let(name=requireChildKind) {
+    Fn(params=node,state,index,expected,code,message) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=state) } }
+          Block {
+            If {
+              Eq { NodeKind { ChildAt { Var(name=node) Var(name=index) } } Var(name=expected) }
+              Block { Return { Var(name=state) } }
+              Block { Return { Call(target=addErrForNode) { Var(name=state) Var(name=code) Var(name=message) Var(name=node) } } }
             }
           }
         }
@@ -703,17 +703,17 @@ Program#p1 {
     }
   }
 
-  Let#h231(name=hasAttr) {
-    Fn#h232(params=node,key,index) {
-      Block#h233 {
-        If#h234 {
-          Eq#h235 { Var#h236(name=index) AttrCount#h237 { Var#h238(name=node) } }
-          Block#h239 { Return#h240 { Lit#h241(value=false) } }
-          Block#h242 {
-            If#h243 {
-              Eq#h244 { AttrKey#h245 { Var#h246(name=node) Var#h247(name=index) } Var#h248(name=key) }
-              Block#h249 { Return#h250 { Lit#h251(value=true) } }
-              Block#h252 { Return#h253 { Call#h254(target=hasAttr) { Var#h255(name=node) Var#h256(name=key) Add#h257 { Var#h258(name=index) Lit#h259(value=1) } } } }
+  Let(name=hasAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=hasAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
             }
           }
         }
@@ -721,121 +721,121 @@ Program#p1 {
     }
   }
 
-  Let#h260(name=idExists) {
-    Fn#h261(params=ids,id,index) {
-      Block#h262 {
-        If#h263 {
-          Eq#h264 {
-            StringFind#h265 {
-              Var#h266(name=ids)
-              StrConcat#h267 {
-                StrConcat#h268 {
-                  Lit#h269(value="\n")
-                  Var#h270(name=id)
+  Let(name=idExists) {
+    Fn(params=ids,id,index) {
+      Block {
+        If {
+          Eq {
+            StringFind {
+              Var(name=ids)
+              StrConcat {
+                StrConcat {
+                  Lit(value="\n")
+                  Var(name=id)
                 }
-                Lit#h271(value="\n")
+                Lit(value="\n")
               }
-              Lit#h272(value=0)
+              Lit(value=0)
             }
-            Lit#h273(value=-1)
+            Lit(value=-1)
           }
-          Block#h274 { Return#h275 { Lit#h276(value=false) } }
-          Block#h277 { Return#h278 { Lit#h279(value=true) } }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
         }
       }
     }
   }
 
-  Let#h290(name=litValue) {
-    Fn#h291(params=node) {
-      Block#h292 { Return#h293 { AttrValueString#h294 { Var#h295(name=node) Lit#h296(value=0) } } }
+  Let(name=litValue) {
+    Fn(params=node) {
+      Block { Return { AttrValueString { Var(name=node) Lit(value=0) } } }
     }
   }
 
-  Let#h297(name=addErrForNode) {
-    Fn#h298(params=state,code,message,node) {
-      Block#h299 {
-        Return#h300 {
-          Call#h301(target=makeState) {
-            Call#h302(target=addErr) { Call#h303(target=stateErrors) { Var#h304(name=state) } Var#h305(name=code) Var#h306(name=message) NodeId#h307 { Var#h308(name=node) } }
-            Call#h309(target=stateIds) { Var#h310(name=state) }
+  Let(name=addErrForNode) {
+    Fn(params=state,code,message,node) {
+      Block {
+        Return {
+          Call(target=makeState) {
+            Call(target=addErr) { Call(target=stateErrors) { Var(name=state) } Var(name=code) Var(name=message) NodeId { Var(name=node) } }
+            Call(target=stateIds) { Var(name=state) }
           }
         }
       }
     }
   }
 
-  Let#h311(name=addErr) {
-    Fn#h312(params=errors,code,message,nodeId) {
-      Block#h313 {
-        Let#h314(name=index) { ChildCount#h315 { Var#h316(name=errors) } }
-        Let#h317(name=errId) { StrConcat#h318 { Lit#h319(value="err-") ToString#h320 { Var#h321(name=index) } } }
-        Return#h322 { AppendChild#h323 { Var#h324(name=errors) MakeErr#h325 { Var#h326(name=errId) Var#h327(name=code) Var#h328(name=message) Var#h329(name=nodeId) } } }
+  Let(name=addErr) {
+    Fn(params=errors,code,message,nodeId) {
+      Block {
+        Let(name=index) { ChildCount { Var(name=errors) } }
+        Let(name=errId) { StrConcat { Lit(value="err-") ToString { Var(name=index) } } }
+        Return { AppendChild { Var(name=errors) MakeErr { Var(name=errId) Var(name=code) Var(name=message) Var(name=nodeId) } } }
       }
     }
   }
 
-  Let#h330(name=addId) {
-    Fn#h331(params=ids,id) {
-      Block#h332 {
-        Return#h341 {
-          StrConcat#h342 {
-            StrConcat#h343 {
-              Var#h344(name=ids)
-              Var#h345(name=id)
+  Let(name=addId) {
+    Fn(params=ids,id) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat {
+              Var(name=ids)
+              Var(name=id)
             }
-            Lit#h346(value="\n")
+            Lit(value="\n")
           }
         }
       }
     }
   }
 
-  Let#p1000(name=requireProjectShape) {
-    Fn#p1001(params=node,state) {
-      Block#p1002 {
-        Let#p1003(name=s1) { Call#p1004(target=requireAttr) { Var#p1005(name=node) Var#p1006(name=state) Lit#p1007(value="name") } }
-        Let#p1009(name=s2) { Call#p1010(target=requireAttr) { Var#p1011(name=node) Var#p1012(name=s1) Lit#p1013(value="entryFile") } }
-        Let#p1014(name=s3) { Call#p1015(target=requireAttr) { Var#p1016(name=node) Var#p1017(name=s2) Lit#p1018(value="entryExport") } }
-        Let#p1019(name=s4) {
-          If#p1020 {
-            Eq#p1021 { Call#p1022(target=getAttrOrEmpty) { Var#p1023(name=node) Lit#p1024(value="entryExport") Lit#p1025(value=0) } Lit#p1026(value="") }
-            Block#p1027 { Call#p1028(target=addErrForNode) { Var#p1029(name=s3) Lit#p1030(value="VAL095") Lit#p1031(value="Project entryExport must be non-empty.") Var#p1032(name=node) } }
-            Block#p1033 { Var#p1034(name=s3) }
+  Let(name=requireProjectShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=s1) { Call(target=requireAttr) { Var(name=node) Var(name=state) Lit(value="name") } }
+        Let(name=s2) { Call(target=requireAttr) { Var(name=node) Var(name=s1) Lit(value="entryFile") } }
+        Let(name=s3) { Call(target=requireAttr) { Var(name=node) Var(name=s2) Lit(value="entryExport") } }
+        Let(name=s4) {
+          If {
+            Eq { Call(target=getAttrOrEmpty) { Var(name=node) Lit(value="entryExport") Lit(value=0) } Lit(value="") }
+            Block { Call(target=addErrForNode) { Var(name=s3) Lit(value="VAL095") Lit(value="Project entryExport must be non-empty.") Var(name=node) } }
+            Block { Var(name=s3) }
           }
         }
-        Return#p1066 { Call#p1067(target=requireProjectChildren) { Var#p1068(name=node) Var#p1069(name=s4) Lit#p1070(value=0) } }
+        Return { Call(target=requireProjectChildren) { Var(name=node) Var(name=s4) Lit(value=0) } }
       }
     }
   }
 
-  Let#p1071(name=requireProjectChildren) {
-    Fn#p1072(params=node,state,index) {
-      Block#p1073 {
-        If#p1074 {
-          Eq#p1075 { Var#p1076(name=index) ChildCount#p1077 { Var#p1078(name=node) } }
-          Block#p1079 { Return#p1080 { Var#p1081(name=state) } }
-          Block#p1082 {
-            Let#p1083(name=child) { ChildAt#p1084 { Var#p1085(name=node) Var#p1086(name=index) } }
-            Let#p1087(name=stateAfterChild) {
-              If#p1088 {
-                Eq#p1089 { NodeKind#p1090 { Var#p1091(name=child) } Lit#p1092(value="Include") }
-                Block#p1093 { Var#p1094(name=state) }
-                Block#p1095 {
-                  Call#p1096(target=addErrForNode) {
-                    Var#p1097(name=state)
-                    Lit#p1098(value="VAL096")
-                    Lit#p1099(value="Project children must be Include nodes.")
-                    Var#p1100(name=child)
+  Let(name=requireProjectChildren) {
+    Fn(params=node,state,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=state) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=node) Var(name=index) } }
+            Let(name=stateAfterChild) {
+              If {
+                Eq { NodeKind { Var(name=child) } Lit(value="Include") }
+                Block { Var(name=state) }
+                Block {
+                  Call(target=addErrForNode) {
+                    Var(name=state)
+                    Lit(value="VAL096")
+                    Lit(value="Project children must be Include nodes.")
+                    Var(name=child)
                   }
                 }
               }
             }
-            Return#p1101 {
-              Call#p1102(target=requireProjectChildren) {
-                Var#p1103(name=node)
-                Var#p1104(name=stateAfterChild)
-                Add#p1105 { Var#p1106(name=index) Lit#p1107(value=1) }
+            Return {
+              Call(target=requireProjectChildren) {
+                Var(name=node)
+                Var(name=stateAfterChild)
+                Add { Var(name=index) Lit(value=1) }
               }
             }
           }
@@ -844,65 +844,65 @@ Program#p1 {
     }
   }
 
-  Let#p1110(name=requireIncludeShape) {
-    Fn#p1111(params=node,state) {
-      Block#p1112 {
-        Let#p1113(name=s1) { Call#p1114(target=requireAttrAndChildren) { Var#p1115(name=node) Var#p1116(name=state) Lit#p1117(value="name") Lit#p1118(value=0) } }
-        Let#p1119(name=s2) { Call#p1120(target=requireAttr) { Var#p1121(name=node) Var#p1122(name=s1) Lit#p1123(value="version") } }
-        Return#p1124 { Call#p1125(target=requireIncludePath) { Var#p1126(name=node) Var#p1127(name=s2) } }
+  Let(name=requireIncludeShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=s1) { Call(target=requireAttrAndChildren) { Var(name=node) Var(name=state) Lit(value="name") Lit(value=0) } }
+        Let(name=s2) { Call(target=requireAttr) { Var(name=node) Var(name=s1) Lit(value="version") } }
+        Return { Call(target=requireIncludePath) { Var(name=node) Var(name=s2) } }
       }
     }
   }
 
-  Let#p1130(name=requireIncludePath) {
-    Fn#p1131(params=node,state) {
-      Block#p1132 {
-        If#p1133 {
-          Call#p1134(target=hasAttr) { Var#p1135(name=node) Lit#p1136(value="path") Lit#p1137(value=0) }
-          Block#p1138 {
-            Let#p1139(name=path) { Call#p1140(target=getAttrOrEmpty) { Var#p1141(name=node) Lit#p1142(value="path") Lit#p1143(value=0) } }
-            If#p1144 {
-              Call#p1145(target=isRelativePathText) { Var#p1146(name=path) }
-              Block#p1147 { Return#p1148 { Var#p1149(name=state) } }
-              Block#p1150 {
-                Return#p1151 {
-                  Call#p1152(target=addErrForNode) {
-                    Var#p1153(name=state)
-                    Lit#p1154(value="VAL097")
-                    Lit#p1155(value="Include.path must be a non-empty relative path.")
-                    Var#p1156(name=node)
+  Let(name=requireIncludePath) {
+    Fn(params=node,state) {
+      Block {
+        If {
+          Call(target=hasAttr) { Var(name=node) Lit(value="path") Lit(value=0) }
+          Block {
+            Let(name=path) { Call(target=getAttrOrEmpty) { Var(name=node) Lit(value="path") Lit(value=0) } }
+            If {
+              Call(target=isRelativePathText) { Var(name=path) }
+              Block { Return { Var(name=state) } }
+              Block {
+                Return {
+                  Call(target=addErrForNode) {
+                    Var(name=state)
+                    Lit(value="VAL097")
+                    Lit(value="Include.path must be a non-empty relative path.")
+                    Var(name=node)
                   }
                 }
               }
             }
           }
-          Block#p1157 { Return#p1158 { Var#p1159(name=state) } }
+          Block { Return { Var(name=state) } }
         }
       }
     }
   }
 
-  Let#p1160(name=isRelativePathText) {
-    Fn#p1161(params=path) {
-      Block#p1162 {
-        If#p1163 {
-          Eq#p1164 { Var#p1165(name=path) Lit#p1166(value="") }
-          Block#p1167 { Return#p1168 { Lit#p1169(value=false) } }
-          Block#p1170 {
-            If#p1171 {
-              Eq#p1172 {
-                StringSlice#p1173 { Var#p1174(name=path) Lit#p1175(value=0) Lit#p1176(value=1) }
-                Lit#p1177(value="/")
+  Let(name=isRelativePathText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                StringSlice { Var(name=path) Lit(value=0) Lit(value=1) }
+                Lit(value="/")
               }
-              Block#p1178 { Return#p1179 { Lit#p1180(value=false) } }
-              Block#p1181 {
-                If#p1182 {
-                  Eq#p1183 {
-                    StringFind#p1184 { Var#p1185(name=path) Lit#p1186(value=":") Lit#p1187(value=0) }
-                    Lit#p1188(value=-1)
+              Block { Return { Lit(value=false) } }
+              Block {
+                If {
+                  Eq {
+                    StringFind { Var(name=path) Lit(value=":") Lit(value=0) }
+                    Lit(value=-1)
                   }
-                  Block#p1189 { Return#p1190 { Lit#p1191(value=true) } }
-                  Block#p1192 { Return#p1193 { Lit#p1194(value=false) } }
+                  Block { Return { Lit(value=true) } }
+                  Block { Return { Lit(value=false) } }
                 }
               }
             }
@@ -912,17 +912,17 @@ Program#p1 {
     }
   }
 
-  Let#p1035(name=getAttrOrEmpty) {
-    Fn#p1036(params=node,key,index) {
-      Block#p1037 {
-        If#p1038 {
-          Eq#p1039 { Var#p1040(name=index) AttrCount#p1041 { Var#p1042(name=node) } }
-          Block#p1043 { Return#p1044 { Lit#p1045(value="") } }
-          Block#p1046 {
-            If#p1047 {
-              Eq#p1048 { AttrKey#p1049 { Var#p1050(name=node) Var#p1051(name=index) } Var#p1052(name=key) }
-              Block#p1053 { Return#p1054 { AttrValueString#p1055 { Var#p1056(name=node) Var#p1057(name=index) } } }
-              Block#p1058 { Return#p1059 { Call#p1060(target=getAttrOrEmpty) { Var#p1061(name=node) Var#p1062(name=key) Add#p1063 { Var#p1064(name=index) Lit#p1065(value=1) } } } }
+  Let(name=getAttrOrEmpty) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=getAttrOrEmpty) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
             }
           }
         }

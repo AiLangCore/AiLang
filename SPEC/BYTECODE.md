@@ -2,6 +2,10 @@
 
 AiBC1 is the deterministic bytecode container for AiLang VM execution.
 
+AiBC1 is the final linked program format. The compiler emits relocatable
+AiBCO1 module objects first; `SPEC/AIBCO.md` defines that compiler/linker
+contract.
+
 ## Header
 
 Root node must be `Bytecode#...` with required attrs:

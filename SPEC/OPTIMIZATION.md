@@ -46,6 +46,9 @@ the unoptimized checked IR.
 
 ## Linker
 
+The linker consumes deterministic AiBCO1 module objects and emits the final
+AiBC1 program. See `SPEC/AIBCO.md` for object, symbol, and relocation rules.
+
 The linker owns deterministic module graph construction and final program
 assembly. It must:
 

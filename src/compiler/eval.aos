@@ -175,17 +175,23 @@ Program {
                                       Block { Return { Call(target=evalIfExpr) { Var(name=node) Var(name=env) } } }
                                       Block {
                                         If {
-                                          Eq { Var(name=kind) Lit(value="Eq") }
-                                          Block { Return { Call(target=evalEqExpr) { Var(name=node) Var(name=env) } } }
+                                          Eq { Var(name=kind) Lit(value="Match") }
+                                          Block { Return { Call(target=evalMatchExpr) { Var(name=node) Var(name=env) } } }
                                           Block {
                                             If {
-                                              Eq { Var(name=kind) Lit(value="StrConcat") }
-                                              Block { Return { Call(target=evalStrConcatExpr) { Var(name=node) Var(name=env) } } }
+                                              Eq { Var(name=kind) Lit(value="Eq") }
+                                              Block { Return { Call(target=evalEqExpr) { Var(name=node) Var(name=env) } } }
                                               Block {
                                                 If {
-                                                  Eq { Var(name=kind) Lit(value="Add") }
-                                                  Block { Return { Call(target=evalAddExpr) { Var(name=node) Var(name=env) } } }
-                                                  Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_eval") Lit(value="RUN010") Lit(value="Unsupported node kind.") NodeId { Var(name=node) } } Var(name=env) } } }
+                                                  Eq { Var(name=kind) Lit(value="StrConcat") }
+                                                  Block { Return { Call(target=evalStrConcatExpr) { Var(name=node) Var(name=env) } } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=kind) Lit(value="Add") }
+                                                      Block { Return { Call(target=evalAddExpr) { Var(name=node) Var(name=env) } } }
+                                                      Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_eval") Lit(value="RUN010") Lit(value="Unsupported node kind.") NodeId { Var(name=node) } } Var(name=env) } } }
+                                                    }
+                                                  }
                                                 }
                                               }
                                             }
@@ -299,6 +305,92 @@ Program {
     }
   }
 
+  Let(name=literalValuesEqual) {
+    Fn(params=left,right) {
+      Block {
+        Let(name=leftKind) { AttrValueKind { Var(name=left) Lit(value=0) } }
+        Let(name=rightKind) { AttrValueKind { Var(name=right) Lit(value=0) } }
+        If {
+          Eq { Var(name=leftKind) Var(name=rightKind) }
+          Block {
+            If {
+              Eq { Var(name=leftKind) Lit(value="string") }
+              Block { Return { Eq { AttrValueString { Var(name=left) Lit(value=0) } AttrValueString { Var(name=right) Lit(value=0) } } } }
+              Block {
+                If {
+                  Eq { Var(name=leftKind) Lit(value="int") }
+                  Block { Return { Eq { AttrValueInt { Var(name=left) Lit(value=0) } AttrValueInt { Var(name=right) Lit(value=0) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=leftKind) Lit(value="bool") }
+                      Block { Return { Eq { AttrValueBool { Var(name=left) Lit(value=0) } AttrValueBool { Var(name=right) Lit(value=0) } } } }
+                      Block { Return { Lit(value=false) } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=evalMatchExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=subjectState) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=subject) { Call(target=stateValue) { Var(name=subjectState) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=subjectState) } }
+        If {
+          Eq { NodeKind { Var(name=subject) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=subject) Var(name=e2) } } }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=subject) } Lit(value="Lit") }
+              Block { Return { Call(target=evalMatchArms) { Var(name=node) Var(name=subject) Var(name=e2) Lit(value=1) } } }
+              Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="RUN013") Lit(value="Match subject must be a primitive literal.") NodeId { Var(name=node) } } Var(name=e2) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalMatchArms) {
+    Fn(params=matchNode,subject,env,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
+          Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="MATCH001") Lit(value="Match has no matching case or default.") NodeId { Var(name=matchNode) } } Var(name=env) } } }
+          Block {
+            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
+            Let(name=kind) { NodeKind { Var(name=arm) } }
+            If {
+              Eq { Var(name=kind) Lit(value="Case") }
+              Block {
+                Let(name=caseValue) { ChildAt { Var(name=arm) Lit(value=0) } }
+                If {
+                  Call(target=literalValuesEqual) { Var(name=subject) Var(name=caseValue) }
+                  Block { Return { Call(target=evalNode) { ChildAt { Var(name=arm) Lit(value=1) } Var(name=env) } } }
+                  Block { Return { Call(target=evalMatchArms) { Var(name=matchNode) Var(name=subject) Var(name=env) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Default") }
+                  Block { Return { Call(target=evalNode) { ChildAt { Var(name=arm) Lit(value=0) } Var(name=env) } } }
+                  Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="RUN014") Lit(value="Invalid Match arm.") NodeId { Var(name=arm) } } Var(name=env) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let(name=evalEqExpr) {
     Fn(params=node,env) {
       Block {
@@ -316,27 +408,7 @@ Program {
               Eq { NodeKind { Var(name=rVal) } Lit(value="Err") }
               Block { Return { Call(target=makeState) { Var(name=rVal) Var(name=e3) } } }
               Block {
-                Let(name=lk) { AttrValueKind { Var(name=lVal) Lit(value=0) } }
-                Let(name=rk) { AttrValueKind { Var(name=rVal) Lit(value=0) } }
-                Let(name=eqv) {
-                  If {
-                    Eq { Var(name=lk) Var(name=rk) }
-                    Block {
-                      If {
-                        Eq { Var(name=lk) Lit(value="string") }
-                        Block { Eq { AttrValueString { Var(name=lVal) Lit(value=0) } AttrValueString { Var(name=rVal) Lit(value=0) } } }
-                        Block {
-                          If {
-                            Eq { Var(name=lk) Lit(value="int") }
-                            Block { Eq { AttrValueInt { Var(name=lVal) Lit(value=0) } AttrValueInt { Var(name=rVal) Lit(value=0) } } }
-                            Block { Eq { AttrValueBool { Var(name=lVal) Lit(value=0) } AttrValueBool { Var(name=rVal) Lit(value=0) } } }
-                          }
-                        }
-                      }
-                    }
-                    Block { Lit(value=false) }
-                  }
-                }
+                Let(name=eqv) { Call(target=literalValuesEqual) { Var(name=lVal) Var(name=rVal) } }
                 Return { Call(target=makeState) { Call(target=value.makeBoolLit) { Var(name=eqv) } Var(name=e3) } }
               }
             }

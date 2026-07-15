@@ -23,6 +23,13 @@ This file is normative for `aic run` evaluation behavior.
 - `Var(name)`: return bound value.
 - `Lit`: return literal value.
 - `If`: evaluate condition; must be bool literal; evaluate selected branch only.
+- `Match`: evaluate the subject exactly once. Evaluate `Case` arms in source
+  order using the same primitive equality semantics as `Eq`; evaluate only the
+  first selected arm's `Block`. A final `Default` is selected when no `Case`
+  matches. Without a matching arm or `Default`, evaluation returns `MATCH001`.
+  `Match` subjects and `Case` labels are primitive literals (`string`, `int`,
+  or `bool`) in the initial language surface. Repeated labels are deterministic:
+  the first matching source-order arm wins.
 - `Loop`: repeatedly evaluate body until exited with `Break`.
 - `Break`: valid only inside `Loop`; exits nearest loop.
 - `Continue`: valid only inside `Loop`; skips to next nearest-loop iteration.

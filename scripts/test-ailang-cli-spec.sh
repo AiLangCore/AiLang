@@ -435,7 +435,7 @@ rg -q 'ATTR_VALUE_STRING' "${APP_DIR}/obj/app.bytecode.aos"
 rg -q 'status="ok"' "${APP_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'output="app.aibc1"' "${APP_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'status="bytecode"' "${APP_DIR}/obj/build-input-report.aos"
-rg -q 'input="obj/app.aibc1"' "${APP_DIR}/obj/build-input-report.aos"
+rg -q 'input="obj/app.aibco"' "${APP_DIR}/obj/build-input-report.aos"
 APP_NO_ARGS_OUT="$("${AIVM_BIN}" "${BUILD_DIR}/app.aibc1")"
 printf '%s\n' "${APP_NO_ARGS_OUT}" | rg -q '^app: no app args$'
 APP_WITH_ARG_OUT="$("${AIVM_BIN}" "${BUILD_DIR}/app.aibc1" alpha)"
@@ -452,7 +452,7 @@ rg -q 'Hello from .*/basic-cli[.]' "${BASIC_CLI_DIR}/obj/app.bytecode.aos"
 rg -q 'status="ok"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'output="app.aibc1"' "${BASIC_CLI_DIR}/obj/bytecode-emitter-report.aos"
 rg -q 'status="bytecode"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
-rg -q 'input="obj/app.aibc1"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
+rg -q 'input="obj/app.aibco"' "${BASIC_CLI_DIR}/obj/build-input-report.aos"
 
 mkdir -p "${MULTI_STDOUT_DIR}/src"
 cat > "${MULTI_STDOUT_DIR}/project.aiproj" <<'EOF'

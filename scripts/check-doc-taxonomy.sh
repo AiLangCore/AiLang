@@ -36,6 +36,9 @@ done < <(git ls-files 'SPEC/*.md')
 
 # Docs is stable usage documentation, not active work tracking.
 while IFS= read -r path; do
+  case "$path" in
+    Docs/Archive/*) continue ;;
+  esac
   base="${path##*/}"
   case "$base" in
     *.feature-*.md|*.rc[0-9]*.md|*.milestone-*.md|*.experiment.md|*.archive.md)

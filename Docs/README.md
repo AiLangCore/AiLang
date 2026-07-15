@@ -23,7 +23,10 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - `../Docs/` contains stable usage documentation for humans and developer agents.
 - `../Design/` contains non-normative design notes, proposals, rationale, and decisions.
 - `../Planning/` contains gated plans, tasks, readiness notes, and checklists.
-- `../Archive/` contains historical or superseded documents.
+- `../Docs/Archive/` contains historical or superseded documents.
+- `../Docs/Decisions/` contains accepted architectural decisions and their
+  rationale. Decisions are non-normative; language and bytecode behavior still
+  belongs in `../SPEC/`.
 - `*.local.md` / `*.local.*` files are local scratch and must not be committed.
 
 If a planning or design document proposes behavior that becomes language meaning,
@@ -54,7 +57,8 @@ behavior into `../SPEC/` before implementation relies on it.
 - [Specification Index](../SPEC/README.md)
 - [Design Notes](../Design/README.md)
 - [Planning Documents](../Planning/README.md)
-- [Archive](../Archive/README.md)
+- [Architecture Decisions](./Decisions/)
+- [Archive](./Archive/README.md)
 
 ## Hard Constraints
 

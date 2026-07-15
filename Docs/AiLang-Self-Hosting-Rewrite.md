@@ -201,7 +201,8 @@ native bridge libraries, but not in AiLang command implementation.
     `buildProject` path instead of calling the bootstrap binary emitter
     directly.
   - [x] `build` now emits `obj/bytecode-emitter-report.aos`, writes
-    `obj/app.bytecode.aos` for inspection, and writes `obj/app.aibc1`
+    `obj/app.bytecode.aos` for inspection, writes the entry module object to
+    `obj/app.aibco`, and writes the linked program to `bin/app.aibc1`
     directly from AiLang-authored bytecode emission for the supported bootstrap
     shapes: an entry function containing exactly one integer-literal `Return`,
     the basic CLI template shape with literal `sys.stdout.writeLine` followed

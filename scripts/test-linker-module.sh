@@ -14,7 +14,7 @@ mkdir -p "${PROJECT_DIR}/.ailang/packages/local-lib/src"
 
 cat > "${PROJECT_DIR}/src/dep1.aos" <<'AOS'
 Program#dep1_p1 {
-  Import#dep1_i1(path="src/nested.aos")
+  Import#dep1_i1(path="nested.aos")
   Export#dep1_e1(name=dep1)
   Let#dep1_l1(name=dep1) { Lit#dep1_i2(value=1) }
 }
@@ -36,7 +36,7 @@ AOS
 
 cat > "${PROJECT_DIR}/.ailang/packages/local-lib/src/lib.aos" <<'AOS'
 Program#pkg_lib_p1 {
-  Import#pkg_lib_i1(path="src/pkg-nested.aos")
+  Import#pkg_lib_i1(path="pkg-nested.aos")
   Export#pkg_lib_e1(name=pkgLib)
   Let#pkg_lib_l1(name=pkgLib) { Lit#pkg_lib_i2(value=4) }
 }
@@ -51,7 +51,7 @@ AOS
 
 cat > "${PROJECT_DIR}/src/cycle-a.aos" <<'AOS'
 Program#cycle_a_p1 {
-  Import#cycle_a_i1(path="src/cycle-b.aos")
+  Import#cycle_a_i1(path="cycle-b.aos")
   Export#cycle_a_e1(name=cycleA)
   Let#cycle_a_l1(name=cycleA) { Lit#cycle_a_i2(value=1) }
 }
@@ -59,7 +59,7 @@ AOS
 
 cat > "${PROJECT_DIR}/src/cycle-b.aos" <<'AOS'
 Program#cycle_b_p1 {
-  Import#cycle_b_i1(path="src/cycle-a.aos")
+  Import#cycle_b_i1(path="cycle-a.aos")
   Export#cycle_b_e1(name=cycleB)
   Let#cycle_b_l1(name=cycleB) { Lit#cycle_b_i2(value=2) }
 }
@@ -77,7 +77,7 @@ Program#test_p1 {
       Block#test_b1 {
         Let#test_l2(name=entry) {
           Call#test_c1(target=parse.parseDocument) {
-            Lit#test_i1(value="Program#entry { Import#i1(path=\"src/dep1.aos\") Import#i2(path=\"src/dep2.aos\") Export#e1(name=\"start\") Let#l1(name=\"start\") { Lit#v1(value=0) } }")
+            Lit#test_i1(value="Program#entry { Import#i1(path=\"dep1.aos\") Import#i2(path=\"dep2.aos\") Export#e1(name=\"start\") Let#l1(name=\"start\") { Lit#v1(value=0) } }")
           }
         }
         Let#test_l3(name=paths) {
@@ -134,7 +134,7 @@ Program#test_p1 {
 
         Let#test_l5(name=cycleEntry) {
           Call#test_c4(target=parse.parseDocument) {
-            Lit#test_i16(value="Program#cycle_entry { Import#cycle_i1(path=\"src/cycle-a.aos\") Export#cycle_e1(name=\"start\") Let#cycle_l1(name=\"start\") { Lit#cycle_v1(value=0) } }")
+            Lit#test_i16(value="Program#cycle_entry { Import#cycle_i1(path=\"cycle-a.aos\") Export#cycle_e1(name=\"start\") Let#cycle_l1(name=\"start\") { Lit#cycle_v1(value=0) } }")
           }
         }
         Let#test_l6(name=cycleResult) {

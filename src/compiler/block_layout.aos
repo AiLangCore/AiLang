@@ -1,0 +1,188 @@
+Program {
+  Export(name=blockLayout.assign)
+  Export(name=blockLayout.resolve)
+
+  Let(name=blockLayout.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=blockLayout.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.isBlock) {
+    Fn(params=node) {
+      Block {
+        Return {
+          Eq {
+            StringFind { NodeId { Var(name=node) } Lit(value="ir-block:") Lit(value=0) }
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.isInstruction) {
+    Fn(params=node) {
+      Block { Return { Eq { NodeId { Var(name=node) } Lit(value="ir-inst") } } }
+    }
+  }
+
+  Let(name=blockLayout.isTerminator) {
+    Fn(params=node) {
+      Block { Return { Eq { NodeId { Var(name=node) } Lit(value="ir-term") } } }
+    }
+  }
+
+  Let(name=blockLayout.terminatorCount) {
+    Fn(params=node) {
+      Block {
+        Let(name=op) { Call(target=blockLayout.getAttr) { Var(name=node) Lit(value="op") Lit(value=0) } }
+        If {
+          Eq { Var(name=op) Lit(value="RETURN") }
+          Block { Return { Lit(value=1) } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="JUMP") }
+              Block { Return { Lit(value=1) } }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="BRANCH") }
+                  Block { Return { Lit(value=2) } }
+                  Block { Return { MakeErr { Lit(value="block_layout") Lit(value="LINK022") Lit(value="Unsupported block terminator.") NodeId { Var(name=node) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.countInstructions) {
+    Fn(params=block,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=block) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=block) Var(name=index) } }
+            Let(name=tail) { Call(target=blockLayout.countInstructions) { Var(name=block) Add { Var(name=index) Lit(value=1) } } }
+            If {
+              Call(target=blockLayout.isInstruction) { Var(name=child) }
+              Block { Return { Add { Lit(value=1) Var(name=tail) } } }
+              Block {
+                If {
+                  Call(target=blockLayout.isTerminator) { Var(name=child) }
+                  Block { Return { Add { Call(target=blockLayout.terminatorCount) { Var(name=child) } Var(name=tail) } } }
+                  Block { Return { Var(name=tail) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.contains) {
+    Fn(params=layout,label,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=entry) { ChildAt { Var(name=layout) Var(name=index) } }
+            If {
+              Eq { Call(target=blockLayout.getAttr) { Var(name=entry) Lit(value="label") Lit(value=0) } Var(name=label) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=blockLayout.contains) { Var(name=layout) Var(name=label) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.assign) {
+    Fn(params=function) {
+      Block {
+        Return { Call(target=blockLayout.assignAt) { Var(name=function) Lit(value=0) Lit(value=0) MakeBlock { Lit(value="ir-layout") } } }
+      }
+    }
+  }
+
+  Let(name=blockLayout.assignAt) {
+    Fn(params=function,index,offset,layout) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=function) } }
+          Block { Return { Var(name=layout) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=function) Var(name=index) } }
+            If {
+              Call(target=blockLayout.isBlock) { Var(name=child) }
+              Block {
+                Let(name=label) { Call(target=blockLayout.getAttr) { Var(name=child) Lit(value="label") Lit(value=0) } }
+                If {
+                  Eq { Var(name=label) Lit(value="") }
+                  Block { Return { MakeErr { Lit(value="block_layout") Lit(value="LINK020") Lit(value="Block is missing label.") NodeId { Var(name=child) } } } }
+                  Block {
+                    If {
+                      Call(target=blockLayout.contains) { Var(name=layout) Var(name=label) Lit(value=0) }
+                      Block { Return { MakeErr { Lit(value="block_layout") Lit(value="LINK021") Lit(value="Duplicate block label.") Var(name=label) } } }
+                      Block {
+                        Let(name=count) { Call(target=blockLayout.countInstructions) { Var(name=child) Lit(value=0) } }
+                        Let(name=entryBase) { MakeBlock { StrConcat { Lit(value="ir-layout-entry:") Var(name=label) } } }
+                        Let(name=entryLabel) { AppendAttr { Var(name=entryBase) MakeLitString { Lit(value="label") Var(name=label) } } }
+                        Let(name=entryOffset) { AppendAttr { Var(name=entryLabel) MakeLitInt { Lit(value="offset") Var(name=offset) } } }
+                        Return { Call(target=blockLayout.assignAt) { Var(name=function) Add { Var(name=index) Lit(value=1) } Add { Var(name=offset) Var(name=count) } AppendChild { Var(name=layout) Var(name=entryOffset) } } }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=blockLayout.assignAt) { Var(name=function) Add { Var(name=index) Lit(value=1) } Var(name=offset) Var(name=layout) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLayout.resolve) {
+    Fn(params=layout,label,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { MakeErr { Lit(value="block_layout") Lit(value="LINK023") Lit(value="Block reference is unknown.") Var(name=label) } } }
+          Block {
+            If {
+              Lt { ChildCount { Var(name=layout) } Var(name=index) }
+              Block { Return { MakeErr { Lit(value="block_layout") Lit(value="LINK023") Lit(value="Block reference is unknown.") Var(name=label) } } }
+              Block {
+                Let(name=entry) { ChildAt { Var(name=layout) Var(name=index) } }
+                If {
+                  Eq { Call(target=blockLayout.getAttr) { Var(name=entry) Lit(value="label") Lit(value=0) } Var(name=label) }
+                  Block { Return { AttrValueInt { Var(name=entry) Lit(value=1) } } }
+                  Block { Return { Call(target=blockLayout.resolve) { Var(name=layout) Var(name=label) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

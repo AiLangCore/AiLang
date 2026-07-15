@@ -1,0 +1,19 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_emit.aos")
+  Import(path="object_linker_core.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=objectLinker.collectFunctions)
+  Export(name=objectLinker.resolveTargetName)
+  Export(name=objectLinker.assignOffsets)
+  Export(name=objectLinker.resolveCallOffset)
+  Export(name=objectLinker.collectConstants)
+  Export(name=objectLinker.constantIndex)
+  Export(name=objectLinker.emitAibc1Bytes)
+  Export(name=objectLinker.emitLinkedPlanBytes)
+  Export(name=objectLinker.emitLinkedPlanAibc1Bytes)
+  Export(name=objectLinker.emitLinkedCallBytes)
+  Export(name=objectLinker.emitLinkedPlansAibc1Bytes)
+  Export(name=objectLinker.validateSupported)
+
+}

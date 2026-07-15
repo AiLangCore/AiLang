@@ -1,5 +1,7 @@
 Program {
-  Let(name=format) {
+  Export(name=format.format)
+
+  Let(name=format.format) {
     Fn(params=node) {
       Block {
         Return {
@@ -165,7 +167,7 @@ Program {
               StrConcat {
                 Lit(value=" { ")
                 StrConcat {
-                  Call(target=format) { ChildAt { Var(name=node) Lit(value=0) } }
+                  Call(target=format.format) { ChildAt { Var(name=node) Lit(value=0) } }
                   StrConcat {
                     Call(target=formatChildrenTail) {
                       Var(name=node)
@@ -194,7 +196,7 @@ Program {
               StrConcat {
                 Lit(value=" ")
                 StrConcat {
-                  Call(target=format) { ChildAt { Var(name=node) Var(name=index) } }
+                  Call(target=format.format) { ChildAt { Var(name=node) Var(name=index) } }
                   Call(target=formatChildrenTail) {
                     Var(name=node)
                     Add { Var(name=index) Lit(value=1) }

@@ -38,7 +38,7 @@ while IFS=$'\t' read -r module_path exports_csv; do
     exit 1
   fi
 
-  actual_exports="$(rg -o 'Export#[^\n]*name=([A-Za-z0-9_.]+)' -r '$1' "${module_file}" | sort)"
+  actual_exports="$(rg -o 'Export\(name=([A-Za-z0-9_.]+)\)' -r '$1' "${module_file}" | sort)"
   expected_exports="$(printf '%s\n' "${exports_csv}" | tr ',' '\n' | sort)"
 
   if [[ "${actual_exports}" != "${expected_exports}" ]]; then

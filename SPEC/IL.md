@@ -17,6 +17,9 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Project` | `name` (string), `entryFile` (string), `entryExport` (string) | `0..N` | Project manifest node for `project.aiproj`; children must be `Include`. |
 | `Include` | `name` (string), `version` (string) | `0` | Declares project-level dependency metadata. Optional `path` declares a local development include; otherwise the package resolves through the registry and lockfile. |
 | `If` | none | `2..3` | Condition, then-branch, optional else-branch. |
+| `Match` | none | `2..N` | Deterministic value dispatch. Child `0` is the subject expression; remaining children are ordered `Case` or an optional final `Default`. |
+| `Case` | none | `2` | Valid only as a `Match` arm. Child `0` is a primitive `Lit` case value and child `1` is the selected `Block`. |
+| `Default` | none | `1` | Valid only as the final optional `Match` arm. Its child is the selected `Block`. |
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |
 | `Add` | none | `2` | Numeric addition over the `number` family. |
@@ -49,6 +52,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `MakePair` | none | `2` | Creates an internal scratch pair for compiler/parser implementation state. Not a public semantic record. |
 | `PairFirst` | none | `1` | Reads the first value from an internal scratch pair. |
 | `PairSecond` | none | `1` | Reads the second value from an internal scratch pair. |
+| `ValueKind` | none | `1` | Returns the deterministic VM value category: `void`, `int`, `number`, `bool`, `null`, `string`, `bytes`, `node`, `pair`, or `unknown`. It is intended for compiler and library control flow when a value may be an internal pair or a diagnostic node. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
 | `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
 | `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |

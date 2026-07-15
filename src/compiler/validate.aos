@@ -10,6 +10,7 @@ Program {
                 MakeBlock { Lit(value="errs") }
                 Lit(value="\n")
               }
+              Lit(value="")
             }
           }
         }
@@ -55,7 +56,7 @@ Program {
   }
 
   Let(name=validateNode) {
-    Fn(params=node,state) {
+    Fn(params=node,state,parentKind) {
       Block {
         Let(name=errors) { Call(target=stateErrors) { Var(name=state) } }
         Let(name=ids) { Call(target=stateIds) { Var(name=state) } }
@@ -71,14 +72,15 @@ Program {
 
         Let(name=idsAfter) { Call(target=addId) { Var(name=ids) Var(name=nodeId) } }
         Let(name=stateAfterSelf) { Call(target=makeState) { Var(name=errorsAfterId) Var(name=idsAfter) } }
-        Let(name=stateAfterKind) { Call(target=validateKind) { Var(name=node) Var(name=stateAfterSelf) } }
-        Return { Call(target=validateChildren) { Var(name=node) Var(name=stateAfterKind) Lit(value=0) } }
+        Let(name=kind) { NodeKind { Var(name=node) } }
+        Let(name=stateAfterKind) { Call(target=validateKind) { Var(name=node) Var(name=stateAfterSelf) Var(name=parentKind) } }
+        Return { Call(target=validateChildren) { Var(name=node) Var(name=stateAfterKind) Lit(value=0) Var(name=kind) } }
       }
     }
   }
 
   Let(name=validateChildren) {
-    Fn(params=node,state,index) {
+    Fn(params=node,state,index,parentKind) {
       Block {
         Return {
           If {
@@ -90,8 +92,10 @@ Program {
                 Call(target=validateNode) {
                   ChildAt { Var(name=node) Var(name=index) }
                   Var(name=state)
+                  Var(name=parentKind)
                 }
                 Add { Var(name=index) Lit(value=1) }
+                Var(name=parentKind)
               }
             }
           }
@@ -101,7 +105,7 @@ Program {
   }
 
   Let(name=validateKind) {
-    Fn(params=node,state) {
+    Fn(params=node,state,parentKind) {
       Block {
         Let(name=kind) { NodeKind { Var(name=node) } }
         Let(name=errors) { Call(target=stateErrors) { Var(name=state) } }
@@ -132,32 +136,32 @@ Program {
                                 Block { Call(target=requireIfShape) { Var(name=node) Var(name=state) } }
                                 Block {
                                   If {
-                                    Eq { Var(name=kind) Lit(value="Block") }
-                                    Block { Var(name=state) }
+                                    Eq { Var(name=kind) Lit(value="Match") }
+                                    Block { Call(target=requireMatchShape) { Var(name=node) Var(name=state) } }
                                     Block {
                                       If {
-                                        Eq { Var(name=kind) Lit(value="Return") }
-                                        Block { Call(target=requireReturnShape) { Var(name=node) Var(name=state) } }
+                                        Eq { Var(name=kind) Lit(value="Case") }
+                                        Block { Call(target=requireCaseInMatch) { Var(name=node) Var(name=state) Var(name=parentKind) } }
                                         Block {
                                           If {
-                                            Eq { Var(name=kind) Lit(value="Fn") }
-                                            Block { Call(target=requireFnShape) { Var(name=node) Var(name=state) } }
+                                            Eq { Var(name=kind) Lit(value="Default") }
+                                            Block { Call(target=requireDefaultInMatch) { Var(name=node) Var(name=state) Var(name=parentKind) } }
                                             Block {
                                               If {
-                                                Eq { Var(name=kind) Lit(value="Eq") }
-                                                Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                Eq { Var(name=kind) Lit(value="Block") }
+                                                Block { Var(name=state) }
                                                 Block {
                                                   If {
-                                                    Eq { Var(name=kind) Lit(value="Add") }
-                                                    Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+                                                    Eq { Var(name=kind) Lit(value="Return") }
+                                                    Block { Call(target=requireReturnShape) { Var(name=node) Var(name=state) } }
                                                     Block {
                                                       If {
-                                                        Eq { Var(name=kind) Lit(value="ToString") }
-                                                        Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                        Eq { Var(name=kind) Lit(value="Fn") }
+                                                        Block { Call(target=requireFnShape) { Var(name=node) Var(name=state) } }
                                                         Block {
                                                           If {
-                                                            Eq { Var(name=kind) Lit(value="NodeKind") }
-                                                            Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+                                                            Eq { Var(name=kind) Lit(value="Eq") }
+                                                            Block { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
                                                             Block {
                                                               If {
                                                                 Eq { Var(name=kind) Lit(value="NodeId") }
@@ -337,7 +341,7 @@ Program {
     Fn(params=_) {
       Block {
         Return {
-          Lit(value="|Program|Let|Var|Lit|Call|If|Block|Return|Fn|Eq|Add|ToString|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|Import|Export|Project|Include|Loop|Break|Continue|")
+          Lit(value="|Program|Let|Var|Lit|Call|If|Match|Case|Default|Block|Return|Fn|Eq|Add|ToString|ValueKind|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|AppendAttr|Import|Export|Project|Include|Loop|Break|Continue|")
         }
       }
     }
@@ -650,6 +654,124 @@ Program {
             Eq { Var(name=count) Lit(value=3) }
             Block { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterThen) Lit(value=2) Lit(value="Block") Lit(value="VAL022") Lit(value="If else-branch must be Block.") } }
             Block { Var(name=stateAfterThen) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=requireCaseShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=s1) { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=2) } }
+        Let(name=s2) { Call(target=requireChildKind) { Var(name=node) Var(name=s1) Lit(value=0) Lit(value="Lit") Lit(value="VAL024") Lit(value="Case value must be Lit.") } }
+        Return { Call(target=requireChildKind) { Var(name=node) Var(name=s2) Lit(value=1) Lit(value="Block") Lit(value="VAL024") Lit(value="Case body must be Block.") } }
+      }
+    }
+  }
+
+  Let(name=requireCaseInMatch) {
+    Fn(params=node,state,parentKind) {
+      Block {
+        If {
+          Eq { Var(name=parentKind) Lit(value="Match") }
+          Block { Return { Call(target=requireCaseShape) { Var(name=node) Var(name=state) } } }
+          Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL028") Lit(value="Case is valid only inside Match.") Var(name=node) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=requireDefaultShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=s1) { Call(target=requireChildCount) { Var(name=node) Var(name=state) Lit(value=1) } }
+        Return { Call(target=requireChildKind) { Var(name=node) Var(name=s1) Lit(value=0) Lit(value="Block") Lit(value="VAL026") Lit(value="Default body must be Block.") } }
+      }
+    }
+  }
+
+  Let(name=requireDefaultInMatch) {
+    Fn(params=node,state,parentKind) {
+      Block {
+        If {
+          Eq { Var(name=parentKind) Lit(value="Match") }
+          Block { Return { Call(target=requireDefaultShape) { Var(name=node) Var(name=state) } } }
+          Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL028") Lit(value="Default is valid only inside Match.") Var(name=node) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=requireMatchShape) {
+    Fn(params=node,state) {
+      Block {
+        Let(name=count) { ChildCount { Var(name=node) } }
+        If {
+          Eq { Var(name=count) Lit(value=0) }
+          Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL003") Lit(value="Match expects a subject and at least one arm.") Var(name=node) } } }
+          Block {
+            If {
+              Eq { Var(name=count) Lit(value=1) }
+              Block { Return { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL003") Lit(value="Match expects a subject and at least one arm.") Var(name=node) } } }
+              Block { Return { Call(target=requireMatchArms) { Var(name=node) Var(name=state) Lit(value=1) Lit(value=false) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=requireMatchArms) {
+    Fn(params=node,state,index,seenDefault) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=state) } }
+          Block {
+            Let(name=arm) { ChildAt { Var(name=node) Var(name=index) } }
+            Let(name=kind) { NodeKind { Var(name=arm) } }
+            If {
+              Eq { Var(name=kind) Lit(value="Case") }
+              Block {
+                Let(name=s1) { Call(target=requireCaseShape) { Var(name=arm) Var(name=state) } }
+                Let(name=s2) {
+                  If {
+                    Var(name=seenDefault)
+                    Block { Call(target=addErrForNode) { Var(name=s1) Lit(value="VAL025") Lit(value="Case cannot follow Default.") Var(name=arm) } }
+                    Block { Var(name=s1) }
+                  }
+                }
+                Return { Call(target=requireMatchArms) { Var(name=node) Var(name=s2) Add { Var(name=index) Lit(value=1) } Var(name=seenDefault) } }
+              }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Default") }
+                  Block {
+                    Let(name=s1) { Call(target=requireDefaultShape) { Var(name=arm) Var(name=state) } }
+                    Let(name=s2) {
+                      If {
+                        Var(name=seenDefault)
+                        Block { Call(target=addErrForNode) { Var(name=s1) Lit(value="VAL026") Lit(value="Match may contain only one Default.") Var(name=arm) } }
+                        Block { Var(name=s1) }
+                      }
+                    }
+                    Let(name=s3) {
+                      If {
+                        Eq { Add { Var(name=index) Lit(value=1) } ChildCount { Var(name=node) } }
+                        Block { Var(name=s2) }
+                        Block { Call(target=addErrForNode) { Var(name=s2) Lit(value="VAL027") Lit(value="Default must be the final Match arm.") Var(name=arm) } }
+                      }
+                    }
+                    Return { Call(target=requireMatchArms) { Var(name=node) Var(name=s3) Add { Var(name=index) Lit(value=1) } Lit(value=true) } }
+                  }
+                  Block {
+                    Let(name=s1) { Call(target=addErrForNode) { Var(name=state) Lit(value="VAL023") Lit(value="Match arms must be Case or Default.") Var(name=arm) } }
+                    Return { Call(target=requireMatchArms) { Var(name=node) Var(name=s1) Add { Var(name=index) Lit(value=1) } Var(name=seenDefault) } }
+                  }
+                }
+              }
+            }
           }
         }
       }

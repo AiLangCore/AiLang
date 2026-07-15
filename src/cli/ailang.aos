@@ -1,11 +1,11 @@
 Program {
+
   Import(path="../std/str.aos")
   Import(path="../std/bytes.aos")
   Import(path="../compiler/parser.aos")
   Import(path="../compiler/linker.aos")
   Import(path="../compiler/bundle.aos")
-  Import(path="../compiler/bytecode.aos")
-  Import(path="../compiler/object.aos")
+  Import(path="../compiler/structural_project_link.aos")
   Import(path="package.aos")
   Import(path="target_packages.aos")
   Export(name=main)
@@ -956,50 +956,34 @@ Program {
                                 }
                               }
                               If {
-                                Eq { Var(name=graphCode) Lit(value=0) }
+                                Eq { NodeKind { Var(name=graphCode) } Lit(value="Err") }
+                                Block { Return { Call(target=buildErrorFromCompilerErr) { Var(name=graphCode) } } }
                                 Block {
-                                  Let(name=bootstrapInput) {
-                                    Call(target=selectBootstrapBuildInput) {
-                                      Var(name=path)
-                                    }
-                                  }
                                   Let(name=bytecodeInput) {
                                     StrConcat {
                                       Var(name=path)
-                                      Lit(value="/obj/app.aibc1")
+                                      Lit(value="/bin/app.aibc1")
                                     }
                                   }
+                                  Call(target=sys.fs.dir.create) { Var(name=resolvedOutDir) }
                                   If {
-                                    Eq {
-                                      Var(name=bootstrapInput)
-                                      Var(name=bytecodeInput)
-                                    }
+                                    Eq { Var(name=bytecodeInput) Var(name=outFile) }
+                                    Block { Lit(value=0) }
                                     Block {
-                                      Call(target=sys.fs.dir.create) { Var(name=resolvedOutDir) }
                                       Call(target=copyFileBytes) {
                                         Var(name=bytecodeInput)
                                         Var(name=outFile)
                                       }
-                                      Call(target=sys.stdout.writeLine) {
-                                        StrConcat {
-                                          Lit(value="Ok#ok1(type=string value=\"")
-                                          StrConcat { Var(name=outFile) Lit(value="\")") }
-                                        }
-                                      }
-                                      Return { Lit(value=0) }
-                                    }
-                                    Block {
-                                      Return {
-                                        Call(target=runBootstrapBuild) {
-                                          Var(name=bootstrapInput)
-                                          Var(name=resolvedOutDir)
-                                          Var(name=outFile)
-                                        }
-                                      }
                                     }
                                   }
+                                  Call(target=sys.stdout.writeLine) {
+                                    StrConcat {
+                                      Lit(value="Ok#ok1(type=string value=\"")
+                                      StrConcat { Var(name=outFile) Lit(value="\")") }
+                                    }
+                                  }
+                                  Return { Lit(value=0) }
                                 }
-                                Block { Return { Var(name=graphCode) } }
                               }
                             }
                             Block { Return { Call(target=buildError) { Lit(value="RUN024") Lit(value="Package import is not declared in project manifest.") Var(name=undeclaredPackageImport) } } }
@@ -1138,12 +1122,18 @@ Program {
           Let(name=objectPath) {
             StrConcat {
               Var(name=objDir)
-              Lit(value="/entry.aibco")
+              Lit(value="/app.aibco")
             }
           }
-          Let(name=bytecodeBinaryPath) {
+          Let(name=binDir) {
             StrConcat {
-              Var(name=objDir)
+              Var(name=projectDir)
+              Lit(value="/bin")
+            }
+          }
+          Let(name=linkedProgramPath) {
+            StrConcat {
+              Var(name=binDir)
               Lit(value="/app.aibc1")
             }
           }
@@ -1176,7 +1166,8 @@ Program {
             }
             Block {
               Return {
-                Call(target=buildError) {
+                MakeErr {
+                  Lit(value="cli")
                   Lit(value="AILANG013")
                   Lit(value="Project entryFile could not be parsed.")
                   Lit(value="entryFile")
@@ -1199,7 +1190,8 @@ Program {
                 }
                 Block {
                   Return {
-                    Call(target=buildError) {
+                    MakeErr {
+                      Lit(value="cli")
                       Lit(value="AILANG021")
                       Lit(value="Project import graph could not be linked.")
                       Lit(value="linker")
@@ -1208,6 +1200,7 @@ Program {
                 }
                 Block {
                   Call(target=sys.fs.dir.create) { Var(name=objDir) }
+                  Call(target=sys.fs.dir.create) { Var(name=binDir) }
                   Call(target=writeTextFile) {
                     Var(name=linkReportPath)
                     Call(target=linker.buildLinkReportText) {
@@ -1222,69 +1215,26 @@ Program {
                       Var(name=modulePaths)
                     }
                   }
-                  Call(target=writeTextFile) {
-                    Var(name=objectPath)
-                    Call(target=object.emitModuleText) {
-                      Var(name=entryProgram)
-                      Var(name=entryFile)
-                    }
-                  }
-                  Let(name=objectEmission) {
-                    Call(target=emitModuleObjects) {
+                  Let(name=linkedStatus) {
+                    Call(target=structuralProject.writeProjectAibc1FromObjectFiles) {
                       Var(name=modulePaths)
                       Var(name=projectDir)
                       Var(name=lockText)
                       Var(name=objDir)
-                      Lit(value=0)
+                      Var(name=linkedProgramPath)
                     }
                   }
                   If {
-                    Eq { NodeKind { Var(name=objectEmission) } Lit(value="Err") }
-                    Block { Return { Var(name=objectEmission) } }
-                    Block { Lit(value=0) }
-                  }
-                  Let(name=bytecodeResult) {
-                    Call(target=bytecode.buildEntryReturnIntMainText) {
-                      Var(name=entryProgram)
-                      Var(name=entryExport)
-                    }
-                  }
-                  If {
-                    Eq {
-                      NodeKind { Var(name=bytecodeResult) }
-                      Lit(value="Err")
-                    }
+                    Eq { NodeKind { Var(name=linkedStatus) } Lit(value="Err") }
+                    Block { Return { Var(name=linkedStatus) } }
                     Block {
                       Call(target=writeTextFile) {
                         Var(name=bytecodeReportPath)
-                        Lit(value="BytecodeEmitterReport#bytecode_report(status=\"unsupported\" emitter=\"entry-return-int\")")
+                        Lit(value="BytecodeEmitterReport#bytecode_report(status=\"ok\" emitter=\"structural-project-linker\" object=\"obj/app.aibco\" output=\"bin/app.aibc1\")")
                       }
-                    }
-                    Block {
-                      Let(name=bytecodeText) {
-                        AttrValueString {
-                          Var(name=bytecodeResult)
-                          Lit(value=0)
-                        }
-                      }
-                      Call(target=writeTextFile) {
-                        Var(name=bytecodeObjectPath)
-                        Var(name=bytecodeText)
-                      }
-                      Call(target=sys.fs.file.write) {
-                        Var(name=bytecodeBinaryPath)
-                        Call(target=bytecode.buildEntryReturnIntMainBytes) {
-                          Var(name=entryProgram)
-                          Var(name=entryExport)
-                        }
-                      }
-                      Call(target=writeTextFile) {
-                        Var(name=bytecodeReportPath)
-                        Lit(value="BytecodeEmitterReport#bytecode_report(status=\"ok\" emitter=\"entry-return-int\" output=\"app.aibc1\")")
-                      }
+                      Return { MakeBlock { Lit(value="build-graph-ok") } }
                     }
                   }
-                  Return { Lit(value=0) }
                 }
               }
             }
@@ -1325,40 +1275,7 @@ Program {
         }
       }
     }
-
-    Let(name=emitModuleObjects) {
-      Fn(params=modulePaths,projectDir,lockText,objDir,index) {
-        Block {
-          If {
-            Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
-            Block { Return { Lit(value=0) } }
-            Block {
-              Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
-              Let(name=readPath) { Call(target=linker.resolveModuleReadPath) { Var(name=projectDir) Var(name=modulePath) Var(name=lockText) } }
-              If {
-                Eq { Var(name=readPath) Lit(value="") }
-                Block { Return { Call(target=buildError) { Lit(value="AILANG022") Lit(value="Linked module could not be resolved for object emission.") Var(name=modulePath) } } }
-                Block {
-                  Let(name=moduleProgram) { Call(target=parse.parseDocument) { Call(target=io.readFile) { Var(name=readPath) } } }
-                  If {
-                    Eq { NodeKind { Var(name=moduleProgram) } Lit(value="Err") }
-                    Block { Return { Call(target=buildError) { Lit(value="AILANG023") Lit(value="Linked module could not be parsed for object emission.") Var(name=modulePath) } } }
-                    Block {
-                      Call(target=writeTextFile) {
-                        StrConcat { Var(name=objDir) StrConcat { Lit(value="/module-") StrConcat { ToString { Var(name=index) } Lit(value=".aibco") } } }
-                        Call(target=object.emitModuleText) { Var(name=moduleProgram) Var(name=modulePath) }
-                      }
-                      Return { Call(target=emitModuleObjects) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=objDir) Add { Var(name=index) Lit(value=1) } } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
     }
-  }
 
   Let(name=selectBootstrapBuildInput) {
     Fn(params=projectDir) {
@@ -1377,7 +1294,10 @@ Program {
         }
         Let(name=bytecodeBinaryPath) {
           StrConcat {
-            Var(name=objDir)
+            StrConcat {
+              Var(name=projectDir)
+              Lit(value="/bin")
+            }
             Lit(value="/app.aibc1")
           }
         }
@@ -1449,7 +1369,7 @@ Program {
                           Block {
                             Call(target=writeTextFile) {
                               Var(name=buildInputReportPath)
-                              Lit(value="BuildInputReport#build_input(status=\"bytecode\" input=\"obj/app.aibc1\")")
+                              Lit(value="BuildInputReport#build_input(status=\"bytecode\" input=\"bin/app.aibc1\")")
                             }
                             Return { Var(name=bytecodeBinaryPath) }
                           }
@@ -1467,11 +1387,25 @@ Program {
                 }
               }
               Block {
-                Call(target=writeTextFile) {
-                  Var(name=buildInputReportPath)
-                  Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-object-missing\")")
+                If {
+                  Call(target=sys.fs.path.exists) {
+                    Var(name=bytecodeBinaryPath)
+                  }
+                  Block {
+                    Call(target=writeTextFile) {
+                      Var(name=buildInputReportPath)
+                      Lit(value="BuildInputReport#build_input(status=\"object\" input=\"obj/app.aibco\")")
+                    }
+                    Return { Var(name=bytecodeBinaryPath) }
+                  }
+                  Block {
+                    Call(target=writeTextFile) {
+                      Var(name=buildInputReportPath)
+                      Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"object-binary-missing\")")
+                    }
+                    Return { Var(name=projectDir) }
+                  }
                 }
-                Return { Var(name=projectDir) }
               }
             }
           }
@@ -1682,6 +1616,20 @@ Program {
           }
         }
         Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=buildErrorFromCompilerErr) {
+    Fn(params=err) {
+      Block {
+        Return {
+          Call(target=buildError) {
+            AttrValueString { Var(name=err) Lit(value=0) }
+            AttrValueString { Var(name=err) Lit(value=1) }
+            AttrValueString { Var(name=err) Lit(value=2) }
+          }
+        }
       }
     }
   }

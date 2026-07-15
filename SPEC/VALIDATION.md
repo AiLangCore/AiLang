@@ -32,8 +32,13 @@ This file is normative for semantic validation used by `aic check` (default path
   development includes.
 - Child arity must match node contract (for example `Let=1`, `Var=0`,
   `Eq=2`, numeric primitives `Add/Sub/Mul/Div/Mod/Pow/Lt=2`, `If=2..3`,
-  `Loop=1`, `Break=0`, `Continue=0`).
+  `Match=2..N`, `Case=2`, `Default=1`, `Loop=1`, `Break=0`,
+  `Continue=0`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
+- `Match` child `0` is its subject. Every remaining child must be a `Case` or
+  `Default` (`VAL023`). A `Case` contains `Lit` then `Block` (`VAL024`), and a
+  `Default` contains one `Block` and must be final (`VAL025`-`VAL027`).
+  `Case` and `Default` outside `Match` are rejected (`VAL028`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).
 - `Await` must have exactly one child (`VAL167`).
 - `Par` must have at least two child expressions (`VAL168`).

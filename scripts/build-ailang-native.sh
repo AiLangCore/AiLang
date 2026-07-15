@@ -291,4 +291,10 @@ if [[ "${TARGET_PLATFORM}" == "${HOST_PLATFORM}" && "${TARGET_ARCH}" == "${HOST_
   cp "${RUNTIME_PATH}" "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
   chmod +x "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
   rm -f "${ROOT_DIR}/tools/airun" "${ROOT_DIR}/tools/airun.exe"
+  if [[ "${HOST_PLATFORM}" == "osx" ]] && command -v codesign >/dev/null 2>&1; then
+    codesign --force --sign - "${HOST_WRAPPER_PATH}"
+    codesign --force --sign - "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
+    codesign --verify --strict "${HOST_WRAPPER_PATH}"
+    codesign --verify --strict "${ROOT_DIR}/tools/${RUNTIME_BIN_NAME}"
+  fi
 fi

@@ -92,6 +92,6 @@ AOS
 
 while IFS= read -r SOURCE_PATH; do
   OUT="$(./tools/ailang run "${TMP_DIR}/app.aos" -- "${SOURCE_PATH}")"
-  printf '%s\n' "${OUT}" | rg -Fq 'parser-selfhost-compiler-files-ok'
-  printf '%s\n' "${OUT}" | rg -Fq 'Ok#ok1(type=int value=0)'
+  [[ "${OUT}" == *'parser-selfhost-compiler-files-ok'* ]]
+  [[ "${OUT}" == *'Ok#ok1(type=int value=0)'* ]]
 done < <(find src/compiler -maxdepth 1 -name '*.aos' | sort)

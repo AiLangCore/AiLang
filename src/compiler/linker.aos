@@ -1,10 +1,12 @@
 Program {
   Import(path="parser.aos")
   Import(path="../std/bytes.aos")
+  Import(path="../std/str.aos")
   Export(name=linker.collectProjectModulePaths)
   Export(name=linker.buildLinkReportText)
   Export(name=linker.collectProjectModulePathsWithLock)
   Export(name=linker.resolveModuleReadPath)
+  Export(name=linker.canonicalImportPath)
 
   Let(name=linker.collectProjectModulePaths) {
     Fn(params=dir,entryProgram,entryFile) {
@@ -24,12 +26,18 @@ Program {
   Let(name=linker.collectProjectModulePathsWithLock) {
     Fn(params=dir,entryProgram,entryFile,lockText) {
       Block {
+        Let(name=entryDirectory) { Call(target=linker.pathDirectory) { Var(name=entryFile) } }
+        Let(name=entryReadRoot) { Call(target=linker.joinPath) { Var(name=dir) Var(name=entryDirectory) } }
+        Let(name=entryDisplayPrefix) { Call(target=linker.directoryPrefix) { Var(name=entryDirectory) } }
         Let(name=paths) {
           AppendChild {
             MakeBlock { Lit(value="modules") }
-            MakeLitString {
-              Lit(value="module0")
-              Var(name=entryFile)
+            AppendChild {
+              MakeLitString {
+                Lit(value="module0")
+                Var(name=entryFile)
+              }
+              Var(name=entryProgram)
             }
           }
         }
@@ -45,8 +53,8 @@ Program {
         Return {
           Call(target=linker.collectImportPaths) {
             Var(name=dir)
-            Var(name=dir)
-            Lit(value="")
+            Var(name=entryReadRoot)
+            Var(name=entryDisplayPrefix)
             Var(name=entryProgram)
             Lit(value=0)
             Var(name=paths)
@@ -162,6 +170,14 @@ Program {
                         Var(name=sdkName)
                       }
                     }
+                    Let(name=importDirectory) { Call(target=linker.pathDirectory) { Var(name=path) } }
+                    Let(name=nextReadRoot) { Call(target=linker.joinPath) { Var(name=importReadRoot) Var(name=importDirectory) } }
+                    Let(name=nextDisplayPrefix) {
+                      Call(target=linker.joinDisplayPrefix) {
+                        Var(name=importDisplayPrefix)
+                        Var(name=importDirectory)
+                      }
+                    }
                     Let(name=displayPath) {
                       StrConcat {
                         Var(name=importDisplayPrefix)
@@ -234,20 +250,23 @@ Program {
                                 Let(name=newPaths) {
                                   AppendChild {
                                     Var(name=paths)
-                                    MakeLitString {
-                                      StrConcat {
-                                        Lit(value="module")
-                                        ToString { ChildCount { Var(name=paths) } }
+                                    AppendChild {
+                                      MakeLitString {
+                                        StrConcat {
+                                          Lit(value="module")
+                                          ToString { ChildCount { Var(name=paths) } }
+                                        }
+                                        Var(name=displayPath)
                                       }
-                                      Var(name=displayPath)
+                                      Var(name=importProgram)
                                     }
                                   }
                                 }
                                 Let(name=depPaths) {
                                   Call(target=linker.collectImportPaths) {
                                     Var(name=projectDir)
-                                    Var(name=importReadRoot)
-                                    Var(name=importDisplayPrefix)
+                                    Var(name=nextReadRoot)
+                                    Var(name=nextDisplayPrefix)
                                     Var(name=importProgram)
                                     Lit(value=0)
                                     Var(name=newPaths)
@@ -333,6 +352,91 @@ Program {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.canonicalImportPath) {
+    Fn(params=modulePath,importPath,packageName,sdkName) {
+      Block {
+        Let(name=moduleDirectory) { Call(target=linker.pathDirectory) { Var(name=modulePath) } }
+        Let(name=displayPrefix) { Call(target=linker.directoryPrefix) { Var(name=moduleDirectory) } }
+        Let(name=importPrefix) { Call(target=linker.importDisplayPrefix) { Var(name=displayPrefix) Var(name=packageName) Var(name=sdkName) } }
+        Return { StrConcat { Var(name=importPrefix) Var(name=importPath) } }
+      }
+    }
+  }
+
+  Let(name=linker.pathDirectory) {
+    Fn(params=path) {
+      Block {
+        Let(name=lastSlash) {
+          Call(target=linker.findLastSlash) {
+            Var(name=path)
+            Lit(value=0)
+            Lit(value=-1)
+          }
+        }
+        If {
+          Eq { Var(name=lastSlash) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block { Return { StringSlice { Var(name=path) Lit(value=0) Var(name=lastSlash) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.findLastSlash) {
+    Fn(params=path,index,lastSlash) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=path) } }
+          Block { Return { Var(name=lastSlash) } }
+          Block {
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { StringSlice { Var(name=path) Var(name=index) Lit(value=1) } Lit(value="/") }
+              Block { Return { Call(target=linker.findLastSlash) { Var(name=path) Var(name=nextIndex) Var(name=index) } } }
+              Block { Return { Call(target=linker.findLastSlash) { Var(name=path) Var(name=nextIndex) Var(name=lastSlash) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.joinPath) {
+    Fn(params=base,path) {
+      Block {
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Var(name=base) } }
+          Block { Return { StrConcat { Var(name=base) StrConcat { Lit(value="/") Var(name=path) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.directoryPrefix) {
+    Fn(params=directory) {
+      Block {
+        If {
+          Eq { Var(name=directory) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block { Return { StrConcat { Var(name=directory) Lit(value="/") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.joinDisplayPrefix) {
+    Fn(params=prefix,directory) {
+      Block {
+        If {
+          Eq { Var(name=directory) Lit(value="") }
+          Block { Return { Var(name=prefix) } }
+          Block { Return { StrConcat { Var(name=prefix) StrConcat { Var(name=directory) Lit(value="/") } } } }
         }
       }
     }
@@ -502,7 +606,9 @@ Program {
               Block {
                 Let(name=packageName) { Call(target=substring) { Var(name=tail) Lit(value=0) Var(name=slash) } }
                 Let(name=relativePath) { Call(target=substring) { Var(name=tail) Add { Var(name=slash) Lit(value=1) } Lit(value=2147483647) } }
-                Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=lockText) Var(name=packageName) } }
+                Let(name=packagePath) { Call(target=linker.packagePath) { Var(name=lockText) Var(name=packageName) } }
+                Let(name=packageRoot) { Call(target=linker.packageRoot) { Var(name=lockText) Var(name=packageName) } }
+                Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=packagePath) Var(name=packageRoot) } }
                 If {
                   Eq { Var(name=basePath) Lit(value="") }
                   Block { Return { Lit(value="") } }

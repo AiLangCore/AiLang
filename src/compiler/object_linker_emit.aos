@@ -1,0 +1,547 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=objectLinker.emitLinkedPlanBytes)
+  Export(name=objectLinker.emitLinkedPlanAibc1Bytes)
+  Export(name=objectLinker.emitLinkedCallBytes)
+  Export(name=objectLinker.emitLinkedPlansAibc1Bytes)
+  Let(name=objectLinker.emitLinkedPlanBytes) {
+    Fn(params=plan,functionOffset) {
+      Block {
+        Let(name=constants) { Call(target=objectLinker.collectLinkedPlanConstants) { Var(name=plan) Lit(value=0) MakeBlock { Lit(value="constants") } } }
+        Return { Call(target=objectLinker.emitLinkedPlanAt) { Var(name=plan) Var(name=functionOffset) Var(name=constants) Lit(value=0) } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlanAibc1Bytes) {
+    Fn(params=plan) {
+      Block {
+        Let(name=constants) { Call(target=objectLinker.collectLinkedPlanConstants) { Var(name=plan) Lit(value=0) MakeBlock { Lit(value="constants") } } }
+        Let(name=instructions) { Call(target=objectLinker.emitLinkedPlanAt) { Var(name=plan) Lit(value=0) Var(name=constants) Lit(value=0) } }
+        Let(name=instructionPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=instructions) } } }
+        Let(name=constantBytes) { Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Lit(value=0) } }
+        Let(name=constantPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=constantBytes) } } }
+        Return {
+          Call(target=objectLinker.cat3) {
+            Call(target=objectLinker.header) { Lit(value=2) }
+            Call(target=objectLinker.instructionSection) { Var(name=instructionPayloadSize) ChildCount { Var(name=plan) } Var(name=instructions) }
+            Call(target=objectLinker.constantSection) { Var(name=constantPayloadSize) ChildCount { Var(name=constants) } Var(name=constantBytes) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedCallBytes) {
+    Fn(params=functionLayout,targetSymbol,functionOffset) {
+      Block {
+        Let(name=targetOffset) { Call(target=functionLayout.resolveOffset) { Var(name=functionLayout) Var(name=targetSymbol) Lit(value=0) } }
+        Return { Call(target=objectLinker.inst) { Lit(value=11) Var(name=targetOffset) } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlansAibc1Bytes) {
+    Fn(params=plans) {
+      Block {
+        Let(name=layout) { Call(target=functionLayout.assign) { Var(name=plans) } }
+        Let(name=constants) { Call(target=structuralBundle.collectConstants) { Var(name=plans) } }
+        Let(name=instructions) { Call(target=objectLinker.emitLinkedPlansAt) { Var(name=plans) Var(name=layout) Var(name=constants) Lit(value=0) Lit(value=0) } }
+        Let(name=instructionPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=instructions) } } }
+        Let(name=constantBytes) { Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Lit(value=0) } }
+        Let(name=constantPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=constantBytes) } } }
+        Return { Call(target=objectLinker.cat3) { Call(target=objectLinker.header) { Lit(value=2) } Call(target=objectLinker.instructionSection) { Var(name=instructionPayloadSize) Call(target=structuralBundle.instructionCount) { Var(name=plans) Lit(value=0) } Var(name=instructions) } Call(target=objectLinker.constantSection) { Var(name=constantPayloadSize) ChildCount { Var(name=constants) } Var(name=constantBytes) } } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlansAt) {
+    Fn(params=plans,layout,constants,index,offset) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plans) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=plan) { ChildAt { Var(name=plans) Var(name=index) } }
+            Return { Call(target=objectLinker.cat2) { Call(target=objectLinker.emitLinkedPlanWithCallsAt) { Var(name=plan) Var(name=layout) Var(name=constants) Var(name=offset) Lit(value=0) } Call(target=objectLinker.emitLinkedPlansAt) { Var(name=plans) Var(name=layout) Var(name=constants) Add { Var(name=index) Lit(value=1) } Add { Var(name=offset) ChildCount { Var(name=plan) } } } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlanWithCallsAt) {
+    Fn(params=plan,layout,constants,functionOffset,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+            Let(name=bytes) {
+              If {
+                Eq { Var(name=op) Lit(value="CALL") }
+                Block { Call(target=objectLinker.emitLinkedCallBytes) { Var(name=layout) Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } Var(name=functionOffset) } }
+                Block { Call(target=objectLinker.emitLinkedPlanInstruction) { Var(name=instruction) Var(name=functionOffset) Var(name=constants) } }
+              }
+            }
+            Return { Call(target=objectLinker.cat2) { Var(name=bytes) Call(target=objectLinker.emitLinkedPlanWithCallsAt) { Var(name=plan) Var(name=layout) Var(name=constants) Var(name=functionOffset) Add { Var(name=index) Lit(value=1) } } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlanAt) {
+    Fn(params=plan,functionOffset,constants,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Return {
+              Call(target=objectLinker.cat2) {
+                Call(target=objectLinker.emitLinkedPlanInstruction) { Var(name=instruction) Var(name=functionOffset) Var(name=constants) }
+                Call(target=objectLinker.emitLinkedPlanAt) { Var(name=plan) Var(name=functionOffset) Var(name=constants) Add { Var(name=index) Lit(value=1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.nativeLinkedOpcode) {
+    Fn(params=op) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="MAKE_BLOCK") }
+          Block { Return { Lit(value=41) } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="ATTR_COUNT") }
+              Block { Return { Lit(value=33) } }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="ATTR_KEY") }
+                  Block { Return { Lit(value=34) } }
+                  Block {
+                    If {
+                      Eq { Var(name=op) Lit(value="VALUE_KIND") }
+                      Block { Return { Lit(value=77) } }
+                      Block {
+                        If {
+                          Eq { Var(name=op) Lit(value="NODE_KIND") }
+                          Block { Return { Lit(value=31) } }
+                          Block {
+                            If {
+                              Eq { Var(name=op) Lit(value="TO_STRING") }
+                              Block { Return { Lit(value=17) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=op) Lit(value="STR_ESCAPE") }
+                                  Block { Return { Lit(value=18) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=op) Lit(value="PAIR_FIRST") }
+                                      Block { Return { Lit(value=65) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=op) Lit(value="PAIR_SECOND") }
+                                          Block { Return { Lit(value=66) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=op) Lit(value="ATTR_VALUE_STRING") }
+                                              Block { Return { Lit(value=36) } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=op) Lit(value="ATTR_VALUE_KIND") }
+                                                  Block { Return { Lit(value=35) } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=op) Lit(value="ATTR_VALUE_BOOL") }
+                                                      Block { Return { Lit(value=38) } }
+                                                      Block {
+                                                        If {
+                                                          Eq { Var(name=op) Lit(value="CHILD_COUNT") }
+                                                          Block { Return { Lit(value=39) } }
+                                                          Block {
+                                                            If {
+                                                              Eq { Var(name=op) Lit(value="CHILD_AT") }
+                                                              Block { Return { Lit(value=40) } }
+                                                              Block {
+                                                                If {
+                                                                  Eq { Var(name=op) Lit(value="MAKE_ERR") }
+                                                                  Block { Return { Lit(value=43) } }
+                                                                  Block {
+                                                                    If {
+                                                                      Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") }
+                                                                      Block { Return { Lit(value=44) } }
+                                                                      Block {
+                                                                        If {
+                                                                          Eq { Var(name=op) Lit(value="MAKE_LIT_INT") }
+                                                                          Block { Return { Lit(value=45) } }
+                                                                          Block {
+                                                                            If {
+                                                                              Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") }
+                                                                              Block { Return { Lit(value=46) } }
+                                                                              Block {
+                                                                                If {
+                                                                                  Eq { Var(name=op) Lit(value="MAKE_NODE") }
+                                                                                  Block { Return { Lit(value=47) } }
+                                                                                  Block {
+                                                                                    If {
+                                                                                      Eq { Var(name=op) Lit(value="MAKE_PAIR") }
+                                                                                      Block { Return { Lit(value=64) } }
+                                                                                      Block {
+                                                                                        If {
+                                                                                          Eq { Var(name=op) Lit(value="APPEND_CHILD") }
+                                                                                          Block { Return { Lit(value=42) } }
+                                                                                          Block {
+                                                                                            If {
+                                                                                              Eq { Var(name=op) Lit(value="APPEND_ATTR") }
+                                                                                              Block { Return { Lit(value=51) } }
+                                                                                              Block {
+                                                                                                If {
+                                                                                                  Eq { Var(name=op) Lit(value="STR_CONCAT") }
+                                                                                                  Block { Return { Lit(value=16) } }
+                                                                                                  Block {
+                                                                                                    If {
+                                                                                                      Eq { Var(name=op) Lit(value="STR_SUBSTRING") }
+                                                                                                      Block { Return { Lit(value=20) } }
+                                                                                                      Block {
+                                                                                                        If {
+                                                                                                          Eq { Var(name=op) Lit(value="STR_FIND") }
+                                                                                                          Block { Return { Lit(value=52) } }
+                                                                                                          Block {
+                                                                                                            If {
+                                                                                                              Eq { Var(name=op) Lit(value="ATTR_VALUE_INT") }
+                                                                                                              Block { Return { Lit(value=37) } }
+                                                                                                              Block { Return { Lit(value=-1) } }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitLinkedPlanInstruction) {
+    Fn(params=instruction,functionOffset,constants) {
+      Block {
+        Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+        Let(name=target) { Call(target=objectLinker.getAttrInt) { Var(name=instruction) Lit(value="target") Lit(value=0) } }
+        Let(name=a) { Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } }
+        Let(name=nativeOpcode) { Call(target=objectLinker.nativeLinkedOpcode) { Var(name=op) } }
+        If {
+          Eq { Var(name=nativeOpcode) Lit(value=-1) }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="CONST") }
+              Block {
+                Let(name=constant) { Call(target=objectLinker.constantIndex) { Var(name=constants) Var(name=a) Lit(value=0) } }
+                Return { Call(target=objectLinker.inst) { Lit(value=15) AttrValueInt { Var(name=constant) Lit(value=0) } } }
+              }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
+                  Block { Return { Call(target=objectLinker.inst) { Lit(value=6) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=op) Lit(value="STORE_LOCAL") }
+                      Block { Return { Call(target=objectLinker.inst) { Lit(value=5) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                      Block {
+                        If {
+                          Eq { Var(name=op) Lit(value="CALL_SYS") }
+                          Block { Return { Call(target=objectLinker.inst) { Lit(value=22) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                          Block {
+                            If {
+                              Eq { Var(name=op) Lit(value="POP") }
+                              Block { Return { Call(target=objectLinker.inst) { Lit(value=4) Lit(value=0) } } }
+                              Block {
+                                If {
+                                  Eq { Var(name=op) Lit(value="ADD_INT") }
+                                  Block { Return { Call(target=objectLinker.inst) { Lit(value=7) Lit(value=0) } } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=op) Lit(value="SUB_NUM") }
+                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=67) Lit(value=0) } } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=op) Lit(value="MUL_NUM") }
+                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=68) Lit(value=0) } } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=op) Lit(value="DIV_NUM") }
+                                              Block { Return { Call(target=objectLinker.inst) { Lit(value=69) Lit(value=0) } } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=op) Lit(value="MOD_NUM") }
+                                                  Block { Return { Call(target=objectLinker.inst) { Lit(value=70) Lit(value=0) } } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=op) Lit(value="EQ_INT") }
+                                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=13) Lit(value=0) } } }
+                                                      Block {
+                                                        If {
+                                                          Eq { Var(name=op) Lit(value="EQ") }
+                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=14) Lit(value=0) } } }
+                                                          Block {
+                                                            If {
+                                                              Eq { Var(name=op) Lit(value="LT_NUM") }
+                                                              Block { Return { Call(target=objectLinker.inst) { Lit(value=72) Lit(value=0) } } }
+                                                              Block {
+                                                                If {
+                                                                  Eq { Var(name=op) Lit(value="RETURN") }
+                                                                  Block { Return { Call(target=objectLinker.inst) { Lit(value=19) Lit(value=0) } } }
+                                                                  Block {
+                                                                    If {
+                                                                      Eq { Var(name=op) Lit(value="JUMP") }
+                                                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=8) Add { Var(name=functionOffset) Var(name=target) } } } }
+                                                                      Block {
+                                                                        If {
+                                                                          Eq { Var(name=op) Lit(value="JUMP_IF_FALSE") }
+                                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=9) Add { Var(name=functionOffset) Var(name=target) } } } }
+                                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=1) Lit(value=0) } } }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=objectLinker.inst) { Var(name=nativeOpcode) Lit(value=0) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectLinkedPlanConstants) {
+    Fn(params=plan,index,constants) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { Var(name=constants) } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+            If {
+              Eq { Var(name=op) Lit(value="CONST") }
+              Block {
+                Let(name=target) { Call(target=objectLinker.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } }
+                If {
+                  Call(target=objectLinker.containsConstant) { Var(name=constants) Var(name=target) Lit(value=0) }
+                  Block { Return { Call(target=objectLinker.collectLinkedPlanConstants) { Var(name=plan) Add { Var(name=index) Lit(value=1) } Var(name=constants) } } }
+                  Block { Return { Call(target=objectLinker.collectLinkedPlanConstants) { Var(name=plan) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=constants) MakeLitString { Lit(value="target") Var(name=target) } } } } }
+                }
+              }
+              Block { Return { Call(target=objectLinker.collectLinkedPlanConstants) { Var(name=plan) Add { Var(name=index) Lit(value=1) } Var(name=constants) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.findReloc) {
+    Fn(params=functionNode,instructionIndex,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK010") Lit(value="Instruction relocation is missing.") ToString { Var(name=instructionIndex) } } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Reloc") }
+              Block {
+                If {
+                  Eq { AttrValueInt { Var(name=child) Lit(value=1) } Var(name=instructionIndex) }
+                  Block { Return { Var(name=child) } }
+                  Block { Return { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+              Block { Return { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitConstantBytes) {
+    Fn(params=constants,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=constants) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=target) { AttrValueString { ChildAt { Var(name=constants) Var(name=index) } Lit(value=0) } }
+            Return {
+              Call(target=objectLinker.cat2) {
+                Call(target=objectLinker.constTargetBytes) { Var(name=target) }
+                Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Add { Var(name=index) Lit(value=1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.constIntTarget) {
+    Fn(params=target) {
+      Block {
+        Let(name=valueText) { StringSlice { Var(name=target) Lit(value=4) Lit(value=2147483647) } }
+        Return { Call(target=objectLinker.cat2) { BytesFromByte { Lit(value=1) } BytesI64LE { Call(target=parse.parseIntToken) { Var(name=valueText) } } } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.constTargetBytes) {
+    Fn(params=target) {
+      Block {
+        If {
+          Eq { StringFind { Var(name=target) Lit(value="int:") Lit(value=0) } Lit(value=0) }
+          Block { Return { Call(target=objectLinker.constIntTarget) { Var(name=target) } } }
+          Block {
+            If {
+              Eq { StringFind { Var(name=target) Lit(value="bool:true") Lit(value=0) } Lit(value=0) }
+              Block { Return { Call(target=objectLinker.cat2) { BytesFromByte { Lit(value=2) } BytesFromByte { Lit(value=1) } } } }
+              Block {
+                If {
+                  Eq { StringFind { Var(name=target) Lit(value="bool:false") Lit(value=0) } Lit(value=0) }
+                  Block { Return { Call(target=objectLinker.cat2) { BytesFromByte { Lit(value=2) } BytesFromByte { Lit(value=0) } } } }
+                  Block {
+                    Let(name=value) { StringSlice { Var(name=target) Lit(value=7) Lit(value=2147483647) } }
+                    Let(name=raw) { BytesFromUtf8String { Var(name=value) } }
+                    Return { Call(target=objectLinker.cat3) { BytesFromByte { Lit(value=3) } BytesU32LE { BytesLength { Var(name=raw) } } Var(name=raw) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.totalInstructionCount) {
+    Fn(params=layout,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { Lit(value=0) } }
+          Block { Return { Add { AttrValueInt { ChildAt { ChildAt { Var(name=layout) Var(name=index) } Lit(value=2) } Lit(value=0) } Call(target=objectLinker.totalInstructionCount) { Var(name=layout) Add { Var(name=index) Lit(value=1) } } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.cat2) {
+    Fn(params=left,right) { Block { Return { BytesConcat { Var(name=left) Var(name=right) } } } }
+  }
+
+  Let(name=objectLinker.cat3) {
+    Fn(params=a,b,c) { Block { Return { Call(target=objectLinker.cat2) { Call(target=objectLinker.cat2) { Var(name=a) Var(name=b) } Var(name=c) } } } }
+  }
+
+  Let(name=objectLinker.inst) {
+    Fn(params=op,operand) { Block { Return { Call(target=objectLinker.cat2) { BytesU32LE { Var(name=op) } BytesI64LE { Var(name=operand) } } } } }
+  }
+
+  Let(name=objectLinker.header) {
+    Fn(params=sectionCount) {
+      Block {
+        Return { Call(target=objectLinker.cat3) { Call(target=objectLinker.cat3) { BytesFromUtf8String { Lit(value="AIBC") } BytesU32LE { Lit(value=2) } BytesU32LE { Lit(value=0) } } BytesU32LE { Var(name=sectionCount) } BytesFromUtf8String { Lit(value="") } } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.instructionSection) {
+    Fn(params=payloadSize,count,instructions) {
+      Block { Return { Call(target=objectLinker.cat2) { Call(target=objectLinker.cat3) { BytesU32LE { Lit(value=1) } BytesU32LE { Var(name=payloadSize) } BytesU32LE { Var(name=count) } } Var(name=instructions) } } }
+    }
+  }
+
+  Let(name=objectLinker.constantSection) {
+    Fn(params=payloadSize,count,constants) {
+      Block { Return { Call(target=objectLinker.cat2) { Call(target=objectLinker.cat3) { BytesU32LE { Lit(value=2) } BytesU32LE { Var(name=payloadSize) } BytesU32LE { Var(name=count) } } Var(name=constants) } } }
+    }
+  }
+
+}

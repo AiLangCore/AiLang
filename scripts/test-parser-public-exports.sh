@@ -9,7 +9,7 @@ ACTUAL="${TMP_DIR}/actual.txt"
 
 mkdir -p "${TMP_DIR}"
 
-sed -n 's/.*Export#[^)]*(name=\([^)]*\)).*/\1/p' "${PARSER}" | sort > "${ACTUAL}"
+sed -n 's/.*Export(name=\([^)]*\)).*/\1/p' "${PARSER}" | sort > "${ACTUAL}"
 
 {
   printf '%s\n' parse.charAt
@@ -55,7 +55,7 @@ for private_name in \
   parse.parseAttrsInto \
   parse.parseChildrenInto \
   parse.parseNodeWithNameAttrAt; do
-  if rg -q "Export#[^)]*\\(name=${private_name}\\)" "${PARSER}"; then
+  if rg -q "Export\\(name=${private_name}\\)" "${PARSER}"; then
     echo "parser private helper exported unexpectedly: ${private_name}" >&2
     exit 1
   fi

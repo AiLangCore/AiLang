@@ -144,20 +144,12 @@ Program {
   Let(name=parse.readNameText) {
     Fn(params=text,index) {
       Block {
-        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
-        If {
-          Call(target=parse.isDelimiter) { Var(name=ch) }
-          Block { Return { Lit(value="") } }
-          Block {
-            Return {
-              StrConcat {
-                Var(name=ch)
-                Call(target=parse.readNameText) {
-                  Var(name=text)
-                  Add { Var(name=index) Lit(value=1) }
-                }
-              }
-            }
+        Let(name=end) { Call(target=parse.readNameEnd) { Var(name=text) Var(name=index) } }
+        Return {
+          Call(target=substring) {
+            Var(name=text)
+            Var(name=index)
+            Sub { Var(name=end) Var(name=index) }
           }
         }
       }
@@ -203,7 +195,7 @@ Program {
     }
   }
 
-  Let(name=parse.readStringText) {
+  Let(name=parse.readEscapedStringText) {
     Fn(params=text,index) {
       Block {
         Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
@@ -226,7 +218,7 @@ Program {
                             Add { Var(name=index) Lit(value=1) }
                           }
                         }
-                        Call(target=parse.readStringText) {
+                        Call(target=parse.readEscapedStringText) {
                           Var(name=text)
                           Add { Var(name=index) Lit(value=2) }
                         }
@@ -237,7 +229,7 @@ Program {
                     Return {
                       StrConcat {
                         Var(name=ch)
-                        Call(target=parse.readStringText) {
+                        Call(target=parse.readEscapedStringText) {
                           Var(name=text)
                           Add { Var(name=index) Lit(value=1) }
                         }
@@ -247,6 +239,58 @@ Program {
                 }
               }
             }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readStringTextAtEnd) {
+    Fn(params=text,index,end) {
+      Block {
+        If {
+          Eq { Var(name=end) Var(name=index) }
+          Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+          Block {
+            Let(name=closingIndex) { Sub { Var(name=end) Lit(value=1) } }
+            If {
+              Eq {
+                Call(target=parse.charAt) { Var(name=text) Var(name=closingIndex) }
+                Lit(value="\"")
+              }
+              Block {
+                Let(name=raw) {
+                  Call(target=substring) {
+                    Var(name=text)
+                    Var(name=index)
+                    Sub { Var(name=closingIndex) Var(name=index) }
+                  }
+                }
+                If {
+                  Eq {
+                    Call(target=find) { Var(name=raw) Lit(value="\\") Lit(value=0) }
+                    Lit(value=-1)
+                  }
+                  Block { Return { Var(name=raw) } }
+                  Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+                }
+              }
+              Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readStringText) {
+    Fn(params=text,index) {
+      Block {
+        Return {
+          Call(target=parse.readStringTextAtEnd) {
+            Var(name=text)
+            Var(name=index)
+            Call(target=parse.readStringEnd) { Var(name=text) Var(name=index) }
           }
         }
       }
@@ -336,7 +380,11 @@ Program {
           Call(target=substring) {
             Var(name=token)
             Lit(value=0)
-            Call(target=parse.tokenSep1) { Var(name=token) }
+            Call(target=find) {
+              Var(name=token)
+              Lit(value="|")
+              Lit(value=0)
+            }
           }
         }
       }
@@ -431,17 +479,19 @@ Program {
             If {
               Eq { Var(name=ch) Lit(value="\"") }
               Block {
+                Let(name=stringStart) { Add { Var(name=start) Lit(value=1) } }
+                Let(name=stringEnd) {
+                  Call(target=parse.readStringEnd) { Var(name=text) Var(name=stringStart) }
+                }
                 Return {
                   Call(target=parse.makeToken) {
                     Lit(value="string")
-                    Call(target=parse.readStringText) {
+                    Call(target=parse.readStringTextAtEnd) {
                       Var(name=text)
-                      Add { Var(name=start) Lit(value=1) }
+                      Var(name=stringStart)
+                      Var(name=stringEnd)
                     }
-                    Call(target=parse.readStringEnd) {
-                      Var(name=text)
-                      Add { Var(name=start) Lit(value=1) }
-                    }
+                    Var(name=stringEnd)
                   }
                 }
               }

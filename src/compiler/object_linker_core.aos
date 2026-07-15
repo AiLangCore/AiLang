@@ -1,0 +1,464 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_emit.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=objectLinker.emitAibc1Bytes)
+  Export(name=objectLinker.validateSupported)
+  Let(name=objectLinker.emitAibc1Bytes) {
+    Fn(params=functions) {
+      Block {
+        Let(name=layout) { Call(target=objectLinker.assignOffsets) { Var(name=functions) } }
+        Let(name=constants) { Call(target=objectLinker.collectConstants) { Var(name=functions) } }
+        Let(name=instructions) { Call(target=objectLinker.emitFunctionsBytes) { Var(name=functions) Var(name=functions) Var(name=layout) Var(name=constants) Lit(value=0) } }
+        Let(name=constantBytes) { Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Lit(value=0) } }
+        Let(name=instructionPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=instructions) } } }
+        Let(name=constantPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=constantBytes) } } }
+        Return {
+          Call(target=objectLinker.cat3) {
+            Call(target=objectLinker.header) { Lit(value=2) }
+            Call(target=objectLinker.instructionSection) {
+              Var(name=instructionPayloadSize)
+              Call(target=objectLinker.totalInstructionCount) { Var(name=layout) Lit(value=0) }
+              Var(name=instructions)
+            }
+            Call(target=objectLinker.constantSection) {
+              Var(name=constantPayloadSize)
+              ChildCount { Var(name=constants) }
+              Var(name=constantBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.validateSupported) {
+    Fn(params=functions) {
+      Block { Return { Call(target=objectLinker.validateFunctionsAt) { Var(name=functions) Lit(value=0) } } }
+    }
+  }
+
+  Let(name=objectLinker.validateFunctionsAt) {
+    Fn(params=functions,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { MakeBlock { Lit(value="object-linker-valid") } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+            Let(name=validation) { Call(target=objectLinker.validateFunctionAt) { Var(name=functionNode) Var(name=symbol) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=validation) } Lit(value="Err") }
+              Block { Return { Var(name=validation) } }
+              Block {
+                Let(name=relocations) { Call(target=objectLinker.validateCallRelocations) { Var(name=functionNode) Var(name=functions) Lit(value=0) Lit(value=0) } }
+                If {
+                  Eq { NodeKind { Var(name=relocations) } Lit(value="Err") }
+                  Block { Return { Var(name=relocations) } }
+                  Block { Return { Call(target=objectLinker.validateFunctionsAt) { Var(name=functions) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.validateFunctionAt) {
+    Fn(params=functionNode,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { MakeBlock { Lit(value="function-valid") } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Unsupported") }
+              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK011") Lit(value="Function uses an unsupported lowering shape.") Var(name=symbol) } } }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+                  Block {
+                    Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } }
+                    If {
+                      Call(target=objectLinker.isSupportedInstruction) { Var(name=op) }
+                      Block { Return { Call(target=objectLinker.validateFunctionAt) { Var(name=functionNode) Var(name=symbol) Var(name=nextIndex) } } }
+                      Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK012") Lit(value="Object contains an unsupported instruction opcode.") Var(name=symbol) } } }
+                    }
+                  }
+                  Block { Return { Call(target=objectLinker.validateFunctionAt) { Var(name=functionNode) Var(name=symbol) Var(name=nextIndex) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.isSupportedInstruction) {
+    Fn(params=op) {
+      Block {
+        If { Eq { Var(name=op) Lit(value="RETURN") } Block { Return { Lit(value=true) } } Block {
+          If { Eq { Var(name=op) Lit(value="CONST") } Block { Return { Lit(value=true) } } Block {
+            If { Eq { Var(name=op) Lit(value="CALL") } Block { Return { Lit(value=true) } } Block {
+              If { Eq { Var(name=op) Lit(value="CALL_SYS") } Block { Return { Lit(value=true) } } Block {
+                If { Eq { Var(name=op) Lit(value="POP") } Block { Return { Lit(value=true) } } Block {
+                  If { Eq { Var(name=op) Lit(value="STORE_LOCAL") } Block { Return { Lit(value=true) } } Block {
+                    If { Eq { Var(name=op) Lit(value="LOAD_LOCAL") } Block { Return { Lit(value=true) } } Block {
+                      If { Eq { Var(name=op) Lit(value="ADD_INT") } Block { Return { Lit(value=true) } } Block {
+                        If { Eq { Var(name=op) Lit(value="SUB_NUM") } Block { Return { Lit(value=true) } } Block {
+                          If { Eq { Var(name=op) Lit(value="MUL_NUM") } Block { Return { Lit(value=true) } } Block {
+                            If { Eq { Var(name=op) Lit(value="DIV_NUM") } Block { Return { Lit(value=true) } } Block {
+                              If { Eq { Var(name=op) Lit(value="MOD_NUM") } Block { Return { Lit(value=true) } } Block {
+                                If { Eq { Var(name=op) Lit(value="EQ_INT") } Block { Return { Lit(value=true) } } Block {
+                                  If { Eq { Var(name=op) Lit(value="EQ") } Block { Return { Lit(value=true) } } Block {
+                                    If { Eq { Var(name=op) Lit(value="JUMP") } Block { Return { Lit(value=true) } } Block {
+                                      If { Eq { Var(name=op) Lit(value="JUMP_IF_FALSE") } Block { Return { Lit(value=true) } } Block {
+                                        If { Eq { Var(name=op) Lit(value="STR_CONCAT") } Block { Return { Lit(value=true) } } Block {
+                                          If { Eq { Var(name=op) Lit(value="LT_NUM") } Block { Return { Lit(value=true) } } Block {
+                                            If { Eq { Var(name=op) Lit(value="VALUE_KIND") } Block { Return { Lit(value=true) } } Block {
+                                              If { Eq { Var(name=op) Lit(value="NODE_KIND") } Block { Return { Lit(value=true) } } Block {
+                                              If { Eq { Var(name=op) Lit(value="NODE_ID") } Block { Return { Lit(value=true) } } Block {
+                                                If { Eq { Var(name=op) Lit(value="TO_STRING") } Block { Return { Lit(value=true) } } Block {
+                                                  If { Eq { Var(name=op) Lit(value="STR_ESCAPE") } Block { Return { Lit(value=true) } } Block {
+                                                    If { Eq { Var(name=op) Lit(value="STR_SUBSTRING") } Block { Return { Lit(value=true) } } Block {
+                                                      If { Eq { Var(name=op) Lit(value="STR_FIND") } Block { Return { Lit(value=true) } } Block {
+                                                        If { Eq { Var(name=op) Lit(value="ATTR_COUNT") } Block { Return { Lit(value=true) } } Block {
+                                                          If { Eq { Var(name=op) Lit(value="ATTR_KEY") } Block { Return { Lit(value=true) } } Block {
+                                                            If { Eq { Var(name=op) Lit(value="ATTR_VALUE_KIND") } Block { Return { Lit(value=true) } } Block {
+                                                              If { Eq { Var(name=op) Lit(value="ATTR_VALUE_STRING") } Block { Return { Lit(value=true) } } Block {
+                                                                If { Eq { Var(name=op) Lit(value="ATTR_VALUE_INT") } Block { Return { Lit(value=true) } } Block {
+                                                                  If { Eq { Var(name=op) Lit(value="ATTR_VALUE_BOOL") } Block { Return { Lit(value=true) } } Block {
+                                                                    If { Eq { Var(name=op) Lit(value="CHILD_COUNT") } Block { Return { Lit(value=true) } } Block {
+                                                                      If { Eq { Var(name=op) Lit(value="CHILD_AT") } Block { Return { Lit(value=true) } } Block {
+                                                                        If { Eq { Var(name=op) Lit(value="MAKE_BLOCK") } Block { Return { Lit(value=true) } } Block {
+                                                                          If { Eq { Var(name=op) Lit(value="MAKE_ERR") } Block { Return { Lit(value=true) } } Block {
+                                                                            If { Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") } Block { Return { Lit(value=true) } } Block {
+                                                                              If { Eq { Var(name=op) Lit(value="MAKE_LIT_INT") } Block { Return { Lit(value=true) } } Block {
+                                                                                If { Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") } Block { Return { Lit(value=true) } } Block {
+                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE") } Block { Return { Lit(value=true) } } Block {
+                                                                                    If { Eq { Var(name=op) Lit(value="MAKE_PAIR") } Block { Return { Lit(value=true) } } Block {
+                                                                                      If { Eq { Var(name=op) Lit(value="PAIR_FIRST") } Block { Return { Lit(value=true) } } Block {
+                                                                                        If { Eq { Var(name=op) Lit(value="PAIR_SECOND") } Block { Return { Lit(value=true) } } Block {
+                                                                                          If { Eq { Var(name=op) Lit(value="APPEND_CHILD") } Block { Return { Lit(value=true) } } Block {
+                                                                                                Return { Eq { Var(name=op) Lit(value="APPEND_ATTR") } }
+                                                                                              }
+                                                                                          } }
+                                                                                        } }
+                                                                                      } }
+                                                                                    } }
+                                                                                  } }
+                                                                                } }
+                                                                              } }
+                                                                            } }
+                                                                          } }
+                                                                        } }
+                                                                      } }
+                                                                    } }
+                                                                  } }
+                                                                } }
+                                                              } }
+                                                            } }
+                                                          } }
+                                                        } }
+                                                      } }
+                                                    } }
+                                                  } }
+                                                } }
+                                              } }
+                                            } }
+                                          } }
+                                        } }
+                                      } }
+                                    } }
+                                  } }
+                                } }
+                              } }
+                            } }
+                          } }
+                        } }
+                      } }
+                    } }
+                  } }
+                } }
+              } }
+            } }
+          } }
+        } }
+      }
+      }
+    }
+  }
+
+  Let(name=objectLinker.supportedInstructionAt) {
+    Fn(params=op,allowed,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=allowed) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { Var(name=op) AttrValueString { ChildAt { Var(name=allowed) Var(name=index) } Lit(value=0) } }
+              Block { Return { Lit(value=1) } }
+              Block { Return { Call(target=objectLinker.supportedInstructionAt) { Var(name=op) Var(name=allowed) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.validateCallRelocations) {
+    Fn(params=functionNode,functions,index,instructionIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { MakeBlock { Lit(value="call-relocations-valid") } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+              Block {
+                Let(name=nextInstructionIndex) { Add { Var(name=instructionIndex) Lit(value=1) } }
+                Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } }
+                If {
+                  Eq { Var(name=op) Lit(value="CALL") }
+                  Block {
+                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=reloc) } Lit(value="Err") }
+                      Block { Return { Var(name=reloc) } }
+                      Block {
+                        Let(name=targetSymbol) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetSymbol") Lit(value=0) } }
+                        If {
+                          Eq { Var(name=targetSymbol) Lit(value="") }
+                          Block {
+                            Let(name=targetName) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetName") Lit(value=0) } }
+                            Let(name=resolved) { Call(target=objectLinker.resolveTargetName) { Var(name=functions) Var(name=targetName) } }
+                            If {
+                              Eq { NodeKind { Var(name=resolved) } Lit(value="Err") }
+                              Block { Return { Var(name=resolved) } }
+                              Block { Return { Call(target=objectLinker.validateCallRelocations) { Var(name=functionNode) Var(name=functions) Var(name=nextIndex) Var(name=nextInstructionIndex) } } }
+                            }
+                          }
+                          Block {
+                            If {
+                              Call(target=objectLinker.containsSymbol) { Var(name=functions) Var(name=targetSymbol) Lit(value=0) }
+                              Block { Return { Call(target=objectLinker.validateCallRelocations) { Var(name=functionNode) Var(name=functions) Var(name=nextIndex) Var(name=nextInstructionIndex) } } }
+                              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK009") Lit(value="Resolved call symbol is missing from linker input.") Var(name=targetSymbol) } } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Call(target=objectLinker.validateCallRelocations) { Var(name=functionNode) Var(name=functions) Var(name=nextIndex) Var(name=nextInstructionIndex) } } }
+                }
+              }
+              Block { Return { Call(target=objectLinker.validateCallRelocations) { Var(name=functionNode) Var(name=functions) Var(name=nextIndex) Var(name=instructionIndex) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitFunctionsBytes) {
+    Fn(params=functions,allFunctions,layout,constants,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            Let(name=functionOffset) { Call(target=objectLinker.resolveCallOffset) { Var(name=layout) Var(name=symbol) Lit(value=0) } }
+            Return {
+              Call(target=objectLinker.cat2) {
+                Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=allFunctions) Var(name=layout) Var(name=constants) AttrValueInt { Var(name=functionOffset) Lit(value=0) } Lit(value=0) Lit(value=0) }
+                Call(target=objectLinker.emitFunctionsBytes) { Var(name=functions) Var(name=allFunctions) Var(name=layout) Var(name=constants) Add { Var(name=index) Lit(value=1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitFunctionBytes) {
+    Fn(params=functionNode,functions,layout,constants,functionOffset,index,instructionIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { BytesFromUtf8String { Lit(value="") } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+              Block {
+                Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } }
+                Let(name=nextInstructionIndex) { Add { Var(name=instructionIndex) Lit(value=1) } }
+                Return {
+                  Call(target=objectLinker.cat2) {
+                    Call(target=objectLinker.emitInstructionBytes) { Var(name=op) Var(name=child) Var(name=functionNode) Var(name=instructionIndex) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) }
+                    Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) Var(name=nextIndex) Var(name=nextInstructionIndex) }
+                  }
+                }
+              }
+              Block { Return { Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) Var(name=nextIndex) Var(name=instructionIndex) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitInstructionBytes) {
+    Fn(params=op,instructionNode,functionNode,instructionIndex,functions,layout,constants,functionOffset) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="RETURN") }
+          Block { Return { Call(target=objectLinker.inst) { Lit(value=19) Lit(value=0) } } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="CONST") }
+              Block {
+                Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                Let(name=target) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="target") Lit(value=0) } }
+                Let(name=constantIndex) { Call(target=objectLinker.constantIndex) { Var(name=constants) Var(name=target) Lit(value=0) } }
+                Return { Call(target=objectLinker.inst) { Lit(value=15) AttrValueInt { Var(name=constantIndex) Lit(value=0) } } }
+              }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="CALL") }
+                  Block {
+                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                    Let(name=targetName) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetName") Lit(value=0) } }
+                    Let(name=resolvedSymbol) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetSymbol") Lit(value=0) } }
+                    If {
+                      Eq { Var(name=resolvedSymbol) Lit(value="") }
+                      Block {
+                        Let(name=targetSymbol) { Call(target=objectLinker.resolveTargetName) { Var(name=functions) Var(name=targetName) } }
+                        Let(name=targetOffset) { Call(target=objectLinker.resolveCallOffset) { Var(name=layout) AttrValueString { Var(name=targetSymbol) Lit(value=0) } Lit(value=0) } }
+                        Return { Call(target=objectLinker.inst) { Lit(value=11) AttrValueInt { Var(name=targetOffset) Lit(value=0) } } }
+                      }
+                      Block {
+                        Let(name=targetOffset) { Call(target=objectLinker.resolveCallOffset) { Var(name=layout) Var(name=resolvedSymbol) Lit(value=0) } }
+                        Return { Call(target=objectLinker.inst) { Lit(value=11) AttrValueInt { Var(name=targetOffset) Lit(value=0) } } }
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { Var(name=op) Lit(value="CALL_SYS") }
+                      Block { Return { Call(target=objectLinker.inst) { Lit(value=22) Call(target=objectLinker.getAttrInt) { Var(name=instructionNode) Lit(value="a") Lit(value=0) } } } }
+                      Block {
+                        If {
+                          Eq { Var(name=op) Lit(value="POP") }
+                          Block { Return { Call(target=objectLinker.inst) { Lit(value=4) Lit(value=0) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=op) Lit(value="STORE_LOCAL") }
+                              Block { Return { Call(target=objectLinker.inst) { Lit(value=5) Call(target=objectLinker.getAttrInt) { Var(name=instructionNode) Lit(value="a") Lit(value=0) } } } }
+                              Block {
+                                If {
+                                  Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
+                                  Block { Return { Call(target=objectLinker.inst) { Lit(value=6) Call(target=objectLinker.getAttrInt) { Var(name=instructionNode) Lit(value="a") Lit(value=0) } } } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=op) Lit(value="ADD_INT") }
+                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=7) Lit(value=0) } } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=op) Lit(value="SUB_NUM") }
+                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=67) Lit(value=0) } } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=op) Lit(value="MUL_NUM") }
+                                              Block { Return { Call(target=objectLinker.inst) { Lit(value=68) Lit(value=0) } } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=op) Lit(value="DIV_NUM") }
+                                                  Block { Return { Call(target=objectLinker.inst) { Lit(value=69) Lit(value=0) } } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=op) Lit(value="MOD_NUM") }
+                                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=70) Lit(value=0) } } }
+                                                      Block {
+                                                        If {
+                                                          Eq { Var(name=op) Lit(value="EQ_INT") }
+                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=13) Lit(value=0) } } }
+                                                          Block {
+                                                            If {
+                                                              Eq { Var(name=op) Lit(value="EQ") }
+                                                              Block { Return { Call(target=objectLinker.inst) { Lit(value=14) Lit(value=0) } } }
+                                                              Block {
+                                                                If {
+                                                                  Eq { Var(name=op) Lit(value="JUMP") }
+                                                              Block {
+                                                                Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                                                                Return { Call(target=objectLinker.inst) { Lit(value=8) Add { Var(name=functionOffset) Call(target=objectLinker.getAttrInt) { Var(name=reloc) Lit(value="targetInstruction") Lit(value=0) } } } }
+                                                              }
+                                                              Block {
+                                                                If {
+                                                                  Eq { Var(name=op) Lit(value="JUMP_IF_FALSE") }
+                                                                  Block {
+                                                                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                                                                    Return { Call(target=objectLinker.inst) { Lit(value=9) Add { Var(name=functionOffset) Call(target=objectLinker.getAttrInt) { Var(name=reloc) Lit(value="targetInstruction") Lit(value=0) } } } }
+                                                                  }
+                                                                  Block {
+                                                                    If {
+                                                                      Eq { Var(name=op) Lit(value="STR_CONCAT") }
+                                                                      Block { Return { Call(target=objectLinker.inst) { Lit(value=16) Lit(value=0) } } }
+                                                                      Block {
+                                                                        If {
+                                                                          Eq { Var(name=op) Lit(value="LT_NUM") }
+                                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=72) Lit(value=0) } } }
+                                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=1) Lit(value=0) } } }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+    }
+  }

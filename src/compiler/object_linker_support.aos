@@ -1,0 +1,496 @@
+Program {
+  Import(path="parser.aos")
+  Import(path="function_layout.aos")
+  Import(path="structural_bundle.aos")
+  Import(path="../std/bytes.aos")
+  Export(name=objectLinker.collectFunctions)
+  Export(name=objectLinker.resolveTargetName)
+  Export(name=objectLinker.assignOffsets)
+  Export(name=objectLinker.resolveCallOffset)
+  Export(name=objectLinker.collectConstants)
+  Export(name=objectLinker.constantIndex)
+  Export(name=objectLinker.containsConstant)
+  Export(name=objectLinker.getAttr)
+  Export(name=objectLinker.getAttrInt)
+  Let(name=objectLinker.collectFunctions) {
+    Fn(params=objects) {
+      Block {
+        Return {
+          Call(target=objectLinker.collectObjectsAt) {
+            Var(name=objects)
+            Lit(value=0)
+            MakeBlock { Lit(value="functions") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectObjectsAt) {
+    Fn(params=objects,index,functions) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objects) } }
+          Block { Return { Var(name=functions) } }
+          Block {
+            Let(name=objectNode) { ChildAt { Var(name=objects) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=objectNode) } Lit(value="Object") }
+              Block {
+                Let(name=format) { Call(target=objectLinker.getAttr) { Var(name=objectNode) Lit(value="format") Lit(value=0) } }
+                If {
+                  Eq { Var(name=format) Lit(value="AiBCO1") }
+                  Block {
+                    Let(name=version) { Call(target=objectLinker.getAttrInt) { Var(name=objectNode) Lit(value="version") Lit(value=0) } }
+                    If {
+                      Eq { Var(name=version) Lit(value=1) }
+                      Block {
+                        Let(name=modulePath) { Call(target=objectLinker.getAttr) { Var(name=objectNode) Lit(value="modulePath") Lit(value=0) } }
+                        If {
+                          Eq { Var(name=modulePath) Lit(value="") }
+                          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK003") Lit(value="Object is missing modulePath.") Lit(value="object") } } }
+                          Block {
+                            Let(name=metadata) { Call(target=objectLinker.validateObjectMetadata) { Var(name=objectNode) Var(name=modulePath) Lit(value=0) } }
+                            If {
+                              Eq { NodeKind { Var(name=metadata) } Lit(value="Err") }
+                              Block { Return { Var(name=metadata) } }
+                              Block {
+                                Let(name=collected) { Call(target=objectLinker.collectFunctionsAt) { Var(name=objectNode) Var(name=modulePath) Lit(value=0) Var(name=functions) } }
+                                If {
+                                  Eq { NodeKind { Var(name=collected) } Lit(value="Err") }
+                                  Block { Return { Var(name=collected) } }
+                                  Block { Return { Call(target=objectLinker.collectObjectsAt) { Var(name=objects) Add { Var(name=index) Lit(value=1) } Var(name=collected) } } }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK014") Lit(value="Unsupported AiBCO object version.") ToString { Var(name=version) } } } }
+                    }
+                  }
+                  Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK013") Lit(value="Object format must be AiBCO1.") Var(name=format) } } }
+                }
+              }
+              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK003") Lit(value="Linker input contains a non-object node.") Lit(value="object") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.validateObjectMetadata) {
+    Fn(params=objectNode,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objectNode) } }
+          Block { Return { MakeBlock { Lit(value="object-metadata-valid") } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=objectNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            Let(name=kind) { NodeKind { Var(name=child) } }
+            If {
+              Eq { Var(name=kind) Lit(value="Import") }
+              Block {
+                Let(name=path) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="path") Lit(value=0) } }
+                If {
+                  Eq { Var(name=path) Lit(value="") }
+                  Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK015") Lit(value="Import metadata is missing path.") Var(name=modulePath) } } }
+                  Block { Return { Call(target=objectLinker.validateObjectMetadata) { Var(name=objectNode) Var(name=modulePath) Var(name=nextIndex) } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Export") }
+                  Block { Return { Call(target=objectLinker.validateNamedMetadata) { Var(name=objectNode) Var(name=modulePath) Var(name=child) Var(name=nextIndex) Lit(value="Export") } } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="Symbol") }
+                      Block {
+                        Let(name=symbolKind) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="kind") Lit(value=0) } }
+                        If {
+                          Eq { Var(name=symbolKind) Lit(value="function") }
+                          Block { Return { Call(target=objectLinker.validateNamedMetadata) { Var(name=objectNode) Var(name=modulePath) Var(name=child) Var(name=nextIndex) Lit(value="Symbol") } } }
+                          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK015") Lit(value="Symbol metadata has unsupported kind.") Var(name=symbolKind) } } }
+                        }
+                      }
+                      Block { Return { Call(target=objectLinker.validateObjectMetadata) { Var(name=objectNode) Var(name=modulePath) Var(name=nextIndex) } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.validateNamedMetadata) {
+    Fn(params=objectNode,modulePath,child,nextIndex,kind) {
+      Block {
+        Let(name=name) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
+        Let(name=symbol) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="symbol") Lit(value=0) } }
+        Let(name=expected) { StrConcat { Var(name=modulePath) StrConcat { Lit(value="::") Var(name=name) } } }
+        If {
+          Eq { Var(name=name) Lit(value="") }
+          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK015") StrConcat { Var(name=kind) Lit(value=" metadata is missing name.") } Var(name=modulePath) } } }
+          Block {
+            If {
+              Eq { Var(name=symbol) Var(name=expected) }
+              Block { Return { Call(target=objectLinker.validateObjectMetadata) { Var(name=objectNode) Var(name=modulePath) Var(name=nextIndex) } } }
+              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK015") StrConcat { Var(name=kind) Lit(value=" metadata has non-canonical symbol.") } Var(name=symbol) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectFunctionsAt) {
+    Fn(params=objectNode,modulePath,index,functions) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objectNode) } }
+          Block { Return { Var(name=functions) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=objectNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Function") }
+              Block {
+                Let(name=name) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
+                Let(name=symbol) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="symbol") Lit(value=0) } }
+                Let(name=params) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="params") Lit(value=0) } }
+                If {
+                  Eq { Var(name=symbol) Lit(value="") }
+                  Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK004") Lit(value="Function is missing symbol.") Lit(value="function") } } }
+                  Block {
+                    If {
+                      Call(target=objectLinker.containsSymbol) { Var(name=functions) Var(name=symbol) Lit(value=0) }
+                      Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK005") Lit(value="Duplicate function symbol.") Var(name=symbol) } } }
+                      Block {
+                        Let(name=recordBase) { MakeBlock { Lit(value="linked-function") } }
+                        Let(name=recordWithModule) { AppendChild { Var(name=recordBase) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
+                        Let(name=recordWithName) { AppendChild { Var(name=recordWithModule) MakeLitString { Lit(value="name") Var(name=name) } } }
+                        Let(name=recordWithSymbol) { AppendChild { Var(name=recordWithName) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+                        Let(name=recordWithParams) { AppendChild { Var(name=recordWithSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
+                        Let(name=record) { AppendChild { Var(name=recordWithParams) Var(name=child) } }
+                        Return { Call(target=objectLinker.collectFunctionsAt) { Var(name=objectNode) Var(name=modulePath) Var(name=nextIndex) AppendChild { Var(name=functions) Var(name=record) } } }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=objectLinker.collectFunctionsAt) { Var(name=objectNode) Var(name=modulePath) Var(name=nextIndex) Var(name=functions) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.containsSymbol) {
+    Fn(params=functions,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=existing) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            If {
+              Eq { Var(name=existing) Var(name=symbol) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=objectLinker.containsSymbol) { Var(name=functions) Var(name=symbol) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveTargetName) {
+    Fn(params=functions,targetName) {
+      Block {
+        Return {
+          Call(target=objectLinker.resolveTargetNameAt) {
+            Var(name=functions)
+            Var(name=targetName)
+            Lit(value=0)
+            Lit(value="")
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveTargetNameAt) {
+    Fn(params=functions,targetName,index,resolvedSymbol,matchCount) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block {
+            If {
+              Eq { Var(name=matchCount) Lit(value=0) }
+              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK006") Lit(value="Unresolved function call target.") Var(name=targetName) } } }
+              Block {
+                If {
+                  Eq { Var(name=matchCount) Lit(value=1) }
+                  Block { Return { MakeLitString { Lit(value="symbol") Var(name=resolvedSymbol) } } }
+                  Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK007") Lit(value="Ambiguous function call target.") Var(name=targetName) } } }
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { Var(name=name) Var(name=targetName) }
+              Block { Return { Call(target=objectLinker.resolveTargetNameAt) { Var(name=functions) Var(name=targetName) Var(name=nextIndex) Var(name=symbol) Add { Var(name=matchCount) Lit(value=1) } } } }
+              Block { Return { Call(target=objectLinker.resolveTargetNameAt) { Var(name=functions) Var(name=targetName) Var(name=nextIndex) Var(name=resolvedSymbol) Var(name=matchCount) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.assignOffsets) {
+    Fn(params=functions) {
+      Block {
+        Return {
+          Call(target=objectLinker.assignOffsetsAt) {
+            Var(name=functions)
+            Lit(value=0)
+            Lit(value=0)
+            MakeBlock { Lit(value="layout") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.assignOffsetsAt) {
+    Fn(params=functions,index,offset,layout) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=layout) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+            Let(name=instructionCount) { Call(target=objectLinker.countInstructions) { Var(name=functionNode) Lit(value=0) } }
+            If {
+              Eq { Var(name=instructionCount) Lit(value=0) }
+              Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK008") Lit(value="Function has no lowered instructions.") Var(name=symbol) } } }
+              Block {
+                Let(name=layoutBase) { MakeBlock { Lit(value="layout-function") } }
+                Let(name=layoutWithSymbol) { AppendChild { Var(name=layoutBase) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+                Let(name=layoutWithOffset) { AppendChild { Var(name=layoutWithSymbol) MakeLitInt { Lit(value="offset") Var(name=offset) } } }
+                Let(name=layoutRecord) { AppendChild { Var(name=layoutWithOffset) MakeLitInt { Lit(value="instructionCount") Var(name=instructionCount) } } }
+                Return {
+                  Call(target=objectLinker.assignOffsetsAt) {
+                    Var(name=functions)
+                    Add { Var(name=index) Lit(value=1) }
+                    Add { Var(name=offset) Var(name=instructionCount) }
+                    AppendChild { Var(name=layout) Var(name=layoutRecord) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.countInstructions) {
+    Fn(params=functionNode,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=tail) { Call(target=objectLinker.countInstructions) { Var(name=functionNode) Add { Var(name=index) Lit(value=1) } } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+              Block { Return { Add { Lit(value=1) Var(name=tail) } } }
+              Block { Return { Var(name=tail) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveCallOffset) {
+    Fn(params=layout,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK009") Lit(value="Resolved call symbol is missing from layout.") Var(name=symbol) } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=layout) Var(name=index) } }
+            Let(name=recordSymbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) } }
+            If {
+              Eq { Var(name=recordSymbol) Var(name=symbol) }
+              Block { Return { MakeLitInt { Lit(value="offset") AttrValueInt { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } } } }
+              Block { Return { Call(target=objectLinker.resolveCallOffset) { Var(name=layout) Var(name=symbol) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectConstants) {
+    Fn(params=functions) {
+      Block {
+        Return {
+          Call(target=objectLinker.collectConstantsAt) {
+            Var(name=functions)
+            Lit(value=0)
+            MakeBlock { Lit(value="constants") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectConstantsAt) {
+    Fn(params=functions,index,constants) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=constants) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+            Let(name=updated) { Call(target=objectLinker.collectFunctionConstantsAt) { Var(name=functionNode) Lit(value=0) Var(name=constants) } }
+            If {
+              Eq { NodeKind { Var(name=updated) } Lit(value="Err") }
+              Block { Return { Var(name=updated) } }
+              Block { Return { Call(target=objectLinker.collectConstantsAt) { Var(name=functions) Add { Var(name=index) Lit(value=1) } Var(name=updated) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectFunctionConstantsAt) {
+    Fn(params=functionNode,index,constants) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { Var(name=constants) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Reloc") }
+              Block {
+                Let(name=kind) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="kind") Lit(value=0) } }
+                If {
+                  Eq { Var(name=kind) Lit(value="const") }
+                  Block {
+                    Let(name=target) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="target") Lit(value=0) } }
+                    If {
+                      Call(target=objectLinker.containsConstant) { Var(name=constants) Var(name=target) Lit(value=0) }
+                      Block { Return { Call(target=objectLinker.collectFunctionConstantsAt) { Var(name=functionNode) Var(name=nextIndex) Var(name=constants) } } }
+                      Block { Return { Call(target=objectLinker.collectFunctionConstantsAt) { Var(name=functionNode) Var(name=nextIndex) AppendChild { Var(name=constants) MakeLitString { Lit(value="target") Var(name=target) } } } } }
+                    }
+                  }
+                  Block { Return { Call(target=objectLinker.collectFunctionConstantsAt) { Var(name=functionNode) Var(name=nextIndex) Var(name=constants) } } }
+                }
+              }
+              Block { Return { Call(target=objectLinker.collectFunctionConstantsAt) { Var(name=functionNode) Var(name=nextIndex) Var(name=constants) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.containsConstant) {
+    Fn(params=constants,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=constants) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=existing) { AttrValueString { ChildAt { Var(name=constants) Var(name=index) } Lit(value=0) } }
+            If {
+              Eq { Var(name=existing) Var(name=target) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=objectLinker.containsConstant) { Var(name=constants) Var(name=target) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.constantIndex) {
+    Fn(params=constants,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=constants) } }
+          Block { Return { MakeErr { Lit(value="object_linker") Lit(value="LINK010") Lit(value="Constant relocation target is missing from constant pool.") Var(name=target) } } }
+          Block {
+            Let(name=existing) { AttrValueString { ChildAt { Var(name=constants) Var(name=index) } Lit(value=0) } }
+            If {
+              Eq { Var(name=existing) Var(name=target) }
+              Block { Return { MakeLitInt { Lit(value="index") Var(name=index) } } }
+              Block { Return { Call(target=objectLinker.constantIndex) { Var(name=constants) Var(name=target) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=objectLinker.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.getAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=objectLinker.getAttrInt) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

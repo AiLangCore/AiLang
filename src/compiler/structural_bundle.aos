@@ -1,0 +1,97 @@
+Program {
+  Export(name=structuralBundle.collectConstants)
+  Export(name=structuralBundle.instructionCount)
+
+  Let(name=structuralBundle.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=structuralBundle.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralBundle.contains) {
+    Fn(params=constants,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=constants) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { AttrValueString { ChildAt { Var(name=constants) Var(name=index) } Lit(value=0) } Var(name=target) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=structuralBundle.contains) { Var(name=constants) Var(name=target) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralBundle.collectConstants) {
+    Fn(params=plans) {
+      Block { Return { Call(target=structuralBundle.collectPlansAt) { Var(name=plans) Lit(value=0) MakeBlock { Lit(value="constants") } } } }
+    }
+  }
+
+  Let(name=structuralBundle.collectPlansAt) {
+    Fn(params=plans,index,constants) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plans) } }
+          Block { Return { Var(name=constants) } }
+          Block { Return { Call(target=structuralBundle.collectPlansAt) { Var(name=plans) Add { Var(name=index) Lit(value=1) } Call(target=structuralBundle.collectPlanAt) { ChildAt { Var(name=plans) Var(name=index) } Lit(value=0) Var(name=constants) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralBundle.collectPlanAt) {
+    Fn(params=plan,index,constants) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { Var(name=constants) } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Let(name=op) { Call(target=structuralBundle.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+            If {
+              Eq { Var(name=op) Lit(value="CONST") }
+              Block {
+                Let(name=target) { Call(target=structuralBundle.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } }
+                If {
+                  Call(target=structuralBundle.contains) { Var(name=constants) Var(name=target) Lit(value=0) }
+                  Block { Return { Call(target=structuralBundle.collectPlanAt) { Var(name=plan) Add { Var(name=index) Lit(value=1) } Var(name=constants) } } }
+                  Block { Return { Call(target=structuralBundle.collectPlanAt) { Var(name=plan) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=constants) MakeLitString { Lit(value="target") Var(name=target) } } } } }
+                }
+              }
+              Block { Return { Call(target=structuralBundle.collectPlanAt) { Var(name=plan) Add { Var(name=index) Lit(value=1) } Var(name=constants) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralBundle.instructionCount) {
+    Fn(params=plans,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plans) } }
+          Block { Return { Lit(value=0) } }
+          Block { Return { Add { ChildCount { ChildAt { Var(name=plans) Var(name=index) } } Call(target=structuralBundle.instructionCount) { Var(name=plans) Add { Var(name=index) Lit(value=1) } } } } }
+        }
+      }
+    }
+  }
+}

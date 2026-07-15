@@ -1,0 +1,552 @@
+Program {
+  Import(path="lower.aos")
+  Import(path="parser.aos")
+  Import(path="format.aos")
+  Import(path="linker.aos")
+  Export(name=structuralObject.collectModuleRecords)
+  Export(name=structuralObject.validateProjectFunctionRecords)
+  Export(name=structuralObject.emitProjectPlans)
+  Export(name=structuralObject.emitModuleObject)
+  Export(name=structuralObject.emitModuleObjectForProgram)
+  Export(name=structuralObject.emitModuleObjectText)
+  Export(name=structuralObject.emitProjectObjects)
+  Export(name=structuralObject.emitProjectObjectTexts)
+  Export(name=structuralObject.emitProjectObjectTextsForPrograms)
+
+  Let(name=structuralObject.collectModuleRecords) {
+    Fn(params=modulePrograms,modulePaths,index,records) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePrograms) } }
+          Block { Return { Var(name=records) } }
+          Block {
+            If {
+              Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+              Block { Return { MakeErr { Lit(value="structural_object") Lit(value="OBJ030") Lit(value="Module program/path counts differ.") NodeId { Var(name=modulePrograms) } } } }
+              Block {
+                Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+                Let(name=recordsForModule) { Call(target=lower.collectFunctionRecords) { ChildAt { Var(name=modulePrograms) Var(name=index) } Var(name=modulePath) } }
+                Return { Call(target=structuralObject.appendModuleRecords) { Var(name=modulePrograms) Var(name=modulePaths) Add { Var(name=index) Lit(value=1) } Var(name=records) Var(name=recordsForModule) Lit(value=0) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.validateProjectFunctionRecords) {
+    Fn(params=records) {
+      Block {
+        Return {
+          Call(target=structuralObject.validateProjectFunctionRecordsAt) {
+            Var(name=records)
+            Lit(value=0)
+            MakeBlock { Lit(value="symbols") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.validateProjectFunctionRecordsAt) {
+    Fn(params=records,index,symbols) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+            If {
+              Call(target=structuralObject.containsProjectFunctionSymbol) { Var(name=symbols) Var(name=symbol) Lit(value=0) }
+              Block { Return { MakeErr { Lit(value="structural_object") Lit(value="OBJ034") Lit(value="Duplicate canonical function symbol in project graph.") Var(name=symbol) } } }
+              Block {
+                Return {
+                  Call(target=structuralObject.validateProjectFunctionRecordsAt) {
+                    Var(name=records)
+                    Add { Var(name=index) Lit(value=1) }
+                    AppendChild { Var(name=symbols) MakeLitString { Lit(value="symbol") Var(name=symbol) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.containsProjectFunctionSymbol) {
+    Fn(params=symbols,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=symbols) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=existing) { AttrValueString { ChildAt { Var(name=symbols) Var(name=index) } Lit(value=0) } }
+            If {
+              Eq { Var(name=existing) Var(name=symbol) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=structuralObject.containsProjectFunctionSymbol) { Var(name=symbols) Var(name=symbol) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendModuleRecords) {
+    Fn(params=modulePrograms,modulePaths,nextModuleIndex,records,moduleRecords,recordIndex) {
+      Block {
+        If {
+          Eq { Var(name=recordIndex) ChildCount { Var(name=moduleRecords) } }
+          Block { Return { Call(target=structuralObject.collectModuleRecords) { Var(name=modulePrograms) Var(name=modulePaths) Var(name=nextModuleIndex) Var(name=records) } } }
+          Block { Return { Call(target=structuralObject.appendModuleRecords) { Var(name=modulePrograms) Var(name=modulePaths) Var(name=nextModuleIndex) AppendChild { Var(name=records) ChildAt { Var(name=moduleRecords) Var(name=recordIndex) } } Var(name=moduleRecords) Add { Var(name=recordIndex) Lit(value=1) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectPlans) {
+    Fn(params=records) {
+      Block { Return { Call(target=lower.emitStructuralPlansWithSymbols) { Var(name=records) Lit(value=0) MakeBlock { Lit(value="plans") } } } }
+    }
+  }
+
+  Let(name=structuralObject.emitModuleObjectText) {
+    Fn(params=modulePath,moduleRecords,allRecords) {
+      Block {
+        Let(name=object) { Call(target=structuralObject.emitModuleObject) { Var(name=modulePath) Var(name=moduleRecords) Var(name=allRecords) } }
+        If {
+          Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+          Block { Return { Var(name=object) } }
+          Block { Return { Call(target=format.format) { Var(name=object) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitModuleObject) {
+    Fn(params=modulePath,moduleRecords,allRecords) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Object") StrConcat { Lit(value="structural-object:") Var(name=modulePath) } } }
+        Let(name=withFormat) { AppendAttr { Var(name=base) MakeLitString { Lit(value="format") Lit(value="AiBCO1") } } }
+        Let(name=withPath) { AppendAttr { Var(name=withFormat) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
+        Let(name=object) { AppendAttr { Var(name=withPath) MakeLitInt { Lit(value="version") Lit(value=1) } } }
+        Return { Call(target=structuralObject.appendFunctions) { Var(name=object) Var(name=moduleRecords) Var(name=allRecords) Lit(value=0) } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitModuleObjectForProgram) {
+    Fn(params=program,modulePath,moduleRecords,allRecords) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Object") StrConcat { Lit(value="structural-object:") Var(name=modulePath) } } }
+        Let(name=withFormat) { AppendAttr { Var(name=base) MakeLitString { Lit(value="format") Lit(value="AiBCO1") } } }
+        Let(name=withPath) { AppendAttr { Var(name=withFormat) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
+        Let(name=object) { AppendAttr { Var(name=withPath) MakeLitInt { Lit(value="version") Lit(value=1) } } }
+        Let(name=withImports) { Call(target=structuralObject.appendImports) { Var(name=object) Var(name=program) Var(name=modulePath) Lit(value=0) } }
+        Let(name=withExports) { Call(target=structuralObject.appendExports) { Var(name=withImports) Var(name=program) Var(name=modulePath) Lit(value=0) } }
+        Let(name=withSymbols) { Call(target=structuralObject.appendSymbols) { Var(name=withExports) Var(name=moduleRecords) Lit(value=0) } }
+        Return { Call(target=structuralObject.appendFunctions) { Var(name=withSymbols) Var(name=moduleRecords) Var(name=allRecords) Lit(value=0) } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjectTexts) {
+    Fn(params=modulePaths,records) {
+      Block {
+        Let(name=objects) { Call(target=structuralObject.emitProjectObjects) { Var(name=modulePaths) Var(name=records) } }
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
+          Block { Return { Var(name=objects) } }
+          Block { Return { Call(target=structuralObject.formatProjectObjects) { Var(name=objects) Lit(value=0) MakeBlock { Lit(value="object-texts") } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjectTextsForPrograms) {
+    Fn(params=modulePrograms,modulePaths,records) {
+      Block {
+        Let(name=objects) { Call(target=structuralObject.emitProjectObjectsForPrograms) { Var(name=modulePrograms) Var(name=modulePaths) Var(name=records) } }
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
+          Block { Return { Var(name=objects) } }
+          Block { Return { Call(target=structuralObject.formatProjectObjects) { Var(name=objects) Lit(value=0) MakeBlock { Lit(value="object-texts") } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjectsForPrograms) {
+    Fn(params=modulePrograms,modulePaths,records) {
+      Block { Return { Call(target=structuralObject.appendProjectObjectsForPrograms) { Var(name=modulePrograms) Var(name=modulePaths) Var(name=records) Lit(value=0) MakeBlock { Lit(value="objects") } } } }
+    }
+  }
+
+  Let(name=structuralObject.appendProjectObjectsForPrograms) {
+    Fn(params=modulePrograms,modulePaths,records,index,objects) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            If {
+              Eq { Var(name=index) ChildCount { Var(name=modulePrograms) } }
+              Block { Return { MakeErr { Lit(value="structural_object") Lit(value="OBJ031") Lit(value="Module program/path counts differ during object emission.") NodeId { Var(name=modulePaths) } } } }
+              Block {
+                Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+                Let(name=moduleRecords) { Call(target=structuralObject.recordsForModule) { Var(name=records) Var(name=modulePath) Lit(value=0) MakeBlock { Lit(value="records") } } }
+                Let(name=object) { Call(target=structuralObject.emitModuleObjectForProgram) { ChildAt { Var(name=modulePrograms) Var(name=index) } Var(name=modulePath) Var(name=moduleRecords) Var(name=records) } }
+                If {
+                  Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+                  Block { Return { Var(name=object) } }
+                  Block { Return { Call(target=structuralObject.appendProjectObjectsForPrograms) { Var(name=modulePrograms) Var(name=modulePaths) Var(name=records) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=objects) Var(name=object) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjects) {
+    Fn(params=modulePaths,records) {
+      Block { Return { Call(target=structuralObject.appendProjectObjects) { Var(name=modulePaths) Var(name=records) Lit(value=0) MakeBlock { Lit(value="objects") } } } }
+    }
+  }
+
+  Let(name=structuralObject.appendProjectObjects) {
+    Fn(params=modulePaths,records,index,objects) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=moduleRecords) { Call(target=structuralObject.recordsForModule) { Var(name=records) Var(name=modulePath) Lit(value=0) MakeBlock { Lit(value="records") } } }
+            Let(name=object) { Call(target=structuralObject.emitModuleObject) { Var(name=modulePath) Var(name=moduleRecords) Var(name=records) } }
+            If {
+              Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+              Block { Return { Var(name=object) } }
+              Block { Return { Call(target=structuralObject.appendProjectObjects) { Var(name=modulePaths) Var(name=records) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=objects) Var(name=object) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.formatProjectObjects) {
+    Fn(params=objects,index,texts) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objects) } }
+          Block { Return { Var(name=texts) } }
+          Block { Return { Call(target=structuralObject.formatProjectObjects) { Var(name=objects) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=texts) MakeLitString { Lit(value="text") Call(target=format.format) { ChildAt { Var(name=objects) Var(name=index) } } } } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.recordsForModule) {
+    Fn(params=records,modulePath,index,moduleRecords) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Var(name=moduleRecords) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=recordModulePath) { AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) } }
+            If {
+              Eq { Var(name=recordModulePath) Var(name=modulePath) }
+              Block { Return { Call(target=structuralObject.recordsForModule) { Var(name=records) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=moduleRecords) Var(name=record) } } } }
+              Block { Return { Call(target=structuralObject.recordsForModule) { Var(name=records) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } Var(name=moduleRecords) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendImports) {
+    Fn(params=object,program,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=object) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block {
+                Let(name=importPath) { Call(target=structuralObject.getAttr) { Var(name=child) Lit(value="path") Lit(value=0) } }
+                Let(name=packageName) { Call(target=structuralObject.getAttr) { Var(name=child) Lit(value="package") Lit(value=0) } }
+                Let(name=sdkName) { Call(target=structuralObject.getAttr) { Var(name=child) Lit(value="sdk") Lit(value=0) } }
+                Let(name=canonicalPath) { Call(target=linker.canonicalImportPath) { Var(name=modulePath) Var(name=importPath) Var(name=packageName) Var(name=sdkName) } }
+                Return { Call(target=structuralObject.appendImports) { AppendChild { Var(name=object) Call(target=structuralObject.importNode) { Var(name=canonicalPath) } } Var(name=program) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } }
+              }
+              Block { Return { Call(target=structuralObject.appendImports) { Var(name=object) Var(name=program) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.importNode) {
+    Fn(params=path) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Import") StrConcat { Lit(value="structural-import:") Var(name=path) } } }
+        Return { AppendAttr { Var(name=base) MakeLitString { Lit(value="path") Var(name=path) } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendExports) {
+    Fn(params=object,program,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=object) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Export") }
+              Block {
+                Let(name=name) { Call(target=structuralObject.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
+                Return { Call(target=structuralObject.appendExports) { AppendChild { Var(name=object) Call(target=structuralObject.exportNode) { Var(name=modulePath) Var(name=name) } } Var(name=program) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } }
+              }
+              Block { Return { Call(target=structuralObject.appendExports) { Var(name=object) Var(name=program) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.exportNode) {
+    Fn(params=modulePath,name) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Export") StrConcat { Lit(value="structural-export:") StrConcat { Var(name=modulePath) StrConcat { Lit(value="::") Var(name=name) } } } } }
+        Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } } }
+        Return { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") StrConcat { Var(name=modulePath) StrConcat { Lit(value="::") Var(name=name) } } } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendSymbols) {
+    Fn(params=object,moduleRecords,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=moduleRecords) } }
+          Block { Return { Var(name=object) } }
+          Block { Return { Call(target=structuralObject.appendSymbols) { AppendChild { Var(name=object) Call(target=structuralObject.symbolNode) { ChildAt { Var(name=moduleRecords) Var(name=index) } } } Var(name=moduleRecords) Add { Var(name=index) Lit(value=1) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.symbolNode) {
+    Fn(params=record) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=base) { MakeNode { Lit(value="Symbol") StrConcat { Lit(value="structural-symbol:") Var(name=symbol) } } }
+        Let(name=withKind) { AppendAttr { Var(name=base) MakeLitString { Lit(value="kind") Lit(value="function") } } }
+        Let(name=withName) { AppendAttr { Var(name=withKind) MakeLitString { Lit(value="name") Var(name=name) } } }
+        Return { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendFunctions) {
+    Fn(params=object,moduleRecords,allRecords,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=moduleRecords) } }
+          Block { Return { Var(name=object) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=moduleRecords) Var(name=index) } }
+            Let(name=plan) { Call(target=lower.emitStructuralRecordPlanWithSymbols) { Var(name=record) Var(name=allRecords) } }
+            If {
+              Eq { NodeKind { Var(name=plan) } Lit(value="Err") }
+              Block { Return { Var(name=plan) } }
+              Block { Return { Call(target=structuralObject.appendFunctions) { AppendChild { Var(name=object) Call(target=structuralObject.functionNode) { Var(name=record) Var(name=plan) } } Var(name=moduleRecords) Var(name=allRecords) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.functionNode) {
+    Fn(params=record,plan) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=base) { MakeNode { Lit(value="Function") StrConcat { Lit(value="structural-function:") Var(name=symbol) } } }
+        Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } } }
+        Let(name=withSymbol) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+        Let(name=withParams) { AppendAttr { Var(name=withSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
+        Return { Call(target=structuralObject.appendInstructions) { AppendAttr { Var(name=withParams) MakeLitString { Lit(value="locals") Var(name=params) } } Var(name=plan) Lit(value=0) } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendInstructions) {
+    Fn(params=function,plan,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { Var(name=function) } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Let(name=withInstruction) { AppendChild { Var(name=function) Call(target=structuralObject.instructionNode) { Var(name=instruction) } } }
+            Let(name=withReloc) { Call(target=structuralObject.appendRelocation) { Var(name=withInstruction) Var(name=instruction) Var(name=index) } }
+            Return { Call(target=structuralObject.appendInstructions) { Var(name=withReloc) Var(name=plan) Add { Var(name=index) Lit(value=1) } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.instructionNode) {
+    Fn(params=instruction) {
+      Block {
+        Let(name=op) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+        Let(name=base) { MakeNode { Lit(value="Inst") StrConcat { Lit(value="structural-inst:") NodeId { Var(name=instruction) } } } }
+        Let(name=withOp) { AppendAttr { Var(name=base) MakeLitString { Lit(value="op") Var(name=op) } } }
+        Return { AppendAttr { Var(name=withOp) MakeLitInt { Lit(value="a") Call(target=structuralObject.instructionOperand) { Var(name=instruction) Var(name=op) } } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.instructionOperand) {
+    Fn(params=instruction,op) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
+          Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="STORE_LOCAL") }
+              Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="CALL_SYS") }
+                  Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+                  Block { Return { Lit(value=0) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendRelocation) {
+    Fn(params=function,instruction,index) {
+      Block {
+        Let(name=op) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
+        If {
+          Eq { Var(name=op) Lit(value="CONST") }
+          Block { Return { AppendChild { Var(name=function) Call(target=structuralObject.constRelocation) { Var(name=instruction) Var(name=index) } } } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="CALL") }
+              Block { Return { AppendChild { Var(name=function) Call(target=structuralObject.callRelocation) { Var(name=instruction) Var(name=index) } } } }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="JUMP") }
+                  Block { Return { AppendChild { Var(name=function) Call(target=structuralObject.jumpRelocation) { Var(name=instruction) Var(name=index) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=op) Lit(value="JUMP_IF_FALSE") }
+                      Block { Return { AppendChild { Var(name=function) Call(target=structuralObject.jumpRelocation) { Var(name=instruction) Var(name=index) } } } }
+                      Block { Return { Var(name=function) } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.constRelocation) {
+    Fn(params=instruction,index) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Reloc") StrConcat { Lit(value="structural-const:") ToString { Var(name=index) } } } }
+        Let(name=withKind) { AppendAttr { Var(name=base) MakeLitString { Lit(value="kind") Lit(value="const") } } }
+        Let(name=withInstruction) { AppendAttr { Var(name=withKind) MakeLitInt { Lit(value="instruction") Var(name=index) } } }
+        Return { AppendAttr { Var(name=withInstruction) MakeLitString { Lit(value="target") Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.callRelocation) {
+    Fn(params=instruction,index) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Reloc") StrConcat { Lit(value="structural-call:") ToString { Var(name=index) } } } }
+        Let(name=withKind) { AppendAttr { Var(name=base) MakeLitString { Lit(value="kind") Lit(value="call") } } }
+        Let(name=withInstruction) { AppendAttr { Var(name=withKind) MakeLitInt { Lit(value="instruction") Var(name=index) } } }
+        Return { AppendAttr { Var(name=withInstruction) MakeLitString { Lit(value="targetSymbol") Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.jumpRelocation) {
+    Fn(params=instruction,index) {
+      Block {
+        Let(name=base) { MakeNode { Lit(value="Reloc") StrConcat { Lit(value="structural-jump:") ToString { Var(name=index) } } } }
+        Let(name=withKind) { AppendAttr { Var(name=base) MakeLitString { Lit(value="kind") Lit(value="jump") } } }
+        Let(name=withInstruction) { AppendAttr { Var(name=withKind) MakeLitInt { Lit(value="instruction") Var(name=index) } } }
+        Return { AppendAttr { Var(name=withInstruction) MakeLitInt { Lit(value="targetInstruction") Call(target=structuralObject.getAttrInt) { Var(name=instruction) Lit(value="target") Lit(value=0) } } } }
+      }
+    }
+  }
+
+  Let(name=structuralObject.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=structuralObject.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.getAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=structuralObject.getAttrInt) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

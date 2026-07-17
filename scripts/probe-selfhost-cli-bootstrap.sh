@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AILANG_BIN="${AILANG_BIN:-${ROOT_DIR}/tools/ailang}"
+AIVM_RUNTIME="${AIVM_RUNTIME:-${ROOT_DIR}/tools/aivm-runtime}"
 TMP_DIR="${ROOT_DIR}/.tmp/selfhost-cli-bootstrap"
 BOOTSTRAP_DIR="${TMP_DIR}/bootstrap"
 BOOTSTRAP_CLI="${BOOTSTRAP_DIR}/app.aibc1"
@@ -19,10 +20,13 @@ Program {
 }
 AOS
 
-AILANG_VM_PROFILE=tooling "${AILANG_BIN}" build "${TMP_DIR}/src/cli/ailang.aos" --out "${BOOTSTRAP_DIR}"
+BOOTSTRAP_OUT="$(AILANG_VM_PROFILE=tooling "${AILANG_BIN}" build "${TMP_DIR}/src/cli/ailang.aos" --out "${BOOTSTRAP_DIR}")"
+printf '%s\n' "${BOOTSTRAP_OUT}"
 test -f "${BOOTSTRAP_CLI}"
-AILANG_VM_PROFILE=tooling "${AILANG_BIN}" run "${BOOTSTRAP_CLI}" -- build "${TMP_DIR}"
+SELFHOST_OUT="$(AILANG_VM_PROFILE=tooling "${AIVM_RUNTIME}" run "${BOOTSTRAP_CLI}" -- build "${TMP_DIR}")"
+printf '%s\n' "${SELFHOST_OUT}"
 
 test -f "${TMP_DIR}/obj/app.aibco"
 test -s "${FINAL_CLI}"
-"${AILANG_BIN}" run "${FINAL_CLI}" -- --version
+FINAL_OUT="$(AILANG_VM_PROFILE=tooling "${AIVM_RUNTIME}" run "${FINAL_CLI}" -- --version)"
+printf '%s\n' "${FINAL_OUT}"

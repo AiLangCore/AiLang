@@ -512,7 +512,7 @@ Program {
                 If {
                   Eq { Var(name=target) Lit(value="io.write") }
                   Block {
-                    Call(target=io.write) { Call(target=value.toString) { Var(name=argVal) } }
+                    Call(target=sys.stdout.writeLine) { Call(target=value.toString) { Var(name=argVal) } }
                     Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=e2) } }
                   }
                   Block {
@@ -555,7 +555,7 @@ Program {
                                         If {
                                           Eq { Var(name=target) Lit(value="compiler.format") }
                                           Block {
-                                            Let(name=text) { Call(target=format) { Var(name=argVal) } }
+                                            Let(name=text) { Call(target=format.format) { Var(name=argVal) } }
                                             Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
                                             Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
                                           }

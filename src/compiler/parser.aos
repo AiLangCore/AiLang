@@ -1,5 +1,6 @@
 Program {
   Import(path="../std/str.aos")
+  Import(path="parser/token_cursor.aos")
 
   Let(name=parse.charAt) {
     Fn(params=text,index) {
@@ -146,22 +147,7 @@ Program {
   Let(name=parse.readNameEnd) {
     Fn(params=text,index) {
       Block {
-        Let(name=first) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=32) } Var(name=index) } }
-        Let(name=afterNewline) { Call(target=parse.earlierFoundIndex) { Var(name=first) StringFind { Var(name=text) StringFromCodePoint { Lit(value=10) } Var(name=index) } } }
-        Let(name=afterTab) { Call(target=parse.earlierFoundIndex) { Var(name=afterNewline) StringFind { Var(name=text) StringFromCodePoint { Lit(value=9) } Var(name=index) } } }
-        Let(name=afterReturn) { Call(target=parse.earlierFoundIndex) { Var(name=afterTab) StringFind { Var(name=text) StringFromCodePoint { Lit(value=13) } Var(name=index) } } }
-        Let(name=afterHash) { Call(target=parse.earlierFoundIndex) { Var(name=afterReturn) StringFind { Var(name=text) Lit(value="#") Var(name=index) } } }
-        Let(name=afterOpenParen) { Call(target=parse.earlierFoundIndex) { Var(name=afterHash) StringFind { Var(name=text) Lit(value="(") Var(name=index) } } }
-        Let(name=afterCloseParen) { Call(target=parse.earlierFoundIndex) { Var(name=afterOpenParen) StringFind { Var(name=text) Lit(value=")") Var(name=index) } } }
-        Let(name=afterOpenBrace) { Call(target=parse.earlierFoundIndex) { Var(name=afterCloseParen) StringFind { Var(name=text) Lit(value="{") Var(name=index) } } }
-        Let(name=afterCloseBrace) { Call(target=parse.earlierFoundIndex) { Var(name=afterOpenBrace) StringFind { Var(name=text) Lit(value="}") Var(name=index) } } }
-        Let(name=afterEquals) { Call(target=parse.earlierFoundIndex) { Var(name=afterCloseBrace) StringFind { Var(name=text) Lit(value="=") Var(name=index) } } }
-        Let(name=end) { Call(target=parse.earlierFoundIndex) { Var(name=afterEquals) StringFind { Var(name=text) StringFromCodePoint { Lit(value=34) } Var(name=index) } } }
-        If {
-          Eq { Var(name=end) Lit(value=-1) }
-          Block { Return { StringScalarLength { Var(name=text) } } }
-          Block { Return { Var(name=end) } }
-        }
+        Return { Call(target=parseCursor.readNameEnd) { Var(name=text) Var(name=index) } }
       }
     }
   }

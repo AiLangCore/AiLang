@@ -40,7 +40,7 @@ Program {
                               Eq { Var(name=cmd) Lit(value="init") }
                               Block { Return { Call(target=runNew) { Var(name=args) } } }
                               Block {
-                                Call(target=io.write) { Lit(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
+                                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
                                 Return { Lit(value=1) }
                               }
                             }
@@ -103,11 +103,11 @@ Program {
         If {
           Eq { Var(name=dir) Lit(value="") }
           Block {
-            Call(target=io.write) { Lit(value="Err#err0(code=AIC002 message=\"Missing test directory.\" nodeId=argv)") }
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC002 message=\"Missing test directory.\" nodeId=argv)") }
             Return { Lit(value=1) }
           }
           Block {
-            Call(target=io.write) { Lit(value="Err#err0(code=AIC003 message=\"Self-hosted test command is not implemented yet.\" nodeId=test)") }
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC003 message=\"Self-hosted test command is not implemented yet.\" nodeId=test)") }
             Return { Lit(value=1) }
           }
         }
@@ -122,14 +122,14 @@ Program {
         If {
           Eq { Var(name=name) Lit(value="") }
           Block {
-            Call(target=io.write) { Lit(value="Err#err0(code=AICN001 message=\"Missing project name.\" nodeId=argv)") }
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN001 message=\"Missing project name.\" nodeId=argv)") }
             Return { Lit(value=1) }
           }
           Block {
             If {
               Call(target=bootstrapIo.pathExists) { Var(name=name) }
               Block {
-                Call(target=io.write) { Lit(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
+                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
                 Return { Lit(value=1) }
               }
               Block {
@@ -183,11 +183,11 @@ Program {
                     Call(target=bootstrapIo.writeFile) { Var(name=agentsPath) Call(target=template.buildAgentsDoc) { Var(name=resolvedTemplate) } }
                     Call(target=bootstrapIo.writeFile) { Var(name=gitignorePath) Call(target=template.buildGitIgnore) { Lit(value=0) } }
                     Call(target=bootstrapIo.writeFile) { Var(name=assetsLocaleEnPath) Call(target=template.buildLocaleSeedData) { Lit(value=0) } }
-                    Call(target=io.write) { Lit(value="Ok#ok1(type=string value=\"project-created\")") }
+                    Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"project-created\")") }
                     Return { Lit(value=0) }
                   }
                   Block {
-                    Call(target=io.write) { Lit(value="Err#err0(code=AICN003 message=\"Unknown template.\" nodeId=template)") }
+                    Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN003 message=\"Unknown template.\" nodeId=template)") }
                     Return { Lit(value=1) }
                   }
                 }
@@ -206,7 +206,7 @@ Program {
         If {
           Eq { Var(name=dir) Lit(value="") }
           Block {
-            Call(target=io.write) { Lit(value="Err#err0(code=AICP001 message=\"Missing publish directory.\" nodeId=argv)") }
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICP001 message=\"Missing publish directory.\" nodeId=argv)") }
             Return { Lit(value=1) }
           }
           Block {
@@ -218,7 +218,7 @@ Program {
                 If {
                   Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
                   Block {
-                    Call(target=io.write) { Call(target=format) { Var(name=parsed) } }
+                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
                     Return { Lit(value=1) }
                   }
                   Block {
@@ -235,7 +235,7 @@ Program {
                         If {
                           Eq { NodeKind { Var(name=entryParsed) } Lit(value="Err") }
                           Block {
-                            Call(target=io.write) { Call(target=format) { Var(name=entryParsed) } }
+                            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=entryParsed) } }
                             Return { Lit(value=1) }
                           }
                           Block {
@@ -259,7 +259,7 @@ Program {
                                 If {
                                   Eq { NodeKind { Var(name=modulePaths) } Lit(value="Err") }
                                   Block {
-                                    Call(target=io.write) { Call(target=format) { Var(name=modulePaths) } }
+                                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=modulePaths) } }
                                     Return { Lit(value=1) }
                                   }
                                   Block {
@@ -294,7 +294,7 @@ Program {
                                 If {
                                   Eq { NodeKind { Var(name=publishProgram) } Lit(value="Err") }
                                   Block {
-                                    Call(target=io.write) { Call(target=format) { Var(name=publishProgram) } }
+                                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=publishProgram) } }
                                     Return { Lit(value=1) }
                                   }
                                   Block {
@@ -302,11 +302,11 @@ Program {
                                     If {
                                       Eq { NodeKind { Var(name=publishResult) } Lit(value="Err") }
                                       Block {
-                                        Call(target=io.write) { Call(target=format) { Var(name=publishResult) } }
+                                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=publishResult) } }
                                         Return { Lit(value=1) }
                                       }
                                       Block {
-                                        Call(target=io.write) { Lit(value="Ok#ok1(type=string value=\"publish-complete\")") }
+                                        Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"publish-complete\")") }
                                         Return { Lit(value=0) }
                                       }
                                     }
@@ -316,8 +316,8 @@ Program {
                                 }
                               }
                               Block {
-                                Call(target=io.write) {
-                                  Call(target=format) {
+                                Call(target=sys.stdout.writeLine) {
+                                  Call(target=format.format) {
                                     MakeErr {
                                       Lit(value="runtime_err")
                                       Lit(value="RUN024")
@@ -333,7 +333,7 @@ Program {
                         }
                       }
                       Block {
-                        Call(target=io.write) { Call(target=format) { ChildAt { Var(name=diags) Lit(value=0) } } }
+                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { ChildAt { Var(name=diags) Lit(value=0) } } }
                         Return { Lit(value=1) }
                       }
                     }
@@ -341,7 +341,7 @@ Program {
                 }
               }
               Block {
-                Call(target=io.write) { Lit(value="Err#err0(code=AICP002 message=\"project.aiproj not found.\" nodeId=project)") }
+                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICP002 message=\"project.aiproj not found.\" nodeId=project)") }
                 Return { Lit(value=1) }
               }
             }
@@ -367,11 +367,10 @@ Program {
     Fn(params=args) {
       Block {
         Let(name=parsed) { Call(target=readAndParse) { Lit(value=0) } }
-        Let(name=mode) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
         If {
           Eq { Var(name=mode) Lit(value="--ids") }
-          Block { Call(target=io.write) { Call(target=formatWithIds) { Var(name=parsed) } } }
-          Block { Call(target=io.write) { Call(target=format) { Var(name=parsed) } } }
+          Block { Call(target=sys.stdout.writeLine) { Call(target=formatWithIds) { Var(name=parsed) } } }
+          Block { Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } } }
         }
         Return { Lit(value=0) }
       }
@@ -387,30 +386,20 @@ Program {
         If {
           Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
           Block {
-            Call(target=io.write) { Call(target=format) { Var(name=parsed) } }
+            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
             Return { Lit(value=1) }
           }
           Block {
-            Let(name=diags) {
-              If {
-                If {
-                  Call(target=project.isProjectManifest) { Var(name=parsed) }
-                  Block { Lit(value=true) }
-                  Block { Eq { Var(name=mode) Lit(value="host") } }
-                }
-                Block { Call(target=validate) { Var(name=parsed) } }
-                Block { Call(target=validate) { Var(name=parsed) } }
-              }
-            }
+            Let(name=diags) { Call(target=validate) { Var(name=parsed) } }
             If {
               Eq { ChildCount { Var(name=diags) } Lit(value=0) }
               Block {
-                Call(target=io.write) { Lit(value="Ok#ok0(type=void)") }
+                Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=void)") }
                 Return { Lit(value=0) }
               }
               Block {
-                Call(target=io.write) {
-                  Call(target=format) {
+                Call(target=sys.stdout.writeLine) {
+                  Call(target=format.format) {
                     ChildAt { Var(name=diags) Lit(value=0) }
                   }
                 }
@@ -430,7 +419,7 @@ Program {
         If {
           Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
           Block {
-            Call(target=io.write) { Call(target=format) { Var(name=parsed) } }
+            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
             Return { Lit(value=1) }
           }
           Block {
@@ -453,7 +442,7 @@ Program {
                         Return
                       }
                       Block {
-                        Call(target=io.write) { Call(target=format) { Var(name=value) } }
+                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=value) } }
                         Return
                       }
                     }
@@ -462,8 +451,8 @@ Program {
                 }
               }
               Block {
-                Call(target=io.write) {
-                  Call(target=format) {
+                Call(target=sys.stdout.writeLine) {
+                  Call(target=format.format) {
                     ChildAt { Var(name=diags) Lit(value=0) }
                   }
                 }

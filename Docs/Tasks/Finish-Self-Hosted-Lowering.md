@@ -25,10 +25,49 @@ Already implemented and tested:
 - linked execution for supported arithmetic, calls, locals, parameters,
   comparisons, Match, imports, relocations, native primitives, and syscalls
 
-Current blocker:
+Current self-build frontier:
 
-- `src/compiler/lower.aos` remains a large monolith and the full self-hosted
-  parser gate does not complete within the expected diagnostic window.
+- The recursive self-hosted compiler parser gate passes.
+- The workspace-source CLI reaches structural lowering for the complete
+  compiler module graph.
+- Legacy compiler calls to unqualified `format` and `io.write` have been
+  replaced with the canonical `format.format` export and
+  `sys.stdout.writeLine` syscall.
+- Value-producing `If` expressions inside local bindings now lower through the
+  focused `lower/control/value_if.aos` module. Both branches store into the
+  binding slot and jump to a merge block before the surrounding sequence
+  continues.
+- The workspace-source CLI no longer reports the former `LOWER032` frontier.
+- The authoritative bootstrap probe now runs the generated CLI through the
+  current bundled `aivm-runtime` and keeps its artifact assertions reachable.
+  Earlier direct invocations used a stale installed/native VM or were cut off
+  by a short command window, which made the build appear to exit silently.
+- Identifier scanning now lives in `parser/token_cursor.aos`. It walks only the
+  current token instead of running ten full-tail `StringFind` searches for each
+  name. The compiled parse of the approximately 100-KiB
+  `src/cli/ailang.aos` module fell from more than 150 seconds to about 12
+  seconds on the local tooling runtime.
+- The arenas are already heap-backed, incrementally grown, profile-capped, and
+  compacted. No arena-pressure diagnostic was observed in this iteration, so
+  raising or dynamically removing the profile ceilings is not currently
+  justified.
+- The current frontier has moved to complete multi-module graph compilation.
+  The bootstrap continues beyond entry-module parsing but still had not
+  reached object emission after several minutes.
+- `scripts/probe-selfhost-compiler-phases.sh` now isolates entry parsing, graph
+  discovery, program collection, record collection, validation, and object
+  emission. The current run reaches `phase=graph` and remains there; it does
+  not yet enter program or record collection.
+- Large-entry parser diagnostics show no arena pressure: string high-water is
+  about 156 KiB, bytes high-water about 103 KiB, and node high-water 3,614,
+  with zero string, bytes, or node pressure events. The next optimization must
+  therefore target graph/parser work or module size rather than arena limits.
+
+Reproduce the frontier with:
+
+```sh
+./tools/ailang run src/cli/ailang.aos -- build . --out .tmp/selfhost-source-cli-build
+```
 
 ## Architectural Rules
 
@@ -63,6 +102,7 @@ Existing extracted families include:
 - `lower/constants/locals.aos`
 - `lower/constants/policy.aos`
 - `lower/constants/expressions.aos`
+- `lower/control/value_if.aos`
 
 Next extractions:
 

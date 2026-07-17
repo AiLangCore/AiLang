@@ -102,7 +102,7 @@ Program {
             If {
               Eq { Var(name=k) Lit(value="string") }
               Block {
-                Call(target=io.write) {
+                Call(target=sys.stdout.writeLine) {
                   StrConcat {
                     Lit(value="Ok#ok0(type=string value=\"")
                     StrConcat {
@@ -117,7 +117,7 @@ Program {
                 If {
                   Eq { Var(name=k) Lit(value="int") }
                   Block {
-                    Call(target=io.write) {
+                    Call(target=sys.stdout.writeLine) {
                       StrConcat {
                         Lit(value="Ok#ok0(type=int value=")
                         StrConcat {
@@ -131,8 +131,8 @@ Program {
                   Block {
                     If {
                       AttrValueBool { Var(name=value) Lit(value=0) }
-                      Block { Call(target=io.write) { Lit(value="Ok#ok0(type=bool value=true)") } }
-                      Block { Call(target=io.write) { Lit(value="Ok#ok0(type=bool value=false)") } }
+                      Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=bool value=true)") } }
+                      Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=bool value=false)") } }
                     }
                     Return
                   }
@@ -143,8 +143,8 @@ Program {
           Block {
             If {
               Eq { NodeId { Var(name=value) } Lit(value="void") }
-              Block { Call(target=io.write) { Lit(value="Ok#ok0(type=void)") } }
-              Block { Call(target=io.write) { Lit(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
+              Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=void)") } }
+              Block { Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
             }
             Return
           }

@@ -16,9 +16,11 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-parser-raw-int-value.sh
 ./scripts/test-parser-public-exports.sh
 ./scripts/test-parser-selfhost.sh
+./scripts/test-compiled-parser-large-module.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
 ./scripts/test-selfhost-build-cached-module-programs.sh
 ./scripts/test-structural-cached-module-programs.sh
+./scripts/test-selfhost-compiler-call-targets.sh
 ./scripts/test-parser-selfhost-stdlib-files.sh
 ./scripts/test-no-authored-node-ids.sh
 ./scripts/test-compiler-document-parse.sh
@@ -35,6 +37,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-lower-structural-node-expression-module.sh
 ./scripts/test-lower-structural-native-if-module.sh
 ./scripts/test-lower-structural-native-terminal-let-module.sh
+./scripts/test-lower-structural-value-if-binding-module.sh
 ./scripts/test-lower-structural-nested-native-if-module.sh
 ./scripts/test-lower-structural-native-if-call-module.sh
 ./scripts/test-lower-structural-native-sequence-module.sh

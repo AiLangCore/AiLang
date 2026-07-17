@@ -1,5 +1,5 @@
 Program {
-  Import(path="lower_literals.aos")
+  Import(path="literals.aos")
 
   Let(name=lower.emitMatchConstants) {
     Fn(params=matchNode,index) {

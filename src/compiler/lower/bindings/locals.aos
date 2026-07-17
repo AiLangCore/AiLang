@@ -1,0 +1,188 @@
+Program {
+  Let(name=lower.emitLocalThenReturnBody) {
+    Fn(params=body,params,baseSlot) {
+      Block {
+        Let(name=lastIndex) { Sub { ChildCount { Var(name=body) } Lit(value=1) } }
+        Return { Call(target=lower.emitLocalBindingsAt) { Var(name=body) Var(name=params) Var(name=baseSlot) Lit(value=0) Var(name=lastIndex) Var(name=baseSlot) } }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalBindingsAt) {
+    Fn(params=body,params,baseSlot,index,lastIndex,instructionIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=lastIndex) }
+          Block { Return { Call(target=lower.emitLocalReturn) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) Var(name=instructionIndex) } } }
+          Block {
+            Let(name=localNode) { ChildAt { Var(name=body) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=localNode) } Lit(value="Let") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=localNode) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=localNode) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+                      Block {
+                        Let(name=slot) { Add { Var(name=baseSlot) Var(name=index) } }
+                        Let(name=target) { Call(target=lower.literalConstantTarget) { Var(name=value) } }
+                        Return {
+                          StrConcat {
+                            StrConcat {
+                              Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                              StrConcat { ToString { Var(name=instructionIndex) } StrConcat { Lit(value=" target=\"") StrConcat { Var(name=target) Lit(value="\") Inst(op=\"STORE_LOCAL\" a=") } } }
+                            }
+                            StrConcat {
+                              ToString { Var(name=slot) }
+                              StrConcat { Lit(value=") ") Call(target=lower.emitLocalBindingsAt) { Var(name=body) Var(name=params) Var(name=baseSlot) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) Add { Var(name=instructionIndex) Lit(value=2) } } }
+                            }
+                          }
+                        }
+                      }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=value) } Lit(value="Var") }
+                          Block { Return { Call(target=lower.emitLocalVarBinding) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Var(name=instructionIndex) Var(name=value) } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=value) } Lit(value="Call") }
+                              Block { Return { Call(target=lower.emitLocalCallBinding) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Var(name=instructionIndex) Var(name=value) } } }
+                              Block { Return { Lit(value="Unsupported(reason=\"local-value\") ") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Lit(value="Unsupported(reason=\"local-missing-value\") ") } }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"local-binding\") ") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalVarBinding) {
+    Fn(params=body,params,baseSlot,index,lastIndex,instructionIndex,value) {
+      Block {
+        Let(name=name) { Call(target=lower.getAttr) { Var(name=value) Lit(value="name") Lit(value=0) } }
+        Let(name=parameterSlot) { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Lit(value=0) Lit(value=0) } }
+        Let(name=localSlot) { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Lit(value=0) Var(name=index) } }
+        Let(name=targetSlot) { Add { Var(name=baseSlot) Var(name=index) } }
+        If {
+          Eq { Var(name=parameterSlot) Lit(value=-1) }
+          Block {
+            If {
+              Eq { Var(name=localSlot) Lit(value=-1) }
+              Block { Return { Lit(value="Unsupported(reason=\"unknown-local\") ") } }
+              Block { Return { Call(target=lower.emitLocalCopyBinding) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Var(name=instructionIndex) Var(name=localSlot) Var(name=targetSlot) } } }
+            }
+          }
+          Block { Return { Call(target=lower.emitLocalCopyBinding) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Var(name=instructionIndex) Var(name=parameterSlot) Var(name=targetSlot) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalCopyBinding) {
+    Fn(params=body,params,baseSlot,index,lastIndex,instructionIndex,sourceSlot,targetSlot) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+            StrConcat {
+              ToString { Var(name=sourceSlot) }
+              StrConcat {
+                Lit(value=") Inst(op=\"STORE_LOCAL\" a=")
+                StrConcat {
+                  ToString { Var(name=targetSlot) }
+                  StrConcat { Lit(value=") ") Call(target=lower.emitLocalBindingsAt) { Var(name=body) Var(name=params) Var(name=baseSlot) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) Add { Var(name=instructionIndex) Lit(value=2) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalCallBinding) {
+    Fn(params=body,params,baseSlot,index,lastIndex,instructionIndex,callNode) {
+      Block {
+        Let(name=targetSlot) { Add { Var(name=baseSlot) Var(name=index) } }
+        Let(name=target) { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="target") Lit(value=0) } }
+        If {
+          Eq { ChildCount { Var(name=callNode) } Lit(value=0) }
+          Block { Return { Call(target=lower.emitLocalCallAfterArgs) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Lit(value="") Var(name=target) Var(name=instructionIndex) Var(name=targetSlot) Add { Var(name=instructionIndex) Lit(value=2) } } } }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=callNode) } Lit(value=1) }
+              Block {
+                Let(name=argText) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) ChildAt { Var(name=callNode) Lit(value=0) } Var(name=instructionIndex) } }
+                If {
+                  Eq { Var(name=argText) Lit(value="") }
+                  Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+                  Block { Return { Call(target=lower.emitLocalCallAfterArgs) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) Var(name=argText) Var(name=target) Add { Var(name=instructionIndex) Lit(value=1) } Var(name=targetSlot) Add { Var(name=instructionIndex) Lit(value=3) } } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=callNode) } Lit(value=2) }
+                  Block {
+                    Let(name=firstText) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) ChildAt { Var(name=callNode) Lit(value=0) } Var(name=instructionIndex) } }
+                    Let(name=secondText) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) ChildAt { Var(name=callNode) Lit(value=1) } Add { Var(name=instructionIndex) Lit(value=1) } } }
+                    If {
+                      Eq { Var(name=firstText) Lit(value="") }
+                      Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+                      Block {
+                        If {
+                          Eq { Var(name=secondText) Lit(value="") }
+                          Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+                          Block { Return { Call(target=lower.emitLocalCallAfterArgs) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=index) Var(name=lastIndex) StrConcat { Var(name=firstText) Var(name=secondText) } Var(name=target) Add { Var(name=instructionIndex) Lit(value=2) } Var(name=targetSlot) Add { Var(name=instructionIndex) Lit(value=4) } } } }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Lit(value="Unsupported(reason=\"call-arguments\") ") } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalCallAfterArgs) {
+    Fn(params=body,params,baseSlot,index,lastIndex,argsText,target,callInstruction,targetSlot,nextInstruction) {
+      Block {
+        Return {
+          StrConcat {
+            Var(name=argsText)
+            StrConcat {
+              Lit(value="Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+              StrConcat {
+                ToString { Var(name=callInstruction) }
+                StrConcat {
+                  Lit(value=" targetName=\"")
+                  StrConcat {
+                    StrEscape { Var(name=target) }
+                    StrConcat {
+                      Lit(value="\") Inst(op=\"STORE_LOCAL\" a=")
+                      StrConcat { ToString { Var(name=targetSlot) } StrConcat { Lit(value=") ") Call(target=lower.emitLocalBindingsAt) { Var(name=body) Var(name=params) Var(name=baseSlot) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) Var(name=nextInstruction) } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -62,7 +62,7 @@ Long-term rule:
 - AiVM should interpret compiled AiLang programs, not own language/compiler
   semantics.
 - Native launcher code in AiVM is a temporary bootstrap host until the AiLang
-  CLI is self-hosted. See `Docs/AiLang-Self-Hosting-Rewrite.md`.
+  CLI is self-hosted. See `Docs/Tasks/AiLang-Self-Hosting-Rewrite.md`.
 
 ### AiVectra
 

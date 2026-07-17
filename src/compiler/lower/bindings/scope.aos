@@ -1,5 +1,5 @@
 Program {
-  Import(path="lower_symbols.aos")
+  Import(path="symbols.aos")
 
   Let(name=lower.visibleSlot) {
     Fn(params=body,params,baseSlot,lastIndex,name) {

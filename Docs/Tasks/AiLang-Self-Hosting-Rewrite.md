@@ -1,6 +1,10 @@
-# AiLang Self-Hosting Rewrite
+# Task: AiLang Self-Hosting Rewrite
 
 Status: active migration plan.
+
+Compiler-lowering implementation detail and acceptance criteria live in
+[`Finish-Self-Hosted-Lowering.md`](Finish-Self-Hosted-Lowering.md). This task
+tracks the broader CLI, SDK, packaging, and bootstrap-removal migration.
 
 ## Goal
 
@@ -70,15 +74,23 @@ Current bootstrap status:
   first bytecode-runnable implementations.
 - `init` renders installed `.tpl` files under `templates/projects`. Missing
   template files are an error.
-- `build` has an alpha AiLang command implementation, but source-to-AiBC
-  compilation still delegates to the bootstrap compiler process documented in
-  `Docs/AiLang-Build.md`.
+- The self-hosted compiler pipeline already produces deterministic per-module
+  AiBCO1 objects in `obj/module-<index>.aibco`, writes `obj/app.aibco` as the
+  stable entry object, links `bin/app.aibc1`, and executes supported linked
+  programs on `aivm`.
+- Supported self-hosted lowering includes literals, arithmetic, locals,
+  parameters, calls, comparisons, Match, imports/exports, relocations, native
+  primitives, syscalls, and transitive module symbols.
+- `build` has an alpha AiLang command implementation, but complete arbitrary
+  source-to-AiBC compilation still depends on the bootstrap compiler while the
+  full compiler lowering path is modularized and self-hosted.
 - `clean` is implemented directly in the AiLang-authored CLI.
 - `run` has an alpha AiLang-authored command policy and delegates execution to
-  `aivm` for bytecode or the bootstrap compiler for source/project inputs.
+  `aivm` for bytecode or the bootstrap compiler for unsupported source/project
+  inputs.
 - `publish` has an alpha AiLang-authored command policy and delegates publish
-  execution to the bootstrap compiler until the compiler runs as AiLang
-  bytecode.
+  execution to the bootstrap compiler for unsupported source/project inputs
+  until the compiler runs fully as AiLang bytecode.
 - Production `aivm` binds the process syscalls needed by general-purpose
   AiLang programs, so it can execute the alpha `build` path when the bootstrap
   compiler executable is present.
@@ -203,10 +215,8 @@ native bridge libraries, but not in AiLang command implementation.
   - [x] `build` now emits `obj/bytecode-emitter-report.aos`, writes
     `obj/app.bytecode.aos` for inspection, writes the entry module object to
     `obj/app.aibco`, and writes the linked program to `bin/app.aibc1`
-    directly from AiLang-authored bytecode emission for the supported bootstrap
-    shapes: an entry function containing exactly one integer-literal `Return`,
-    the basic CLI template shape with literal `sys.stdout.writeLine` followed
-    by an integer-literal `Return`, and the current `cli-args` template.
+    through AiLang-authored object and linker code for the currently supported
+    lowering shapes.
   - [x] `build` now emits `obj/build-input-report.aos` and uses generated
     bytecode objects as the runnable build input when the current assembler can
     encode them.
@@ -222,7 +232,13 @@ native bridge libraries, but not in AiLang command implementation.
     allocations that may compact the string arena.
   - [x] Replace the first binary AiBC emission adapter used by `build` for the
     supported bootstrap shapes.
-  - [ ] Generalize binary AiBC emission beyond the bootstrap template shapes.
+  - [ ] Complete modular lowering for all compiler/tool source shapes. The
+    immediate gate is the full self-hosted compiler-file parser and lowering
+    path documented in `Finish-Self-Hosted-Lowering.md`.
+  - [ ] Add automated bootstrap-versus-self-hosted parity checks for
+    diagnostics, AiBCO objects, linked AiBC1 output, and runtime behavior.
+  - [ ] Prove a real project, beginning with Weather, builds and runs without
+    bootstrap compiler fallback.
   - [x] Add package-root-aware graph linking so package imports also flow
     through the AiLang linker artifact path.
 - [ ] Rewrite `tools/aos_frontend.c` in AiLang.

@@ -1,5 +1,5 @@
 Program {
-  Import(path="lower_constants.aos")
+  Import(path="match.aos")
 
   Let(name=lower.emitLocalThenReturnConstants) {
     Fn(params=body) {

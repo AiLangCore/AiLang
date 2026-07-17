@@ -21,6 +21,12 @@ specification files listed above, the normative specification files win.
 Golden tests are conformance evidence. They must not silently define new
 semantics without matching specification updates.
 
+## Informative Authoring Guidance
+
+- `STYLE_AILANG.md` is the canonical AiLang source, module, and project-layout
+  style guide. It governs maintainability and organization but does not define
+  language semantics.
+
 ## Change Control
 
 A behavior change that affects language meaning, validation, bytecode, runtime

@@ -1,0 +1,56 @@
+Program {
+  Let(name=lower.emitReturnNodeAt) {
+    Fn(params=returnNode,instructionIndex) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
+              Block { Return { Call(target=lower.emitReturnExpressionAt) { ChildAt { Var(name=returnNode) Lit(value=0) } Var(name=instructionIndex) } } }
+              Block { Return { Lit(value="Unsupported(reason=\"return-missing-expression\") ") } }
+            }
+          }
+          Block { Return { Lit(value="Unsupported(reason=\"function-body-not-return\") ") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitReturnExpression) {
+    Fn(params=expr) {
+      Block { Return { Call(target=lower.emitReturnExpressionAt) { Var(name=expr) Lit(value=0) } } }
+    }
+  }
+
+  Let(name=lower.emitReturnExpressionAt) {
+    Fn(params=expr,instructionIndex) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=expr) } Lit(value="Match") }
+          Block { Return { Call(target=lower.emitLiteralMatchReturnAt) { Var(name=expr) Var(name=instructionIndex) } } }
+          Block { Return { Call(target=lower.emitReturnExpressionAtCore) { Var(name=expr) Var(name=instructionIndex) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLiteralMatchReturnAt) {
+    Fn(params=matchNode,instructionIndex) {
+      Block {
+        Let(name=selected) { Call(target=lower.literalMatchSelectedExpression) { Var(name=matchNode) } }
+        If {
+          Eq { NodeKind { Var(name=selected) } Lit(value="Block") }
+          Block { Return { Lit(value="Unsupported(reason=\"match-lowering\") ") } }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=selected) } Lit(value="Lit") }
+              Block { Return { Call(target=lower.emitLiteralReturnAt) { Var(name=selected) Var(name=instructionIndex) } } }
+              Block { Return { Call(target=lower.emitReturnExpressionAtCore) { Var(name=selected) Var(name=instructionIndex) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

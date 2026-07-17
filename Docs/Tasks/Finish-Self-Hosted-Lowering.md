@@ -52,7 +52,12 @@ Existing extracted families include:
 
 - `lower/bindings/symbols.aos`
 - `lower/bindings/scope.aos`
+- `lower/bindings/parameters.aos`
 - `lower/bindings/locals.aos`
+- `lower/bindings/calls.aos`
+- `lower/returns/expressions.aos`
+- `lower/returns/routing.aos`
+- `lower/returns/parameters.aos`
 - `lower/constants/literals.aos`
 - `lower/constants/match.aos`
 - `lower/constants/locals.aos`

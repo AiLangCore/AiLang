@@ -1,0 +1,89 @@
+Program {
+  Let(name=lower.emitReturnExpressionWithParamsCore) {
+    Fn(params=expr,params,instructionIndex) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=expr) } Lit(value="Var") }
+          Block {
+            Let(name=name) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="name") Lit(value=0) } }
+            Let(name=slot) { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Lit(value=0) Lit(value=0) } }
+            If {
+              Eq { Var(name=slot) Lit(value=-1) }
+              Block { Return { Lit(value="Unsupported(reason=\"unknown-local\") ") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+                    StrConcat { ToString { Var(name=slot) } Lit(value=") Inst(op=\"RETURN\") ") }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=expr) } Lit(value="Call") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=expr) } Lit(value=1) }
+                  Block {
+                    Let(name=argument) { ChildAt { Var(name=expr) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=argument) } Lit(value="Var") }
+                      Block { Return { Call(target=lower.emitReturnCallWithParameter) { Var(name=expr) Var(name=params) Var(name=instructionIndex) } } }
+                      Block { Return { Call(target=lower.emitReturnExpressionAt) { Var(name=expr) Var(name=instructionIndex) } } }
+                    }
+                  }
+                  Block { Return { Call(target=lower.emitReturnExpressionAt) { Var(name=expr) Var(name=instructionIndex) } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=expr) } Lit(value="Add") }
+                  Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="ADD_INT") } } }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=expr) } Lit(value="Sub") }
+                      Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="SUB_NUM") } } }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=expr) } Lit(value="Mul") }
+                          Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="MUL_NUM") } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=expr) } Lit(value="Div") }
+                              Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="DIV_NUM") } } }
+                              Block {
+                                If {
+                                  Eq { NodeKind { Var(name=expr) } Lit(value="Mod") }
+                                  Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="MOD_NUM") } } }
+                                  Block {
+                                    If {
+                                      Eq { NodeKind { Var(name=expr) } Lit(value="Eq") }
+                                      Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="EQ_INT") } } }
+                                      Block {
+                                        If {
+                                          Eq { NodeKind { Var(name=expr) } Lit(value="Lt") }
+                                          Block { Return { Call(target=lower.emitParameterAdd) { Var(name=expr) Var(name=params) Var(name=instructionIndex) Lit(value="LT_NUM") } } }
+                                          Block { Return { Call(target=lower.emitReturnExpressionAt) { Var(name=expr) Var(name=instructionIndex) } } }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

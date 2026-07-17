@@ -1,0 +1,194 @@
+Program {
+
+  Let(name=lower.emitScopedAdd) {
+    Fn(params=body,params,baseSlot,lastIndex,expr,instructionIndex,op) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=expr) } Lit(value=2) }
+          Block {
+            Let(name=left) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) ChildAt { Var(name=expr) Lit(value=0) } Var(name=instructionIndex) } }
+            Let(name=right) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) ChildAt { Var(name=expr) Lit(value=1) } Add { Var(name=instructionIndex) Lit(value=1) } } }
+            If {
+              Eq { Var(name=left) Lit(value="") }
+              Block { Return { Lit(value="Unsupported(reason=\"add-operand\") ") } }
+              Block {
+                If {
+                  Eq { Var(name=right) Lit(value="") }
+                  Block { Return { Lit(value="Unsupported(reason=\"add-operand\") ") } }
+                  Block { Return { StrConcat { Var(name=left) StrConcat { Var(name=right) StrConcat { Lit(value="Inst(op=\"") StrConcat { Var(name=op) Lit(value="\" a=0) Inst(op=\"RETURN\") ") } } } } } }
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value="Unsupported(reason=\"add-arity\") ") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalReturnCall) {
+    Fn(params=body,params,baseSlot,lastIndex,instructionIndex,expr) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=expr) } Lit(value=1) }
+          Block {
+            Let(name=argument) { ChildAt { Var(name=expr) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=argument) } Lit(value="Var") }
+              Block {
+                Let(name=name) { Call(target=lower.getAttr) { Var(name=argument) Lit(value="name") Lit(value=0) } }
+                Let(name=parameterSlot) { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Lit(value=0) Lit(value=0) } }
+                Let(name=localSlot) { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Lit(value=0) Var(name=lastIndex) } }
+                Let(name=target) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } }
+                If {
+                  Eq { Var(name=parameterSlot) Lit(value=-1) }
+                  Block {
+                    If {
+                      Eq { Var(name=localSlot) Lit(value=-1) }
+                      Block { Return { Lit(value="Unsupported(reason=\"unknown-local\") ") } }
+                      Block { Return { Call(target=lower.emitLoadedCall) { Var(name=localSlot) Var(name=target) Var(name=instructionIndex) } } }
+                    }
+                  }
+                  Block { Return { Call(target=lower.emitLoadedCall) { Var(name=parameterSlot) Var(name=target) Var(name=instructionIndex) } } }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+            }
+          }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=expr) } Lit(value=2) }
+              Block { Return { Call(target=lower.emitTwoLocalReturnCall) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) Var(name=instructionIndex) Var(name=expr) } } }
+              Block { Return { Lit(value="Unsupported(reason=\"call-arguments\") ") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitTwoLocalReturnCall) {
+    Fn(params=body,params,baseSlot,lastIndex,instructionIndex,expr) {
+      Block {
+        Let(name=first) { ChildAt { Var(name=expr) Lit(value=0) } }
+        Let(name=second) { ChildAt { Var(name=expr) Lit(value=1) } }
+        Let(name=firstText) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) Var(name=first) Var(name=instructionIndex) } }
+        Let(name=secondText) { Call(target=lower.emitScopedArgument) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) Var(name=second) Add { Var(name=instructionIndex) Lit(value=1) } } }
+        If {
+          Eq { Var(name=firstText) Lit(value="") }
+          Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+          Block {
+            If {
+              Eq { Var(name=secondText) Lit(value="") }
+              Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Var(name=firstText)
+                    StrConcat { Var(name=secondText) Call(target=lower.emitCallTail) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } Add { Var(name=instructionIndex) Lit(value=2) } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitScopedArgument) {
+    Fn(params=body,params,baseSlot,lastIndex,argument,instructionIndex) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=argument) } Lit(value="Lit") }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=argument) Lit(value=0) } Lit(value="int") }
+              Block {
+                Return {
+                  StrConcat {
+                    Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                    StrConcat { ToString { Var(name=instructionIndex) } StrConcat { Lit(value=" target=\"int:") StrConcat { ToString { AttrValueInt { Var(name=argument) Lit(value=0) } } Lit(value="\") ") } } }
+                  }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=argument) } Lit(value="Var") }
+              Block {
+                Let(name=name) { Call(target=lower.getAttr) { Var(name=argument) Lit(value="name") Lit(value=0) } }
+                Let(name=slot) { Call(target=lower.visibleSlot) { Var(name=body) Var(name=params) Var(name=baseSlot) Var(name=lastIndex) Var(name=name) } }
+                If {
+                  Eq { Var(name=slot) Lit(value=-1) }
+                  Block { Return { Lit(value="") } }
+                  Block { Return { StrConcat { Lit(value="Inst(op=\"LOAD_LOCAL\" a=") StrConcat { ToString { Var(name=slot) } Lit(value=") ") } } } }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitCallTail) {
+    Fn(params=target,instructionIndex) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+            StrConcat { ToString { Var(name=instructionIndex) } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitTwoLoadedCall) {
+    Fn(params=firstSlot,secondSlot,target,instructionIndex) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+            StrConcat {
+              ToString { Var(name=firstSlot) }
+              StrConcat {
+                Lit(value=") Inst(op=\"LOAD_LOCAL\" a=")
+                StrConcat {
+                  ToString { Var(name=secondSlot) }
+                  StrConcat {
+                    Lit(value=") Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+                    StrConcat { ToString { Add { Var(name=instructionIndex) Lit(value=2) } } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLoadedCall) {
+    Fn(params=slot,target,instructionIndex) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+            StrConcat {
+              ToString { Var(name=slot) }
+              StrConcat {
+                Lit(value=") Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+                StrConcat { ToString { Add { Var(name=instructionIndex) Lit(value=1) } } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -295,15 +295,15 @@ Program {
               Block {
                 If {
                   Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
-                  Block { Return { Call(target=objectLinker.inst) { Lit(value=6) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                  Block { Return { Call(target=objectLinker.inst) { Lit(value=6) Call(target=parse.parseIntValue) { Var(name=a) } } } }
                   Block {
                     If {
                       Eq { Var(name=op) Lit(value="STORE_LOCAL") }
-                      Block { Return { Call(target=objectLinker.inst) { Lit(value=5) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                      Block { Return { Call(target=objectLinker.inst) { Lit(value=5) Call(target=parse.parseIntValue) { Var(name=a) } } } }
                       Block {
                         If {
                           Eq { Var(name=op) Lit(value="CALL_SYS") }
-                          Block { Return { Call(target=objectLinker.inst) { Lit(value=22) Call(target=parse.parseIntToken) { Var(name=a) } } } }
+                          Block { Return { Call(target=objectLinker.inst) { Lit(value=22) Call(target=parse.parseIntValue) { Var(name=a) } } } }
                           Block {
                             If {
                               Eq { Var(name=op) Lit(value="POP") }
@@ -467,7 +467,7 @@ Program {
     Fn(params=target) {
       Block {
         Let(name=valueText) { StringSlice { Var(name=target) Lit(value=4) Lit(value=2147483647) } }
-        Return { Call(target=objectLinker.cat2) { BytesFromByte { Lit(value=1) } BytesI64LE { Call(target=parse.parseIntToken) { Var(name=valueText) } } } }
+        Return { Call(target=objectLinker.cat2) { BytesFromByte { Lit(value=1) } BytesI64LE { Call(target=parse.parseIntValue) { Var(name=valueText) } } } }
       }
     }
   }

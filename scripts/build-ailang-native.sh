@@ -74,6 +74,10 @@ mkdir -p "${OUT_DIR}"
 CC_BIN="${CC:-cc}"
 CC_EXTRA=()
 LD_EXTRA=()
+NATIVE_COMPILE_FLAGS=(-O2)
+if [[ "${AILANG_NATIVE_ASAN:-0}" == "1" ]]; then
+  NATIVE_COMPILE_FLAGS=(-O0 -g -fsanitize=address -fno-omit-frame-pointer)
+fi
 UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
 
 configure_linux_tls() {
@@ -154,6 +158,7 @@ VM_CORE_SOURCES=(
   "${NATIVE_SRC_DIR}/aivm_vm_lifecycle.c"
   "${NATIVE_SRC_DIR}/aivm_vm_node.c"
   "${NATIVE_SRC_DIR}/aivm_vm_node_create.c"
+  "${NATIVE_SRC_DIR}/aivm_vm_node_builder.c"
   "${NATIVE_SRC_DIR}/aivm_vm_node_gc.c"
   "${NATIVE_SRC_DIR}/aivm_vm_profile.c"
   "${NATIVE_SRC_DIR}/aivm_vm_stack.c"
@@ -193,7 +198,7 @@ BUILD_METADATA_DEFINES=(
   "-DAILANG_BUILD_COMMIT=\"${AILANG_BUILD_COMMIT}\""
 )
 
-"${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
+"${CC_BIN}" -std=c17 -Wall -Wextra -Werror "${NATIVE_COMPILE_FLAGS[@]}" -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
   "${BUILD_METADATA_DEFINES[@]}" \
   -I "${NATIVE_INCLUDE}" \
   -I "${NATIVE_SRC_DIR}/ailang_cli" \
@@ -202,7 +207,7 @@ BUILD_METADATA_DEFINES=(
   -o "${WRAPPER_PATH}"
 chmod +x "${WRAPPER_PATH}"
 
-"${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
+"${CC_BIN}" -std=c17 -Wall -Wextra -Werror "${NATIVE_COMPILE_FLAGS[@]}" -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
   "${BUILD_METADATA_DEFINES[@]}" \
   -I "${NATIVE_INCLUDE}" \
   -I "${NATIVE_SRC_DIR}/ailang_cli" \
@@ -213,7 +218,7 @@ chmod +x "${RUNTIME_PATH}"
 
 if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
   if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" && "${AILANG_LINUX_UI_BACKEND:-}" != "framebuffer" ]]; then
-    "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
+    "${CC_BIN}" -std=c17 -Wall -Wextra -Werror "${NATIVE_COMPILE_FLAGS[@]}" -DAIRUN_UI_HOST_EXTERNAL=1 -DAIRUN_MINIMAL_RUNTIME=1 "${CC_EXTRA[@]}" \
       "${BUILD_METADATA_DEFINES[@]}" \
       -I "${NATIVE_INCLUDE}" \
       -I "${NATIVE_SRC_DIR}/ailang_cli" \
@@ -228,7 +233,7 @@ if [[ "${TARGET_PLATFORM}" == "linux" ]]; then
     chmod +x "${AIVECTRA_X11_RUNTIME_PATH}"
   fi
 
-  "${CC_BIN}" -std=c17 -Wall -Wextra -Werror -O2 -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
+  "${CC_BIN}" -std=c17 -Wall -Wextra -Werror "${NATIVE_COMPILE_FLAGS[@]}" -DAIRUN_UI_HOST_EXTERNAL=1 "${CC_EXTRA[@]}" \
     "${BUILD_METADATA_DEFINES[@]}" \
     -I "${NATIVE_INCLUDE}" \
     -I "${NATIVE_SRC_DIR}/ailang_cli" \

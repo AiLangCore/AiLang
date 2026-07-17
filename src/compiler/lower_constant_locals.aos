@@ -1,0 +1,115 @@
+Program {
+  Import(path="lower_constants.aos")
+
+  Let(name=lower.emitLocalThenReturnConstants) {
+    Fn(params=body) {
+      Block {
+        Let(name=lastIndex) { Sub { ChildCount { Var(name=body) } Lit(value=1) } }
+        Let(name=returnNode) { ChildAt { Var(name=body) Var(name=lastIndex) } }
+        Return { StrConcat { Call(target=lower.emitLocalConstantsAt) { Var(name=body) Lit(value=0) Var(name=lastIndex) } Call(target=lower.emitReturnArgumentConstants) { Var(name=returnNode) } } }
+      }
+    }
+  }
+
+  Let(name=lower.emitReturnArgumentConstants) {
+    Fn(params=returnNode) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
+              Block {
+                Let(name=expr) { ChildAt { Var(name=returnNode) Lit(value=0) } }
+                If {
+                  Eq { NodeKind { Var(name=expr) } Lit(value="Call") }
+                  Block { Return { Call(target=lower.emitCallArgumentConstantsAt) { Var(name=expr) Lit(value=0) } } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitCallArgumentConstantsAt) {
+    Fn(params=callNode,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=callNode) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=argument) { ChildAt { Var(name=callNode) Var(name=index) } }
+            Let(name=tail) { Call(target=lower.emitCallArgumentConstantsAt) { Var(name=callNode) Add { Var(name=index) Lit(value=1) } } }
+            If {
+              Eq { NodeKind { Var(name=argument) } Lit(value="Lit") }
+              Block { Return { StrConcat { Call(target=lower.emitIntLiteralConstant) { Var(name=argument) } Var(name=tail) } } }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=argument) } Lit(value="Var") }
+                  Block { Return { Var(name=tail) } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLocalConstantsAt) {
+    Fn(params=body,index,lastIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=lastIndex) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=localNode) { ChildAt { Var(name=body) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=localNode) } Lit(value="Let") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=localNode) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=localNode) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+                      Block {
+                        Let(name=constant) { Call(target=lower.emitIntLiteralConstant) { Var(name=value) } }
+                        If {
+                          Eq { Var(name=constant) Lit(value="") }
+                          Block { Return { Lit(value="") } }
+                          Block { Return { StrConcat { Var(name=constant) Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } } }
+                        }
+                      }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=value) } Lit(value="Var") }
+                          Block { Return { Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=value) } Lit(value="Call") }
+                              Block { Return { StrConcat { Call(target=lower.emitCallArgumentConstantsAt) { Var(name=value) Lit(value=0) } Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } } }
+                              Block { Return { Lit(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

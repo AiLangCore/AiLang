@@ -1,0 +1,104 @@
+Program {
+  Let(name=lower.literalMatchBlock) {
+    Fn(params=matchNode,subject,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
+          Block { Return { MakeBlock { Lit(value="no-match") } } }
+          Block {
+            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=arm) } Lit(value="Case") }
+              Block {
+                Let(name=label) { ChildAt { Var(name=arm) Lit(value=0) } }
+                If {
+                  Call(target=lower.literalValuesEqual) { Var(name=subject) Var(name=label) }
+                  Block { Return { ChildAt { Var(name=arm) Lit(value=1) } } }
+                  Block { Return { Call(target=lower.literalMatchBlock) { Var(name=matchNode) Var(name=subject) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=arm) } Lit(value="Default") }
+                  Block { Return { ChildAt { Var(name=arm) Lit(value=0) } } }
+                  Block { Return { MakeBlock { Lit(value="invalid-match-arm") } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.literalMatchSelectedExpression) {
+    Fn(params=matchNode) {
+      Block {
+        Let(name=subject) { ChildAt { Var(name=matchNode) Lit(value=0) } }
+        If {
+          Eq { NodeKind { Var(name=subject) } Lit(value="Lit") }
+          Block {
+            Let(name=block) { Call(target=lower.literalMatchBlock) { Var(name=matchNode) Var(name=subject) Lit(value=1) } }
+            If {
+              Eq { ChildCount { Var(name=block) } Lit(value=1) }
+              Block { Return { ChildAt { Var(name=block) Lit(value=0) } } }
+              Block { Return { MakeBlock { Lit(value="unsupported-match") } } }
+            }
+          }
+          Block { Return { MakeBlock { Lit(value="unsupported-match-subject") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.literalConstantTarget) {
+    Fn(params=value) {
+      Block {
+        Let(name=kind) { AttrValueKind { Var(name=value) Lit(value=0) } }
+        If {
+          Eq { Var(name=kind) Lit(value="int") }
+          Block { Return { StrConcat { Lit(value="int:") ToString { AttrValueInt { Var(name=value) Lit(value=0) } } } } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="bool") }
+              Block {
+                If {
+                  AttrValueBool { Var(name=value) Lit(value=0) }
+                  Block { Return { Lit(value="bool:true") } }
+                  Block { Return { Lit(value="bool:false") } }
+                }
+              }
+              Block { Return { StrConcat { Lit(value="string:") StrEscape { AttrValueString { Var(name=value) Lit(value=0) } } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.literalValuesEqual) {
+    Fn(params=left,right) {
+      Block {
+        Let(name=leftKind) { AttrValueKind { Var(name=left) Lit(value=0) } }
+        Let(name=rightKind) { AttrValueKind { Var(name=right) Lit(value=0) } }
+        If {
+          Eq { Var(name=leftKind) Var(name=rightKind) }
+          Block {
+            If {
+              Eq { Var(name=leftKind) Lit(value="int") }
+              Block { Return { Eq { AttrValueInt { Var(name=left) Lit(value=0) } AttrValueInt { Var(name=right) Lit(value=0) } } } }
+              Block {
+                If {
+                  Eq { Var(name=leftKind) Lit(value="bool") }
+                  Block { Return { Eq { AttrValueBool { Var(name=left) Lit(value=0) } AttrValueBool { Var(name=right) Lit(value=0) } } } }
+                  Block { Return { Eq { AttrValueString { Var(name=left) Lit(value=0) } AttrValueString { Var(name=right) Lit(value=0) } } } }
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+}

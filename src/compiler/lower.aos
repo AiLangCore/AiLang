@@ -1,6 +1,13 @@
 Program {
   Import(path="block_builder.aos")
   Import(path="block_linker.aos")
+  Import(path="lower_constant_expressions.aos")
+  Import(path="lower_constant_policy.aos")
+  Import(path="lower_constant_locals.aos")
+  Import(path="lower_constants.aos")
+  Import(path="lower_literals.aos")
+  Import(path="lower_scope.aos")
+  Import(path="lower_symbols.aos")
   Export(name=lower.collectFunctionRecords)
   Export(name=lower.emitObjectConstants)
   Export(name=lower.emitObjectFunctionBody)
@@ -252,6 +259,10 @@ Program {
     Fn(params=kind) {
       Block {
         If {
+          Eq { Var(name=kind) Lit(value="FinishNodeBuilder") }
+          Block { Return { Lit(value="NODE_BUILDER_FINISH") } }
+          Block {
+        If {
           Eq { Var(name=kind) Lit(value="MakeBlock") }
           Block { Return { Lit(value="MAKE_BLOCK") } }
           Block {
@@ -310,6 +321,8 @@ Program {
             }
           }
         }
+          }
+        }
       }
     }
   }
@@ -338,6 +351,10 @@ Program {
                       Block { Return { Lit(value="MAKE_LIT_BOOL") } }
                       Block {
                         If {
+                          Eq { Var(name=kind) Lit(value="MakeNodeBuilder") }
+                          Block { Return { Lit(value="NODE_BUILDER_NEW") } }
+                          Block {
+                        If {
                           Eq { Var(name=kind) Lit(value="MakeNode") }
                           Block { Return { Lit(value="MAKE_NODE") } }
                           Block {
@@ -352,6 +369,8 @@ Program {
                                 }
                               }
                             }
+                          }
+                        }
                           }
                         }
                       }
@@ -372,6 +391,14 @@ Program {
     Fn(params=kind) {
       Block {
         If {
+          Eq { Var(name=kind) Lit(value="BuilderAppendAttr") }
+          Block { Return { Lit(value="NODE_BUILDER_APPEND_ATTR") } }
+          Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BuilderAppendChild") }
+          Block { Return { Lit(value="NODE_BUILDER_APPEND_CHILD") } }
+          Block {
+        If {
           Eq { Var(name=kind) Lit(value="AppendAttr") }
           Block { Return { Lit(value="APPEND_ATTR") } }
           Block {
@@ -386,6 +413,10 @@ Program {
                 }
               }
             }
+          }
+        }
+          }
+        }
           }
         }
       }
@@ -2296,147 +2327,6 @@ Program {
     }
   }
 
-  Let(name=lower.collectFunctionRecords) {
-    Fn(params=program,modulePath) {
-      Block {
-        Return {
-          Call(target=lower.collectAt) {
-            Var(name=program)
-            Var(name=modulePath)
-            Lit(value=0)
-            MakeBlock { Lit(value="functions") }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.collectAt) {
-    Fn(params=program,modulePath,index,records) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=program) } }
-          Block { Return { Var(name=records) } }
-          Block {
-            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
-            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
-            If {
-              Eq { NodeKind { Var(name=child) } Lit(value="Let") }
-              Block {
-                If {
-                  Eq { ChildCount { Var(name=child) } Lit(value=1) }
-                  Block {
-                    Let(name=value) { ChildAt { Var(name=child) Lit(value=0) } }
-                    If {
-                      Eq { NodeKind { Var(name=value) } Lit(value="Fn") }
-                      Block {
-                        Let(name=name) { Call(target=lower.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
-                        Let(name=params) { Call(target=lower.getAttr) { Var(name=value) Lit(value="params") Lit(value=0) } }
-                        Let(name=body) { ChildAt { Var(name=value) Lit(value=0) } }
-                        Let(name=recordBase) { MakeBlock { Lit(value="function") } }
-                        Let(name=recordWithModule) { AppendChild { Var(name=recordBase) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
-                        Let(name=recordWithName) { AppendChild { Var(name=recordWithModule) MakeLitString { Lit(value="name") Var(name=name) } } }
-                        Let(name=recordWithSymbol) {
-                          AppendChild {
-                            Var(name=recordWithName)
-                            MakeLitString {
-                              Lit(value="symbol")
-                              StrConcat { Var(name=modulePath) StrConcat { Lit(value="::") Var(name=name) } }
-                            }
-                          }
-                        }
-                        Let(name=recordWithParams) { AppendChild { Var(name=recordWithSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
-                        Let(name=record) { AppendChild { Var(name=recordWithParams) Var(name=body) } }
-                        Return {
-                          Call(target=lower.collectAt) {
-                            Var(name=program)
-                            Var(name=modulePath)
-                            Var(name=nextIndex)
-                            AppendChild { Var(name=records) Var(name=record) }
-                          }
-                        }
-                      }
-                      Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
-                    }
-                  }
-                  Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
-                }
-              }
-              Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitObjectConstants) {
-    Fn(params=records,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=records) } }
-          Block { Return { Lit(value="") } }
-          Block {
-            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
-            Let(name=tail) { Call(target=lower.emitObjectConstants) { Var(name=records) Add { Var(name=index) Lit(value=1) } } }
-            Let(name=constant) { Call(target=lower.emitRecordConstants) { Var(name=record) } }
-            Return { StrConcat { Var(name=constant) Var(name=tail) } }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitRecordConstants) {
-    Fn(params=record) {
-      Block { Return { Call(target=lower.emitBodyConstants) { ChildAt { Var(name=record) Lit(value=4) } } } }
-    }
-  }
-
-  Let(name=lower.emitBodyConstants) {
-    Fn(params=body) {
-      Block {
-        If {
-          Eq { ChildCount { Var(name=body) } Lit(value=1) }
-          Block { Return { Call(target=lower.emitReturnConstants) { Var(name=body) } } }
-          Block {
-            If {
-              Lt { Lit(value=1) ChildCount { Var(name=body) } }
-              Block {
-                Let(name=first) { ChildAt { Var(name=body) Lit(value=0) } }
-                If {
-                  Eq { NodeKind { Var(name=first) } Lit(value="Let") }
-                  Block { Return { Call(target=lower.emitLocalThenReturnConstants) { Var(name=body) } } }
-                  Block { Return { Call(target=lower.emitStdoutThenReturnConstants) { Var(name=body) } } }
-                }
-              }
-              Block { Return { Lit(value="") } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitReturnConstants) {
-    Fn(params=body) {
-      Block {
-        Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
-        If {
-          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
-          Block {
-            If {
-              Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
-              Block { Return { Call(target=lower.emitExpressionIntConstant) { ChildAt { Var(name=returnNode) Lit(value=0) } } } }
-              Block { Return { Lit(value="") } }
-            }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
   Let(name=lower.emitExpressionIntConstantCore) {
     Fn(params=expr) {
       Block {
@@ -2546,393 +2436,6 @@ Program {
               }
             }
           }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitExpressionIntConstant) {
-    Fn(params=expr) {
-      Block {
-        If {
-          Eq { NodeKind { Var(name=expr) } Lit(value="Match") }
-          Block { Return { Call(target=lower.emitMatchConstants) { Var(name=expr) Lit(value=1) } } }
-          Block { Return { Call(target=lower.emitExpressionIntConstantCore) { Var(name=expr) } } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.literalMatchBlock) {
-    Fn(params=matchNode,subject,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
-          Block { Return { MakeBlock { Lit(value="no-match") } } }
-          Block {
-            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
-            If {
-              Eq { NodeKind { Var(name=arm) } Lit(value="Case") }
-              Block {
-                Let(name=label) { ChildAt { Var(name=arm) Lit(value=0) } }
-                If {
-                  Call(target=lower.literalValuesEqual) { Var(name=subject) Var(name=label) }
-                  Block { Return { ChildAt { Var(name=arm) Lit(value=1) } } }
-                  Block { Return { Call(target=lower.literalMatchBlock) { Var(name=matchNode) Var(name=subject) Add { Var(name=index) Lit(value=1) } } } }
-                }
-              }
-              Block {
-                If {
-                  Eq { NodeKind { Var(name=arm) } Lit(value="Default") }
-                  Block { Return { ChildAt { Var(name=arm) Lit(value=0) } } }
-                  Block { Return { MakeBlock { Lit(value="invalid-match-arm") } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.literalMatchSelectedExpression) {
-    Fn(params=matchNode) {
-      Block {
-        Let(name=subject) { ChildAt { Var(name=matchNode) Lit(value=0) } }
-        If {
-          Eq { NodeKind { Var(name=subject) } Lit(value="Lit") }
-          Block {
-            Let(name=block) { Call(target=lower.literalMatchBlock) { Var(name=matchNode) Var(name=subject) Lit(value=1) } }
-            If {
-              Eq { ChildCount { Var(name=block) } Lit(value=1) }
-              Block { Return { ChildAt { Var(name=block) Lit(value=0) } } }
-              Block { Return { MakeBlock { Lit(value="unsupported-match") } } }
-            }
-          }
-          Block { Return { MakeBlock { Lit(value="unsupported-match-subject") } } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitMatchConstants) {
-    Fn(params=matchNode,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
-          Block { Return { Lit(value="") } }
-          Block {
-            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
-            Let(name=tail) { Call(target=lower.emitMatchConstants) { Var(name=matchNode) Add { Var(name=index) Lit(value=1) } } }
-            If {
-              Eq { NodeKind { Var(name=arm) } Lit(value="Case") }
-              Block {
-                Let(name=label) { ChildAt { Var(name=arm) Lit(value=0) } }
-                Let(name=body) { ChildAt { Var(name=arm) Lit(value=1) } }
-                If {
-                  Eq { ChildCount { Var(name=body) } Lit(value=1) }
-                  Block { Return { StrConcat { Call(target=lower.emitLiteralConstant) { Var(name=label) } StrConcat { Call(target=lower.emitExpressionIntConstantCore) { ChildAt { Var(name=body) Lit(value=0) } } Var(name=tail) } } } }
-                  Block { Return { Var(name=tail) } }
-                }
-              }
-              Block {
-                If {
-                  Eq { NodeKind { Var(name=arm) } Lit(value="Default") }
-                  Block {
-                    Let(name=body) { ChildAt { Var(name=arm) Lit(value=0) } }
-                    If {
-                      Eq { ChildCount { Var(name=body) } Lit(value=1) }
-                      Block { Return { StrConcat { Call(target=lower.emitExpressionIntConstantCore) { ChildAt { Var(name=body) Lit(value=0) } } Var(name=tail) } } }
-                      Block { Return { Var(name=tail) } }
-                    }
-                  }
-                  Block { Return { Var(name=tail) } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitIntLiteralConstant) {
-    Fn(params=value) {
-      Block {
-        If {
-          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
-          Block {
-            If {
-              Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="int") }
-              Block { Return { StrConcat { Lit(value="Const(kind=\"int\" value=") StrConcat { ToString { AttrValueInt { Var(name=value) Lit(value=0) } } Lit(value=") ") } } } }
-              Block { Return { Lit(value="") } }
-            }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.literalConstantTarget) {
-    Fn(params=value) {
-      Block {
-        Let(name=kind) { AttrValueKind { Var(name=value) Lit(value=0) } }
-        If {
-          Eq { Var(name=kind) Lit(value="int") }
-          Block { Return { StrConcat { Lit(value="int:") ToString { AttrValueInt { Var(name=value) Lit(value=0) } } } } }
-          Block {
-            If {
-              Eq { Var(name=kind) Lit(value="bool") }
-              Block {
-                If {
-                  AttrValueBool { Var(name=value) Lit(value=0) }
-                  Block { Return { Lit(value="bool:true") } }
-                  Block { Return { Lit(value="bool:false") } }
-                }
-              }
-              Block { Return { StrConcat { Lit(value="string:") StrEscape { AttrValueString { Var(name=value) Lit(value=0) } } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitLiteralConstant) {
-    Fn(params=value) {
-      Block {
-        If {
-          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
-          Block {
-            Let(name=target) { Call(target=lower.literalConstantTarget) { Var(name=value) } }
-            Return { StrConcat { Lit(value="Const(kind=\"literal\" value=\"") StrConcat { Var(name=target) Lit(value="\") ") } } }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.literalValuesEqual) {
-    Fn(params=left,right) {
-      Block {
-        Let(name=leftKind) { AttrValueKind { Var(name=left) Lit(value=0) } }
-        Let(name=rightKind) { AttrValueKind { Var(name=right) Lit(value=0) } }
-        If {
-          Eq { Var(name=leftKind) Var(name=rightKind) }
-          Block {
-            If {
-              Eq { Var(name=leftKind) Lit(value="int") }
-              Block { Return { Eq { AttrValueInt { Var(name=left) Lit(value=0) } AttrValueInt { Var(name=right) Lit(value=0) } } } }
-              Block {
-                If {
-                  Eq { Var(name=leftKind) Lit(value="bool") }
-                  Block { Return { Eq { AttrValueBool { Var(name=left) Lit(value=0) } AttrValueBool { Var(name=right) Lit(value=0) } } } }
-                  Block { Return { Eq { AttrValueString { Var(name=left) Lit(value=0) } AttrValueString { Var(name=right) Lit(value=0) } } } }
-                }
-              }
-            }
-          }
-          Block { Return { Lit(value=false) } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitLocalThenReturnConstants) {
-    Fn(params=body) {
-      Block {
-        Let(name=lastIndex) { Sub { ChildCount { Var(name=body) } Lit(value=1) } }
-        Let(name=returnNode) { ChildAt { Var(name=body) Var(name=lastIndex) } }
-        Return {
-          StrConcat {
-            Call(target=lower.emitLocalConstantsAt) { Var(name=body) Lit(value=0) Var(name=lastIndex) }
-            Call(target=lower.emitReturnArgumentConstants) { Var(name=returnNode) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitReturnArgumentConstants) {
-    Fn(params=returnNode) {
-      Block {
-        If {
-          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
-          Block {
-            If {
-              Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
-              Block {
-                Let(name=expr) { ChildAt { Var(name=returnNode) Lit(value=0) } }
-                If {
-                  Eq { NodeKind { Var(name=expr) } Lit(value="Call") }
-                  Block { Return { Call(target=lower.emitCallArgumentConstantsAt) { Var(name=expr) Lit(value=0) } } }
-                  Block { Return { Lit(value="") } }
-                }
-              }
-              Block { Return { Lit(value="") } }
-            }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitCallArgumentConstantsAt) {
-    Fn(params=callNode,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=callNode) } }
-          Block { Return { Lit(value="") } }
-          Block {
-            Let(name=argument) { ChildAt { Var(name=callNode) Var(name=index) } }
-            Let(name=tail) { Call(target=lower.emitCallArgumentConstantsAt) { Var(name=callNode) Add { Var(name=index) Lit(value=1) } } }
-            If {
-              Eq { NodeKind { Var(name=argument) } Lit(value="Lit") }
-              Block { Return { StrConcat { Call(target=lower.emitIntLiteralConstant) { Var(name=argument) } Var(name=tail) } } }
-              Block {
-                If {
-                  Eq { NodeKind { Var(name=argument) } Lit(value="Var") }
-                  Block { Return { Var(name=tail) } }
-                  Block { Return { Lit(value="") } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitLocalConstantsAt) {
-    Fn(params=body,index,lastIndex) {
-      Block {
-        If {
-          Eq { Var(name=index) Var(name=lastIndex) }
-          Block { Return { Lit(value="") } }
-          Block {
-            Let(name=localNode) { ChildAt { Var(name=body) Var(name=index) } }
-            If {
-              Eq { NodeKind { Var(name=localNode) } Lit(value="Let") }
-              Block {
-                If {
-                  Eq { ChildCount { Var(name=localNode) } Lit(value=1) }
-                  Block {
-                    Let(name=value) { ChildAt { Var(name=localNode) Lit(value=0) } }
-                    If {
-                      Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
-                      Block {
-                        Let(name=constant) { Call(target=lower.emitIntLiteralConstant) { Var(name=value) } }
-                        If {
-                          Eq { Var(name=constant) Lit(value="") }
-                          Block { Return { Lit(value="") } }
-                          Block { Return { StrConcat { Var(name=constant) Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } } }
-                        }
-                      }
-                      Block {
-                        If {
-                          Eq { NodeKind { Var(name=value) } Lit(value="Var") }
-                          Block { Return { Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } }
-                          Block {
-                            If {
-                              Eq { NodeKind { Var(name=value) } Lit(value="Call") }
-                              Block {
-                                Return {
-                                  StrConcat {
-                                    Call(target=lower.emitCallArgumentConstantsAt) { Var(name=value) Lit(value=0) }
-                                    Call(target=lower.emitLocalConstantsAt) { Var(name=body) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) }
-                                  }
-                                }
-                              }
-                              Block { Return { Lit(value="") } }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                  Block { Return { Lit(value="") } }
-                }
-              }
-              Block { Return { Lit(value="") } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitStdoutThenReturnConstants) {
-    Fn(params=body) {
-      Block {
-        Let(name=callNode) { ChildAt { Var(name=body) Lit(value=0) } }
-        Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=1) } }
-        If {
-          Eq { NodeKind { Var(name=callNode) } Lit(value="Call") }
-          Block {
-            If {
-              Eq { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="target") Lit(value=0) } Lit(value="sys.stdout.writeLine") }
-              Block {
-                Let(name=message) { Call(target=lower.stdoutStringLiteral) { Var(name=callNode) } }
-                If {
-                  Eq { NodeKind { Var(name=message) } Lit(value="Err") }
-                  Block { Return { Lit(value="") } }
-                  Block {
-                    Let(name=returnBody) { AppendChild { MakeBlock { Lit(value="return-body") } Var(name=returnNode) } }
-                    Let(name=returnConstants) { Call(target=lower.emitReturnConstants) { Var(name=returnBody) } }
-                    Return {
-                      StrConcat {
-                        Lit(value="Const(kind=\"string\" value=\"sys.stdout.writeLine\") Const(kind=\"string\" value=\"")
-                        StrConcat { StrEscape { AttrValueString { Var(name=message) Lit(value=0) } } StrConcat { Lit(value="\") ") Var(name=returnConstants) } }
-                      }
-                    }
-                  }
-                }
-              }
-              Block { Return { Lit(value="") } }
-            }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.emitSingleReturnIntConstant) {
-    Fn(params=body) {
-      Block {
-        If {
-          Eq { ChildCount { Var(name=body) } Lit(value=1) }
-          Block {
-            Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
-            If {
-              Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
-              Block {
-                If {
-                  Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
-                  Block {
-                    Let(name=value) { ChildAt { Var(name=returnNode) Lit(value=0) } }
-                    If {
-                      Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
-                      Block {
-                        If {
-                          Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="int") }
-                          Block { Return { StrConcat { Lit(value="Const(kind=\"int\" value=") StrConcat { ToString { AttrValueInt { Var(name=value) Lit(value=0) } } Lit(value=") ") } } } }
-                          Block { Return { Lit(value="") } }
-                        }
-                      }
-                      Block { Return { Lit(value="") } }
-                    }
-                  }
-                  Block { Return { Lit(value="") } }
-                }
-              }
-              Block { Return { Lit(value="") } }
-            }
-          }
-          Block { Return { Lit(value="") } }
         }
       }
     }
@@ -3431,19 +2934,6 @@ Program {
     }
   }
 
-  Let(name=lower.visibleSlot) {
-    Fn(params=body,params,baseSlot,lastIndex,name) {
-      Block {
-        Let(name=parameterSlot) { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Lit(value=0) Lit(value=0) } }
-        If {
-          Eq { Var(name=parameterSlot) Lit(value=-1) }
-          Block { Return { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Lit(value=0) Var(name=lastIndex) } } }
-          Block { Return { Var(name=parameterSlot) } }
-        }
-      }
-    }
-  }
-
   Let(name=lower.emitTwoLoadedCall) {
     Fn(params=firstSlot,secondSlot,target,instructionIndex) {
       Block {
@@ -3480,46 +2970,6 @@ Program {
               StrConcat {
                 Lit(value=") Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
                 StrConcat { ToString { Add { Var(name=instructionIndex) Lit(value=1) } } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.localSlot) {
-    Fn(params=body,name,baseSlot,index,lastIndex) {
-      Block {
-        If {
-          Eq { Var(name=index) Var(name=lastIndex) }
-          Block { Return { Lit(value=-1) } }
-          Block {
-            Let(name=localNode) { ChildAt { Var(name=body) Var(name=index) } }
-            If {
-              Eq { Call(target=lower.getAttr) { Var(name=localNode) Lit(value="name") Lit(value=0) } Var(name=name) }
-              Block { Return { Add { Var(name=baseSlot) Var(name=index) } } }
-              Block { Return { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.parameterCount) {
-    Fn(params=params,index) {
-      Block {
-        If {
-          Eq { Var(name=params) Lit(value="") }
-          Block { Return { Lit(value=0) } }
-          Block {
-            If {
-              Eq { StringFind { Var(name=params) Lit(value=",") Var(name=index) } Lit(value=-1) }
-              Block { Return { Lit(value=1) } }
-              Block {
-                Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=index) } }
-                Return { Add { Lit(value=1) Call(target=lower.parameterCount) { Var(name=params) Add { Var(name=comma) Lit(value=1) } } } }
               }
             }
           }
@@ -3609,31 +3059,6 @@ Program {
             }
           }
           Block { Return { Lit(value="Unsupported(reason=\"function-body-not-return\") ") } }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.stdoutStringLiteral) {
-    Fn(params=callNode) {
-      Block {
-        If {
-          Eq { ChildCount { Var(name=callNode) } Lit(value=1) }
-          Block {
-            Let(name=value) { ChildAt { Var(name=callNode) Lit(value=0) } }
-            If {
-              Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
-              Block {
-                If {
-                  Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="string") }
-                  Block { Return { Var(name=value) } }
-                  Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires a string literal.") Lit(value="call") } } }
-                }
-              }
-              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires a string literal.") Lit(value="call") } } }
-            }
-          }
-          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires exactly one argument.") Lit(value="call") } } }
         }
       }
     }
@@ -4093,32 +3518,6 @@ Program {
     }
   }
 
-  Let(name=lower.parameterSlot) {
-    Fn(params=params,name,start,slot) {
-      Block {
-        Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=start) } }
-        Let(name=length) { StringScalarLength { Var(name=params) } }
-        If {
-          Eq { Var(name=comma) Lit(value=-1) }
-          Block {
-            If {
-              Eq { StringSlice { Var(name=params) Var(name=start) Var(name=length) } Var(name=name) }
-              Block { Return { Var(name=slot) } }
-              Block { Return { Lit(value=-1) } }
-            }
-          }
-          Block {
-            If {
-              Eq { StringSlice { Var(name=params) Var(name=start) Sub { Var(name=comma) Var(name=start) } } Var(name=name) }
-              Block { Return { Var(name=slot) } }
-              Block { Return { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Add { Var(name=comma) Lit(value=1) } Add { Var(name=slot) Lit(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
   Let(name=lower.emitReturnExpressionAtCore) {
     Fn(params=expr,instructionIndex) {
       Block {
@@ -4409,21 +3808,4 @@ Program {
     }
   }
 
-  Let(name=lower.getAttr) {
-    Fn(params=node,key,index) {
-      Block {
-        If {
-          Eq { Var(name=index) AttrCount { Var(name=node) } }
-          Block { Return { Lit(value="") } }
-          Block {
-            If {
-              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
-              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
-              Block { Return { Call(target=lower.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
 }

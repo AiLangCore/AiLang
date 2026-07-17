@@ -431,15 +431,15 @@ Program {
       Block {
         If {
           Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
-          Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+          Block { Return { Call(target=parse.parseIntValue) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
           Block {
             If {
               Eq { Var(name=op) Lit(value="STORE_LOCAL") }
-              Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+              Block { Return { Call(target=parse.parseIntValue) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
               Block {
                 If {
                   Eq { Var(name=op) Lit(value="CALL_SYS") }
-                  Block { Return { Call(target=parse.parseIntToken) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
+                  Block { Return { Call(target=parse.parseIntValue) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
                   Block { Return { Lit(value=0) } }
                 }
               }

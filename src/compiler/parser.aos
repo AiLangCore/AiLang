@@ -121,21 +121,46 @@ Program {
     }
   }
 
+  Let(name=parse.earlierFoundIndex) {
+    Fn(params=current,candidate) {
+      Block {
+        If {
+          Eq { Var(name=candidate) Lit(value=-1) }
+          Block { Return { Var(name=current) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=current) Lit(value=-1) }
+          Block { Return { Var(name=candidate) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Lt { Var(name=candidate) Var(name=current) }
+          Block { Return { Var(name=candidate) } }
+          Block { Return { Var(name=current) } }
+        }
+      }
+    }
+  }
+
   Let(name=parse.readNameEnd) {
     Fn(params=text,index) {
       Block {
-        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        Let(name=first) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=32) } Var(name=index) } }
+        Let(name=afterNewline) { Call(target=parse.earlierFoundIndex) { Var(name=first) StringFind { Var(name=text) StringFromCodePoint { Lit(value=10) } Var(name=index) } } }
+        Let(name=afterTab) { Call(target=parse.earlierFoundIndex) { Var(name=afterNewline) StringFind { Var(name=text) StringFromCodePoint { Lit(value=9) } Var(name=index) } } }
+        Let(name=afterReturn) { Call(target=parse.earlierFoundIndex) { Var(name=afterTab) StringFind { Var(name=text) StringFromCodePoint { Lit(value=13) } Var(name=index) } } }
+        Let(name=afterHash) { Call(target=parse.earlierFoundIndex) { Var(name=afterReturn) StringFind { Var(name=text) Lit(value="#") Var(name=index) } } }
+        Let(name=afterOpenParen) { Call(target=parse.earlierFoundIndex) { Var(name=afterHash) StringFind { Var(name=text) Lit(value="(") Var(name=index) } } }
+        Let(name=afterCloseParen) { Call(target=parse.earlierFoundIndex) { Var(name=afterOpenParen) StringFind { Var(name=text) Lit(value=")") Var(name=index) } } }
+        Let(name=afterOpenBrace) { Call(target=parse.earlierFoundIndex) { Var(name=afterCloseParen) StringFind { Var(name=text) Lit(value="{") Var(name=index) } } }
+        Let(name=afterCloseBrace) { Call(target=parse.earlierFoundIndex) { Var(name=afterOpenBrace) StringFind { Var(name=text) Lit(value="}") Var(name=index) } } }
+        Let(name=afterEquals) { Call(target=parse.earlierFoundIndex) { Var(name=afterCloseBrace) StringFind { Var(name=text) Lit(value="=") Var(name=index) } } }
+        Let(name=end) { Call(target=parse.earlierFoundIndex) { Var(name=afterEquals) StringFind { Var(name=text) StringFromCodePoint { Lit(value=34) } Var(name=index) } } }
         If {
-          Call(target=parse.isDelimiter) { Var(name=ch) }
-          Block { Return { Var(name=index) } }
-          Block {
-            Return {
-              Call(target=parse.readNameEnd) {
-                Var(name=text)
-                Add { Var(name=index) Lit(value=1) }
-              }
-            }
-          }
+          Eq { Var(name=end) Lit(value=-1) }
+          Block { Return { StringScalarLength { Var(name=text) } } }
+          Block { Return { Var(name=end) } }
         }
       }
     }
@@ -159,6 +184,23 @@ Program {
   Let(name=parse.readStringEnd) {
     Fn(params=text,index) {
       Block {
+        Let(name=quoteIndex) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=34) } Var(name=index) } }
+        Let(name=escapeIndex) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=92) } Var(name=index) } }
+        If {
+          Eq { Var(name=quoteIndex) Lit(value=-1) }
+          Block { Return { StringScalarLength { Var(name=text) } } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=escapeIndex) Lit(value=-1) }
+          Block { Return { Add { Var(name=quoteIndex) Lit(value=1) } } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Lt { Var(name=quoteIndex) Var(name=escapeIndex) }
+          Block { Return { Add { Var(name=quoteIndex) Lit(value=1) } } }
+          Block { Lit(value=0) }
+        }
         Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
         If {
           Eq { Var(name=ch) Lit(value="") }
@@ -326,47 +368,24 @@ Program {
     Fn(params=kind,value,nextIndex) {
       Block {
         Return {
-          StrConcat {
-            Var(name=kind)
-            StrConcat {
-              Lit(value="|")
-              StrConcat {
-                ToString { Var(name=nextIndex) }
-                StrConcat {
-                  Lit(value="|")
-                  Var(name=value)
-                }
-              }
+          MakePair {
+            MakePair {
+              Var(name=kind)
+              Var(name=value)
             }
+            Var(name=nextIndex)
           }
         }
       }
     }
   }
 
-  Let(name=parse.tokenSep1) {
+  Let(name=parse.tokenFields) {
     Fn(params=token) {
       Block {
         Return {
-          Call(target=find) {
+          PairFirst {
             Var(name=token)
-            Lit(value="|")
-            Lit(value=0)
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=parse.tokenSep2) {
-    Fn(params=token) {
-      Block {
-        Let(name=sep1) { Call(target=parse.tokenSep1) { Var(name=token) } }
-        Return {
-          Call(target=find) {
-            Var(name=token)
-            Lit(value="|")
-            Add { Var(name=sep1) Lit(value=1) }
           }
         }
       }
@@ -377,13 +396,9 @@ Program {
     Fn(params=token) {
       Block {
         Return {
-          Call(target=substring) {
-            Var(name=token)
-            Lit(value=0)
-            Call(target=find) {
+          PairFirst {
+            Call(target=parse.tokenFields) {
               Var(name=token)
-              Lit(value="|")
-              Lit(value=0)
             }
           }
         }
@@ -395,13 +410,10 @@ Program {
     Fn(params=token) {
       Block {
         Return {
-          Call(target=substring) {
-            Var(name=token)
-            Add {
-              Call(target=parse.tokenSep2) { Var(name=token) }
-              Lit(value=1)
+          PairSecond {
+            Call(target=parse.tokenFields) {
+              Var(name=token)
             }
-            Lit(value=2147483647)
           }
         }
       }
@@ -411,14 +423,9 @@ Program {
   Let(name=parse.tokenNext) {
     Fn(params=token) {
       Block {
-        Let(name=sep1) { Call(target=parse.tokenSep1) { Var(name=token) } }
-        Let(name=sep2) { Call(target=parse.tokenSep2) { Var(name=token) } }
         Return {
-          Call(target=parse.parseIntText) {
+          PairSecond {
             Var(name=token)
-            Add { Var(name=sep1) Lit(value=1) }
-            Var(name=sep2)
-            Lit(value=0)
           }
         }
       }
@@ -855,7 +862,18 @@ Program {
   Let(name=parse.parseIntToken) {
     Fn(params=token) {
       Block {
-        Let(name=value) { Call(target=parse.tokenValue) { Var(name=token) } }
+        Return {
+          Call(target=parse.parseIntValue) {
+            Call(target=parse.tokenValue) { Var(name=token) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseIntValue) {
+    Fn(params=value) {
+      Block {
         If {
           Eq {
             Call(target=parse.charAt) { Var(name=value) Lit(value=0) }
@@ -918,14 +936,16 @@ Program {
         Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=hashToken) } } }
         Let(name=lbraceToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
         Return {
-          AppendChild {
-            MakeNode {
-              Call(target=parse.tokenValue) { Var(name=kindToken) }
-              Call(target=parse.tokenValue) { Var(name=idToken) }
-            }
-            Call(target=parse.parseNodeWithNameAttrAt) {
-              Var(name=text)
-              Call(target=parse.tokenNext) { Var(name=lbraceToken) }
+          FinishNodeBuilder {
+            BuilderAppendChild {
+              MakeNodeBuilder {
+                Call(target=parse.tokenValue) { Var(name=kindToken) }
+                Call(target=parse.tokenValue) { Var(name=idToken) }
+              }
+              Call(target=parse.parseNodeWithNameAttrAt) {
+                Var(name=text)
+                Call(target=parse.tokenNext) { Var(name=lbraceToken) }
+              }
             }
           }
         }
@@ -940,6 +960,28 @@ Program {
           MakePair {
             Var(name=node)
             Var(name=nextIndex)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.finishNodeResult) {
+    Fn(params=result) {
+      Block {
+        If {
+          Eq {
+            ValueKind { Call(target=parse.resultNode) { Var(name=result) } }
+            Lit(value="node")
+          }
+          Block { Return { Var(name=result) } }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                FinishNodeBuilder { Call(target=parse.resultNode) { Var(name=result) } }
+                Call(target=parse.resultNext) { Var(name=result) }
+              }
+            }
           }
         }
       }
@@ -1048,7 +1090,7 @@ Program {
                           Call(target=parse.parseChildrenInto) {
                             Var(name=text)
                             Call(target=parse.tokenNext) { Var(name=lookaheadToken) }
-                            MakeNode {
+                            MakeNodeBuilder {
                               Call(target=parse.tokenValue) { Var(name=kindToken) }
                               Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
                             }
@@ -1096,7 +1138,7 @@ Program {
                                           Call(target=parse.parseChildrenInto) {
                                             Var(name=text)
                                             Call(target=parse.tokenNext) { Var(name=afterIdToken) }
-                                            MakeNode {
+                                            MakeNodeBuilder {
                                               Call(target=parse.tokenValue) { Var(name=kindToken) }
                                               Call(target=parse.tokenValue) { Var(name=idToken) }
                                             }
@@ -1177,7 +1219,7 @@ Program {
           Call(target=parse.parseAttrsInto) {
             Var(name=text)
             Call(target=parse.tokenNext) { Var(name=lparenToken) }
-            MakeNode {
+            MakeNodeBuilder {
               Call(target=parse.tokenValue) { Var(name=kindToken) }
               Call(target=parse.tokenValue) { Var(name=idToken) }
             }
@@ -1205,7 +1247,7 @@ Program {
           }
           Block {
             Return {
-              Var(name=attrResult)
+              Call(target=parse.finishNodeResult) { Var(name=attrResult) }
             }
           }
         }
@@ -1348,7 +1390,7 @@ Program {
                               Call(target=parse.parseAttrsInto) {
                                 Var(name=text)
                                 Call(target=parse.tokenNext) { Var(name=valueToken) }
-                                AppendAttr {
+                                BuilderAppendAttr {
                                   Var(name=node)
                                   Call(target=parse.makeAttrLit) {
                                     Var(name=nextToken)
@@ -1409,7 +1451,7 @@ Program {
           Block {
             Return {
               Call(target=parse.makeResult) {
-                Var(name=parent)
+                FinishNodeBuilder { Var(name=parent) }
                 Call(target=parse.tokenNext) { Var(name=nextToken) }
               }
             }
@@ -1453,7 +1495,7 @@ Program {
                       Call(target=parse.parseChildrenInto) {
                         Var(name=text)
                         Call(target=parse.resultNext) { Var(name=childResult) }
-                        AppendChild {
+                        BuilderAppendChild {
                           Var(name=parent)
                           Call(target=parse.resultNode) { Var(name=childResult) }
                         }
@@ -1560,6 +1602,7 @@ Program {
   Export(name=parse.parseIntText)
   Export(name=parse.negateInt)
   Export(name=parse.parseIntToken)
+  Export(name=parse.parseIntValue)
   Export(name=parse.parseProgramWithOneChild)
   Export(name=parse.parseNode)
   Export(name=parse.parseDocument)

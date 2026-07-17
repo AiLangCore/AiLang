@@ -341,7 +341,7 @@ Program {
     Fn(params=_) {
       Block {
         Return {
-          Lit(value="|Program|Let|Var|Lit|Call|If|Match|Case|Default|Block|Return|Fn|Eq|Add|ToString|ValueKind|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|AppendAttr|Import|Export|Project|Include|Loop|Break|Continue|")
+          Lit(value="|Program|Let|Var|Lit|Call|If|Match|Case|Default|Block|Return|Fn|Eq|Add|ToString|ValueKind|NodeKind|NodeId|AttrCount|AttrKey|AttrValueKind|AttrValueString|AttrValueInt|AttrValueBool|ChildCount|ChildAt|StrConcat|StrEscape|AppendAttr|MakeNodeBuilder|BuilderAppendChild|BuilderAppendAttr|FinishNodeBuilder|Import|Export|Project|Include|Loop|Break|Continue|")
         }
       }
     }

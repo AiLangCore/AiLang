@@ -1,0 +1,15 @@
+Program {
+  Import(path="lower_constants.aos")
+
+  Let(name=lower.emitExpressionIntConstant) {
+    Fn(params=expr) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=expr) } Lit(value="Match") }
+          Block { Return { Call(target=lower.emitMatchConstants) { Var(name=expr) Lit(value=1) } } }
+          Block { Return { Call(target=lower.emitExpressionIntConstantCore) { Var(name=expr) } } }
+        }
+      }
+    }
+  }
+}

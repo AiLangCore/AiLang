@@ -13,6 +13,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-deterministic-primitive-validation.sh
 ./scripts/test-pair-intrinsics.sh
 ./scripts/test-scratch-pair-call-lifetime.sh
+./scripts/test-parser-raw-int-value.sh
 ./scripts/test-parser-public-exports.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_PATH="${1:?usage: probe-structural-lowering-module.sh <source.aos>}"
+START_RECORD="${START_RECORD:-0}"
 TMP_DIR="${ROOT_DIR}/.tmp/probe-structural-lowering-module"
 
 rm -rf "${TMP_DIR}"
@@ -96,7 +97,7 @@ Program {
         Let(name=program) { Call(target=parse.parseDocument) { Var(name=source) } }
         Let(name=records) { Call(target=lower.collectFunctionRecords) { Var(name=program) Lit(value="${SOURCE_PATH}") } }
         Call(target=printRecords) { Var(name=records) Lit(value=0) }
-        Return { Call(target=probe) { Var(name=records) Lit(value=0) } }
+        Return { Call(target=probe) { Var(name=records) Lit(value=${START_RECORD}) } }
       }
     }
   }

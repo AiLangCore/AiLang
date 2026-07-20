@@ -66,25 +66,14 @@ Program {
                     StrConcat {
                       StrConcat {
                         StrConcat {
-                          If {
-                            Eq { Var(name=index) Lit(value=0) }
-                            Block { Lit(value="(") }
-                            Block { Lit(value=" ") }
-                          }
+                          Call(target=formatAttrPrefix) { Var(name=index) }
                           AttrKey { Var(name=node) Var(name=index) }
                         }
                         Lit(value="=")
                       }
                       Call(target=formatAttrValue) { Var(name=node) Var(name=index) }
                     }
-                    If {
-                      Eq {
-                        Add { Var(name=index) Lit(value=1) }
-                        AttrCount { Var(name=node) }
-                      }
-                      Block { Lit(value=")") }
-                      Block { Lit(value="") }
-                    }
+                    Call(target=formatAttrSuffix) { Var(name=node) Var(name=index) }
                   }
                   Call(target=formatAttrs) {
                     Var(name=node)
@@ -95,6 +84,30 @@ Program {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=formatAttrPrefix) {
+    Fn(params=index) {
+      Block {
+        If {
+          Eq { Var(name=index) Lit(value=0) }
+          Block { Return { Lit(value="(") } }
+          Block { Return { Lit(value=" ") } }
+        }
+      }
+    }
+  }
+
+  Let(name=formatAttrSuffix) {
+    Fn(params=node,index) {
+      Block {
+        If {
+          Eq { Add { Var(name=index) Lit(value=1) } AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=")") } }
+          Block { Return { Lit(value="") } }
         }
       }
     }

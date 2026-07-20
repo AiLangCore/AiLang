@@ -241,6 +241,7 @@ Program {
   Let(name=lower.emitStructuralLocalBoundIfCallsPlan) {
     Fn(params=name,symbol,params,records,local,condition,thenBlock,elseBlock) {
       Block {
+        Let(name=localName) { Call(target=lower.getAttr) { Var(name=local) Lit(value="name") Lit(value=0) } }
         Let(name=localSlot) { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } }
         Let(name=init) { ChildAt { Var(name=local) Lit(value=0) } }
         Let(name=thenCall) { ChildAt { ChildAt { Var(name=thenBlock) Lit(value=0) } Lit(value=0) } }

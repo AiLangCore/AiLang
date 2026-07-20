@@ -11,6 +11,8 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-stdlib-behavior.sh
 ./scripts/test-no-direct-deterministic-syscalls.sh
+./scripts/test-compiler-canonical-io-targets.sh
+./scripts/test-target-package-section-slicing.sh
 ./scripts/test-deterministic-primitive-validation.sh
 ./scripts/test-pair-intrinsics.sh
 ./scripts/test-scratch-pair-call-lifetime.sh
@@ -37,10 +39,14 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-lower-module.sh
 ./scripts/test-lower-structural-node-expression-module.sh
 ./scripts/test-lower-structural-native-append-child-module.sh
+./scripts/test-lower-structural-byte-primitives-module.sh
 ./scripts/test-lower-structural-string-primitives-module.sh
 ./scripts/test-lower-structural-native-if-module.sh
 ./scripts/test-lower-structural-statement-if-module.sh
+./scripts/test-lower-structural-statement-binding-module.sh
+./scripts/test-lower-structural-statement-return-module.sh
 ./scripts/test-lower-structural-nested-statement-if-module.sh
+./scripts/test-lower-structural-local-bound-if-calls-module.sh
 ./scripts/test-lower-structural-native-terminal-let-module.sh
 ./scripts/test-lower-structural-value-if-binding-module.sh
 ./scripts/test-lower-structural-nested-native-if-module.sh

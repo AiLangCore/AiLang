@@ -19,7 +19,7 @@ Program {
             }
             Let(name=depText) {
               Call(target=bytes.toUtf8String) {
-                Call(target=io.readFile) { Var(name=depPath) }
+                Call(target=sys.fs.file.read) { Var(name=depPath) }
               }
             }
             Let(name=depParsed) {

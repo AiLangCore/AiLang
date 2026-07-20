@@ -10,6 +10,7 @@ Program {
   Import(path="bootstrap_io.aos")
   Import(path="value.aos")
   Import(path="eval.aos")
+  Import(path="../std/bytes.aos")
   Export(name=main)
 
   Let(name=main) {
@@ -212,9 +213,9 @@ Program {
           Block {
             Let(name=manifestPath) { StrConcat { Var(name=dir) Lit(value="/project.aiproj") } }
             If {
-              Call(target=io.fileExists) { Var(name=manifestPath) }
+              Call(target=sys.fs.file.exists) { Var(name=manifestPath) }
               Block {
-                Let(name=parsed) { Call(target=parse.parseDocument) { Call(target=io.readFile) { Var(name=manifestPath) } } }
+                Let(name=parsed) { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=manifestPath) } } } }
                 If {
                   Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
                   Block {
@@ -231,7 +232,7 @@ Program {
                         Let(name=entryFile) { Call(target=getAttr) { Var(name=projectNode) Lit(value="entryFile") Lit(value=0) } }
                         Let(name=entryExport) { Call(target=getAttr) { Var(name=projectNode) Lit(value="entryExport") Lit(value=0) } }
                         Let(name=entryPath) { StrConcat { Var(name=dir) StrConcat { Lit(value="/") Var(name=entryFile) } } }
-                        Let(name=entryParsed) { Call(target=parse.parseDocument) { Call(target=io.readFile) { Var(name=entryPath) } } }
+                        Let(name=entryParsed) { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=entryPath) } } } }
                         If {
                           Eq { NodeKind { Var(name=entryParsed) } Lit(value="Err") }
                           Block {
@@ -356,7 +357,7 @@ Program {
       Block {
         Return {
           Call(target=parse.parseDocument) {
-            Call(target=io.readAllStdin)
+            Call(target=sys.console.readAllStdin)
           }
         }
       }

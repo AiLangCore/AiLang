@@ -152,6 +152,7 @@ VM_CORE_SOURCES=(
   "${NATIVE_SRC_DIR}/aivm_types.c"
   "${NATIVE_SRC_DIR}/aivm_vm.c"
   "${NATIVE_SRC_DIR}/aivm_vm_arena.c"
+  "${NATIVE_SRC_DIR}/aivm_host_memory.c"
   "${NATIVE_SRC_DIR}/aivm_vm_blob.c"
   "${NATIVE_SRC_DIR}/aivm_vm_error.c"
   "${NATIVE_SRC_DIR}/aivm_vm_history.c"

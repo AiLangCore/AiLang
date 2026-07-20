@@ -206,6 +206,92 @@ Current self-build frontier:
   `StringSlice` opcode; block construction now propagates that error instead of
   crashing in `MAKE_LIT_STRING`. Resolving why native variadic opcode selection
   yields `LOWER025` for `StringSlice` is the immediate frontier.
+- `StringSlice` was not reaching native emission: structural-expression policy
+  omitted the variadic opcode family and routed the node into legacy binary
+  lowering. Policy now recognizes native variadic and binary opcode families,
+  while focused opcode mappings cover string slice, remove, find, Unicode
+  conversion, UTF-8 byte count, and scalar length. The focused
+  `compiler/lower/expressions/variadic.aos` module owns variadic argument and
+  opcode emission. All 12 functions in `src/std/str.aos` now lower, and the
+  whole-compiler probe serializes both the CLI and string modules. The next
+  frontier is `src/std/bytes.aos::bytes.length`, where missing byte-primitive
+  routing currently reaches an invalid `ChildAt` path.
+- Byte primitives now route through the focused
+  `compiler/lower/expressions/byte_opcodes.aos` module. Unary, binary, and
+  variadic mappings cover all 11 exports in `src/std/bytes.aos`, including
+  length, indexing, slicing, concatenation, encoding conversions, and integer
+  byte construction. The whole-compiler probe now serializes the CLI, string,
+  and byte modules and enters `src/compiler/parser.aos`. Its next failure is
+  `parse.isWhitespace`: a statement-If branch contains an early `Return`, while
+  statement branch lowering currently supports calls, nested If nodes, and
+  no-op literals. Early-return branch termination is the immediate frontier.
+- Early statement-If returns now terminate their branch directly through the
+  focused `compiler/lower/control/statement_return.aos` module, while non-returning
+  branches still join and continue through the merge block. A regression covers
+  multiple guarded returns followed by a final continuation return. The
+  whole-compiler probe now lowers and serializes all 45 functions in
+  `src/compiler/parser.aos` plus `parser/token_cursor.aos`. It advances into
+  `src/compiler/linker.aos` and stops at `linker.collectImportPaths`, where the
+  legacy `io.readFile` intrinsic alias is currently treated as an unknown
+  structural call target (`LOWER026`). Intrinsic/capability call routing is the
+  immediate frontier.
+- Compiler-owned host calls now use canonical `sys.*` targets directly; file
+  reads retain explicit `bytes.toUtf8String` conversion in AiLang. No alias
+  routing or new syscall was added. A repository guard rejects future authored
+  `io.*` or `console.*` call targets under `src/compiler`. The whole-compiler
+  probe now lowers and serializes the linker facade, focused linker modules,
+  bundle module, and structural-project linker. It advances into
+  `src/compiler/structural_project.aos` and stops at
+  `structuralProject.writeObjectFileAt`, where a statement-If branch contains a
+  local `Let` (`LOWER033`). Branch-local binding emission is the immediate
+  frontier.
+- Statement-If branches now lower local `Let` nodes through the focused
+  `compiler/lower/control/statement_binding.aos` module. The emitted local is
+  visible only to the remainder of its branch; sibling branches and the
+  post-merge continuation retain their original bindings. The whole-compiler
+  probe clears `structuralProject.writeObjectFileAt`, completes
+  `structural_project.aos` and `structural_object.aos`, and enters module 12 of
+  51 (`src/compiler/lower.aos`). It reached
+  `lower.emitGeneralParameterMatchArms` before exceeding the diagnostic silence
+  window, so the next iteration must distinguish slow lowering from a stalled
+  or unsupported shape at that record.
+- Resumable whole-graph probing showed that the module-12 silence was
+  graph-scale lookup latency, not a failed record or arena exhaustion.
+  `lower.emitGeneralParameterMatchArms` succeeds with full project symbols.
+  A missing `localName` binding in the focused local-If call planner was fixed,
+  and formatter attribute delimiters now use small helper calls instead of
+  unsupported inline value-If expressions. The probe consequently advances
+  through module 54. Current graph discovery reports 56 modules total; the
+  only undiscovered module frontier is module 55,
+  `src/cli/target_packages.aos::findTargetSectionFrom`, which currently fails
+  on a nested `Return` (`LOWER031`).
+- Target-package section slicing now uses the focused `sliceTargetSection`
+  helper instead of an inline value-If expression. The resumed full-symbol
+  probe lowers and serializes module 55, so every record in all 56 discovered
+  modules is supported. An uninterrupted pass completes modules 0 through 11,
+  reaches module 12, and then spends more than four minutes re-lowering its 53
+  records during object serialization. Aggregate duplicate lowering and symbol
+  lookup performance, rather than an unsupported source shape, is now the
+  immediate whole-object frontier.
+- The object-emission probe can now disable its diagnostic per-record pass,
+  separating probe overhead from production serialization. With diagnostics
+  disabled, module 12 completes object construction after approximately four
+  and a half minutes, and the same process continues through modules 13 to 55
+  successfully. Together with the preceding uninterrupted completion of
+  modules 0 to 11, every discovered module now has successful object-emission
+  evidence. A single start-to-finish retained-object build and whole-project
+  link are the next gates; repeated full-graph symbol lookup remains a measured
+  performance defect but is not a memory-capacity blocker.
+- A phased whole-compiler link probe now distinguishes graph discovery, symbol
+  collection, duplicate validation, object retention, and final linking. Symbol
+  collection and validation both complete for all 56 modules. In-memory object
+  retention completes modules 0 through 11, including the large CLI, parser,
+  and structural-object modules. Module 12 does not fail allocation, but its
+  construction slows from roughly four and a half minutes when isolated to
+  more than eight minutes with modules 0 through 11 retained. The persisted
+  writer is slower still because it formats, writes, reads, and reparses each
+  object. Retained-node GC/arena pressure and the redundant persistence round
+  trip are now the immediate whole-link architecture frontier.
 
 Reproduce the frontier with:
 

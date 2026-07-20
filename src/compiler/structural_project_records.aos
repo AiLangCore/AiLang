@@ -80,7 +80,7 @@ Program {
             Let(name=programRecord) { ChildAt { Var(name=modulePaths) Var(name=index) } }
             If {
               Eq { ChildCount { Var(name=programRecord) } Lit(value=0) }
-              Block { Return { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=io.readFile) { Var(name=readPath) } } } } }
+              Block { Return { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=readPath) } } } } }
               Block { Return { ChildAt { Var(name=programRecord) Lit(value=0) } } }
             }
           }

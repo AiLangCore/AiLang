@@ -40,8 +40,8 @@ require_grep 'libexec/ailang/commands' "Docs/CLI-Private-Commands.md"
 require_grep '[commands.package]' "manifests/commands.toml"
 require_grep 'path = "libexec/ailang/commands/package"' "manifests/commands.toml"
 
-require_grep 'Export#cli_targets_e1(name=isPackageTarget)' "src/cli/target_packages.aos"
-require_grep 'Export#cli_targets_e8(name=resolveTargetRunner)' "src/cli/target_packages.aos"
+require_grep 'Export(name=isPackageTarget)' "src/cli/target_packages.aos"
+require_grep 'Export(name=resolveTargetRunner)' "src/cli/target_packages.aos"
 
 
 require_grep 'AILANG-PKG-REQ001' "src/cli/target_packages.aos"

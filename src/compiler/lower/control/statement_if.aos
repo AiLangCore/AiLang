@@ -62,7 +62,19 @@ Program {
                     If {
                       Eq { NodeKind { Var(name=node) } Lit(value="If") }
                       Block { Return { Call(target=lower.statementIf.appendNestedBranch) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=mergeLabel) Var(name=node) } } }
-                      Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER033") Lit(value="Statement If branches currently support Call, nested If, or no-op Lit statements.") NodeId { Var(name=node) } } } }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=node) } Lit(value="Return") }
+                          Block { Return { Call(target=lower.statementIf.appendReturn) { Var(name=function) Var(name=context) Var(name=node) Var(name=bindings) Var(name=records) } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=node) } Lit(value="Let") }
+                              Block { Return { Call(target=lower.statementIf.appendBinding) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=mergeLabel) Var(name=node) } } }
+                              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER033") Lit(value="Statement If branches currently support Call, nested If, Return, Let, or no-op Lit statements.") NodeId { Var(name=node) } } } }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }

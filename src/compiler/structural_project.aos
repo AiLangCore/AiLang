@@ -129,7 +129,7 @@ Program {
           }
           Block { Lit(value=0) }
         }
-        Let(name=persistedText) { Call(target=bytes.toUtf8String) { Call(target=io.readFile) { Var(name=objectPath) } } }
+        Let(name=persistedText) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=objectPath) } } }
         Return { Call(target=parse.parseDocument) { Var(name=persistedText) } }
       }
     }
@@ -170,7 +170,7 @@ Program {
                 Let(name=program) {
                   If {
                     Eq { ChildCount { Var(name=programRecord) } Lit(value=0) }
-                    Block { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=io.readFile) { Var(name=readPath) } } } }
+                    Block { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=readPath) } } } }
                     Block { ChildAt { Var(name=programRecord) Lit(value=0) } }
                   }
                 }

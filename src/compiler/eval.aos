@@ -3,6 +3,7 @@ Program {
   Import(path="format.aos")
   Import(path="validate.aos")
   Import(path="value.aos")
+  Import(path="../std/bytes.aos")
   Export(name=eval.runProgram)
 
   Let(name=eval.runProgram) {
@@ -505,7 +506,7 @@ Program {
             If {
               Eq { Var(name=target) Lit(value="io.print") }
               Block {
-                Call(target=io.print) { Call(target=value.toString) { Var(name=argVal) } }
+                Call(target=sys.stdout.writeLine) { Call(target=value.toString) { Var(name=argVal) } }
                 Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=e2) } }
               }
               Block {
@@ -519,7 +520,7 @@ Program {
                     If {
                       Eq { Var(name=target) Lit(value="io.readLine") }
                       Block {
-                        Let(name=line) { Call(target=io.readLine) }
+                        Let(name=line) { Call(target=sys.console.readLine) }
                         Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=line) } }
                         Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
                       }
@@ -527,7 +528,7 @@ Program {
                         If {
                           Eq { Var(name=target) Lit(value="io.readAllStdin") }
                           Block {
-                            Let(name=text) { Call(target=io.readAllStdin) }
+                            Let(name=text) { Call(target=sys.console.readAllStdin) }
                             Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
                             Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
                           }
@@ -535,7 +536,7 @@ Program {
                             If {
                               Eq { Var(name=target) Lit(value="io.readFile") }
                               Block {
-                                Let(name=text) { Call(target=io.readFile) { Call(target=value.toString) { Var(name=argVal) } } }
+                                Let(name=text) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Call(target=value.toString) { Var(name=argVal) } } } }
                                 Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
                                 Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
                               }
@@ -543,7 +544,7 @@ Program {
                                 If {
                                   Eq { Var(name=target) Lit(value="io.fileExists") }
                                   Block {
-                                    Let(name=ok) { Call(target=io.fileExists) { Call(target=value.toString) { Var(name=argVal) } } }
+                                    Let(name=ok) { Call(target=sys.fs.file.exists) { Call(target=value.toString) { Var(name=argVal) } } }
                                     Let(name=lit) { Call(target=value.makeBoolLit) { Var(name=ok) } }
                                     Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
                                   }

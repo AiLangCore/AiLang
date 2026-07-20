@@ -23,7 +23,7 @@ Program {
           }
         }
         Call(target=sys.stdout.writeLine) {
-          Call(target=format) { Var(name=node) }
+          Call(target=format.format) { Var(name=node) }
         }
         Call(target=sys.stdout.writeLine) {
           Call(target=formatWithIds) { Var(name=node) }

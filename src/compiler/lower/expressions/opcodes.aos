@@ -103,7 +103,7 @@ Program {
                                                             If {
                                                               Eq { Var(name=kind) Lit(value="StringScalarLength") }
                                                               Block { Return { Lit(value="STR_SCALAR_LENGTH") } }
-                                                              Block { Return { Lit(value="") } }
+                                                              Block { Return { Call(target=lower.structuralNativeByteUnaryOpcode) { Var(name=kind) } } }
                                                             }
                                                           }
                                                         }
@@ -179,7 +179,7 @@ Program {
                                     If {
                                       Eq { Var(name=kind) Lit(value="StringRemove") }
                                       Block { Return { Lit(value="STR_REMOVE") } }
-                                      Block { Return { Lit(value="") } }
+                                      Block { Return { Call(target=lower.structuralNativeByteVariadicOpcode) { Var(name=kind) } } }
                                     }
                                   }
                                 }
@@ -229,7 +229,7 @@ Program {
                     If {
                       Eq { Var(name=kind) Lit(value="StringDecodeUnicodeSurrogatePairHex4") }
                       Block { Return { Lit(value="STR_DECODE_UNICODE_SURROGATE_PAIR_HEX4") } }
-                      Block { Return { Lit(value="") } }
+                      Block { Return { Call(target=lower.structuralNativeByteBinaryOpcode) { Var(name=kind) } } }
                     }
                   }
                 }

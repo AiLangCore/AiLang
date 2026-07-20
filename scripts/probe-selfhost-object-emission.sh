@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${ROOT_DIR}/.tmp/selfhost-object-emission"
 PROJECT_DIR="${1:-${ROOT_DIR}}"
+START_MODULE="${START_MODULE:-0}"
+START_RECORD="${START_RECORD:-0}"
+STOP_AFTER_PROBE="${STOP_AFTER_PROBE:-false}"
+PROBE_RECORDS="${PROBE_RECORDS:-true}"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
@@ -55,9 +59,27 @@ Program {
             Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="emit=module-begin index=") StrConcat { ToString { Var(name=index) } StrConcat { Lit(value=" path=") Var(name=modulePath) } } } }
             Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Var(name=index) } }
             Let(name=records) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
-            Let(name=probeStatus) { Call(target=probeRecordsWithTrace) { Var(name=records) Var(name=symbols) Lit(value=0) } }
+            Let(name=recordStart) {
+              If {
+                Eq { Var(name=index) Lit(value=${START_MODULE}) }
+                Block { Lit(value=${START_RECORD}) }
+                Block { Lit(value=0) }
+              }
+            }
+            Let(name=probeStatus) {
+              If {
+                Lit(value=${PROBE_RECORDS})
+                Block { Call(target=probeRecordsWithTrace) { Var(name=records) Var(name=symbols) Var(name=recordStart) } }
+                Block { Lit(value=0) }
+              }
+            }
             If {
               Call(target=lower.isStructuralError) { Var(name=probeStatus) }
+              Block { Return { Var(name=probeStatus) } }
+              Block { Lit(value=0) }
+            }
+            If {
+              Lit(value=${STOP_AFTER_PROBE})
               Block { Return { Var(name=probeStatus) } }
               Block { Lit(value=0) }
             }
@@ -87,7 +109,7 @@ Program {
         Let(name=paths) { Call(target=linker.collectProjectModulePathsWithLock) { Lit(value="${PROJECT_DIR}") Var(name=entryProgram) Lit(value="src/cli/ailang.aos") Lit(value="") } }
         Let(name=symbols) { Call(target=structuralProject.collectProjectSymbolChunks) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Lit(value=0) MakeBlock { Lit(value="record-chunks") } } }
         Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=symbols) } }
-        Return { Call(target=emitModulesWithTrace) { Var(name=paths) Var(name=validated) Lit(value=0) } }
+        Return { Call(target=emitModulesWithTrace) { Var(name=paths) Var(name=validated) Lit(value=${START_MODULE}) } }
       }
     }
   }

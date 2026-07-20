@@ -61,13 +61,7 @@ Program {
           Block {
             Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=2147483647) } }
             Let(name=end) { Call(target=find) { Var(name=rest) Lit(value="\n[[") Lit(value=1) } }
-            Let(name=section) {
-              If {
-                Eq { Var(name=end) Lit(value=-1) }
-                Block { Return { Var(name=rest) } }
-                Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
-              }
-            }
+            Let(name=section) { Call(target=sliceTargetSection) { Var(name=rest) Var(name=end) } }
             If {
               Call(target=targetSectionMatches) { Var(name=section) Var(name=needle) Var(name=aliasNeedle) }
               Block { Return { Var(name=section) } }
@@ -83,6 +77,18 @@ Program {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=sliceTargetSection) {
+    Fn(params=rest,end) {
+      Block {
+        If {
+          Eq { Var(name=end) Lit(value=-1) }
+          Block { Return { Var(name=rest) } }
+          Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
         }
       }
     }

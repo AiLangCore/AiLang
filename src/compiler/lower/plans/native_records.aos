@@ -1,0 +1,62 @@
+Program {
+  Let(name=lower.emitStructuralNativeReturnRecordPlan) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=value) { ChildAt { Var(name=returnNode) Lit(value=0) } }
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+        Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=context) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+        Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=withParams) Var(name=value) Var(name=params) Var(name=records) } }
+        Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } }
+        Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralNativeIfRecordPlan) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=ifNode) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+        Let(name=entry) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+        Let(name=completed) { Call(target=lower.appendStructuralNativeIfTree) { Var(name=function) Var(name=withParams) Var(name=ifNode) Var(name=params) Var(name=records) } }
+        If {
+          Eq { NodeKind { Var(name=completed) } Lit(value="Err") }
+          Block { Return { Var(name=completed) } }
+          Block { Return { Call(target=blockLinker.flatten) { Var(name=completed) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralNativeSequenceRecordPlan) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+        Let(name=entry) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+        Let(name=completed) { Call(target=lower.appendStructuralNativeBranch) { Var(name=function) Var(name=withParams) Var(name=body) Var(name=params) Var(name=records) } }
+        If {
+          Eq { NodeKind { Var(name=completed) } Lit(value="Err") }
+          Block { Return { Var(name=completed) } }
+          Block { Return { Call(target=blockLinker.flatten) { Var(name=completed) } } }
+        }
+      }
+    }
+  }
+
+}

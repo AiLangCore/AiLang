@@ -12,6 +12,7 @@ Program {
   Export(name=structuralObject.emitProjectObjects)
   Export(name=structuralObject.emitProjectObjectTexts)
   Export(name=structuralObject.emitProjectObjectTextsForPrograms)
+  Export(name=structuralObject.recordsForModule)
 
   Let(name=structuralObject.collectModuleRecords) {
     Fn(params=modulePrograms,modulePaths,index,records) {

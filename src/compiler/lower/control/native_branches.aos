@@ -1,0 +1,126 @@
+Program {
+  Let(name=lower.appendStructuralNativeTerminalSequence) {
+    Fn(params=function,context,branch,bindings,records,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=branch) } }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branch is missing a Return or If.") NodeId { Var(name=branch) } } } }
+          Block {
+            Let(name=node) { ChildAt { Var(name=branch) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=node) } Lit(value="Let") }
+              Block {
+                Let(name=name) { Call(target=lower.getAttr) { Var(name=node) Lit(value="name") Lit(value=0) } }
+                Let(name=value) { ChildAt { Var(name=node) Lit(value=0) } }
+                If {
+                  Eq { NodeKind { Var(name=value) } Lit(value="If") }
+                  Block { Return { Call(target=lower.valueIf.appendBinding) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=name) Var(name=value) } } }
+                  Block {
+                    Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) Var(name=value) Var(name=bindings) Var(name=records) } }
+                    If {
+                      Call(target=lower.isStructuralError) { Var(name=withValue) }
+                      Block { Return { Var(name=withValue) } }
+                      Block {
+                        Let(name=slot) { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } }
+                        Let(name=withStore) { Call(target=blockBuilder.emit) { Var(name=withValue) Lit(value="STORE_LOCAL") ToString { Var(name=slot) } } }
+                        Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withStore) Var(name=branch) Call(target=lower.appendStructuralNativeBinding) { Var(name=bindings) Var(name=name) } Var(name=records) Add { Var(name=index) Lit(value=1) } } }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=node) } Lit(value="Call") }
+                  Block {
+                    Let(name=withCall) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) Var(name=node) Var(name=bindings) Var(name=records) } }
+                    If {
+                      Call(target=lower.isStructuralError) { Var(name=withCall) }
+                      Block { Return { Var(name=withCall) } }
+                      Block {
+                        Let(name=withDiscard) { Call(target=blockBuilder.emit) { Var(name=withCall) Lit(value="POP") Lit(value="") } }
+                        Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withDiscard) Var(name=branch) Var(name=bindings) Var(name=records) Add { Var(name=index) Lit(value=1) } } }
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                  Eq { NodeKind { Var(name=node) } Lit(value="Return") }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=node) Lit(value=0) } }
+                    Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) Var(name=value) Var(name=bindings) Var(name=records) } }
+                    If {
+                      Call(target=lower.isStructuralError) { Var(name=withValue) }
+                      Block { Return { Var(name=withValue) } }
+                      Block { Return { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } } } } }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=node) } Lit(value="If") }
+                      Block {
+                        If {
+                          Eq { Add { Var(name=index) Lit(value=1) } ChildCount { Var(name=branch) } }
+                          Block { Return { Call(target=lower.appendStructuralNativeIfTree) { Var(name=function) Var(name=context) Var(name=node) Var(name=bindings) Var(name=records) } } }
+                          Block { Return { Call(target=lower.statementIf.append) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=node) } } }
+                        }
+                      }
+                      Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branches support Let, Call, Return, or If.") StrConcat { NodeKind { Var(name=node) } StrConcat { Lit(value=":") NodeId { Var(name=node) } } } } } }
+                    }
+                  }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  }
+
+  Let(name=lower.appendStructuralNativeBranch) {
+    Fn(params=function,context,branch,params,records) {
+      Block { Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=context) Var(name=branch) Var(name=params) Var(name=records) Lit(value=0) } } }
+    }
+  }
+
+  Let(name=lower.isStructuralError) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq { ValueKind { Var(name=value) } Lit(value="node") }
+          Block { Return { Eq { NodeKind { Var(name=value) } Lit(value="Err") } } }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeIfTree) {
+    Fn(params=function,context,ifNode,params,records) {
+      Block {
+        Let(name=condition) { ChildAt { Var(name=ifNode) Lit(value=0) } }
+        Let(name=thenBranch) { ChildAt { Var(name=ifNode) Lit(value=1) } }
+        Let(name=elseBranch) { ChildAt { Var(name=ifNode) Lit(value=2) } }
+        Let(name=thenLabel) { StrConcat { Lit(value="if-then-") NodeId { Var(name=ifNode) } } }
+        Let(name=elseLabel) { StrConcat { Lit(value="if-else-") NodeId { Var(name=ifNode) } } }
+        Let(name=withCondition) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) Var(name=condition) Var(name=params) Var(name=records) } }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withCondition) }
+          Block { Return { Var(name=withCondition) } }
+          Block {
+            Let(name=entry) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Call(target=blockBuilder.terminateBranch) { Var(name=withCondition) Var(name=thenLabel) Var(name=elseLabel) } } } }
+            Let(name=withThen) { Call(target=lower.appendStructuralNativeBranch) { Var(name=entry) Call(target=blockBuilder.beginBlock) { Var(name=thenLabel) } Var(name=thenBranch) Var(name=params) Var(name=records) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=withThen) }
+              Block { Return { Var(name=withThen) } }
+              Block { Return { Call(target=lower.appendStructuralNativeBranch) { Var(name=withThen) Call(target=blockBuilder.beginBlock) { Var(name=elseLabel) } Var(name=elseBranch) Var(name=params) Var(name=records) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

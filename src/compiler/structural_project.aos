@@ -5,6 +5,8 @@ Program {
   Export(name=structuralProject.emitProjectPlans)
   Export(name=structuralProject.emitProjectObjectTexts)
   Export(name=structuralProject.writeProjectObjectFiles)
+  Export(name=structuralProject.writeObjectFileAt)
+  Export(name=structuralProject.appendParsedObject)
 
   Let(name=structuralProject.emitProjectPlans) {
     Fn(params=modulePaths,projectDir,lockText) {

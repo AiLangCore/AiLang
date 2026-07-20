@@ -13,7 +13,10 @@ Program {
   Import(path="../../src/compiler/parser.aos")
   Import(path="../../src/compiler/linker.aos")
   Import(path="../../src/compiler/structural_project.aos")
+  Import(path="../../src/compiler/structural_project_incremental.aos")
+  Import(path="../../src/compiler/structural_project_symbols.aos")
   Import(path="../../src/compiler/structural_object.aos")
+  Import(path="../../src/compiler/structural_object_chunks.aos")
   Import(path="../../src/std/bytes.aos")
   Export(name=start)
   Let(name=start) {
@@ -24,15 +27,11 @@ Program {
         Let(name=entryProgram) { Call(target=parse.parseDocument) { Var(name=entryText) } }
         Call(target=sys.stdout.writeLine) { Lit(value="phase=graph") }
         Let(name=paths) { Call(target=linker.collectProjectModulePathsWithLock) { Lit(value="${PROJECT_DIR}") Var(name=entryProgram) Lit(value="src/cli/ailang.aos") Lit(value="") } }
-        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=programs modules=") ToString { ChildCount { Var(name=paths) } } } }
-        Let(name=programs) { Call(target=structuralProject.collectModulePrograms) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Lit(value=0) MakeBlock { Lit(value="modules") } } }
-        Call(target=sys.stdout.writeLine) { Lit(value="phase=records") }
-        Let(name=records) { Call(target=structuralObject.collectModuleRecords) { Var(name=programs) Var(name=paths) Lit(value=0) MakeBlock { Lit(value="records") } } }
-        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=validate records=") ToString { ChildCount { Var(name=records) } } } }
-        Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecords) { Var(name=records) } }
-        Call(target=sys.stdout.writeLine) { Lit(value="phase=objects") }
-        Let(name=objects) { Call(target=structuralObject.emitProjectObjectTextsForPrograms) { Var(name=programs) Var(name=paths) Var(name=validated) } }
-        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=done objects=") ToString { ChildCount { Var(name=objects) } } } }
+        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=incremental-records modules=") ToString { ChildCount { Var(name=paths) } } } }
+        Let(name=records) { Call(target=structuralProject.collectProjectSymbolChunks) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Lit(value=0) MakeBlock { Lit(value="record-chunks") } } }
+        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=records-done chunks=") ToString { ChildCount { Var(name=records) } } } }
+        Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
+        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="phase=validate-done chunks=") ToString { ChildCount { Var(name=validated) } } } }
         Return { Lit(value=0) }
       }
     }

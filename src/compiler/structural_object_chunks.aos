@@ -1,0 +1,62 @@
+Program {
+  Export(name=structuralObject.validateProjectFunctionRecordChunks)
+
+  Let(name=structuralObject.validateProjectFunctionRecordChunks) {
+    Fn(params=chunks) {
+      Block { Return { Call(target=structuralObject.validateRecordChunksAt) { Var(name=chunks) Lit(value=0) Lit(value=0) } } }
+    }
+  }
+
+  Let(name=structuralObject.validateRecordChunksAt) {
+    Fn(params=chunks,chunkIndex,recordIndex) {
+      Block {
+        If {
+          Eq { Var(name=chunkIndex) ChildCount { Var(name=chunks) } }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Let(name=records) { ChildAt { Var(name=chunks) Var(name=chunkIndex) } }
+            If {
+              Eq { Var(name=recordIndex) ChildCount { Var(name=records) } }
+              Block { Return { Call(target=structuralObject.validateRecordChunksAt) { Var(name=chunks) Add { Var(name=chunkIndex) Lit(value=1) } Lit(value=0) } } }
+              Block {
+                Let(name=record) { ChildAt { Var(name=records) Var(name=recordIndex) } }
+                Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+                If {
+                  Call(target=structuralObject.containsRecordChunkSymbolAfter) { Var(name=chunks) Var(name=symbol) Var(name=chunkIndex) Add { Var(name=recordIndex) Lit(value=1) } }
+                  Block { Return { MakeErr { Lit(value="structural_object") Lit(value="OBJ034") Lit(value="Duplicate canonical function symbol in project graph.") Var(name=symbol) } } }
+                  Block { Return { Call(target=structuralObject.validateRecordChunksAt) { Var(name=chunks) Var(name=chunkIndex) Add { Var(name=recordIndex) Lit(value=1) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.containsRecordChunkSymbolAfter) {
+    Fn(params=chunks,symbol,chunkIndex,recordIndex) {
+      Block {
+        If {
+          Eq { Var(name=chunkIndex) ChildCount { Var(name=chunks) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=records) { ChildAt { Var(name=chunks) Var(name=chunkIndex) } }
+            If {
+              Eq { Var(name=recordIndex) ChildCount { Var(name=records) } }
+              Block { Return { Call(target=structuralObject.containsRecordChunkSymbolAfter) { Var(name=chunks) Var(name=symbol) Add { Var(name=chunkIndex) Lit(value=1) } Lit(value=0) } } }
+              Block {
+                Let(name=candidate) { ChildAt { Var(name=records) Var(name=recordIndex) } }
+                If {
+                  Eq { AttrValueString { ChildAt { Var(name=candidate) Lit(value=2) } Lit(value=0) } Var(name=symbol) }
+                  Block { Return { Lit(value=true) } }
+                  Block { Return { Call(target=structuralObject.containsRecordChunkSymbolAfter) { Var(name=chunks) Var(name=symbol) Var(name=chunkIndex) Add { Var(name=recordIndex) Lit(value=1) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

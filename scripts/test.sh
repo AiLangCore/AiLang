@@ -6,6 +6,7 @@ source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 cd "${ROOT_DIR}"
 
 bash ./scripts/check-doc-taxonomy.sh
+./scripts/check-aos-module-size.sh
 ./scripts/test-stdlib-conformance.sh
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-stdlib-behavior.sh
@@ -35,7 +36,11 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-object-emitter-module.sh
 ./scripts/test-lower-module.sh
 ./scripts/test-lower-structural-node-expression-module.sh
+./scripts/test-lower-structural-native-append-child-module.sh
+./scripts/test-lower-structural-string-primitives-module.sh
 ./scripts/test-lower-structural-native-if-module.sh
+./scripts/test-lower-structural-statement-if-module.sh
+./scripts/test-lower-structural-nested-statement-if-module.sh
 ./scripts/test-lower-structural-native-terminal-let-module.sh
 ./scripts/test-lower-structural-value-if-binding-module.sh
 ./scripts/test-lower-structural-nested-native-if-module.sh

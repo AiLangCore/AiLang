@@ -51,11 +51,17 @@ Program {
   Let(name=blockLinker.flatten) {
     Fn(params=function) {
       Block {
-        Let(name=layout) { Call(target=blockLayout.assign) { Var(name=function) } }
-        Let(name=base) { MakeBlock { Lit(value="ir-linked-function") } }
-        Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="name") Lit(value=0) } } } }
-        Let(name=plan) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="symbol") Lit(value=0) } } } }
-        Return { Call(target=blockLinker.flattenAt) { Var(name=function) Var(name=layout) Lit(value=0) Var(name=plan) } }
+        If {
+          Eq { NodeKind { Var(name=function) } Lit(value="Err") }
+          Block { Return { Var(name=function) } }
+          Block {
+            Let(name=layout) { Call(target=blockLayout.assign) { Var(name=function) } }
+            Let(name=base) { MakeBlock { Lit(value="ir-linked-function") } }
+            Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="name") Lit(value=0) } } } }
+            Let(name=plan) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="symbol") Lit(value=0) } } } }
+            Return { Call(target=blockLinker.flattenAt) { Var(name=function) Var(name=layout) Lit(value=0) Var(name=plan) } }
+          }
+        }
       }
     }
   }

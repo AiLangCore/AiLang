@@ -73,7 +73,11 @@
   documentation that identify its path in the same change.
 
 ## Module Boundaries
-- Keep one semantic responsibility per module.
+- Each `.aos` file must contain one top-level `Program` and must represent one
+  semantic module.
+- Keep one semantic responsibility per module. This is not a one-function-per-
+  file rule: closely related helpers may share a file when they implement the
+  same capability and change for the same reason.
 - Split a module before adding behavior when it already mixes unrelated
   responsibilities.
 - Keep public facades thin and move deterministic implementation into focused
@@ -86,6 +90,14 @@
 - Preserve established public contracts during a behavior-preserving split;
   change a contract only as an explicit replacement updated consistently
   across callers and tests.
+- Any `.aos` file longer than 1,000 lines triggers a repository-validation
+  warning and requires an explicit semantic-cohesion review. The warning is
+  not an automatic failure because parsers, state machines, generated source,
+  and other intrinsically cohesive modules may legitimately exceed the
+  threshold.
+- Do not silence a size warning by making arbitrary numbered fragments or
+  generic helper modules. Resolve it by confirming cohesion or splitting along
+  semantic ownership.
 
 ## AI-First Rules
 - Write code so an AI agent can safely edit one part without reinterpreting the whole file.

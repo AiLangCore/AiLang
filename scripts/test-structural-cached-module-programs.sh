@@ -53,6 +53,6 @@ Program {
 AOS
 
 OUT="$(cd "${ROOT_DIR}" && ./tools/ailang run "${TMP_DIR}/app.aos")"
-printf '%s\n' "${OUT}" | rg -x '2'
+printf '%s\n' "${OUT}" | rg -x '3'
 printf '%s\n' "${OUT}" | rg -Fq 'Ok#ok1(type=int value=0)'
 echo 'structural cached module programs: PASS'

@@ -1,0 +1,101 @@
+Program {
+  Import(path="structural_project.aos")
+  Import(path="structural_object.aos")
+  Import(path="structural_object_chunks.aos")
+  Import(path="structural_project_records.aos")
+  Import(path="structural_project_symbols.aos")
+  Export(name=structuralProject.writeProjectObjectFilesIncremental)
+
+  Let(name=structuralProject.writeProjectObjectFilesIncremental) {
+    Fn(params=modulePaths,projectDir,lockText,objDir) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Let(name=records) {
+          Call(target=structuralProject.collectProjectSymbolChunks) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Lit(value=0)
+            MakeBlock { Lit(value="record-chunks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
+            If {
+              Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
+              Block { Return { Var(name=validated) } }
+              Block {
+                Return {
+                  Call(target=structuralProject.writeModuleObjectsIncremental) {
+                    Var(name=modulePaths)
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                    Var(name=validated)
+                    Lit(value=0)
+                    MakeBlock { Lit(value="objects") }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeModuleObjectsIncremental) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,index,objects) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=program) {
+              Call(target=structuralProject.parseModuleProgram) {
+                Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=index)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+              Block { Return { Var(name=program) } }
+              Block {
+                Let(name=moduleRecords) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
+                Let(name=object) { Call(target=structuralObject.emitModuleObjectForProgram) { Var(name=program) Var(name=modulePath) Var(name=moduleRecords) Var(name=records) } }
+                If {
+                  Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+                  Block { Return { Var(name=object) } }
+                  Block {
+                    Let(name=persisted) {
+                      Call(target=structuralProject.writeObjectFileAt) {
+                        Call(target=format.format) { Var(name=object) } Var(name=objDir) Var(name=index)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
+                      Block { Return { Var(name=persisted) } }
+                      Block {
+                        Let(name=nextObjects) { Call(target=structuralProject.appendParsedObject) { Var(name=objects) Var(name=persisted) Lit(value="") } }
+                        Return {
+                          Call(target=structuralProject.writeModuleObjectsIncremental) {
+                            Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=objDir) Var(name=records)
+                            Add { Var(name=index) Lit(value=1) } Var(name=nextObjects)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

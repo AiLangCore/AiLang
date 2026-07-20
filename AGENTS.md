@@ -16,6 +16,9 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 
 ## Module Discipline
 
+- Treat each `.aos` file as one semantic module with one top-level `Program`.
+  This is not a one-function-per-file rule. Files over 1,000 lines trigger a
+  semantic-cohesion warning and must be reviewed before adding behavior.
 - Agents must prefer creating focused semantic `.aos` modules over expanding
   large facade, host, runtime, CLI, or sample files. Do not create or continue
   "blob" files.

@@ -1,0 +1,248 @@
+Program {
+  Let(name=lower.structuralNativeIndexOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="AttrKey") }
+          Block { Return { Lit(value="ATTR_KEY") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="AttrValueString") }
+              Block { Return { Lit(value="ATTR_VALUE_STRING") } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="AttrValueInt") }
+                  Block { Return { Lit(value="ATTR_VALUE_INT") } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="AttrValueKind") }
+                      Block { Return { Lit(value="ATTR_VALUE_KIND") } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="AttrValueBool") }
+                          Block { Return { Lit(value="ATTR_VALUE_BOOL") } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="ChildAt") }
+                              Block { Return { Lit(value="CHILD_AT") } }
+                              Block { Return { Lit(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeUnaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="FinishNodeBuilder") }
+          Block { Return { Lit(value="NODE_BUILDER_FINISH") } }
+          Block {
+        If {
+          Eq { Var(name=kind) Lit(value="MakeBlock") }
+          Block { Return { Lit(value="MAKE_BLOCK") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="AttrCount") }
+              Block { Return { Lit(value="ATTR_COUNT") } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="ChildCount") }
+                  Block { Return { Lit(value="CHILD_COUNT") } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="ValueKind") }
+                      Block { Return { Lit(value="VALUE_KIND") } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="NodeId") }
+                          Block { Return { Lit(value="NODE_ID") } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="NodeKind") }
+                              Block { Return { Lit(value="NODE_KIND") } }
+                              Block {
+                                If {
+                                  Eq { Var(name=kind) Lit(value="ToString") }
+                                  Block { Return { Lit(value="TO_STRING") } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=kind) Lit(value="StrEscape") }
+                                      Block { Return { Lit(value="STR_ESCAPE") } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=kind) Lit(value="PairFirst") }
+                                          Block { Return { Lit(value="PAIR_FIRST") } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=kind) Lit(value="PairSecond") }
+                                              Block { Return { Lit(value="PAIR_SECOND") } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=kind) Lit(value="StringFromCodePoint") }
+                                                  Block { Return { Lit(value="STR_FROM_CODEPOINT") } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=kind) Lit(value="StringDecodeUnicodeHex4") }
+                                                      Block { Return { Lit(value="STR_DECODE_UNICODE_HEX4") } }
+                                                      Block {
+                                                        If {
+                                                          Eq { Var(name=kind) Lit(value="StringUtf8ByteCount") }
+                                                          Block { Return { Lit(value="STR_UTF8_BYTE_COUNT") } }
+                                                          Block {
+                                                            If {
+                                                              Eq { Var(name=kind) Lit(value="StringScalarLength") }
+                                                              Block { Return { Lit(value="STR_SCALAR_LENGTH") } }
+                                                              Block { Return { Lit(value="") } }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeVariadicOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="MakeErr") }
+          Block { Return { Lit(value="MAKE_ERR") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="MakeLitString") }
+              Block { Return { Lit(value="MAKE_LIT_STRING") } }
+              Block {
+            If {
+              Eq { Var(name=kind) Lit(value="MakeLitInt") }
+              Block { Return { Lit(value="MAKE_LIT_INT") } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="MakePair") }
+                  Block { Return { Lit(value="MAKE_PAIR") } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="MakeLitBool") }
+                      Block { Return { Lit(value="MAKE_LIT_BOOL") } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="MakeNodeBuilder") }
+                          Block { Return { Lit(value="NODE_BUILDER_NEW") } }
+                          Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="MakeNode") }
+                          Block { Return { Lit(value="MAKE_NODE") } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="StringSlice") }
+                              Block { Return { Lit(value="STR_SUBSTRING") } }
+                              Block {
+                                If {
+                                  Eq { Var(name=kind) Lit(value="StringFind") }
+                                  Block { Return { Lit(value="STR_FIND") } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=kind) Lit(value="StringRemove") }
+                                      Block { Return { Lit(value="STR_REMOVE") } }
+                                      Block { Return { Lit(value="") } }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeBinaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BuilderAppendAttr") }
+          Block { Return { Lit(value="NODE_BUILDER_APPEND_ATTR") } }
+          Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BuilderAppendChild") }
+          Block { Return { Lit(value="NODE_BUILDER_APPEND_CHILD") } }
+          Block {
+        If {
+          Eq { Var(name=kind) Lit(value="AppendAttr") }
+          Block { Return { Lit(value="APPEND_ATTR") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="AppendChild") }
+              Block { Return { Lit(value="APPEND_CHILD") } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="StrConcat") }
+                  Block { Return { Lit(value="STR_CONCAT") } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="StringDecodeUnicodeSurrogatePairHex4") }
+                      Block { Return { Lit(value="STR_DECODE_UNICODE_SURROGATE_PAIR_HEX4") } }
+                      Block { Return { Lit(value="") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+          }
+        }
+          }
+        }
+      }
+    }
+  }
+
+}

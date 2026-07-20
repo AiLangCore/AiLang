@@ -22,6 +22,7 @@ AOS
 
 cat > "${PROJECT_DIR}/src/dep2.aos" <<'AOS'
 Program#dep2_p1 {
+  Import#dep2_i1(path="./nested.aos")
   Export#dep2_e1(name=dep2)
   Let#dep2_l1(name=dep2) { Lit#dep2_i2(value=2) }
 }
@@ -77,7 +78,7 @@ Program#test_p1 {
       Block#test_b1 {
         Let#test_l2(name=entry) {
           Call#test_c1(target=parse.parseDocument) {
-            Lit#test_i1(value="Program#entry { Import#i1(path=\"dep1.aos\") Import#i2(path=\"dep2.aos\") Export#e1(name=\"start\") Let#l1(name=\"start\") { Lit#v1(value=0) } }")
+            Lit#test_i1(value="Program#entry { Export#e1(name=\"start\") Import#i1(path=\"dep1.aos\") Import#i2(path=\"dep2.aos\") Let#l1(name=\"start\") { Lit#v1(value=0) } }")
           }
         }
         Let#test_l3(name=paths) {
@@ -86,6 +87,16 @@ Program#test_p1 {
             Var#test_v1(name=entry)
             Lit#test_i2(value="src/app.aos")
           }
+        }
+        If#test_if_windows_path {
+          Eq#test_windows_path_eq {
+            Call#test_windows_path_call(target=linker.normalizeDisplayPath) {
+              Lit#test_windows_path_value(value="src\\compiler\\.\\parser\\..\\linker.aos")
+            }
+            Lit#test_windows_path_expected(value="src/compiler/linker.aos")
+          }
+          Block#test_windows_path_ok { Lit#test_windows_path_zero(value=0) }
+          Block#test_windows_path_fail { Return#test_windows_path_return { Lit#test_windows_path_error(value=9) } }
         }
         If#test_if1 {
           Eq#test_e1 { ChildCount#test_cc1 { Var#test_v2(name=paths) } Lit#test_i3(value=4) }

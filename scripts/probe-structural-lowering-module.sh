@@ -43,7 +43,7 @@ Program {
                             Lit(value=" message=")
                             StrConcat {
                               AttrValueString { Var(name=plan) Lit(value=1) }
-                              StrConcat { Lit(value=" nodeId=") NodeId { Var(name=plan) } }
+                              StrConcat { Lit(value=" detail=") AttrValueString { Var(name=plan) Lit(value=2) } }
                             }
                           }
                         }

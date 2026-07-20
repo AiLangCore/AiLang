@@ -1,0 +1,332 @@
+Program {
+  Let(name=lower.isStructuralReturnCallBlock) {
+    Fn(params=block) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=block) } Lit(value=1) }
+          Block {
+            Let(name=returnNode) { ChildAt { Var(name=block) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
+                  Block {
+                    Let(name=call) { ChildAt { Var(name=returnNode) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=call) } Lit(value="Call") }
+                      Block { Return { Lit(value=true) } }
+                      Block { Return { Lit(value=false) } }
+                    }
+                  }
+                  Block { Return { Lit(value=false) } }
+                }
+              }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralIfRecordPlanWithSymbols) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=ifNode) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=condition) { ChildAt { Var(name=ifNode) Lit(value=0) } }
+        Let(name=thenBlock) { ChildAt { Var(name=ifNode) Lit(value=1) } }
+        Let(name=elseBlock) { ChildAt { Var(name=ifNode) Lit(value=2) } }
+        If {
+          Eq { NodeKind { Var(name=condition) } Lit(value="Lit") }
+          Block {
+            If {
+              Call(target=lower.isStructuralReturnCallBlock) { Var(name=thenBlock) }
+              Block {
+                If {
+                  Call(target=lower.isStructuralReturnCallBlock) { Var(name=elseBlock) }
+                  Block { Return { Call(target=lower.emitStructuralLiteralIfCallsPlan) { Var(name=name) Var(name=symbol) Var(name=params) Var(name=records) Var(name=condition) Var(name=thenBlock) Var(name=elseBlock) } } }
+                  Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER029") Lit(value="Structural If call branches currently require a single Call return.") NodeId { Var(name=elseBlock) } } } }
+                }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER029") Lit(value="Structural If call branches currently require a single Call return.") NodeId { Var(name=thenBlock) } } } }
+            }
+          }
+          Block {
+            If {
+              Call(target=lower.isStructuralReturnCallBlock) { Var(name=thenBlock) }
+              Block {
+                If {
+                  Call(target=lower.isStructuralReturnCallBlock) { Var(name=elseBlock) }
+                  Block { Return { Call(target=lower.emitStructuralBoundIfCallsPlan) { Var(name=name) Var(name=symbol) Var(name=params) Var(name=records) Var(name=condition) Var(name=thenBlock) Var(name=elseBlock) } } }
+                  Block { Return { Call(target=lower.emitStructuralIfRecordPlan) { Var(name=record) } } }
+                }
+              }
+              Block { Return { Call(target=lower.emitStructuralIfRecordPlan) { Var(name=record) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralLiteralIfCallsPlan) {
+    Fn(params=name,symbol,params,records,condition,thenBlock,elseBlock) {
+      Block {
+        Let(name=thenCall) { ChildAt { ChildAt { Var(name=thenBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=elseCall) { ChildAt { ChildAt { Var(name=elseBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=thenName) { Call(target=lower.getAttr) { Var(name=thenCall) Lit(value="target") Lit(value=0) } }
+        Let(name=elseName) { Call(target=lower.getAttr) { Var(name=elseCall) Lit(value="target") Lit(value=0) } }
+        If {
+          Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=thenName) Lit(value=0) }
+          Block {
+            If {
+              Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=elseName) Lit(value=0) }
+              Block {
+                Let(name=thenTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=thenName) Lit(value=0) } }
+                Let(name=elseTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=elseName) Lit(value=0) } }
+                Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+                Let(name=entry0) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+                Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry0) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+                Let(name=entry1) { Call(target=blockBuilder.emit) { Var(name=withParams) Lit(value="CONST") Call(target=lower.literalConstantTarget) { Var(name=condition) } } }
+                Let(name=entry2) { Call(target=blockBuilder.terminateBranch) { Var(name=entry1) Lit(value="then") Lit(value="else") } }
+                Let(name=then0) { Call(target=blockBuilder.beginBlock) { Lit(value="then") } }
+                Let(name=then1) { Call(target=lower.appendStructuralCallArguments) { Var(name=then0) Var(name=thenCall) Var(name=params) Lit(value="") Lit(value=-1) Lit(value=0) } }
+                Let(name=then2) { Call(target=blockBuilder.emit) { Var(name=then1) Lit(value="CALL") AttrValueString { Var(name=thenTarget) Lit(value=0) } } }
+                Let(name=then3) { Call(target=blockBuilder.terminateReturn) { Var(name=then2) } }
+                Let(name=else0) { Call(target=blockBuilder.beginBlock) { Lit(value="else") } }
+                Let(name=else1) { Call(target=lower.appendStructuralCallArguments) { Var(name=else0) Var(name=elseCall) Var(name=params) Lit(value="") Lit(value=-1) Lit(value=0) } }
+                Let(name=else2) { Call(target=blockBuilder.emit) { Var(name=else1) Lit(value="CALL") AttrValueString { Var(name=elseTarget) Lit(value=0) } } }
+                Let(name=else3) { Call(target=blockBuilder.terminateReturn) { Var(name=else2) } }
+                Let(name=withEntry) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=entry2) } } }
+                Let(name=withThen) { Call(target=blockBuilder.appendBlock) { Var(name=withEntry) Call(target=blockBuilder.seal) { Var(name=then3) } } }
+                Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=withThen) Call(target=blockBuilder.seal) { Var(name=else3) } } } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=elseName) } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=thenName) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralIfCallCondition) {
+    Fn(params=context,condition,params) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=condition) } Lit(value="Var") }
+          Block { Return { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=condition) Var(name=params) Lit(value="") Lit(value=-1) } } }
+          Block {
+            If {
+              Call(target=lower.isStructuralBoundEqualityCondition) { Var(name=condition) Var(name=params) Lit(value="") }
+              Block {
+                Let(name=left) { ChildAt { Var(name=condition) Lit(value=0) } }
+                Let(name=right) { ChildAt { Var(name=condition) Lit(value=1) } }
+                Let(name=withLeft) { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=left) Var(name=params) Lit(value="") Lit(value=-1) } }
+                Let(name=withRight) { Call(target=lower.appendStructuralValue) { Var(name=withLeft) Var(name=right) Var(name=params) Lit(value="") Lit(value=-1) } }
+                Return { Call(target=blockBuilder.emit) { Var(name=withRight) Call(target=lower.structuralEqualityOp) { Var(name=left) Var(name=right) } Lit(value="") } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER023") Lit(value="Structural If call condition requires a parameter binding or equality over declared bindings.") NodeId { Var(name=condition) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralBoundIfCallsPlan) {
+    Fn(params=name,symbol,params,records,condition,thenBlock,elseBlock) {
+      Block {
+        Let(name=thenCall) { ChildAt { ChildAt { Var(name=thenBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=elseCall) { ChildAt { ChildAt { Var(name=elseBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=thenName) { Call(target=lower.getAttr) { Var(name=thenCall) Lit(value="target") Lit(value=0) } }
+        Let(name=elseName) { Call(target=lower.getAttr) { Var(name=elseCall) Lit(value="target") Lit(value=0) } }
+        If {
+          Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=thenName) Lit(value=0) }
+          Block {
+            If {
+              Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=elseName) Lit(value=0) }
+              Block {
+                Let(name=thenTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=thenName) Lit(value=0) } }
+                Let(name=elseTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=elseName) Lit(value=0) } }
+                Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+                Let(name=entry0) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+                Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry0) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+                Let(name=entryCondition) { Call(target=lower.appendStructuralIfCallCondition) { Var(name=withParams) Var(name=condition) Var(name=params) } }
+                Let(name=entryBranch) { Call(target=blockBuilder.terminateBranch) { Var(name=entryCondition) Lit(value="then") Lit(value="else") } }
+                Let(name=then0) { Call(target=blockBuilder.beginBlock) { Lit(value="then") } }
+                Let(name=then1) { Call(target=lower.appendStructuralCallArguments) { Var(name=then0) Var(name=thenCall) Var(name=params) Lit(value="") Lit(value=-1) Lit(value=0) } }
+                Let(name=then2) { Call(target=blockBuilder.emit) { Var(name=then1) Lit(value="CALL") AttrValueString { Var(name=thenTarget) Lit(value=0) } } }
+                Let(name=then3) { Call(target=blockBuilder.terminateReturn) { Var(name=then2) } }
+                Let(name=else0) { Call(target=blockBuilder.beginBlock) { Lit(value="else") } }
+                Let(name=else1) { Call(target=lower.appendStructuralCallArguments) { Var(name=else0) Var(name=elseCall) Var(name=params) Lit(value="") Lit(value=-1) Lit(value=0) } }
+                Let(name=else2) { Call(target=blockBuilder.emit) { Var(name=else1) Lit(value="CALL") AttrValueString { Var(name=elseTarget) Lit(value=0) } } }
+                Let(name=else3) { Call(target=blockBuilder.terminateReturn) { Var(name=else2) } }
+                Let(name=withEntry) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=entryBranch) } } }
+                Let(name=withThen) { Call(target=blockBuilder.appendBlock) { Var(name=withEntry) Call(target=blockBuilder.seal) { Var(name=then3) } } }
+                Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=withThen) Call(target=blockBuilder.seal) { Var(name=else3) } } } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=elseName) } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=thenName) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralLocalIfRecordPlanWithSymbols) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=local) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=ifNode) { ChildAt { Var(name=body) Lit(value=1) } }
+        Let(name=condition) { ChildAt { Var(name=ifNode) Lit(value=0) } }
+        Let(name=thenBlock) { ChildAt { Var(name=ifNode) Lit(value=1) } }
+        Let(name=elseBlock) { ChildAt { Var(name=ifNode) Lit(value=2) } }
+        If {
+          Call(target=lower.isStructuralReturnCallBlock) { Var(name=thenBlock) }
+          Block {
+            If {
+              Call(target=lower.isStructuralReturnCallBlock) { Var(name=elseBlock) }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=condition) } Lit(value="Lit") }
+                  Block { Return { Call(target=lower.emitStructuralLocalLiteralIfCallsPlan) { Var(name=name) Var(name=symbol) Var(name=params) Var(name=records) Var(name=local) Var(name=condition) Var(name=thenBlock) Var(name=elseBlock) } } }
+                  Block { Return { Call(target=lower.emitStructuralLocalBoundIfCallsPlan) { Var(name=name) Var(name=symbol) Var(name=params) Var(name=records) Var(name=local) Var(name=condition) Var(name=thenBlock) Var(name=elseBlock) } } }
+                }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER029") Lit(value="Structural local If call branches currently require a single Call return.") NodeId { Var(name=elseBlock) } } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER029") Lit(value="Structural local If call branches currently require a single Call return.") NodeId { Var(name=thenBlock) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralLocalIfCallCondition) {
+    Fn(params=context,condition,params,localName,localSlot) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=condition) } Lit(value="Var") }
+          Block { Return { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=condition) Var(name=params) Var(name=localName) Var(name=localSlot) } } }
+          Block {
+            If {
+              Call(target=lower.isStructuralBoundEqualityCondition) { Var(name=condition) Var(name=params) Var(name=localName) }
+              Block {
+                Let(name=left) { ChildAt { Var(name=condition) Lit(value=0) } }
+                Let(name=right) { ChildAt { Var(name=condition) Lit(value=1) } }
+                Let(name=withLeft) { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=left) Var(name=params) Var(name=localName) Var(name=localSlot) } }
+                Let(name=withRight) { Call(target=lower.appendStructuralValue) { Var(name=withLeft) Var(name=right) Var(name=params) Var(name=localName) Var(name=localSlot) } }
+                Return { Call(target=blockBuilder.emit) { Var(name=withRight) Call(target=lower.structuralEqualityOp) { Var(name=left) Var(name=right) } Lit(value="") } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER023") Lit(value="Structural local If call condition requires a declared binding or equality over declared bindings.") NodeId { Var(name=condition) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralLocalBoundIfCallsPlan) {
+    Fn(params=name,symbol,params,records,local,condition,thenBlock,elseBlock) {
+      Block {
+        Let(name=localSlot) { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } }
+        Let(name=init) { ChildAt { Var(name=local) Lit(value=0) } }
+        Let(name=thenCall) { ChildAt { ChildAt { Var(name=thenBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=elseCall) { ChildAt { ChildAt { Var(name=elseBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=thenName) { Call(target=lower.getAttr) { Var(name=thenCall) Lit(value="target") Lit(value=0) } }
+        Let(name=elseName) { Call(target=lower.getAttr) { Var(name=elseCall) Lit(value="target") Lit(value=0) } }
+        If {
+          Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=thenName) Lit(value=0) }
+          Block {
+            If {
+              Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=elseName) Lit(value=0) }
+              Block {
+                Let(name=thenTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=thenName) Lit(value=0) } }
+                Let(name=elseTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=elseName) Lit(value=0) } }
+                Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="local") } }
+                Let(name=entry0) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+                Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry0) Sub { Var(name=localSlot) Lit(value=1) } } }
+                Let(name=withInit) { Call(target=lower.appendStructuralValue) { Var(name=withParams) Var(name=init) Var(name=params) Lit(value="") Lit(value=-1) } }
+                Let(name=withStore) { Call(target=blockBuilder.emit) { Var(name=withInit) Lit(value="STORE_LOCAL") ToString { Var(name=localSlot) } } }
+                Let(name=entryCondition) { Call(target=lower.appendStructuralLocalIfCallCondition) { Var(name=withStore) Var(name=condition) Var(name=params) Var(name=localName) Var(name=localSlot) } }
+                Let(name=entryBranch) { Call(target=blockBuilder.terminateBranch) { Var(name=entryCondition) Lit(value="then") Lit(value="else") } }
+                Let(name=then0) { Call(target=blockBuilder.beginBlock) { Lit(value="then") } }
+                Let(name=then1) { Call(target=lower.appendStructuralCallArguments) { Var(name=then0) Var(name=thenCall) Var(name=params) Var(name=localName) Var(name=localSlot) Lit(value=0) } }
+                Let(name=then2) { Call(target=blockBuilder.emit) { Var(name=then1) Lit(value="CALL") AttrValueString { Var(name=thenTarget) Lit(value=0) } } }
+                Let(name=then3) { Call(target=blockBuilder.terminateReturn) { Var(name=then2) } }
+                Let(name=else0) { Call(target=blockBuilder.beginBlock) { Lit(value="else") } }
+                Let(name=else1) { Call(target=lower.appendStructuralCallArguments) { Var(name=else0) Var(name=elseCall) Var(name=params) Var(name=localName) Var(name=localSlot) Lit(value=0) } }
+                Let(name=else2) { Call(target=blockBuilder.emit) { Var(name=else1) Lit(value="CALL") AttrValueString { Var(name=elseTarget) Lit(value=0) } } }
+                Let(name=else3) { Call(target=blockBuilder.terminateReturn) { Var(name=else2) } }
+                Let(name=withEntry) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=entryBranch) } } }
+                Let(name=withThen) { Call(target=blockBuilder.appendBlock) { Var(name=withEntry) Call(target=blockBuilder.seal) { Var(name=then3) } } }
+                Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=withThen) Call(target=blockBuilder.seal) { Var(name=else3) } } } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=elseName) } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=thenName) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralLocalLiteralIfCallsPlan) {
+    Fn(params=name,symbol,params,records,local,condition,thenBlock,elseBlock) {
+      Block {
+        Let(name=localName) { Call(target=lower.getAttr) { Var(name=local) Lit(value="name") Lit(value=0) } }
+        Let(name=localSlot) { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } }
+        Let(name=init) { ChildAt { Var(name=local) Lit(value=0) } }
+        Let(name=thenCall) { ChildAt { ChildAt { Var(name=thenBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=elseCall) { ChildAt { ChildAt { Var(name=elseBlock) Lit(value=0) } Lit(value=0) } }
+        Let(name=thenName) { Call(target=lower.getAttr) { Var(name=thenCall) Lit(value="target") Lit(value=0) } }
+        Let(name=elseName) { Call(target=lower.getAttr) { Var(name=elseCall) Lit(value="target") Lit(value=0) } }
+        If {
+          Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=thenName) Lit(value=0) }
+          Block {
+            If {
+              Call(target=lower.hasStructuralCallTarget) { Var(name=records) Var(name=elseName) Lit(value=0) }
+              Block {
+                Let(name=thenTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=thenName) Lit(value=0) } }
+                Let(name=elseTarget) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=elseName) Lit(value=0) } }
+                Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="local") } }
+                Let(name=entry0) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+                Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=entry0) Sub { Var(name=localSlot) Lit(value=1) } } }
+                Let(name=withInit) { Call(target=lower.appendStructuralValue) { Var(name=withParams) Var(name=init) Var(name=params) Lit(value="") Lit(value=-1) } }
+                Let(name=withStore) { Call(target=blockBuilder.emit) { Var(name=withInit) Lit(value="STORE_LOCAL") ToString { Var(name=localSlot) } } }
+                Let(name=entry1) { Call(target=blockBuilder.emit) { Var(name=withStore) Lit(value="CONST") Call(target=lower.literalConstantTarget) { Var(name=condition) } } }
+                Let(name=entry2) { Call(target=blockBuilder.terminateBranch) { Var(name=entry1) Lit(value="then") Lit(value="else") } }
+                Let(name=then0) { Call(target=blockBuilder.beginBlock) { Lit(value="then") } }
+                Let(name=then1) { Call(target=lower.appendStructuralCallArguments) { Var(name=then0) Var(name=thenCall) Var(name=params) Var(name=localName) Var(name=localSlot) Lit(value=0) } }
+                Let(name=then2) { Call(target=blockBuilder.emit) { Var(name=then1) Lit(value="CALL") AttrValueString { Var(name=thenTarget) Lit(value=0) } } }
+                Let(name=then3) { Call(target=blockBuilder.terminateReturn) { Var(name=then2) } }
+                Let(name=else0) { Call(target=blockBuilder.beginBlock) { Lit(value="else") } }
+                Let(name=else1) { Call(target=lower.appendStructuralCallArguments) { Var(name=else0) Var(name=elseCall) Var(name=params) Var(name=localName) Var(name=localSlot) Lit(value=0) } }
+                Let(name=else2) { Call(target=blockBuilder.emit) { Var(name=else1) Lit(value="CALL") AttrValueString { Var(name=elseTarget) Lit(value=0) } } }
+                Let(name=else3) { Call(target=blockBuilder.terminateReturn) { Var(name=else2) } }
+                Let(name=withEntry) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=entry2) } } }
+                Let(name=withThen) { Call(target=blockBuilder.appendBlock) { Var(name=withEntry) Call(target=blockBuilder.seal) { Var(name=then3) } } }
+                Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=withThen) Call(target=blockBuilder.seal) { Var(name=else3) } } } }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=elseName) } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=thenName) } } }
+        }
+      }
+    }
+  }
+
+}

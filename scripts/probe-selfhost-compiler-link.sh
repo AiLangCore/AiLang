@@ -16,6 +16,7 @@ Program {
   Import(path="../../src/compiler/structural_project_symbols.aos")
   Import(path="../../src/compiler/structural_object_chunks.aos")
   Import(path="../../src/compiler/object_linker.aos")
+  Import(path="../../src/compiler/object_linker_constant_plan.aos")
   Import(path="../../src/std/bytes.aos")
   Export(name=start)
 
@@ -57,16 +58,61 @@ Program {
         Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
         Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=validation-done") }
         Let(name=objects) { Call(target=collectObjects) { Var(name=paths) Var(name=validated) Lit(value=0) MakeBlock { Lit(value="objects") } } }
-        Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=objects-done count=") ToString { ChildCount { Var(name=objects) } } } }
-        Let(name=functions) { Call(target=objectLinker.collectFunctions) { Var(name=objects) } }
-        Let(name=supported) { Call(target=objectLinker.validateSupported) { Var(name=functions) } }
         If {
-          Eq { NodeKind { Var(name=supported) } Lit(value="Err") }
-          Block { Return { Var(name=supported) } }
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
           Block {
-            Call(target=sys.fs.file.write) { Lit(value="${TMP_DIR}/bin/ailang.aibc1") Call(target=objectLinker.emitAibc1Bytes) { Var(name=functions) } }
-            Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=done") }
-            Return { Lit(value=0) }
+            Call(target=sys.stdout.writeLine) {
+              StrConcat {
+                Lit(value="selfhost-link=object-error code=")
+                StrConcat {
+                  AttrValueString { Var(name=objects) Lit(value=0) }
+                  StrConcat { Lit(value=" node=") AttrValueString { Var(name=objects) Lit(value=2) } }
+                }
+              }
+            }
+            Return { Var(name=objects) }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=objects-done count=") ToString { ChildCount { Var(name=objects) } } } }
+            Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=function-collection-begin") }
+            Let(name=functions) { Call(target=objectLinker.collectFunctions) { Var(name=objects) } }
+            If {
+              Eq { NodeKind { Var(name=functions) } Lit(value="Err") }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=function-collection-error") }
+                Return { Var(name=functions) }
+              }
+              Block {
+                Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=function-collection-done count=") ToString { ChildCount { Var(name=functions) } } } }
+                Let(name=supported) { Call(target=objectLinker.validateSupported) { Var(name=functions) } }
+                If {
+                  Eq { NodeKind { Var(name=supported) } Lit(value="Err") }
+                  Block { Return { Var(name=supported) } }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=layout-begin") }
+                    Let(name=layout) { Call(target=objectLinker.assignOffsets) { Var(name=functions) } }
+                    Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=layout-done") }
+                    Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=constant-plan-begin") }
+                    Let(name=constantPlan) { Call(target=objectLinker.buildConstantPlan) { Var(name=functions) } }
+                    Let(name=constants) { PairFirst { Var(name=constantPlan) } }
+                    Let(name=constantOperands) { PairSecond { Var(name=constantPlan) } }
+                    Call(target=sys.stdout.writeLine) {
+                      StrConcat {
+                        Lit(value="selfhost-link=constant-plan-done constants=")
+                        StrConcat {
+                          ToString { ChildCount { Var(name=constants) } }
+                          StrConcat { Lit(value=" functions=") ToString { ChildCount { Var(name=constantOperands) } } }
+                        }
+                      }
+                    }
+                    Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=byte-emission-begin") }
+                    Call(target=sys.fs.file.write) { Lit(value="${TMP_DIR}/bin/ailang.aibc1") Call(target=objectLinker.emitAibc1BytesFromPlan) { Var(name=functions) Var(name=layout) Var(name=constants) Var(name=constantOperands) } }
+                    Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=done") }
+                    Return { Lit(value=0) }
+                  }
+                }
+              }
+            }
           }
         }
       }

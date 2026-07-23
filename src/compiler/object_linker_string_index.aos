@@ -1,0 +1,198 @@
+Program {
+  Export(name=objectLinker.stringIndexEmpty)
+  Export(name=objectLinker.stringIndexGet)
+  Export(name=objectLinker.stringIndexPut)
+
+  Let(name=objectLinker.stringIndexEmpty) {
+    Fn() {
+      Block { Return { MakeBlock { Lit(value="string-index-empty") } } }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexGet) {
+    Fn(params=index,key,fallback) {
+      Block {
+        Return {
+          Call(target=objectLinker.stringIndexGetHashed) {
+            Var(name=index) Var(name=key)
+            Call(target=objectLinker.stringIndexHash) { Var(name=key) }
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexGetHashed) {
+    Fn(params=index,key,hash,fallback) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=index) } Lit(value=0) }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=nodeHash) { AttrValueInt { ChildAt { Var(name=index) Lit(value=2) } Lit(value=0) } }
+            If {
+              Eq { Var(name=hash) Var(name=nodeHash) }
+              Block {
+                Let(name=nodeKey) { AttrValueString { ChildAt { Var(name=index) Lit(value=0) } Lit(value=0) } }
+                If {
+                  Eq { Var(name=key) Var(name=nodeKey) }
+                  Block { Return { AttrValueInt { ChildAt { Var(name=index) Lit(value=1) } Lit(value=0) } } }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.stringIndexGetHashed) {
+                        ChildAt { Var(name=index) Lit(value=4) } Var(name=key) Var(name=hash) Var(name=fallback)
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Lt { Var(name=hash) Var(name=nodeHash) }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.stringIndexGetHashed) {
+                        ChildAt { Var(name=index) Lit(value=3) } Var(name=key) Var(name=hash) Var(name=fallback)
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.stringIndexGetHashed) {
+                        ChildAt { Var(name=index) Lit(value=4) } Var(name=key) Var(name=hash) Var(name=fallback)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexPut) {
+    Fn(params=index,key,value) {
+      Block {
+        Return {
+          Call(target=objectLinker.stringIndexPutHashed) {
+            Var(name=index) Var(name=key) Var(name=value)
+            Call(target=objectLinker.stringIndexHash) { Var(name=key) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexPutHashed) {
+    Fn(params=index,key,value,hash) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=index) } Lit(value=0) }
+          Block {
+            Return {
+              Call(target=objectLinker.makeStringIndexNode) {
+                Var(name=key) Var(name=value) Var(name=hash)
+                Call(target=objectLinker.stringIndexEmpty) {}
+                Call(target=objectLinker.stringIndexEmpty) {}
+              }
+            }
+          }
+          Block {
+            Let(name=nodeKey) { AttrValueString { ChildAt { Var(name=index) Lit(value=0) } Lit(value=0) } }
+            Let(name=nodeValue) { AttrValueInt { ChildAt { Var(name=index) Lit(value=1) } Lit(value=0) } }
+            Let(name=nodeHash) { AttrValueInt { ChildAt { Var(name=index) Lit(value=2) } Lit(value=0) } }
+            Let(name=left) { ChildAt { Var(name=index) Lit(value=3) } }
+            Let(name=right) { ChildAt { Var(name=index) Lit(value=4) } }
+            If {
+              Eq { Var(name=key) Var(name=nodeKey) }
+              Block {
+                Return {
+                  Call(target=objectLinker.makeStringIndexNode) {
+                    Var(name=nodeKey) Var(name=value) Var(name=nodeHash) Var(name=left) Var(name=right)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Lt { Var(name=hash) Var(name=nodeHash) }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.makeStringIndexNode) {
+                        Var(name=nodeKey) Var(name=nodeValue) Var(name=nodeHash)
+                        Call(target=objectLinker.stringIndexPutHashed) {
+                          Var(name=left) Var(name=key) Var(name=value) Var(name=hash)
+                        }
+                        Var(name=right)
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.makeStringIndexNode) {
+                        Var(name=nodeKey) Var(name=nodeValue) Var(name=nodeHash) Var(name=left)
+                        Call(target=objectLinker.stringIndexPutHashed) {
+                          Var(name=right) Var(name=key) Var(name=value) Var(name=hash)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.makeStringIndexNode) {
+    Fn(params=key,value,hash,left,right) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="string-index-node") } }
+        Let(name=withKey) { AppendChild { Var(name=base) MakeLitString { Lit(value="key") Var(name=key) } } }
+        Let(name=withValue) { AppendChild { Var(name=withKey) MakeLitInt { Lit(value="value") Var(name=value) } } }
+        Let(name=withHash) { AppendChild { Var(name=withValue) MakeLitInt { Lit(value="hash") Var(name=hash) } } }
+        Let(name=withLeft) { AppendChild { Var(name=withHash) Var(name=left) } }
+        Return { AppendChild { Var(name=withLeft) Var(name=right) } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexHash) {
+    Fn(params=key) {
+      Block {
+        Let(name=data) { BytesFromUtf8String { Var(name=key) } }
+        Return {
+          Call(target=objectLinker.stringIndexHashAt) {
+            Var(name=data) Lit(value=0) BytesLength { Var(name=data) } Lit(value=5381)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.stringIndexHashAt) {
+    Fn(params=data,index,length,hash) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=length) }
+          Block { Return { Var(name=hash) } }
+          Block {
+            Return {
+              Call(target=objectLinker.stringIndexHashAt) {
+                Var(name=data) Add { Var(name=index) Lit(value=1) } Var(name=length)
+                Mod {
+                  Add { Mul { Var(name=hash) Lit(value=33) } BytesAt { Var(name=data) Var(name=index) } }
+                  Lit(value=2147483647)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

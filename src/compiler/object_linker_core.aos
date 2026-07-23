@@ -1,15 +1,45 @@
 Program {
   Import(path="object_linker_support.aos")
   Import(path="object_linker_emit.aos")
+  Import(path="object_linker_native_opcodes.aos")
+  Import(path="object_linker_byte_ranges.aos")
+  Import(path="object_linker_constant_plan.aos")
   Import(path="../std/bytes.aos")
   Export(name=objectLinker.emitAibc1Bytes)
+  Export(name=objectLinker.emitAibc1BytesFromLayout)
+  Export(name=objectLinker.emitAibc1BytesFromPlan)
   Export(name=objectLinker.validateSupported)
   Let(name=objectLinker.emitAibc1Bytes) {
     Fn(params=functions) {
       Block {
         Let(name=layout) { Call(target=objectLinker.assignOffsets) { Var(name=functions) } }
-        Let(name=constants) { Call(target=objectLinker.collectConstants) { Var(name=functions) } }
-        Let(name=instructions) { Call(target=objectLinker.emitFunctionsBytes) { Var(name=functions) Var(name=functions) Var(name=layout) Var(name=constants) Lit(value=0) } }
+        Let(name=constantPlan) { Call(target=objectLinker.buildConstantPlan) { Var(name=functions) } }
+        Return {
+          Call(target=objectLinker.emitAibc1BytesFromPlan) {
+            Var(name=functions) Var(name=layout) PairFirst { Var(name=constantPlan) } PairSecond { Var(name=constantPlan) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitAibc1BytesFromLayout) {
+    Fn(params=functions,layout,constants) {
+      Block {
+        Let(name=constantPlan) { Call(target=objectLinker.buildConstantPlan) { Var(name=functions) } }
+        Return {
+          Call(target=objectLinker.emitAibc1BytesFromPlan) {
+            Var(name=functions) Var(name=layout) Var(name=constants) PairSecond { Var(name=constantPlan) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitAibc1BytesFromPlan) {
+    Fn(params=functions,layout,constants,constantOperands) {
+      Block {
+        Let(name=instructions) { Call(target=objectLinker.emitFunctionsBytes) { Var(name=functions) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=constantOperands) Lit(value=0) } }
         Let(name=constantBytes) { Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Lit(value=0) } }
         Let(name=instructionPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=instructions) } } }
         Let(name=constantPayloadSize) { Add { Lit(value=4) Call(target=bytes.length) { Var(name=constantBytes) } } }
@@ -146,7 +176,11 @@ Program {
                                                                                       If { Eq { Var(name=op) Lit(value="PAIR_FIRST") } Block { Return { Lit(value=true) } } Block {
                                                                                         If { Eq { Var(name=op) Lit(value="PAIR_SECOND") } Block { Return { Lit(value=true) } } Block {
                                                                                           If { Eq { Var(name=op) Lit(value="APPEND_CHILD") } Block { Return { Lit(value=true) } } Block {
-                                                                                                Return { Eq { Var(name=op) Lit(value="APPEND_ATTR") } }
+                                                                                                If {
+                                                                                                  Eq { Var(name=op) Lit(value="APPEND_ATTR") }
+                                                                                                  Block { Return { Lit(value=true) } }
+                                                                                                  Block { Return { Call(target=objectLinker.isNativeInstruction) { Var(name=op) } } }
+                                                                                                }
                                                                                               }
                                                                                           } }
                                                                                         } }
@@ -270,20 +304,54 @@ Program {
   }
 
   Let(name=objectLinker.emitFunctionsBytes) {
-    Fn(params=functions,allFunctions,layout,constants,index) {
+    Fn(params=functions,allFunctions,layout,constants,constantOperands,index) {
+      Block {
+        Return {
+          Call(target=objectLinker.emitFunctionBytesRange) {
+            Var(name=functions) Var(name=allFunctions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+            Var(name=index) Sub { ChildCount { Var(name=functions) } Var(name=index) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitFunctionBytesRange) {
+    Fn(params=functions,allFunctions,layout,constants,constantOperands,index,count) {
       Block {
         If {
-          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Eq { Var(name=count) Lit(value=0) }
           Block { Return { BytesFromUtf8String { Lit(value="") } } }
           Block {
-            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
-            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
-            Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
-            Let(name=functionOffset) { Call(target=objectLinker.resolveCallOffset) { Var(name=layout) Var(name=symbol) Lit(value=0) } }
-            Return {
-              Call(target=objectLinker.cat2) {
-                Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=allFunctions) Var(name=layout) Var(name=constants) AttrValueInt { Var(name=functionOffset) Lit(value=0) } Lit(value=0) Lit(value=0) }
-                Call(target=objectLinker.emitFunctionsBytes) { Var(name=functions) Var(name=allFunctions) Var(name=layout) Var(name=constants) Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { Var(name=count) Lit(value=1) }
+              Block {
+                Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+                Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+                Let(name=layoutRecord) { ChildAt { Var(name=layout) Var(name=index) } }
+                Let(name=functionConstantOperands) { ChildAt { Var(name=constantOperands) Var(name=index) } }
+                Return {
+                  Call(target=objectLinker.emitFunctionBytes) {
+                    Var(name=functionNode) Var(name=allFunctions) Var(name=layout) Var(name=constants) Var(name=functionConstantOperands)
+                    AttrValueInt { ChildAt { Var(name=layoutRecord) Lit(value=1) } Lit(value=0) } Lit(value=0) Lit(value=0) Lit(value=0)
+                  }
+                }
+              }
+              Block {
+                Let(name=leftCount) { Call(target=objectLinker.byteRangeHalf) { Var(name=count) } }
+                Let(name=rightCount) { Sub { Var(name=count) Var(name=leftCount) } }
+                Return {
+                  Call(target=objectLinker.cat2) {
+                    Call(target=objectLinker.emitFunctionBytesRange) {
+                      Var(name=functions) Var(name=allFunctions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+                      Var(name=index) Var(name=leftCount)
+                    }
+                    Call(target=objectLinker.emitFunctionBytesRange) {
+                      Var(name=functions) Var(name=allFunctions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+                      Add { Var(name=index) Var(name=leftCount) } Var(name=rightCount)
+                    }
+                  }
+                }
               }
             }
           }
@@ -293,27 +361,130 @@ Program {
   }
 
   Let(name=objectLinker.emitFunctionBytes) {
-    Fn(params=functionNode,functions,layout,constants,functionOffset,index,instructionIndex) {
+    Fn(params=functionNode,functions,layout,constants,constantOperands,functionOffset,index,instructionIndex,constantOrdinal) {
+      Block {
+        Return {
+          Call(target=objectLinker.emitInstructionBytesRange) {
+            Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+            Var(name=functionOffset) Var(name=index)
+            Sub { ChildCount { Var(name=functionNode) } Var(name=index) }
+            Var(name=instructionIndex) Var(name=constantOrdinal)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitInstructionBytesRange) {
+    Fn(params=functionNode,functions,layout,constants,constantOperands,functionOffset,index,count,instructionIndex,constantOrdinal) {
       Block {
         If {
-          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Eq { Var(name=count) Lit(value=0) }
           Block { Return { BytesFromUtf8String { Lit(value="") } } }
           Block {
-            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
-            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
             If {
-              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+              Eq { Var(name=count) Lit(value=1) }
               Block {
-                Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } }
-                Let(name=nextInstructionIndex) { Add { Var(name=instructionIndex) Lit(value=1) } }
+                Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+                If {
+                  Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+                  Block {
+                    Let(name=op) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } }
+                    Return {
+                      Call(target=objectLinker.emitInstructionBytes) {
+                        Var(name=op) Var(name=child) Var(name=functionNode) Var(name=instructionIndex)
+                        Add { Var(name=index) Lit(value=1) }
+                        Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset)
+                        Call(target=objectLinker.constantOperandForInstruction) {
+                          Var(name=op) Var(name=constantOperands) Var(name=constantOrdinal)
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { BytesFromUtf8String { Lit(value="") } } }
+                }
+              }
+              Block {
+                Let(name=leftCount) { Call(target=objectLinker.byteRangeHalf) { Var(name=count) } }
+                Let(name=rightCount) { Sub { Var(name=count) Var(name=leftCount) } }
+                Let(name=leftInstructionCount) {
+                  Call(target=objectLinker.countInstructionsInRange) {
+                    Var(name=functionNode) Var(name=index) Var(name=leftCount)
+                  }
+                }
+                Let(name=leftConstantCount) {
+                  Call(target=objectLinker.countConstantsInRange) {
+                    Var(name=functionNode) Var(name=index) Var(name=leftCount)
+                  }
+                }
                 Return {
                   Call(target=objectLinker.cat2) {
-                    Call(target=objectLinker.emitInstructionBytes) { Var(name=op) Var(name=child) Var(name=functionNode) Var(name=instructionIndex) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) }
-                    Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) Var(name=nextIndex) Var(name=nextInstructionIndex) }
+                    Call(target=objectLinker.emitInstructionBytesRange) {
+                      Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+                      Var(name=functionOffset) Var(name=index) Var(name=leftCount) Var(name=instructionIndex) Var(name=constantOrdinal)
+                    }
+                    Call(target=objectLinker.emitInstructionBytesRange) {
+                      Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=constantOperands)
+                      Var(name=functionOffset) Add { Var(name=index) Var(name=leftCount) } Var(name=rightCount)
+                      Add { Var(name=instructionIndex) Var(name=leftInstructionCount) }
+                      Add { Var(name=constantOrdinal) Var(name=leftConstantCount) }
+                    }
                   }
                 }
               }
-              Block { Return { Call(target=objectLinker.emitFunctionBytes) { Var(name=functionNode) Var(name=functions) Var(name=layout) Var(name=constants) Var(name=functionOffset) Var(name=nextIndex) Var(name=instructionIndex) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.countInstructionsInRange) {
+    Fn(params=functionNode,index,count) {
+      Block {
+        If {
+          Eq { Var(name=count) Lit(value=0) }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=tail) {
+              Call(target=objectLinker.countInstructionsInRange) {
+                Var(name=functionNode) Add { Var(name=index) Lit(value=1) } Sub { Var(name=count) Lit(value=1) }
+              }
+            }
+            If {
+              Eq { NodeKind { ChildAt { Var(name=functionNode) Var(name=index) } } Lit(value="Inst") }
+              Block { Return { Add { Lit(value=1) Var(name=tail) } } }
+              Block { Return { Var(name=tail) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.countConstantsInRange) {
+    Fn(params=functionNode,index,count) {
+      Block {
+        If {
+          Eq { Var(name=count) Lit(value=0) }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=tail) {
+              Call(target=objectLinker.countConstantsInRange) {
+                Var(name=functionNode) Add { Var(name=index) Lit(value=1) } Sub { Var(name=count) Lit(value=1) }
+              }
+            }
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+              Block {
+                If {
+                  Eq { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="op") Lit(value=0) } Lit(value="CONST") }
+                  Block { Return { Add { Lit(value=1) Var(name=tail) } } }
+                  Block { Return { Var(name=tail) } }
+                }
+              }
+              Block { Return { Var(name=tail) } }
             }
           }
         }
@@ -322,7 +493,7 @@ Program {
   }
 
   Let(name=objectLinker.emitInstructionBytes) {
-    Fn(params=op,instructionNode,functionNode,instructionIndex,functions,layout,constants,functionOffset) {
+    Fn(params=op,instructionNode,functionNode,instructionIndex,relocSearchIndex,functions,layout,constants,functionOffset,resolvedConstantIndex) {
       Block {
         If {
           Eq { Var(name=op) Lit(value="RETURN") }
@@ -331,16 +502,13 @@ Program {
             If {
               Eq { Var(name=op) Lit(value="CONST") }
               Block {
-                Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
-                Let(name=target) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="target") Lit(value=0) } }
-                Let(name=constantIndex) { Call(target=objectLinker.constantIndex) { Var(name=constants) Var(name=target) Lit(value=0) } }
-                Return { Call(target=objectLinker.inst) { Lit(value=15) AttrValueInt { Var(name=constantIndex) Lit(value=0) } } }
+                Return { Call(target=objectLinker.inst) { Lit(value=15) Var(name=resolvedConstantIndex) } }
               }
               Block {
                 If {
                   Eq { Var(name=op) Lit(value="CALL") }
                   Block {
-                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Var(name=relocSearchIndex) } }
                     Let(name=targetName) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetName") Lit(value=0) } }
                     Let(name=resolvedSymbol) { Call(target=objectLinker.getAttr) { Var(name=reloc) Lit(value="targetSymbol") Lit(value=0) } }
                     If {
@@ -404,14 +572,14 @@ Program {
                                                                 If {
                                                                   Eq { Var(name=op) Lit(value="JUMP") }
                                                               Block {
-                                                                Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                                                                Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Var(name=relocSearchIndex) } }
                                                                 Return { Call(target=objectLinker.inst) { Lit(value=8) Add { Var(name=functionOffset) Call(target=objectLinker.getAttrInt) { Var(name=reloc) Lit(value="targetInstruction") Lit(value=0) } } } }
                                                               }
                                                               Block {
                                                                 If {
                                                                   Eq { Var(name=op) Lit(value="JUMP_IF_FALSE") }
                                                                   Block {
-                                                                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Lit(value=0) } }
+                                                                    Let(name=reloc) { Call(target=objectLinker.findReloc) { Var(name=functionNode) Var(name=instructionIndex) Var(name=relocSearchIndex) } }
                                                                     Return { Call(target=objectLinker.inst) { Lit(value=9) Add { Var(name=functionOffset) Call(target=objectLinker.getAttrInt) { Var(name=reloc) Lit(value="targetInstruction") Lit(value=0) } } } }
                                                                   }
                                                                   Block {
@@ -422,7 +590,7 @@ Program {
                                                                         If {
                                                                           Eq { Var(name=op) Lit(value="LT_NUM") }
                                                                           Block { Return { Call(target=objectLinker.inst) { Lit(value=72) Lit(value=0) } } }
-                                                                          Block { Return { Call(target=objectLinker.inst) { Lit(value=1) Lit(value=0) } } }
+                                                                          Block { Return { Call(target=objectLinker.inst) { Call(target=objectLinker.nativeOpcode) { Var(name=op) } Lit(value=0) } } }
                                                                         }
                                                                       }
                                                                     }

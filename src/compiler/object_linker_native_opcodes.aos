@@ -1,0 +1,121 @@
+Program {
+  Export(name=objectLinker.nativeOpcode)
+  Export(name=objectLinker.isNativeInstruction)
+
+  Let(name=objectLinker.nativeOpcode) {
+    Fn(params=op) {
+      Block {
+        If { Eq { Var(name=op) Lit(value="STR_CONCAT") } Block { Return { Lit(value=16) } } Block {
+          If { Eq { Var(name=op) Lit(value="TO_STRING") } Block { Return { Lit(value=17) } } Block {
+            If { Eq { Var(name=op) Lit(value="STR_ESCAPE") } Block { Return { Lit(value=18) } } Block {
+              If { Eq { Var(name=op) Lit(value="STR_SUBSTRING") } Block { Return { Lit(value=20) } } Block {
+                If { Eq { Var(name=op) Lit(value="STR_REMOVE") } Block { Return { Lit(value=21) } } Block {
+          If { Eq { Var(name=op) Lit(value="STR_UTF8_BYTE_COUNT") } Block { Return { Lit(value=30) } } Block {
+            If { Eq { Var(name=op) Lit(value="NODE_ID") } Block { Return { Lit(value=32) } } Block {
+              If { Eq { Var(name=op) Lit(value="STR_FROM_CODEPOINT") } Block { Return { Lit(value=53) } } Block {
+                If { Eq { Var(name=op) Lit(value="STR_DECODE_UNICODE_HEX4") } Block { Return { Lit(value=54) } } Block {
+                  If { Eq { Var(name=op) Lit(value="STR_DECODE_UNICODE_SURROGATE_PAIR_HEX4") } Block { Return { Lit(value=55) } } Block {
+                    If { Eq { Var(name=op) Lit(value="BYTES_LENGTH") } Block { Return { Lit(value=56) } } Block {
+                      If { Eq { Var(name=op) Lit(value="BYTES_AT") } Block { Return { Lit(value=57) } } Block {
+                        If { Eq { Var(name=op) Lit(value="BYTES_SLICE") } Block { Return { Lit(value=58) } } Block {
+                          If { Eq { Var(name=op) Lit(value="BYTES_CONCAT") } Block { Return { Lit(value=59) } } Block {
+                            If { Eq { Var(name=op) Lit(value="BYTES_FROM_UTF8_STRING") } Block { Return { Lit(value=60) } } Block {
+                              If { Eq { Var(name=op) Lit(value="BYTES_TO_UTF8_STRING") } Block { Return { Lit(value=61) } } Block {
+                                If { Eq { Var(name=op) Lit(value="BYTES_FROM_BASE64") } Block { Return { Lit(value=62) } } Block {
+                                  If { Eq { Var(name=op) Lit(value="BYTES_TO_BASE64") } Block { Return { Lit(value=63) } } Block {
+                                    If { Eq { Var(name=op) Lit(value="BYTES_FROM_BYTE") } Block { Return { Lit(value=73) } } Block {
+                                      If { Eq { Var(name=op) Lit(value="BYTES_U32_LE") } Block { Return { Lit(value=74) } } Block {
+                                        If { Eq { Var(name=op) Lit(value="BYTES_I64_LE") } Block { Return { Lit(value=75) } } Block {
+                                          If { Eq { Var(name=op) Lit(value="STR_SCALAR_LENGTH") } Block { Return { Lit(value=76) } } Block {
+                                            If { Eq { Var(name=op) Lit(value="NODE_BUILDER_NEW") } Block { Return { Lit(value=78) } } Block {
+                                              If { Eq { Var(name=op) Lit(value="NODE_BUILDER_APPEND_CHILD") } Block { Return { Lit(value=79) } } Block {
+                                                If { Eq { Var(name=op) Lit(value="NODE_BUILDER_APPEND_ATTR") } Block { Return { Lit(value=80) } } Block {
+                                                  If { Eq { Var(name=op) Lit(value="NODE_BUILDER_FINISH") } Block { Return { Lit(value=81) } } Block {
+                                                    If { Eq { Var(name=op) Lit(value="NODE_KIND") } Block { Return { Lit(value=31) } } Block {
+                                                      If { Eq { Var(name=op) Lit(value="ATTR_COUNT") } Block { Return { Lit(value=33) } } Block {
+                                                        If { Eq { Var(name=op) Lit(value="ATTR_KEY") } Block { Return { Lit(value=34) } } Block {
+                                                          If { Eq { Var(name=op) Lit(value="ATTR_VALUE_KIND") } Block { Return { Lit(value=35) } } Block {
+                                                            If { Eq { Var(name=op) Lit(value="ATTR_VALUE_STRING") } Block { Return { Lit(value=36) } } Block {
+                                                              If { Eq { Var(name=op) Lit(value="ATTR_VALUE_INT") } Block { Return { Lit(value=37) } } Block {
+                                                                If { Eq { Var(name=op) Lit(value="ATTR_VALUE_BOOL") } Block { Return { Lit(value=38) } } Block {
+                                                                  If { Eq { Var(name=op) Lit(value="CHILD_COUNT") } Block { Return { Lit(value=39) } } Block {
+                                                                    If { Eq { Var(name=op) Lit(value="CHILD_AT") } Block { Return { Lit(value=40) } } Block {
+                                                                      If { Eq { Var(name=op) Lit(value="MAKE_BLOCK") } Block { Return { Lit(value=41) } } Block {
+                                                                        If { Eq { Var(name=op) Lit(value="APPEND_CHILD") } Block { Return { Lit(value=42) } } Block {
+                                                                          If { Eq { Var(name=op) Lit(value="MAKE_ERR") } Block { Return { Lit(value=43) } } Block {
+                                                                            If { Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") } Block { Return { Lit(value=44) } } Block {
+                                                                              If { Eq { Var(name=op) Lit(value="MAKE_LIT_INT") } Block { Return { Lit(value=45) } } Block {
+                                                                                If { Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") } Block { Return { Lit(value=46) } } Block {
+                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE") } Block { Return { Lit(value=47) } } Block {
+                                                                                    If { Eq { Var(name=op) Lit(value="APPEND_ATTR") } Block { Return { Lit(value=51) } } Block {
+                                                                                      If { Eq { Var(name=op) Lit(value="STR_FIND") } Block { Return { Lit(value=52) } } Block {
+                                                                                        If { Eq { Var(name=op) Lit(value="MAKE_PAIR") } Block { Return { Lit(value=64) } } Block {
+                                                                                          If { Eq { Var(name=op) Lit(value="PAIR_FIRST") } Block { Return { Lit(value=65) } } Block {
+                                                                                            If { Eq { Var(name=op) Lit(value="PAIR_SECOND") } Block { Return { Lit(value=66) } } Block {
+                                                                                              If { Eq { Var(name=op) Lit(value="VALUE_KIND") } Block { Return { Lit(value=77) } } Block {
+                                                                                                Return { Lit(value=-1) }
+                                                                                              } }
+                                                                                            } }
+                                                                                          } }
+                                                                                        } }
+                                                                                      } }
+                                                                                    } }
+                                                                                  } }
+                                                                                } }
+                                                                              } }
+                                                                            } }
+                                                                          } }
+                                                                        } }
+                                                                      } }
+                                                                    } }
+                                                                  } }
+                                                                } }
+                                                              } }
+                                                            } }
+                                                          } }
+                                                        } }
+                                                      } }
+                                                    } }
+                                                  } }
+                                                } }
+                                              } }
+                                            } }
+                                          } }
+                                        } }
+                                      } }
+                                    } }
+                                  } }
+                                } }
+                              } }
+                            } }
+                          } }
+                        } }
+                      } }
+                    } }
+                  } }
+                } }
+              } }
+            } }
+          } }
+                } }
+              } }
+            } }
+          } }
+        } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.isNativeInstruction) {
+    Fn(params=op) {
+      Block {
+        Return {
+          Eq {
+            Eq { Call(target=objectLinker.nativeOpcode) { Var(name=op) } Lit(value=-1) }
+            Lit(value=false)
+          }
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@ Program {
   Export(name=objectLinker.collectConstants)
   Export(name=objectLinker.constantIndex)
   Export(name=objectLinker.emitAibc1Bytes)
+  Export(name=objectLinker.emitAibc1BytesFromLayout)
+  Export(name=objectLinker.emitAibc1BytesFromPlan)
   Export(name=objectLinker.emitLinkedPlanBytes)
   Export(name=objectLinker.emitLinkedPlanAibc1Bytes)
   Export(name=objectLinker.emitLinkedCallBytes)

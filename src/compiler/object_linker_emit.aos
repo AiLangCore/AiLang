@@ -1,5 +1,6 @@
 Program {
   Import(path="object_linker_support.aos")
+  Import(path="object_linker_native_opcodes.aos")
   Import(path="../std/bytes.aos")
   Export(name=objectLinker.emitLinkedPlanBytes)
   Export(name=objectLinker.emitLinkedPlanAibc1Bytes)
@@ -220,7 +221,7 @@ Program {
                                                                                                             If {
                                                                                                               Eq { Var(name=op) Lit(value="ATTR_VALUE_INT") }
                                                                                                               Block { Return { Lit(value=37) } }
-                                                                                                              Block { Return { Lit(value=-1) } }
+                                                                                                              Block { Return { Call(target=objectLinker.nativeOpcode) { Var(name=op) } } }
                                                                                                             }
                                                                                                           }
                                                                                                         }

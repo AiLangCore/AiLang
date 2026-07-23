@@ -292,6 +292,104 @@ Current self-build frontier:
   writer is slower still because it formats, writes, reads, and reparses each
   object. Retained-node GC/arena pressure and the redundant persistence round
   trip are now the immediate whole-link architecture frontier.
+- Tooling-profile return-boundary node collection is now pressure-aware instead
+  of compacting the full retained arena after every 512 allocations. Production,
+  debug, and explicit safe-point collection retain their existing behavior.
+  With the revised mechanical policy, graph discovery, all 56 symbol chunks,
+  duplicate validation, and retained construction of all 56 module objects
+  complete in one process for the first time. The large module 12 completes in
+  roughly six and a half minutes with modules 0 through 11 retained, versus the
+  prior run exceeding eight minutes. The process now exits after reporting
+  `objects-done count=56`, during final function collection or validation. The
+  phase probe reports those final subphases explicitly so linker-stage diagnosis,
+  rather than further general cleanup or arena-limit increases, is the immediate
+  frontier.
+- The final-link diagnostic now reports stable validator code, message, and
+  symbol. It identified `LINK012` at `src/std/str.aos::remove`: lowering emitted
+  the valid AiBC1 `STR_REMOVE` opcode, but the object linker maintained partial,
+  inconsistent native-opcode tables. Native string, byte, node, and node-builder
+  opcode numbers now live in the focused
+  `compiler/object_linker_native_opcodes.aos` module and are shared by validation
+  and both object-emission paths. A regression covers representative string,
+  byte, builder, unknown, validation, and binary-emission cases. The whole graph
+  now contains 57 modules and 580 functions; all objects build, function
+  collection completes, and whole-project supported-op validation passes.
+  Final AiBC1 emission begins without the former invalid `-1`/`BYTES_U32_LE`
+  failure, but did not complete during a further ten-minute bounded emission
+  window. Recursive byte concatenation and repeated linker lookup during final
+  emission are now the measured frontier.
+- Whole-function byte emission now divides the function sequence into balanced
+  index ranges before concatenation. The implementation does not place byte
+  values in AST `Block` children: an initial chunk-accumulator experiment
+  correctly failed the node-only child contract and was replaced with the
+  focused `compiler/object_linker_byte_ranges.aos` integer range helper.
+  Focused opcode, jump-relocation, linked-object execution, and lowering tests
+  preserve emitted behavior. The self-hosted graph now contains 58 modules and
+  583 functions; all objects and supported-op validation still pass. Balanced
+  top-level byte copying alone did not complete final emission within a further
+  ten-minute bounded window. Repeated per-instruction layout, symbol, constant,
+  and relocation lookup is therefore the immediate measured frontier; the next
+  probe should trace emission by function range before changing representation.
+- Final-link setup and instruction emission are now separate reusable phases.
+  `objectLinker.emitAibc1BytesFromLayout` consumes precomputed layout and
+  constants, so diagnostic and production callers do not repeat those passes.
+  Function emission reads its own offset directly from the same-index layout
+  record, and relocation lookup starts immediately after the current
+  instruction rather than rescanning the function from child zero. Focused
+  object, jump, call-relocation, and execution regressions remain green. The
+  58-module graph now contains 584 functions and 969 constants. Whole-project
+  layout assignment completes within 30 seconds, and constant collection
+  completes within the next 30 seconds. Instruction emission alone remains
+  active beyond a six-minute bounded window. Per-`CONST` linear
+  `constantIndex` lookup across 969 constants and per-call target offset lookup
+  across 584 layout entries are now isolated as the next indexing frontier.
+- Function and instruction byte concatenation now both use balanced index
+  ranges. Instruction ranges preserve relocation numbering by counting `Inst`
+  nodes in the left range before emitting the right range, and relocation
+  searches begin at the current instruction's following child. Function offsets
+  are read directly from the same-index layout record. The graph remains 58
+  modules and now contains 586 functions; layout and collection of 969 constants
+  each complete within 30 seconds. Instruction emission still remains active
+  beyond an eight-minute bounded window. This rules out top-level and
+  per-function byte concatenation as the primary blocker and leaves repeated
+  constant-index and call-target offset searches as the evidence-backed
+  frontier. The next representation must carry resolved operands into emission;
+  merely moving the same searches into a separate pass is not sufficient.
+- Constant operands now have an explicit, focused linker representation in
+  `compiler/object_linker_constant_plan.aos`. One traversal builds both the
+  deduplicated constant table and a per-function sequence of resolved constant
+  indices; final `CONST` emission consumes those indices without rescanning the
+  global constant table. `objectLinker.emitAibc1BytesFromPlan` also accepts the
+  precomputed layout and constant plan so probes and production emission share
+  the same path. A focused regression proves stable deduplication and operand
+  ordering. The whole graph now contains 59 modules and 593 functions. All 59
+  objects build in one retained process, function collection and supported-op
+  validation pass, and the parser, linker, relocation, executable-pipeline, and
+  lowering regressions remain green. The whole-link probe then remained active
+  for more than ten minutes after function collection, before final byte
+  emission was observed. Phase markers now distinguish layout, constant-plan
+  construction, and byte emission on the next run. The remaining performance
+  work is therefore bounded to those three linker phases; constant-plan
+  construction must be indexed rather than retaining a linear search for every
+  collected constant, followed by equivalent call-target operand indexing.
+- Constant planning now uses the focused
+  `compiler/object_linker_string_index.aos` module, which provides a
+  deterministic persistent string-to-integer index ordered by a stable UTF-8
+  byte hash with exact collision checks. A 512-key sequential insertion,
+  lookup, update, missing-key, and persistence regression completes in under a
+  second. Constant, operand, and function-plan collection also uses node
+  builders so growing blocks are finished once instead of copied by every
+  append. All focused linker and executable-pipeline regressions pass, and the
+  complete 60-module graph lowers to objects and collects 600 functions in one
+  retained process. Whole-project layout completes in under a minute. Constant
+  planning nevertheless remains active beyond an eight-minute diagnostic
+  window with both indexed lookup and builder-backed accumulation. This rules
+  out constant-key lookup and immutable block growth as the dominant plan
+  bottleneck. Per-instruction relocation discovery still searches forward
+  through function children and is now the immediate measured frontier. The
+  next plan representation must collect relocation operands during the same
+  sequential function traversal instead of calling `findReloc` independently
+  for each instruction.
 
 Reproduce the frontier with:
 

@@ -6,9 +6,42 @@ Program {
     Fn(params=records,name,index) {
       Block {
         If {
-          Eq { NodeId { Var(name=records) } Lit(value="record-chunks") }
-          Block { Return { Call(target=lower.resolveStructuralCallSymbolInChunks) { Var(name=records) Var(name=name) Var(name=index) } } }
-          Block { Return { Call(target=lower.resolveStructuralCallSymbolInRecords) { Var(name=records) Var(name=name) Var(name=index) } } }
+          Eq { ValueKind { Var(name=records) } Lit(value="pair") }
+          Block {
+            Let(name=record) {
+              Call(target=lower.indexedCallRecord) {
+                Var(name=records) Var(name=name)
+              }
+            }
+            If {
+              Eq { ChildCount { Var(name=record) } Lit(value=0) }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="lower") Lit(value="LOWER026")
+                    Lit(value="Structural call target is unknown.") Var(name=name)
+                  }
+                }
+              }
+              Block {
+                Return {
+                  MakeLitString {
+                    Lit(value="symbol")
+                    AttrValueString {
+                      ChildAt { Var(name=record) Lit(value=2) } Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeId { Var(name=records) } Lit(value="record-chunks") }
+              Block { Return { Call(target=lower.resolveStructuralCallSymbolInChunks) { Var(name=records) Var(name=name) Var(name=index) } } }
+              Block { Return { Call(target=lower.resolveStructuralCallSymbolInRecords) { Var(name=records) Var(name=name) Var(name=index) } } }
+            }
+          }
         }
       }
     }

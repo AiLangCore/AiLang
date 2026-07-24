@@ -27,7 +27,7 @@ Program {
                       Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
                       Block {
                         Let(name=slot) { Add { Var(name=baseSlot) Var(name=index) } }
-                        Let(name=target) { Call(target=lower.literalConstantTarget) { Var(name=value) } }
+                        Let(name=target) { Call(target=lower.literalConstantTextTarget) { Var(name=value) } }
                         Return {
                           StrConcat {
                             StrConcat {

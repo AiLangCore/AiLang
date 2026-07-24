@@ -368,6 +368,7 @@ Program {
     Fn(params=args) {
       Block {
         Let(name=parsed) { Call(target=readAndParse) { Lit(value=0) } }
+        Let(name=mode) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
         If {
           Eq { Var(name=mode) Lit(value="--ids") }
           Block { Call(target=sys.stdout.writeLine) { Call(target=formatWithIds) { Var(name=parsed) } } }

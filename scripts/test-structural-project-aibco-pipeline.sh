@@ -25,7 +25,7 @@ Program {
       Block {
         Let(name=entry) { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=io.readFile) { Lit(value="${TMP_DIR}/src/app.aos") } } } }
         Let(name=paths) { Call(target=linker.collectProjectModulePaths) { Lit(value="${TMP_DIR}") Var(name=entry) Lit(value="src/app.aos") } }
-        Let(name=linkStatus) { Call(target=structuralProject.writeProjectAibc1FromObjectFiles) { Var(name=paths) Lit(value="${TMP_DIR}") Lit(value="") Lit(value="${TMP_DIR}/obj") Lit(value="${TMP_DIR}/app.aibc1") } }
+        Let(name=linkStatus) { Call(target=structuralProject.writeProjectAibc1FromObjectFiles) { Var(name=paths) Lit(value="${TMP_DIR}") Lit(value="") Lit(value="${TMP_DIR}/obj") Lit(value="${TMP_DIR}/app.aibc1") Lit(value="src/app.aos") Lit(value="start") } }
         If {
           Eq { NodeKind { Var(name=linkStatus) } Lit(value="Err") }
           Block { Return { Var(name=linkStatus) } }

@@ -68,9 +68,29 @@ Program {
                   Block { Return { Lit(value="bool:false") } }
                 }
               }
-              Block { Return { StrConcat { Lit(value="string:") StrEscape { AttrValueString { Var(name=value) Lit(value=0) } } } } }
+              Block { Return { StrConcat { Lit(value="string:") AttrValueString { Var(name=value) Lit(value=0) } } } }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.literalConstantTextTarget) {
+    Fn(params=value) {
+      Block {
+        Let(name=kind) { AttrValueKind { Var(name=value) Lit(value=0) } }
+        If {
+          Eq { Var(name=kind) Lit(value="string") }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="string:")
+                StrEscape { AttrValueString { Var(name=value) Lit(value=0) } }
+              }
+            }
+          }
+          Block { Return { Call(target=lower.literalConstantTarget) { Var(name=value) } } }
         }
       }
     }

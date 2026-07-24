@@ -1222,6 +1222,8 @@ Program {
                       Var(name=lockText)
                       Var(name=objDir)
                       Var(name=linkedProgramPath)
+                      Var(name=entryFile)
+                      Var(name=entryExport)
                     }
                   }
                   If {

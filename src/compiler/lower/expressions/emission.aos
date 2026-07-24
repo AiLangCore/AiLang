@@ -38,13 +38,9 @@ Program {
                                           Eq { Var(name=kind) Lit(value="Call") }
                                           Block {
                                             Let(name=targetName) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } }
+                                            Let(name=syscallTarget) { Call(target=lower.canonicalStructuralSyscallTarget) { Var(name=targetName) } }
                                             If {
-                                              Call(target=lower.isStructuralSyscallTarget) { Var(name=targetName) }
-                                              Block {
-                                                Let(name=withTarget) { Call(target=blockBuilder.emit) { Var(name=context) Lit(value="CONST") StrConcat { Lit(value="string:") Var(name=targetName) } } }
-                                                Let(name=withArguments) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=withTarget) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } }
-                                                Return { Call(target=blockBuilder.emit) { Var(name=withArguments) Lit(value="CALL_SYS") ToString { ChildCount { Var(name=expr) } } } }
-                                              }
+                                              Eq { Var(name=syscallTarget) Lit(value="") }
                                               Block {
                                                 Let(name=target) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=targetName) Lit(value=0) } }
                                                 If {
@@ -52,6 +48,11 @@ Program {
                                                   Block { Return { Var(name=target) } }
                                                   Block { Return { Call(target=blockBuilder.emit) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } Lit(value="CALL") AttrValueString { Var(name=target) Lit(value=0) } } } }
                                                 }
+                                              }
+                                              Block {
+                                                Let(name=withTarget) { Call(target=blockBuilder.emit) { Var(name=context) Lit(value="CONST") StrConcat { Lit(value="string:") Var(name=syscallTarget) } } }
+                                                Let(name=withArguments) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=withTarget) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } }
+                                                Return { Call(target=blockBuilder.emit) { Var(name=withArguments) Lit(value="CALL_SYS") ToString { ChildCount { Var(name=expr) } } } }
                                               }
                                             }
                                           }
@@ -110,14 +111,6 @@ Program {
             }
           }
         }
-      }
-    }
-  }
-
-  Let(name=lower.isStructuralSyscallTarget) {
-    Fn(params=target) {
-      Block {
-        Return { Eq { StringSlice { Var(name=target) Lit(value=0) Lit(value=4) } Lit(value="sys.") } }
       }
     }
   }

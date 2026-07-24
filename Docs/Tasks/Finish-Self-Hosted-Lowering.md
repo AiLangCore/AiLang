@@ -390,11 +390,169 @@ Current self-build frontier:
   next plan representation must collect relocation operands during the same
   sequential function traversal instead of calling `findReloc` independently
   for each instruction.
+- Constant planning now consumes `Reloc(kind=const)` nodes directly in their
+  validated function order, eliminating per-instruction `findReloc` calls.
+  Planning is also split into independently measurable constant collection,
+  constant-index construction, and operand-plan construction. The complete
+  graph contains 60 modules and 603 functions. Layout completes in under a
+  minute, and the existing collector produces 976 constants within the next
+  30 seconds. Persistent constant-index construction then remains active beyond
+  four minutes before operand planning begins. This rejects relocation
+  discovery as the dominant planner cost and isolates persistent hash-tree
+  construction under the retained compiler graph as the current blocker.
+  The next index representation must avoid rebuilding a tree path for every
+  insertion; a deterministic builder-backed bucket table or an equivalent
+  bulk-built immutable lookup structure should be measured before changing
+  operand or byte emission again.
+- The collection performance work is now tracked independently in
+  `Docs/Tasks/Implement-Std-Collections.md` and normatively defined by
+  `SPEC/COLLECTIONS.md`. Deterministic UTF-8 string hashing moved out of the
+  compiler-specific index into the focused `std/collections/hash.aos` module.
+  The linker consumes that shared standard-library function, and the complete
+  self-hosted object probe lowers the resulting 61-module graph through the new
+  standard module. The next collections iteration must implement the mechanical
+  bulk-builder/frozen-map storage boundary and meet the retained 1,000-entry
+  construction gate before replacing the linker index.
+- AiVM now has focused mechanical bulk-map storage with dynamically checked
+  growth, open addressing, exact string collision checks, builder freezing,
+  and immutable string-to-int lookup. Its 100,000-entry native contract test
+  passes in about 0.01 seconds. AiVM now exposes the storage through distinct
+  `mapBuilder` and immutable `map` value kinds and focused opcodes 82 through
+  87. Native bytecode tests cover the full builder, insert, finish, count,
+  membership, and fallback-lookup stack contract.
+- AiLang validation, focused lowering, object-linker opcode mapping, and
+  `std.collections.map` now expose that storage without a syscall. The object
+  linker's constant index has replaced its persistent hash tree with a
+  builder-backed standard map and freezes once before lookup. A focused
+  1,000-entry linker-index regression completes in about 0.02 seconds. The
+  63-module whole-link probe still spends more than four minutes lowering
+  module 12, `src/compiler/lower.aos`, before reaching constant planning, so
+  lower-facade object emission is again the immediate measured frontier.
+- Retained structural Object and Function child assembly now lives in the
+  focused `compiler/structural_object_builders.aos` module and uses node
+  builders for imports, exports, symbols, functions, instructions, and
+  relocations. This removes repeated immutable `AppendChild` copies without
+  changing AiBCO ordering or shape. Starting at module 12, the complete
+  52-module emission tail now finishes in about 73 seconds including graph and
+  symbol setup; previously module 12 alone exceeded four minutes.
+- With objects 0 through 11 retained, module 12 still remains active past six
+  minutes. The builder removes isolated object-copy cost but does not remove
+  the retained-graph multiplier. The next measurement must distinguish
+  pressure-triggered node collection from repeated linear call-symbol scans;
+  the whole-link probe has not yet reached constant planning in that retained
+  configuration.
+- The whole-link probe can now stop after a selected retained object index via
+  `STOP_AFTER_OBJECT_INDEX`, allowing reproducible prefix profiling without
+  waiting for the complete compiler. The object-0-through-11 prefix finishes
+  in about 70 seconds and its debug diagnostics report 39 node compactions,
+  217,826 reclaimed nodes, and a 49,154-node high-water mark, with no arena
+  pressure errors. By contrast, the per-record module-12 probe lowers all 53
+  records quickly when their emitted objects are not retained. This evidence
+  identifies repeated full-node compaction over the retained graph—not
+  unsupported lowering or isolated call-symbol scanning—as the next dominant
+  cost. Node arenas remain fixed-capacity even though string and byte arenas
+  grow incrementally; the next VM iteration should add host-memory-admitted
+  node/attribute/child arena growth before retrying compaction.
+- AiVM now implements generic tooling-profile node, attribute, and child arena
+  growth in the focused `aivm_vm_node_arena.c` module. Growth is considered at
+  both exhaustion and return-safe-point pressure, doubles only the pressured
+  arena, rechecks current host memory immediately before allocation, and falls
+  back to normal compaction when growth is unavailable. It contains no compiler
+  or AiBCO policy. Core VM, memory-cycle, reference-counting, and map-storage
+  regressions pass.
+- Dynamic node growth did not materially advance retained module 12 within a
+  nearly five-minute bounded rerun. This corrects the earlier diagnosis:
+  repeated fixed-capacity compaction was observable, but is not the dominant
+  module-12 multiplier under the tooling profile. The next optimization should
+  build one call-name-to-record index for lowering rather than repeatedly
+  scanning all retained project record chunks.
+- Call resolution now supports an opaque indexed context built by the focused
+  `lower/records/index.aos` module. It bulk-builds one frozen name-to-ordinal
+  map in reverse record order so duplicate unqualified names preserve the
+  previous first-match behavior. `lower/records/lookup.aos` remains the public
+  resolution facade and retains its linear compatibility path. A regression
+  covers first-match and unknown-target diagnostics.
+- The whole-link probe builds that call context once and shares it across
+  module emission. Retained module 12 still remains active beyond a
+  three-minute bounded run, ruling out both repeated index construction and
+  linear call-name scanning as its primary multiplier.
+- VM return-safe-point collection now keeps independent node and byte decisions.
+  A bytes-only threshold no longer forces node, scratch-pair, or string
+  compaction; explicit safe points still collect every arena. Focused VM and
+  memory tests pass, but this separation also did not remove the retained
+  module-12 stall. The next probe must report progress per function while the
+  first 12 objects remain live, rather than infer the hot function from
+  aggregate module timing.
+- Retained phase tracing showed module 12 stalled inside
+  `structuralProject.parseModuleProgram`, before record collection or lowering.
+  A native five-second stack sample then identified the exact hotspot:
+  `aivm_string_arena_alloc` spent nearly all sampled CPU time repeatedly calling
+  `aivm_compact_string_arena`.
+- String-arena allocation now attempts admitted incremental growth before
+  compaction. Previously every 16-KiB limit crossing compacted and relocated the
+  complete live string graph before increasing the already-reserved limit.
+  Compaction remains the fallback when growth cannot satisfy the request.
+  Focused VM core time fell from about eight seconds to 0.02 seconds and the
+  retained module-12 parse, record collection, and all 53 function plans now
+  complete.
+- The complete retained compiler link now succeeds in one process. The current
+  67-module graph contains 628 functions and 999
+  constants; layout, constant indexing, operand planning, and final byte
+  emission complete in about 163 seconds. The generated
+  `ailang.aibc1` is non-empty and structurally linkable.
+- Executable entry emission now lives in focused
+  `object_linker_entry.aos`. It prepends a generic wrapper that loads
+  `sys.process.args`, calls a canonical entry symbol, and halts. A focused
+  multi-function regression proves argument delivery and exit-code
+  propagation.
+- Structural constant targets now retain raw semantic string values; only
+  legacy text serialization requests escaped targets. The manifest lookup
+  regression with embedded quotes passes.
+- `MakeNode(kind,id)` now emits `MAKE_NODE_EMPTY`, matching the VM's two-string
+  constructor contract rather than the template-instantiation `MAKE_NODE`
+  contract. The native primitive regression passes.
+- Syscall aliases are canonicalized in focused
+  `lower/expressions/syscalls.aos`; `io.write` and `io.print` lower to the
+  existing `sys.stdout.writeLine` boundary.
+- The generated compiler now builds the `binary_runs` sample project without a
+  bootstrap fallback. Structural project linking applies the manifest's
+  `entryFile` and `entryExport` to the generic executable wrapper. The
+  self-hosted output runs, prints `binary-ok`, and exits successfully.
+- The project compiler entry `src/compiler/aic.aos` now lowers and links as a
+  complete 17-module graph with 214 functions and 357 constants. Its previously
+  unbound `runFmt.mode` local is fixed.
+- Bare `Return` statements in terminal and statement-If branches now emit
+  value-free returns without indexing a missing child. Nested value-`If`
+  expressions recursively share one destination slot and converge at the
+  owning merge block. Focused regressions cover both shapes.
+- The generation-1 self-hosted CLI now builds the AiLang project compiler
+  (`aic`) successfully. Repeating the same self-hosted build produces the
+  identical SHA-256
+  `62533eedaf01383c6639513e6c36dd063bf898ca26e708487f5a551a9d52dd67`.
+- Quoted attribute tokens are now classified before boolean spelling, so
+  `"true"` remains a string while unquoted `true` remains a boolean. The
+  focused parser regression and compiler-file parser gate pass.
+- Structural literal-return lowering now preserves function parameters and
+  emits their prologue stores. This fixes ignored `_` arguments and the broader
+  parameterized-constant-return stack leak.
+- Bare returns now produce the compiler's integer-zero void result through the
+  focused `lower/returns/void.aos` module. Statement calls can therefore
+  discard the result without underflowing the VM stack.
+- The rebuilt generation-2 project compiler now completes `fmt`, `check`, and
+  `run` for valid input. `run` evaluates `Program { Lit(value=7) }` to
+  `Ok#ok0(type=int value=7)` without a VM error. The next bootstrap gap is
+  command-surface completeness: the project compiler entry does not expose a
+  `build` command, so it cannot directly produce generation 3.
 
 Reproduce the frontier with:
 
 ```sh
-./tools/ailang run src/cli/ailang.aos -- build . --out .tmp/selfhost-source-cli-build
+./tools/aivm-runtime run .tmp/selfhost-compiler-link/bin/ailang.aibc1 -- \
+  build .tmp/selfhost-generation-2
+printf 'Program { Lit(value=7) }\n' |
+  ./tools/aivm-runtime run .tmp/selfhost-generation-2/bin/app.aibc1 -- check
+printf 'Program { Lit(value=7) }\n' |
+  ./tools/aivm-runtime run .tmp/selfhost-generation-2/bin/app.aibc1 -- run
 ```
 
 ## Architectural Rules

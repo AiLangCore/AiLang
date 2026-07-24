@@ -42,11 +42,17 @@ Program {
           Block { Return { Lit(value=0) } }
           Block {
             If {
-              Eq { StringFind { Var(name=params) Lit(value=",") Var(name=index) } Lit(value=-1) }
+              Eq { Var(name=params) Lit(value="_") }
               Block { Return { Lit(value=1) } }
               Block {
-                Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=index) } }
-                Return { Add { Lit(value=1) Call(target=lower.parameterCount) { Var(name=params) Add { Var(name=comma) Lit(value=1) } } } }
+                If {
+                  Eq { StringFind { Var(name=params) Lit(value=",") Var(name=index) } Lit(value=-1) }
+                  Block { Return { Lit(value=1) } }
+                  Block {
+                    Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=index) } }
+                    Return { Add { Lit(value=1) Call(target=lower.parameterCount) { Var(name=params) Add { Var(name=comma) Lit(value=1) } } } }
+                  }
+                }
               }
             }
           }

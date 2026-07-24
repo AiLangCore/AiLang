@@ -1,0 +1,17 @@
+Program {
+  Export(name=parse.isBooleanAttributeToken)
+
+  Let(name=parse.isBooleanAttributeToken) {
+    Fn(params=token,expected) {
+      Block {
+        Let(name=fields) { PairFirst { Var(name=token) } }
+        Let(name=kind) { PairFirst { Var(name=fields) } }
+        If {
+          Eq { Var(name=kind) Lit(value="string") }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Eq { PairSecond { Var(name=fields) } Var(name=expected) } } }
+        }
+      }
+    }
+  }
+}

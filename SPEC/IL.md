@@ -49,10 +49,16 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `BytesFromByte` | none | `1` | Construct a one-byte value from an int in range `0..255`; out-of-range input is a runtime error. |
 | `BytesU32LE` | none | `1` | Encode an unsigned 32-bit integer in little-endian byte order; out-of-range input is a runtime error. |
 | `BytesI64LE` | none | `1` | Encode a signed 64-bit integer in two's-complement little-endian byte order. |
+| `MapBuilderNew` | none | `0` | Creates mutable construction state for a string-to-int map. |
+| `MapBuilderPutStringInt` | none | `3` | Inserts or replaces `(builder, string key, int value)` and returns the builder. |
+| `MapBuilderFinish` | none | `1` | Freezes a map builder and returns its immutable map value. |
+| `MapCount` | none | `1` | Returns the number of entries in a frozen map. |
+| `MapHasString` | none | `2` | Tests whether a frozen map contains a string key. |
+| `MapGetStringIntOr` | none | `3` | Returns a string key's int value, or the supplied int fallback when absent. |
 | `MakePair` | none | `2` | Creates an internal scratch pair for compiler/parser implementation state. Not a public semantic record. |
 | `PairFirst` | none | `1` | Reads the first value from an internal scratch pair. |
 | `PairSecond` | none | `1` | Reads the second value from an internal scratch pair. |
-| `ValueKind` | none | `1` | Returns the deterministic VM value category: `void`, `int`, `number`, `bool`, `null`, `string`, `bytes`, `node`, `pair`, or `unknown`. It is intended for compiler and library control flow when a value may be an internal pair or a diagnostic node. |
+| `ValueKind` | none | `1` | Returns the deterministic VM value category: `void`, `int`, `number`, `bool`, `null`, `string`, `bytes`, `node`, `pair`, `nodeBuilder`, `mapBuilder`, `map`, or `unknown`. It is intended for compiler and library control flow when a value may be internal construction state or a diagnostic node. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
 | `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
 | `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |

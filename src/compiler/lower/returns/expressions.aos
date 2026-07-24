@@ -144,7 +144,7 @@ Program {
             Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
             StrConcat {
               ToString { Var(name=instructionIndex) }
-              StrConcat { Lit(value=" target=\"") StrConcat { Call(target=lower.literalConstantTarget) { Var(name=value) } Lit(value="\") Inst(op=\"RETURN\") ") } }
+              StrConcat { Lit(value=" target=\"") StrConcat { Call(target=lower.literalConstantTextTarget) { Var(name=value) } Lit(value="\") Inst(op=\"RETURN\") ") } }
             }
           }
         }

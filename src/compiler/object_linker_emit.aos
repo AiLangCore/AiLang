@@ -191,7 +191,7 @@ Program {
                                                                               Block { Return { Lit(value=46) } }
                                                                               Block {
                                                                                 If {
-                                                                                  Eq { Var(name=op) Lit(value="MAKE_NODE") }
+                                                                                  Eq { Var(name=op) Lit(value="MAKE_NODE_EMPTY") }
                                                                                   Block { Return { Lit(value=47) } }
                                                                                   Block {
                                                                                     If {

@@ -1,0 +1,23 @@
+Program {
+  Export(name=objectLinker.mapNativeOpcode)
+
+  Let(name=objectLinker.mapNativeOpcode) {
+    Fn(params=op) {
+      Block {
+        If { Eq { Var(name=op) Lit(value="MAP_BUILDER_NEW") } Block { Return { Lit(value=82) } } Block {
+          If { Eq { Var(name=op) Lit(value="MAP_BUILDER_PUT_STRING_INT") } Block { Return { Lit(value=83) } } Block {
+            If { Eq { Var(name=op) Lit(value="MAP_BUILDER_FINISH") } Block { Return { Lit(value=84) } } Block {
+              If { Eq { Var(name=op) Lit(value="MAP_COUNT") } Block { Return { Lit(value=85) } } Block {
+                If { Eq { Var(name=op) Lit(value="MAP_HAS_STRING") } Block { Return { Lit(value=86) } } Block {
+                  If { Eq { Var(name=op) Lit(value="MAP_GET_STRING_INT_OR") } Block { Return { Lit(value=87) } } Block {
+                    Return { Lit(value=-1) }
+                  } }
+                } }
+              } }
+            } }
+          } }
+        } }
+      }
+    }
+  }
+}

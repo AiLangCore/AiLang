@@ -68,12 +68,30 @@ Each `Inst` has required `op` and optional operands `a`, `b`, `s`.
 - structured concurrency: `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 - primitive ops: `EQ`, `ADD_INT`, `SUB_NUM`, `MUL_NUM`, `DIV_NUM`, `MOD_NUM`, `POW_NUM`, `LT_NUM`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
 - node ops: `NODE_KIND`, `NODE_ID`, `ATTR_COUNT`, `ATTR_KEY`, `ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`, `CHILD_COUNT`, `CHILD_AT`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_STRING`, `MAKE_LIT_INT`, `MAKE_NODE`, `MAKE_FIELD_STRING`, `MAKE_MAP`
+- collection ops: `MAP_BUILDER_NEW`, `MAP_BUILDER_PUT_STRING_INT`,
+  `MAP_BUILDER_FINISH`, `MAP_COUNT`, `MAP_HAS_STRING`,
+  `MAP_GET_STRING_INT_OR`
 - async/structured concurrency ops: `ASYNC_CALL`, `AWAIT`, `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 
 ## Binary Mapping
 
 When serialized to raw bytes by backend tooling, numeric fields are little-endian.
 Canonical byte streams must be deterministic for identical input programs.
+
+The initial collection opcode assignments are:
+
+| Opcode | Number | Stack contract |
+|---|---:|---|
+| `MAP_BUILDER_NEW` | 82 | `-- mapBuilder` |
+| `MAP_BUILDER_PUT_STRING_INT` | 83 | `mapBuilder string int -- mapBuilder` |
+| `MAP_BUILDER_FINISH` | 84 | `mapBuilder -- map` |
+| `MAP_COUNT` | 85 | `map -- int` |
+| `MAP_HAS_STRING` | 86 | `map string -- bool` |
+| `MAP_GET_STRING_INT_OR` | 87 | `map string int -- int` |
+
+`mapBuilder` is transient compiler/library construction state and must not cross
+message, syscall, persistence, or debugger boundaries. `map` is immutable after
+builder finalization.
 
 ## Async Bytecode Contract
 

@@ -1,10 +1,18 @@
 Program {
+  Import(path="object_linker_map_opcodes.aos")
   Export(name=objectLinker.nativeOpcode)
   Export(name=objectLinker.isNativeInstruction)
 
   Let(name=objectLinker.nativeOpcode) {
     Fn(params=op) {
       Block {
+        Let(name=mapOpcode) { Call(target=objectLinker.mapNativeOpcode) { Var(name=op) } }
+        If {
+          Eq { Var(name=mapOpcode) Lit(value=-1) }
+          Block { Lit(value=0) }
+          Block { Return { Var(name=mapOpcode) } }
+        }
+        If { Eq { Var(name=op) Lit(value="HALT") } Block { Return { Lit(value=12) } } Block {
         If { Eq { Var(name=op) Lit(value="STR_CONCAT") } Block { Return { Lit(value=16) } } Block {
           If { Eq { Var(name=op) Lit(value="TO_STRING") } Block { Return { Lit(value=17) } } Block {
             If { Eq { Var(name=op) Lit(value="STR_ESCAPE") } Block { Return { Lit(value=18) } } Block {
@@ -46,7 +54,7 @@ Program {
                                                                             If { Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") } Block { Return { Lit(value=44) } } Block {
                                                                               If { Eq { Var(name=op) Lit(value="MAKE_LIT_INT") } Block { Return { Lit(value=45) } } Block {
                                                                                 If { Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") } Block { Return { Lit(value=46) } } Block {
-                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE") } Block { Return { Lit(value=47) } } Block {
+                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE_EMPTY") } Block { Return { Lit(value=50) } } Block {
                                                                                     If { Eq { Var(name=op) Lit(value="APPEND_ATTR") } Block { Return { Lit(value=51) } } Block {
                                                                                       If { Eq { Var(name=op) Lit(value="STR_FIND") } Block { Return { Lit(value=52) } } Block {
                                                                                         If { Eq { Var(name=op) Lit(value="MAKE_PAIR") } Block { Return { Lit(value=64) } } Block {
@@ -101,7 +109,7 @@ Program {
               } }
             } }
           } }
-        } }
+        } } } }
       }
     }
   }

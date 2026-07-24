@@ -2,6 +2,7 @@ Program {
   Import(path="object_linker_support.aos")
   Import(path="object_linker_emit.aos")
   Import(path="object_linker_native_opcodes.aos")
+  Import(path="object_linker_map_opcodes.aos")
   Import(path="object_linker_byte_ranges.aos")
   Import(path="object_linker_constant_plan.aos")
   Import(path="../std/bytes.aos")
@@ -171,7 +172,7 @@ Program {
                                                                             If { Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") } Block { Return { Lit(value=true) } } Block {
                                                                               If { Eq { Var(name=op) Lit(value="MAKE_LIT_INT") } Block { Return { Lit(value=true) } } Block {
                                                                                 If { Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") } Block { Return { Lit(value=true) } } Block {
-                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE") } Block { Return { Lit(value=true) } } Block {
+                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_NODE_EMPTY") } Block { Return { Lit(value=true) } } Block {
                                                                                     If { Eq { Var(name=op) Lit(value="MAKE_PAIR") } Block { Return { Lit(value=true) } } Block {
                                                                                       If { Eq { Var(name=op) Lit(value="PAIR_FIRST") } Block { Return { Lit(value=true) } } Block {
                                                                                         If { Eq { Var(name=op) Lit(value="PAIR_SECOND") } Block { Return { Lit(value=true) } } Block {

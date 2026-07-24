@@ -82,11 +82,11 @@ Program {
   Let(name=validateChildren) {
     Fn(params=node,state,index,parentKind) {
       Block {
-        Return {
-          If {
-            Eq { Var(name=index) ChildCount { Var(name=node) } }
-            Block { Var(name=state) }
-            Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=state) } }
+          Block {
+            Return {
               Call(target=validateChildren) {
                 Var(name=node)
                 Call(target=validateNode) {
@@ -386,6 +386,36 @@ Program {
     Fn(params=kind) {
       Block {
         If {
+          Eq { Var(name=kind) Lit(value="MapBuilderNew") }
+          Block { Return { Lit(value=0) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="MapBuilderPutStringInt") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="MapBuilderFinish") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="MapCount") }
+          Block { Return { Lit(value=1) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="MapHasString") }
+          Block { Return { Lit(value=2) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="MapGetStringIntOr") }
+          Block { Return { Lit(value=3) } }
+          Block { Lit(value=0) }
+        }
+        If {
           Eq { Var(name=kind) Lit(value="StringSlice") }
           Block { Return { Lit(value=3) } }
           Block { Lit(value=0) }
@@ -649,12 +679,10 @@ Program {
             }
           }
         }
-        Return {
-          If {
-            Eq { Var(name=count) Lit(value=3) }
-            Block { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterThen) Lit(value=2) Lit(value="Block") Lit(value="VAL022") Lit(value="If else-branch must be Block.") } }
-            Block { Var(name=stateAfterThen) }
-          }
+        If {
+          Eq { Var(name=count) Lit(value=3) }
+          Block { Return { Call(target=requireChildKind) { Var(name=node) Var(name=stateAfterThen) Lit(value=2) Lit(value="Block") Lit(value="VAL022") Lit(value="If else-branch must be Block.") } } }
+          Block { Return { Var(name=stateAfterThen) } }
         }
       }
     }

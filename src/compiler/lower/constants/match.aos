@@ -66,7 +66,7 @@ Program {
         If {
           Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
           Block {
-            Let(name=target) { Call(target=lower.literalConstantTarget) { Var(name=value) } }
+            Let(name=target) { Call(target=lower.literalConstantTextTarget) { Var(name=value) } }
             Return { StrConcat { Lit(value="Const(kind=\"literal\" value=\"") StrConcat { Var(name=target) Lit(value="\") ") } } }
           }
           Block { Return { Lit(value="") } }

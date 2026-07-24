@@ -1,6 +1,7 @@
 Program {
   Import(path="../std/str.aos")
   Import(path="parser/token_cursor.aos")
+  Import(path="parser/attribute_values.aos")
 
   Let(name=parse.charAt) {
     Fn(params=text,index) {
@@ -558,9 +559,8 @@ Program {
     Fn(params=keyToken,valueToken) {
       Block {
         If {
-          Eq {
-            Call(target=parse.tokenValue) { Var(name=valueToken) }
-            Lit(value="true")
+          Call(target=parse.isBooleanAttributeToken) {
+            Var(name=valueToken) Lit(value="true")
           }
           Block {
             Return {
@@ -572,9 +572,8 @@ Program {
           }
           Block {
             If {
-              Eq {
-                Call(target=parse.tokenValue) { Var(name=valueToken) }
-                Lit(value="false")
+              Call(target=parse.isBooleanAttributeToken) {
+                Var(name=valueToken) Lit(value="false")
               }
               Block {
                 Return {

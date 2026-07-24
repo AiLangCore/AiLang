@@ -14,6 +14,7 @@ Program {
   Import(path="lower/returns/expressions.aos")
   Import(path="lower/returns/routing.aos")
   Import(path="lower/returns/parameters.aos")
+  Import(path="lower/returns/void.aos")
   Import(path="lower/control/value_if.aos")
   Import(path="lower/control/native_branches.aos")
   Import(path="lower/control/statement_binding.aos")
@@ -21,12 +22,15 @@ Program {
   Import(path="lower/control/statement_if.aos")
   Import(path="lower/expressions/policy.aos")
   Import(path="lower/expressions/byte_opcodes.aos")
+  Import(path="lower/expressions/map_opcodes.aos")
   Import(path="lower/expressions/opcodes.aos")
   Import(path="lower/expressions/variadic.aos")
+  Import(path="lower/expressions/syscalls.aos")
   Import(path="lower/expressions/emission.aos")
   Import(path="lower/plans/dispatch.aos")
   Import(path="lower/plans/native_records.aos")
   Import(path="lower/plans/if_calls.aos")
+  Import(path="lower/records/index.aos")
   Import(path="lower/records/lookup.aos")
   Export(name=lower.collectFunctionRecords)
   Export(name=lower.emitObjectConstants)
@@ -63,11 +67,12 @@ Program {
   }
 
   Let(name=lower.emitStructuralReturnLiteralPlan) {
-    Fn(params=name,symbol,target) {
+    Fn(params=name,symbol,params,target) {
       Block {
-        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Lit(value="") Lit(value="") } }
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
         Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
-        Let(name=withConstant) { Call(target=blockBuilder.emit) { Var(name=context) Lit(value="CONST") Var(name=target) } }
+        Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=context) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+        Let(name=withConstant) { Call(target=blockBuilder.emit) { Var(name=withParams) Lit(value="CONST") Var(name=target) } }
         Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withConstant) } }
         Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
       }
@@ -118,7 +123,8 @@ Program {
               Block {
                 Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
                 Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
-                Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Call(target=lower.literalConstantTarget) { Var(name=value) } } }
+                Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+                Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Var(name=params) Call(target=lower.literalConstantTarget) { Var(name=value) } } }
               }
               Block {
                 If {
@@ -152,6 +158,7 @@ Program {
       Block {
         Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
         Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
         Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
         Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
         Let(name=local) { ChildAt { Var(name=body) Lit(value=0) } }
@@ -928,6 +935,7 @@ Program {
       Block {
         Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
         Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
         Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
         Let(name=match) { ChildAt { ChildAt { Var(name=body) Lit(value=0) } Lit(value=0) } }
         Let(name=subject) { ChildAt { Var(name=match) Lit(value=0) } }
@@ -935,7 +943,7 @@ Program {
         If {
           Eq { NodeKind { Var(name=selected) } Lit(value="no-match") }
           Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER030") Lit(value="Structural Match has no matching Case or Default.") NodeId { Var(name=match) } } } }
-          Block { Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Call(target=lower.literalConstantTarget) { Call(target=lower.matchBlockValue) { Var(name=selected) } } } } }
+          Block { Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Var(name=params) Call(target=lower.literalConstantTarget) { Call(target=lower.matchBlockValue) { Var(name=selected) } } } } }
         }
       }
     }
@@ -1633,7 +1641,7 @@ Program {
                                       StrConcat {
                                         Lit(value=" target=\"")
                                         StrConcat {
-                                          Call(target=lower.literalConstantTarget) { Var(name=label) }
+                                          Call(target=lower.literalConstantTextTarget) { Var(name=label) }
                                           StrConcat {
                                             Lit(value="\") Inst(op=\"")
                                             StrConcat {
@@ -1653,7 +1661,7 @@ Program {
                                                           StrConcat {
                                                             Lit(value=" target=\"")
                                                             StrConcat {
-                                                              Call(target=lower.literalConstantTarget) { Var(name=result) }
+                                                              Call(target=lower.literalConstantTextTarget) { Var(name=result) }
                                                               StrConcat { Lit(value="\") Inst(op=\"RETURN\") ") Call(target=lower.emitGeneralParameterMatchArms) { Var(name=matchNode) Var(name=slot) Add { Var(name=armIndex) Lit(value=1) } Var(name=nextInstruction) } }
                                                             }
                                                           }

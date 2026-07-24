@@ -1,0 +1,57 @@
+Program {
+  Import(path="parser.aos")
+  Export(name=objectLinker.prependExecutableEntry)
+
+  Let(name=objectLinker.prependExecutableEntry) {
+    Fn(params=functions,entrySymbol) {
+      Block {
+        Let(name=wrapperText) {
+          StrConcat {
+            Lit(value="Object(format=AiBCO1 version=1 modulePath=\"__entry__\") { Function(name=__entry symbol=\"__entry__::__entry\" params=\"\") { Inst(op=CONST a=0) Reloc(kind=const instruction=0 target=\"string:sys.process.args\") Inst(op=CALL_SYS a=0) Inst(op=CALL a=0) Reloc(kind=call instruction=2 targetSymbol=\"")
+            StrConcat {
+              StrEscape { Var(name=entrySymbol) }
+              Lit(value="\") Inst(op=HALT) } }")
+            }
+          }
+        }
+        Let(name=wrapperObject) { Call(target=parse.parseDocument) { Var(name=wrapperText) } }
+        If {
+          Eq { NodeKind { Var(name=wrapperObject) } Lit(value="Err") }
+          Block { Return { Var(name=wrapperObject) } }
+          Block {
+            Let(name=wrapperFunctions) {
+              Call(target=objectLinker.collectFunctions) {
+                AppendChild { MakeBlock { Lit(value="objects") } Var(name=wrapperObject) }
+              }
+            }
+            Return {
+              Call(target=objectLinker.appendEntryFunctions) {
+                Var(name=functions) Lit(value=0) Var(name=wrapperFunctions)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.appendEntryFunctions) {
+    Fn(params=functions,index,result) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=result) } }
+          Block {
+            Return {
+              Call(target=objectLinker.appendEntryFunctions) {
+                Var(name=functions)
+                Add { Var(name=index) Lit(value=1) }
+                AppendChild { Var(name=result) ChildAt { Var(name=functions) Var(name=index) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

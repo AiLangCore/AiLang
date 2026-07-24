@@ -1,0 +1,38 @@
+Program {
+  Export(name=collections.hashString)
+
+  Let(name=collections.hashString) {
+    Fn(params=value) {
+      Block {
+        Let(name=data) { BytesFromUtf8String { Var(name=value) } }
+        Return {
+          Call(target=collections.hashBytesAt) {
+            Var(name=data) Lit(value=0) BytesLength { Var(name=data) } Lit(value=5381)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=collections.hashBytesAt) {
+    Fn(params=data,index,length,hash) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=length) }
+          Block { Return { Var(name=hash) } }
+          Block {
+            Return {
+              Call(target=collections.hashBytesAt) {
+                Var(name=data) Add { Var(name=index) Lit(value=1) } Var(name=length)
+                Mod {
+                  Add { Mul { Var(name=hash) Lit(value=33) } BytesAt { Var(name=data) Var(name=index) } }
+                  Lit(value=2147483647)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

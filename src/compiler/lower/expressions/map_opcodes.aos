@@ -1,0 +1,37 @@
+Program {
+  Let(name=lower.structuralNativeMapUnaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If { Eq { Var(name=kind) Lit(value="MapBuilderFinish") } Block { Return { Lit(value="MAP_BUILDER_FINISH") } } Block {
+          If { Eq { Var(name=kind) Lit(value="MapCount") } Block { Return { Lit(value="MAP_COUNT") } } Block {
+            Return { Lit(value="") }
+          } }
+        } }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeMapBinaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If { Eq { Var(name=kind) Lit(value="MapHasString") } Block { Return { Lit(value="MAP_HAS_STRING") } } Block {
+          Return { Lit(value="") }
+        } }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeMapVariadicOpcode) {
+    Fn(params=kind) {
+      Block {
+        If { Eq { Var(name=kind) Lit(value="MapBuilderNew") } Block { Return { Lit(value="MAP_BUILDER_NEW") } } Block {
+          If { Eq { Var(name=kind) Lit(value="MapBuilderPutStringInt") } Block { Return { Lit(value="MAP_BUILDER_PUT_STRING_INT") } } Block {
+            If { Eq { Var(name=kind) Lit(value="MapGetStringIntOr") } Block { Return { Lit(value="MAP_GET_STRING_INT_OR") } } Block {
+              Return { Lit(value="") }
+            } }
+          } }
+        } }
+      }
+    }
+  }
+}

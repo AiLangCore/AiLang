@@ -3,6 +3,7 @@ Program {
   Import(path="parser.aos")
   Import(path="format.aos")
   Import(path="linker.aos")
+  Import(path="structural_object_builders.aos")
   Export(name=structuralObject.collectModuleRecords)
   Export(name=structuralObject.validateProjectFunctionRecords)
   Export(name=structuralObject.emitProjectPlans)
@@ -143,14 +144,11 @@ Program {
   Let(name=structuralObject.emitModuleObjectForProgram) {
     Fn(params=program,modulePath,moduleRecords,allRecords) {
       Block {
-        Let(name=base) { MakeNode { Lit(value="Object") StrConcat { Lit(value="structural-object:") Var(name=modulePath) } } }
-        Let(name=withFormat) { AppendAttr { Var(name=base) MakeLitString { Lit(value="format") Lit(value="AiBCO1") } } }
-        Let(name=withPath) { AppendAttr { Var(name=withFormat) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
-        Let(name=object) { AppendAttr { Var(name=withPath) MakeLitInt { Lit(value="version") Lit(value=1) } } }
-        Let(name=withImports) { Call(target=structuralObject.appendImports) { Var(name=object) Var(name=program) Var(name=modulePath) Lit(value=0) } }
-        Let(name=withExports) { Call(target=structuralObject.appendExports) { Var(name=withImports) Var(name=program) Var(name=modulePath) Lit(value=0) } }
-        Let(name=withSymbols) { Call(target=structuralObject.appendSymbols) { Var(name=withExports) Var(name=moduleRecords) Lit(value=0) } }
-        Return { Call(target=structuralObject.appendFunctions) { Var(name=withSymbols) Var(name=moduleRecords) Var(name=allRecords) Lit(value=0) } }
+        Return {
+          Call(target=structuralObject.buildModuleObjectForProgram) {
+            Var(name=program) Var(name=modulePath) Var(name=moduleRecords) Var(name=allRecords)
+          }
+        }
       }
     }
   }

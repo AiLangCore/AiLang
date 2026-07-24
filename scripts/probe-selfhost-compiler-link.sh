@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_DIR="${ROOT_DIR}/.tmp/selfhost-compiler-link"
+TMP_DIR="${SELFHOST_LINK_WORK_DIR:-${ROOT_DIR}/.tmp/selfhost-compiler-link}"
 PROJECT_DIR="${1:-${ROOT_DIR}}"
 STOP_AFTER_OBJECT_INDEX="${STOP_AFTER_OBJECT_INDEX:--1}"
 TRACE_OBJECT_INDEX="${TRACE_OBJECT_INDEX:--1}"

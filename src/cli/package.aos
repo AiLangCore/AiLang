@@ -1,6 +1,7 @@
 Program {
   Import(path="../std/str.aos")
   Import(path="../std/bytes.aos")
+  Import(path="package/arguments.aos")
   Export(name=runPackage)
 
   Let(name=runPackage) {
@@ -1218,38 +1219,6 @@ Program {
             Let(name=env) { MakeBlock { Lit(value="env") } }
             Let(name=handle) { Call(target=sys.process.spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
             Return { Call(target=sys.process.wait) { Var(name=handle) } }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=packageDefaultPath) {
-    Fn(params=path) {
-      Block {
-        If {
-          Eq { Var(name=path) Lit(value="") }
-          Block { Return { Lit(value=".") } }
-          Block { Return { Var(name=path) } }
-        }
-      }
-    }
-  }
-
-
-  Let(name=packageReadArg) {
-    Fn(params=args,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=args) } }
-          Block { Return { Lit(value="") } }
-          Block {
-            Return {
-              AttrValueString {
-                ChildAt { Var(name=args) Var(name=index) }
-                Lit(value=0)
-              }
-            }
           }
         }
       }

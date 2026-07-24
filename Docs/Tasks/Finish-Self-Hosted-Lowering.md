@@ -538,21 +538,47 @@ Current self-build frontier:
 - Bare returns now produce the compiler's integer-zero void result through the
   focused `lower/returns/void.aos` module. Statement calls can therefore
   discard the result without underflowing the VM stack.
-- The rebuilt generation-2 project compiler now completes `fmt`, `check`, and
+- The rebuilt generation-2 project compiler completes `fmt`, `check`, and
   `run` for valid input. `run` evaluates `Program { Lit(value=7) }` to
-  `Ok#ok0(type=int value=7)` without a VM error. The next bootstrap gap is
-  command-surface completeness: the project compiler entry does not expose a
-  `build` command, so it cannot directly produce generation 3.
+  `Ok#ok0(type=int value=7)` without a VM error.
+- The canonical `./build.sh selfhost` and `./build.ps1 selfhost` targets now
+  stage the complete self-hosted CLI at
+  `.artifacts/ailang-selfhost/bin/ailang.aibc1`. The build uses the full
+  `src/cli/ailang.aos` entry, which owns project `build`; the smaller
+  `src/compiler/aic.aos` entry remains the stdin-oriented project compiler.
+- The staged generation-2 full CLI built a clean generation-3 full CLI.
+  Both artifacts are byte-for-byte identical with SHA-256
+  `3b5f7649e87a9523b29f12a6b3785a18ac2c24530614e0cc86f2fe4f5d138870`.
+  Full-CLI bootstrap command coverage and deterministic generation parity are
+  therefore no longer blockers. The immediate frontier is compiling and
+  running the sibling `ailang-examples` repository exclusively through this
+  staged self-hosted artifact.
+- The self-host build now stages `src/std` beside the compiler artifact so
+  `AILANG_SDK_ROOT=.artifacts/ailang-selfhost` is a complete, relocatable SDK
+  root rather than a repository-local assumption.
+- The examples validator has an explicit `--selfhost` mode that runs package,
+  build, and run commands through the staged AiBC1 CLI and native VM without
+  invoking the bootstrap compiler. The `hello-cli` example builds and prints
+  its expected output through this path.
+- Finished child-process output is copied into stable host scratch storage
+  before its process slot is released. This mechanical AiVM lifetime fix lets
+  the self-hosted CLI relay compiler and application stdout; the focused
+  process lifecycle regression covers wait-before-read behavior.
+- Canonical `sdk:ailang/...` graph display paths now resolve through the
+  current `AILANG_SDK_ROOT` at object-emission time using the shared path join
+  helper. The package example therefore completes restore and source parsing
+  instead of trying to read `sdk:ailang` as a project-relative directory.
+- `examples/package-demo` now reaches structural lowering and exposes the next
+  semantic frontier: `LOWER024` for a generated `ChildAt` expression in the
+  restored `std-json` module. This is a compiler lowering gap, not graph
+  discovery, SDK location, parser, process output, or VM memory pressure.
 
 Reproduce the frontier with:
 
 ```sh
-./tools/aivm-runtime run .tmp/selfhost-compiler-link/bin/ailang.aibc1 -- \
-  build .tmp/selfhost-generation-2
-printf 'Program { Lit(value=7) }\n' |
-  ./tools/aivm-runtime run .tmp/selfhost-generation-2/bin/app.aibc1 -- check
-printf 'Program { Lit(value=7) }\n' |
-  ./tools/aivm-runtime run .tmp/selfhost-generation-2/bin/app.aibc1 -- run
+./build.sh selfhost
+./tools/aivm-runtime run \
+  .artifacts/ailang-selfhost/bin/ailang.aibc1 -- version
 ```
 
 ## Architectural Rules

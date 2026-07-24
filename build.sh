@@ -5,15 +5,17 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 print_usage() {
   cat <<'EOF'
-Usage: ./build.sh [host|shared|wasm|all]
+Usage: ./build.sh [host|selfhost|shared|wasm|all]
 
 Builds AiLang tooling through the selected installed SDK.
 
 Targets:
   host    Stage host tools from the selected installed SDK (default).
+  selfhost
+          Build the AiLang compiler and CLI through the self-hosted pipeline.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
-  all     Stage host tools and run delegated compatibility targets.
+  all     Build host and self-hosted tools, then delegated compatibility targets.
 EOF
 }
 
@@ -23,6 +25,9 @@ run_target() {
     host)
       "${ROOT_DIR}/scripts/build-ailang-native.sh"
       ;;
+    selfhost)
+      "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+      ;;
     shared)
       "${ROOT_DIR}/scripts/build-aivm-c-shared.sh"
       ;;
@@ -31,6 +36,7 @@ run_target() {
       ;;
     all)
       run_target host
+      "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
       run_target shared
       run_target wasm
       ;;

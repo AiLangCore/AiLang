@@ -2,15 +2,17 @@ $ErrorActionPreference = 'Stop'
 
 function Show-Usage {
   @'
-Usage: ./build.ps1 [host|shared|wasm|all]
+Usage: ./build.ps1 [host|selfhost|shared|wasm|all]
 
 Builds AiLang tooling through the selected installed SDK.
 
 Targets:
   host    Stage host tools from the selected installed SDK (default).
+  selfhost
+          Build the AiLang compiler and CLI through the self-hosted pipeline.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
-  all     Stage host tools and run delegated compatibility targets.
+  all     Build host and self-hosted tools, then delegated compatibility targets.
 '@
 }
 
@@ -99,6 +101,10 @@ function Invoke-BuildTarget([string]$Target) {
       & "$PSScriptRoot/scripts/build-ailang-native.ps1"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
+    'selfhost' {
+      bash "$PSScriptRoot/scripts/build-ailang-selfhost.sh"
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
     'shared' {
       bash "$PSScriptRoot/scripts/build-aivm-c-shared.sh"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -109,6 +115,8 @@ function Invoke-BuildTarget([string]$Target) {
     }
     'all' {
       Invoke-BuildTarget 'host'
+      bash "$PSScriptRoot/scripts/build-ailang-selfhost.sh"
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       Invoke-BuildTarget 'shared'
       Invoke-BuildTarget 'wasm'
     }

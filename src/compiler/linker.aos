@@ -595,28 +595,44 @@ Program {
     Fn(params=projectDir,displayPath,lockText) {
       Block {
         If {
-          Eq { Call(target=find) { Var(name=displayPath) Lit(value="package:") Lit(value=0) } Lit(value=0) }
+          Eq { Call(target=find) { Var(name=displayPath) Lit(value="sdk:ailang/") Lit(value=0) } Lit(value=0) }
           Block {
-            Let(name=tail) { Call(target=substring) { Var(name=displayPath) Lit(value=8) Lit(value=2147483647) } }
-            Let(name=slash) { Call(target=find) { Var(name=tail) Lit(value="/") Lit(value=0) } }
+            Let(name=sdkRoot) { Call(target=sys.process.env.get) { Lit(value="AILANG_SDK_ROOT") } }
             If {
-              Eq { Var(name=slash) Lit(value=-1) }
+              Eq { Var(name=sdkRoot) Lit(value="") }
               Block { Return { Lit(value="") } }
               Block {
-                Let(name=packageName) { Call(target=substring) { Var(name=tail) Lit(value=0) Var(name=slash) } }
-                Let(name=relativePath) { Call(target=substring) { Var(name=tail) Add { Var(name=slash) Lit(value=1) } Lit(value=2147483647) } }
-                Let(name=packagePath) { Call(target=linker.packagePath) { Var(name=lockText) Var(name=packageName) } }
-                Let(name=packageRoot) { Call(target=linker.packageRoot) { Var(name=lockText) Var(name=packageName) } }
-                Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=packagePath) Var(name=packageRoot) } }
-                If {
-                  Eq { Var(name=basePath) Lit(value="") }
-                  Block { Return { Lit(value="") } }
-                  Block { Return { StrConcat { Var(name=basePath) StrConcat { Lit(value="/") Var(name=relativePath) } } } }
-                }
+                Let(name=relativePath) { Call(target=substring) { Var(name=displayPath) Lit(value=11) Lit(value=2147483647) } }
+                Return { Call(target=linker.joinPath) { Var(name=sdkRoot) Var(name=relativePath) } }
               }
             }
           }
-          Block { Return { StrConcat { Var(name=projectDir) StrConcat { Lit(value="/") Var(name=displayPath) } } } }
+          Block {
+            If {
+              Eq { Call(target=find) { Var(name=displayPath) Lit(value="package:") Lit(value=0) } Lit(value=0) }
+              Block {
+                Let(name=tail) { Call(target=substring) { Var(name=displayPath) Lit(value=8) Lit(value=2147483647) } }
+                Let(name=slash) { Call(target=find) { Var(name=tail) Lit(value="/") Lit(value=0) } }
+                If {
+                  Eq { Var(name=slash) Lit(value=-1) }
+                  Block { Return { Lit(value="") } }
+                  Block {
+                    Let(name=packageName) { Call(target=substring) { Var(name=tail) Lit(value=0) Var(name=slash) } }
+                    Let(name=relativePath) { Call(target=substring) { Var(name=tail) Add { Var(name=slash) Lit(value=1) } Lit(value=2147483647) } }
+                    Let(name=packagePath) { Call(target=linker.packagePath) { Var(name=lockText) Var(name=packageName) } }
+                    Let(name=packageRoot) { Call(target=linker.packageRoot) { Var(name=lockText) Var(name=packageName) } }
+                    Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=packagePath) Var(name=packageRoot) } }
+                    If {
+                      Eq { Var(name=basePath) Lit(value="") }
+                      Block { Return { Lit(value="") } }
+                      Block { Return { StrConcat { Var(name=basePath) StrConcat { Lit(value="/") Var(name=relativePath) } } } }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=linker.joinPath) { Var(name=projectDir) Var(name=displayPath) } } }
+            }
+          }
         }
       }
     }

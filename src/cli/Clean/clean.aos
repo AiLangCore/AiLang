@@ -1,0 +1,53 @@
+Program {
+  Import(path="../../std/str.aos")
+  Import(path="../common.aos")
+
+  Export(name=runClean)
+
+  Let(name=runClean) {
+    Fn(params=args) {
+      Block {
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Call(target=missingPath) { Lit(value="clean") } } }
+          Block { Return { Call(target=cleanProject) { Var(name=path) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=cleanProject) {
+    Fn(params=path) {
+      Block {
+        Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+          Block {
+            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/bin") } }
+            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/dist") } }
+            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/.toolchain") } }
+            Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"clean-complete\")") }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=deleteDirIfExists) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Call(target=sys.fs.dir.delete) { Var(name=path) Lit(value=true) }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Lit(value=0) } }
+        }
+      }
+    }
+  }
+}

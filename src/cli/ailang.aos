@@ -8,6 +8,7 @@ Program {
   Import(path="../compiler/structural_project_link.aos")
   Import(path="package.aos")
   Import(path="target_packages.aos")
+  Import(path="commands.g.aos")
   Export(name=main)
 
   Let(name=main) {
@@ -34,6 +35,12 @@ Program {
                           Eq { Var(name=cmd) Lit(value="--version") }
                           Block { Return { Call(target=runVersion) { Lit(value=0) } } }
                           Block {
+                            // Try registry-based commands first
+                            Let(name=cmdFunc) { Call(target=getCommandFunction) { Var(name=cmd) } }
+                            If {
+                              Ne { Var(name=cmdFunc) Lit(value=0) }
+                              Block { Return { Call(target=cmdFunc) { Var(name=args) } } }
+                              Block {
                             If {
                               Eq { Var(name=cmd) Lit(value="init") }
                               Block { Return { Call(target=runInit) { Var(name=args) } } }

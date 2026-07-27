@@ -7,7 +7,7 @@ Program {
   Export(name=structuralProject.writeProjectObjectFilesIncremental)
   Export(name=structuralProject.writeProjectObjectPartition)
   Export(name=structuralProject.writePreparedProjectObjectPartition)
-  Export(name=structuralProject.writePreparedProjectObjectSchedule)
+  Export(name=structuralProject.writePreparedProjectObjectAt)
 
   Let(name=structuralProject.writeProjectObjectFilesIncremental) {
     Fn(params=modulePaths,projectDir,lockText,objDir) {
@@ -114,67 +114,19 @@ Program {
     }
   }
 
-  Let(name=structuralProject.writePreparedProjectObjectSchedule) {
-    Fn(params=modulePaths,projectDir,lockText,objDir,records,schedule,workerIndex,assignmentIndex) {
+  Let(name=structuralProject.writePreparedProjectObjectAt) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,moduleIndex) {
       Block {
-        If {
-          Eq { Var(name=assignmentIndex) ChildCount { Var(name=schedule) } }
-          Block { Return { MakeBlock { Lit(value="worker-complete") } } }
-          Block {
-            Let(name=assignment) {
-              ChildAt { Var(name=schedule) Var(name=assignmentIndex) }
-            }
-            If {
-              Eq {
-                AttrValueInt { Var(name=assignment) Lit(value=1) }
-                Var(name=workerIndex)
-              }
-              Block {
-                Let(name=written) {
-                  Call(target=structuralProject.writeModuleObjectPartition) {
-                    Var(name=modulePaths)
-                    Var(name=projectDir)
-                    Var(name=lockText)
-                    Var(name=objDir)
-                    Var(name=records)
-                    AttrValueInt { Var(name=assignment) Lit(value=0) }
-                    ChildCount { Var(name=modulePaths) }
-                  }
-                }
-                If {
-                  Eq { NodeKind { Var(name=written) } Lit(value="Err") }
-                  Block { Return { Var(name=written) } }
-                  Block {
-                    Return {
-                      Call(target=structuralProject.writePreparedProjectObjectSchedule) {
-                        Var(name=modulePaths)
-                        Var(name=projectDir)
-                        Var(name=lockText)
-                        Var(name=objDir)
-                        Var(name=records)
-                        Var(name=schedule)
-                        Var(name=workerIndex)
-                        Add { Var(name=assignmentIndex) Lit(value=1) }
-                      }
-                    }
-                  }
-                }
-              }
-              Block {
-                Return {
-                  Call(target=structuralProject.writePreparedProjectObjectSchedule) {
-                    Var(name=modulePaths)
-                    Var(name=projectDir)
-                    Var(name=lockText)
-                    Var(name=objDir)
-                    Var(name=records)
-                    Var(name=schedule)
-                    Var(name=workerIndex)
-                    Add { Var(name=assignmentIndex) Lit(value=1) }
-                  }
-                }
-              }
-            }
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Return {
+          Call(target=structuralProject.writeModuleObjectPartition) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Var(name=objDir)
+            Var(name=records)
+            Var(name=moduleIndex)
+            ChildCount { Var(name=modulePaths) }
           }
         }
       }

@@ -121,12 +121,25 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(bytes, string)` and returns base64-encoded row-major RGBA8 bytes suitable for `sys.ui.drawImage`.
 - unsupported hosts or decode failures must surface as typed syscall failure, never as a silent empty image.
 
-- `sys.worker.start(taskName,payload)` contract:
-- args are `(string, string)` and return int worker handle.
-- `sys.worker.poll(workerHandle)` contract:
-- args are `(int)` and return status int (`0,1,-1,-2,-3`).
-- `sys.worker.result(workerHandle)` and `sys.worker.error(workerHandle)` return strings.
-- `sys.worker.cancel(workerHandle)` returns bool.
+- `Worker` declarations resolve structurally through the restored project and
+  package graph. Their `Function.target` must exist, be exported, have exact
+  signature `Fn(bytes) -> bytes`, and have no captured environment.
+- Validation computes the target's transitive reachable code, immutable data,
+  and statically required capabilities. Required capabilities must be permitted
+  by the worker declaration when a ceiling is present and by project policy.
+- Worker transport ABI and bytecode compatibility are derived by the builder;
+  authorable source does not repeat fixed input/result or ABI metadata.
+- `WorkerRef`, `Task`, and `WorkerTasks` values are opaque and non-forgeable.
+  They are rejected in constants, worker payloads/results, persisted values,
+  linker records, canonical output, equality, ordering, and hashing.
+- `std.worker.run` accepts `(WorkerRef,bytes)`.
+- `std.worker.runAll` accepts `(WorkerRef,ordered bytes collection)`.
+- `std.worker.taskAt` accepts `(WorkerTasks,int)`.
+- `std.task.cancel` accepts `Task`.
+- `Await` accepts only `Task`; first consumption is one-shot.
+- Worker dependency graphs must be acyclic, canonically indexed, transport
+  compatible, and bounded by declared/runtime workload policies.
+- `whenAny` is rejected in compiler and other canonical-output contexts.
 
 - `sys.debug.emit(channel,payload)` contract:
 - args are `(string, string)`.

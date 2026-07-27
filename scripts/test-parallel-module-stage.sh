@@ -11,12 +11,26 @@ mkdir -p "${TMP_DIR}/project/src"
 cat > "${TMP_DIR}/project/src/app.aos" <<'AOS'
 Program {
   Import(path="dep.aos")
+  Import(path="dep2.aos")
+  Import(path="dep3.aos")
+  Import(path="dep4.aos")
   Export(name=start)
   Let(name=start) {
     Fn() { Block { Return { Call(target=answer) { Lit(value=7) } } } }
   }
 }
 AOS
+
+for dependency in dep2 dep3 dep4; do
+  cat > "${TMP_DIR}/project/src/${dependency}.aos" <<AOS
+Program {
+  Export(name=${dependency})
+  Let(name=${dependency}) {
+    Fn() { Block { Return { Lit(value=1) } } }
+  }
+}
+AOS
+done
 
 cat > "${TMP_DIR}/project/src/dep.aos" <<'AOS'
 Program {
@@ -88,9 +102,11 @@ AILANG_BUILD_WORKER_ARTIFACT="${WORKER_DIR}/module-object.aibc1" \
 
 test -s "${TMP_DIR}/parallel-obj/parallel-stage/module-paths.aos"
 test -s "${TMP_DIR}/parallel-obj/parallel-stage/function-records.aos"
-test -s "${TMP_DIR}/parallel-obj/parallel-stage/object-schedule.aos"
-cmp -s "${TMP_DIR}/serial-obj/module-0.aibco" "${TMP_DIR}/parallel-obj/module-0.aibco"
-cmp -s "${TMP_DIR}/serial-obj/module-1.aibco" "${TMP_DIR}/parallel-obj/module-1.aibco"
+for module_index in 0 1 2 3 4; do
+  cmp -s \
+    "${TMP_DIR}/serial-obj/module-${module_index}.aibco" \
+    "${TMP_DIR}/parallel-obj/module-${module_index}.aibco"
+done
 cmp -s "${TMP_DIR}/serial.aibc1" "${TMP_DIR}/parallel.aibc1"
 
 set +e

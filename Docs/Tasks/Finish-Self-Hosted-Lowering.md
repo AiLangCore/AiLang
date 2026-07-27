@@ -659,6 +659,17 @@ Current self-build frontier:
   retained through the explicit schedule contract and measures 133.3 seconds
   on the expanded 89-module graph. The canonical build passes in 495 seconds;
   its 321.7-second serial object reload is the next measured frontier.
+- The reload investigation tested concatenating all object text into one
+  parser document. It exceeded 540 seconds before completion and was removed;
+  reducing parser entry count does not reduce the dominant work. The retained
+  deterministic loader now reports bounded ten-object milestones from the
+  focused telemetry module. On the passing 89-module canonical build, reload
+  reached 10 objects at 19.4 seconds, 20 at 80.8, 60 at 163.4, 70 at 214.7,
+  and 80 at 273.7 before completing at 326.8 seconds. Cost clusters around
+  particular large objects rather than growing uniformly by object count.
+  The next implementation should have generation workers emit compact
+  linker-ready records so the parent does not reconstruct full AiBCO syntax
+  trees for those large modules.
 
 Reproduce the frontier with:
 

@@ -60,7 +60,7 @@ metadata. They are not runtime semantic nodes and are not passed to AiVM.
   duplicate fully-qualified `Symbol.symbol`. The linker repeats that check for
   independently supplied objects.
 - `Function.params` and `Function.locals` use canonical comma-separated order.
-- `Reloc.kind` is one of `call`, `const`, `jump`, or `entry`.
+- `Reloc.kind` is one of `call`, `const`, `jump`, `entry`, or `worker`.
 - `Reloc.instruction` is a zero-based instruction index in its owning function.
 - A `call` relocation has exactly one of `Reloc.targetName` or
   `Reloc.targetSymbol`. `targetName` is a source-level call target that the
@@ -75,6 +75,10 @@ metadata. They are not runtime semantic nodes and are not passed to AiVM.
   within its owning function. The linker adds the owning function's final flat
   offset before serializing the AiBC1 operand. Source lowerers never calculate
   flat VM instruction addresses.
+- A `worker` relocation identifies a validated structural Worker declaration
+  by canonical declaration symbol. The linker resolves it to the generated
+  AiBC1 WorkerCatalog index only after verifying the bundled artifact,
+  function, ABI, and capability metadata.
 
 ## Initial Lowered Instruction Set
 
@@ -170,6 +174,9 @@ The linker must:
     flat instruction offsets;
 11. emit an AiBC1 `Func` table and instruction stream only after all relocation
    checks pass.
+12. merge Worker declarations in canonical module/object order, reject
+    duplicate declaration symbols, resolve every worker relocation, and emit
+    the generated WorkerCatalog without host paths or runtime name lookup.
 
 The linked AiBC1 output is the only bytecode executed by AiVM.
 

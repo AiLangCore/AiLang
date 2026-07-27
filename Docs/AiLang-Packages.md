@@ -299,6 +299,23 @@ Restored package source is cached under the project:
 The cache is an implementation detail. Projects must resolve packages through
 the lockfile, not by importing cache paths directly.
 
+## Worker Exports
+
+Worker semantics are declared once in structural AiLang source. A package may
+publish a stable logical alias that refers to an already validated declaration:
+
+```toml
+[workers.module-object]
+declaration = "compiler.worker.module_object.moduleObjectWorker"
+```
+
+This metadata is export indexing only. It does not restate a source path,
+function name, signature, capability list, ABI, or artifact identity. The
+builder resolves the declaration through the restored package graph, validates
+its exported `Fn(bytes) -> bytes` target and inferred capabilities, and
+generates the embedded worker catalog. No standalone worker configuration file
+exists.
+
 ## Import Resolution
 
 Relative imports remain project-local:

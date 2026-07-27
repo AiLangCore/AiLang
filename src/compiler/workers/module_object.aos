@@ -2,7 +2,6 @@ Program {
   Import(sdk="ailang" path="std/bytes.aos")
   Import(path="../structural_project_incremental.aos")
   Import(path="../structural_project_stage.aos")
-  Import(path="../structural_project_schedule.aos")
   Export(name=moduleObjectWorkerRun)
 
   Let(name=moduleObjectWorkerRun) {
@@ -11,16 +10,15 @@ Program {
         Let(name=projectDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=0) } }
         Let(name=stageDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=1) } }
         Let(name=objDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=2) } }
-        Let(name=workerIndexText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=3) } }
-        Let(name=workerCountText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=4) } }
+        Let(name=moduleIndexText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=3) } }
         If {
-          Eq { Var(name=workerCountText) Lit(value="") }
+          Eq { Var(name=moduleIndexText) Lit(value="") }
           Block {
             Return {
               MakeErr {
                 Lit(value="module_object_worker")
                 Lit(value="WORKER001")
-                Lit(value="Module object worker requires project, entry, object directory, index, and count.")
+                Lit(value="Module object worker requires project, stage, object directory, and module index.")
                 Lit(value="arguments")
               }
             }
@@ -38,15 +36,13 @@ Program {
               Block { Return { Var(name=stage) } }
               Block {
                 Let(name=writeResult) {
-                  Call(target=structuralProject.writePreparedProjectObjectSchedule) {
+                  Call(target=structuralProject.writePreparedProjectObjectAt) {
                     ChildAt { Var(name=stage) Lit(value=0) }
                     Var(name=projectDir)
                     Var(name=lockText)
                     Var(name=objDir)
                     ChildAt { Var(name=stage) Lit(value=1) }
-                    ChildAt { Var(name=stage) Lit(value=2) }
-                    Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
-                    Lit(value=0)
+                    Call(target=parse.parseIntValue) { Var(name=moduleIndexText) }
                   }
                 }
                 If {
@@ -62,17 +58,11 @@ Program {
                           }
                           MakeLitInt {
                             Lit(value="index")
-                            Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
+                            Call(target=parse.parseIntValue) { Var(name=moduleIndexText) }
                           }
                         }
                         MakeLitInt {
-                          Lit(value="modules")
-                          Call(target=structuralProject.scheduleWorkerModuleCount) {
-                            ChildAt { Var(name=stage) Lit(value=2) }
-                            Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
-                            Lit(value=0)
-                            Lit(value=0)
-                          }
+                          Lit(value="modules") Lit(value=1)
                         }
                       }
                     }

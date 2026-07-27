@@ -1,14 +1,12 @@
 Program {
   Import(sdk="ailang" path="std/process.aos")
   Import(path="../format.aos")
-  Import(path="../build_telemetry.aos")
   Import(path="module_object.aos")
   Export(name=main)
 
   Let(name=main) {
     Fn(params=args) {
       Block {
-        Let(name=startedAt) { Call(target=buildTelemetry.now) {} }
         Let(name=result) { Call(target=moduleObjectWorkerRun) { Var(name=args) } }
         If {
           Eq { NodeKind { Var(name=result) } Lit(value="Err") }
@@ -20,11 +18,6 @@ Program {
             Return { Lit(value=1) }
           }
           Block {
-            Call(target=buildTelemetry.worker) {
-              AttrValueInt { Var(name=result) Lit(value=0) }
-              AttrValueInt { Var(name=result) Lit(value=1) }
-              Var(name=startedAt)
-            }
             Call(target=exit) { Lit(value=0) }
             Return { Lit(value=0) }
           }

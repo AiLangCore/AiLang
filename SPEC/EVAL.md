@@ -143,18 +143,44 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.host.openDefault(target)` is a host launch action and must return promptly with success/failure without blocking evaluator progress on external app/browser lifetime.
 - Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
 
-## Worker Execution Contract (Phase 1)
+## Worker Execution Contract
 
-- Worker APIs are host-executed effectful operations with owner-thread-visible completion:
-- `sys.worker.start(taskName, payload) -> workerHandle`
-- `sys.worker.poll(workerHandle) -> status`
-- `sys.worker.result(workerHandle) -> string`
-- `sys.worker.error(workerHandle) -> string`
-- `sys.worker.cancel(workerHandle) -> bool`
-- Worker task execution may overlap on host threads.
-- Completion becomes language-visible only when owner thread performs polling in evaluator steps.
-- For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
-- Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
+- The owner VM owns a bounded, work-conserving mechanical scheduler. AiLang
+  declares logical work and dependencies; AiVM chooses physical concurrency,
+  pending dispatch, isolation mechanism, slot reuse, buffering, and cleanup.
+- `std.worker.run` admits one logical invocation. `std.worker.runAll` atomically
+  admits an ordered logical workload which may be larger than the bounded
+  materialized pending queue.
+- Admission depends only on owner-visible accounting established before
+  execution. Background completion must not change whether a later owner
+  submission succeeds. Rejection is an immediate stable `Err` and allocates no
+  failed Task or retained scheduler state.
+- After workload admission, AiVM lazily materializes bounded runnable work.
+  Completion may refill physical execution slots without polling or `Await`.
+- Each invocation receives fresh mutable VM state. A validated immutable worker
+  program may be shared, but heaps, globals, stacks, frames, handles, Tasks, and
+  syscall state are isolated.
+- A Task terminal result is observed only through owner evaluation. First
+  `Await` consumes it and releases its admission/result accounting exactly
+  once. A stale alias observes `TASK_CONSUMED`, never a reused task slot.
+- `then` dependencies become runnable when their prerequisite succeeds; owner
+  observation is not required. A prerequisite failure mechanically blocks only
+  its dependents unless owner code cancels the remaining workload.
+- `whenAll` materializes results in declared input order. Completion timing is
+  not semantic ordering.
+- `whenAny` explicitly observes readiness and is therefore an operational API.
+  It is invalid in canonical compiler, validation, linking, diagnostic, or
+  persistence contexts.
+- The scheduler applies bounded result/intermediate storage and backpressure.
+  When a buffer is saturated it pauses producers and favors runnable consumers;
+  it never creates unbounded overflow state.
+- Effective worker capabilities are the intersection of worker-required,
+  owner-granted, and runtime-profile capabilities.
+- Deterministic instruction, allocation, and byte budgets may produce semantic
+  failure. Wall-clock watchdogs are operational aborts only and prevent final
+  artifact commit.
+- Owner shutdown cancels or drains remaining work and releases all workload,
+  Task, result, worker-VM, and capability resources.
 
 ## Process Execution Contract (Phase 1)
 

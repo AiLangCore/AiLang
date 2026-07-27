@@ -28,7 +28,7 @@ if [[ ! -x "${ROOT_DIR}/tools/ailang" || ! -x "${ROOT_DIR}/tools/aivm-runtime" ]
 fi
 
 SELFHOST_JOBS="$(resolve_selfhost_jobs)"
-echo "selfhost-jobs=${SELFHOST_JOBS} logical-cores=$(detect_logical_cores) max=${AILANG_SELFHOST_MAX_JOBS:-4}"
+echo "selfhost-jobs=${SELFHOST_JOBS} logical-cores=$(detect_logical_cores) cpu-target-percent=96 max=${AILANG_SELFHOST_MAX_JOBS:-profile}"
 
 rm -rf "${WORK_DIR}"
 mkdir -p "${BOOTSTRAP_DIR}" "${PROJECT_DIR}" "${OUT_DIR}/bin"

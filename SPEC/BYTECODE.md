@@ -12,7 +12,7 @@ Root node must be `Bytecode#...` with required attrs:
 
 - `magic="AIBC"` (container magic)
 - `format="AiBC1"` (encoding family)
-- `version=2` (schema version)
+- `version=3` (schema version)
 - `flags=0` (reserved byte; non-zero reserved for future use)
 
 VM loader requirements:
@@ -28,8 +28,25 @@ Children are ordered sections:
 
 - `Const#...`
 - `Func#...`
+- `WorkerCatalog#...`
 
 No section may rely on map/hash iteration order.
+
+## Worker Catalog
+
+`WorkerCatalog` is generated build output and is never manually authored
+configuration. Each canonically ordered entry binds:
+
+- one validated structural `Worker` declaration;
+- one embedded deterministic worker artifact;
+- the artifact digest and worker ABI;
+- a validated exported function index with signature `Fn(bytes) -> bytes`;
+- derived required capabilities; and
+- bytecode compatibility metadata.
+
+Catalog entries contain no host path, package-cache path, runtime module name,
+or raw function-name lookup. The loader verifies embedded artifact identity
+before producing an opaque non-forgeable `WorkerRef`.
 
 ## Constant Pool
 
@@ -64,7 +81,9 @@ Each `Inst` has required `op` and optional operands `a`, `b`, `s`.
 
 - stack/data: `CONST`, `LOAD_LOCAL`, `STORE_LOCAL`, `POP`
 - control flow: `JUMP`, `JUMP_IF_FALSE`, `RETURN`
-- calls: `CALL`, `CALL_SYS`, `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`
+- calls: `CALL`, `CALL_SYS`, `ASYNC_CALL`, `ASYNC_CALL_SYS`, `WORKER_RUN`,
+  `WORKER_RUN_ALL`, `WORKER_TASK_AT`, `TASK_THEN`, `TASK_WHEN_ALL`,
+  `TASK_WHEN_ANY`, `TASK_CANCEL`, `AWAIT`
 - structured concurrency: `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 - primitive ops: `EQ`, `ADD_INT`, `SUB_NUM`, `MUL_NUM`, `DIV_NUM`, `MOD_NUM`, `POW_NUM`, `LT_NUM`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
 - node ops: `NODE_KIND`, `NODE_ID`, `ATTR_COUNT`, `ATTR_KEY`, `ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`, `CHILD_COUNT`, `CHILD_AT`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_STRING`, `MAKE_LIT_INT`, `MAKE_NODE`, `MAKE_FIELD_STRING`, `MAKE_MAP`
@@ -95,7 +114,18 @@ builder finalization.
 
 ## Async Bytecode Contract
 
-- `ASYNC_CALL` starts async function execution and pushes deterministic `Task` handle.
+- Task-producing instructions push opaque owner-bound Task values, never integer
+  handles.
+- `WORKER_RUN` accepts a WorkerRef and bytes and pushes Task, or an immediate
+  admission `Err`.
+- `WORKER_RUN_ALL` atomically accepts an ordered logical workload and pushes
+  WorkerTasks, or an immediate admission `Err`.
+- `WORKER_TASK_AT` resolves one canonical logical index to its Task.
+- `TASK_THEN` declares a one-to-one worker continuation.
+- `TASK_WHEN_ALL` produces an ordered canonical bytes envelope.
+- `TASK_WHEN_ANY` is operational and forbidden in canonical compiler paths.
+- `TASK_CANCEL` requests general Task cancellation.
+- `ASYNC_CALL` starts async function execution and pushes opaque Task.
 - `AWAIT` blocks until task completion and pushes resolved value (or deterministic error).
 - `PAR_BEGIN` starts a structured parallel scope.
 - `PAR_FORK` schedules one branch from current scope snapshot.

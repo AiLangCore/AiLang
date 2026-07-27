@@ -1,0 +1,361 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(sdk="ailang" path="std/time.aos")
+  Export(name=structuralProject.runObjectTaskQueue)
+
+  Let(name=structuralProject.runObjectTaskQueue) {
+    Fn(params=projectDir,objDir,stageDir,runtime,artifact,jobs,moduleCount) {
+      Block {
+        Let(name=initial) {
+          Call(target=structuralProject.fillObjectTaskQueue) {
+            Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+            Var(name=runtime) Var(name=artifact) Var(name=jobs)
+            Var(name=moduleCount) Lit(value=0)
+            MakeBlock { Lit(value="object-tasks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=initial) } Lit(value="Err") }
+          Block { Return { Var(name=initial) } }
+          Block {
+            Return {
+              Call(target=structuralProject.pumpObjectTaskQueue) {
+                Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                Var(name=runtime) Var(name=artifact) Var(name=jobs)
+                Var(name=moduleCount)
+                AttrValueInt { Var(name=initial) Lit(value=0) }
+                Lit(value=0)
+                ChildAt { Var(name=initial) Lit(value=0) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.fillObjectTaskQueue) {
+    Fn(params=projectDir,objDir,stageDir,runtime,artifact,jobs,moduleCount,nextModule,tasks) {
+      Block {
+        If {
+          Eq { Var(name=nextModule) Var(name=moduleCount) }
+          Block {
+            Return {
+              AppendChild {
+                AppendAttr {
+                  MakeNode { Lit(value="QueueStart") Lit(value="object-queue-start") }
+                  MakeLitInt { Lit(value="nextModule") Var(name=nextModule) }
+                }
+                Var(name=tasks)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=tasks) } Var(name=jobs) }
+              Block {
+                Return {
+                  AppendChild {
+                    AppendAttr {
+                      MakeNode { Lit(value="QueueStart") Lit(value="object-queue-start") }
+                      MakeLitInt { Lit(value="nextModule") Var(name=nextModule) }
+                    }
+                    Var(name=tasks)
+                  }
+                }
+              }
+              Block {
+                Let(name=task) {
+                  Call(target=structuralProject.spawnObjectTask) {
+                    Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                    Var(name=runtime) Var(name=artifact) Var(name=nextModule)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=task) } Lit(value="Err") }
+                  Block { Return { Var(name=task) } }
+                  Block {
+                    Return {
+                      Call(target=structuralProject.fillObjectTaskQueue) {
+                        Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                        Var(name=runtime) Var(name=artifact) Var(name=jobs)
+                        Var(name=moduleCount)
+                        Add { Var(name=nextModule) Lit(value=1) }
+                        AppendChild { Var(name=tasks) Var(name=task) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.pumpObjectTaskQueue) {
+    Fn(params=projectDir,objDir,stageDir,runtime,artifact,jobs,moduleCount,nextModule,completed,tasks) {
+      Block {
+        If {
+          Eq { Var(name=completed) Var(name=moduleCount) }
+          Block { Return { MakeBlock { Lit(value="object-queue-complete") } } }
+          Block {
+            Let(name=state) {
+              Call(target=structuralProject.pollObjectTasks) {
+                Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                Var(name=runtime) Var(name=artifact) Var(name=moduleCount)
+                Var(name=tasks) Lit(value=0) Var(name=nextModule)
+                Var(name=completed) Lit(value=0)
+                MakeBlock { Lit(value="object-tasks") }
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=state) } Lit(value="Err") }
+              Block { Return { Var(name=state) } }
+              Block {
+                If {
+                  Eq { AttrValueInt { Var(name=state) Lit(value=2) } Lit(value=0) }
+                  Block { Call(target=sleepMs) { Lit(value=1) } }
+                  Block { Lit(value=0) }
+                }
+                Return {
+                  Call(target=structuralProject.pumpObjectTaskQueue) {
+                    Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                    Var(name=runtime) Var(name=artifact) Var(name=jobs)
+                    Var(name=moduleCount)
+                    AttrValueInt { Var(name=state) Lit(value=0) }
+                    AttrValueInt { Var(name=state) Lit(value=1) }
+                    ChildAt { Var(name=state) Lit(value=0) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.pollObjectTasks) {
+    Fn(params=projectDir,objDir,stageDir,runtime,artifact,moduleCount,tasks,index,nextModule,completed,progressed,nextTasks) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=tasks) } }
+          Block {
+            Return {
+              AppendChild {
+                AppendAttr {
+                  AppendAttr {
+                    AppendAttr {
+                      MakeNode { Lit(value="QueueState") Lit(value="object-queue-state") }
+                      MakeLitInt { Lit(value="nextModule") Var(name=nextModule) }
+                    }
+                    MakeLitInt { Lit(value="completed") Var(name=completed) }
+                  }
+                  MakeLitInt { Lit(value="progressed") Var(name=progressed) }
+                }
+                Var(name=nextTasks)
+              }
+            }
+          }
+          Block {
+            Let(name=task) { ChildAt { Var(name=tasks) Var(name=index) } }
+            Let(name=status) {
+              Call(target=poll) {
+                AttrValueInt { Var(name=task) Lit(value=0) }
+              }
+            }
+            If {
+              Eq { Var(name=status) Lit(value=0) }
+              Block {
+                Return {
+                  Call(target=structuralProject.pollObjectTasks) {
+                    Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                    Var(name=runtime) Var(name=artifact) Var(name=moduleCount)
+                    Var(name=tasks) Add { Var(name=index) Lit(value=1) }
+                    Var(name=nextModule) Var(name=completed) Var(name=progressed)
+                    AppendChild { Var(name=nextTasks) Var(name=task) }
+                  }
+                }
+              }
+              Block {
+                Let(name=checked) {
+                  Call(target=structuralProject.checkCompletedObjectTask) {
+                    Var(name=task) Var(name=status)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=checked) } Lit(value="Err") }
+                  Block { Return { Var(name=checked) } }
+                  Block {
+                    If {
+                      Eq { Var(name=nextModule) Var(name=moduleCount) }
+                      Block {
+                        Return {
+                          Call(target=structuralProject.pollObjectTasks) {
+                            Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                            Var(name=runtime) Var(name=artifact) Var(name=moduleCount)
+                            Var(name=tasks) Add { Var(name=index) Lit(value=1) }
+                            Var(name=nextModule) Add { Var(name=completed) Lit(value=1) }
+                            Lit(value=1) Var(name=nextTasks)
+                          }
+                        }
+                      }
+                      Block {
+                        Let(name=replacement) {
+                          Call(target=structuralProject.spawnObjectTask) {
+                            Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                            Var(name=runtime) Var(name=artifact) Var(name=nextModule)
+                          }
+                        }
+                        If {
+                          Eq { NodeKind { Var(name=replacement) } Lit(value="Err") }
+                          Block { Return { Var(name=replacement) } }
+                          Block {
+                            Return {
+                              Call(target=structuralProject.pollObjectTasks) {
+                                Var(name=projectDir) Var(name=objDir) Var(name=stageDir)
+                                Var(name=runtime) Var(name=artifact) Var(name=moduleCount)
+                                Var(name=tasks) Add { Var(name=index) Lit(value=1) }
+                                Add { Var(name=nextModule) Lit(value=1) }
+                                Add { Var(name=completed) Lit(value=1) }
+                                Lit(value=1)
+                                AppendChild { Var(name=nextTasks) Var(name=replacement) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.spawnObjectTask) {
+    Fn(params=projectDir,objDir,stageDir,runtime,artifact,moduleIndex) {
+      Block {
+        Let(name=handle) {
+          Call(target=spawn) {
+            Var(name=runtime)
+            Call(target=structuralProject.objectTaskArguments) {
+              Var(name=artifact) Var(name=projectDir) Var(name=stageDir)
+              Var(name=objDir) Var(name=moduleIndex)
+            }
+            Lit(value="")
+            MakeBlock { Lit(value="environment") }
+          }
+        }
+        If {
+          Eq { Var(name=handle) Lit(value=-1) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_project_queue")
+                Lit(value="PARBUILD009")
+                Lit(value="Module object task could not be started.")
+                ToString { Var(name=moduleIndex) }
+              }
+            }
+          }
+          Block {
+            Return {
+              AppendAttr {
+                AppendAttr {
+                  MakeNode {
+                    Lit(value="ObjectTask")
+                    StrConcat { Lit(value="module-") ToString { Var(name=moduleIndex) } }
+                  }
+                  MakeLitInt { Lit(value="handle") Var(name=handle) }
+                }
+                MakeLitInt { Lit(value="module") Var(name=moduleIndex) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.checkCompletedObjectTask) {
+    Fn(params=task,status) {
+      Block {
+        Let(name=handle) { AttrValueInt { Var(name=task) Lit(value=0) } }
+        Let(name=stdoutText) {
+          Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } }
+        }
+        Let(name=stderrText) {
+          Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } }
+        }
+        If {
+          Eq { Var(name=status) Lit(value=1) }
+          Block { Return { MakeBlock { Lit(value="object-task-complete") } } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_project_queue")
+                Lit(value="PARBUILD002")
+                StrConcat {
+                  Lit(value="Module object task failed: ")
+                  StrConcat { Var(name=stdoutText) Var(name=stderrText) }
+                }
+                ToString { AttrValueInt { Var(name=task) Lit(value=1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.objectTaskArguments) {
+    Fn(params=artifact,projectDir,stageDir,objDir,moduleIndex) {
+      Block {
+        Let(name=args) {
+          AppendChild {
+            MakeBlock { Lit(value="Arguments") }
+            MakeLitString { Lit(value="arg0") Lit(value="run") }
+          }
+        }
+        Let(name=withArtifact) {
+          AppendChild {
+            Var(name=args) MakeLitString { Lit(value="arg1") Var(name=artifact) }
+          }
+        }
+        Let(name=withMarker) {
+          AppendChild {
+            Var(name=withArtifact) MakeLitString { Lit(value="arg2") Lit(value="--") }
+          }
+        }
+        Let(name=withProject) {
+          AppendChild {
+            Var(name=withMarker) MakeLitString { Lit(value="arg3") Var(name=projectDir) }
+          }
+        }
+        Let(name=withStage) {
+          AppendChild {
+            Var(name=withProject) MakeLitString { Lit(value="arg4") Var(name=stageDir) }
+          }
+        }
+        Let(name=withObjects) {
+          AppendChild {
+            Var(name=withStage) MakeLitString { Lit(value="arg5") Var(name=objDir) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withObjects)
+            MakeLitString { Lit(value="arg6") ToString { Var(name=moduleIndex) } }
+          }
+        }
+      }
+    }
+  }
+}

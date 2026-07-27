@@ -4,7 +4,6 @@ Program {
   Import(path="parser.aos")
   Import(path="structural_object_chunks.aos")
   Import(path="structural_project_symbols.aos")
-  Import(path="structural_project_schedule.aos")
   Export(name=structuralProject.prepareParallelStage)
   Export(name=structuralProject.readParallelStage)
 
@@ -57,24 +56,7 @@ Program {
                     If {
                       Eq { NodeKind { Var(name=recordsWrite) } Lit(value="Err") }
                       Block { Return { Var(name=recordsWrite) } }
-                      Block {
-                        Let(name=scheduleWrite) {
-                          Call(target=structuralProject.writeParallelStageDocument) {
-                            StrConcat { Var(name=stageDir) Lit(value="/object-schedule.aos") }
-                            Call(target=structuralProject.createObjectSchedule) {
-                              Var(name=records)
-                              Call(target=parse.parseIntValue) {
-                                Call(target=envGet) { Lit(value="AILANG_BUILD_JOBS") }
-                              }
-                            }
-                          }
-                        }
-                        If {
-                          Eq { NodeKind { Var(name=scheduleWrite) } Lit(value="Err") }
-                          Block { Return { Var(name=scheduleWrite) } }
-                          Block { Return { MakeBlock { Lit(value="parallel-stage") } } }
-                        }
-                      }
+                      Block { Return { MakeBlock { Lit(value="parallel-stage") } } }
                     }
                   }
                 }
@@ -150,30 +132,16 @@ Program {
               Eq { NodeKind { Var(name=records) } Lit(value="Err") }
               Block { Return { Var(name=records) } }
               Block {
-                Let(name=schedule) {
-                  Call(target=structuralProject.readParallelStageDocument) {
-                    StrConcat { Var(name=stageDir) Lit(value="/object-schedule.aos") }
-                  }
-                }
-                If {
-                  Eq { NodeKind { Var(name=schedule) } Lit(value="Err") }
-                  Block { Return { Var(name=schedule) } }
-                  Block {
-                    Return {
-                      AppendChild {
-                        AppendChild {
-                          AppendChild {
-                            MakeBlock { Lit(value="parallel-stage") }
-                            Var(name=modulePaths)
-                          }
-                          Call(target=structuralProject.restoreRecordChunks) {
-                            Var(name=records)
-                            Lit(value=0)
-                            MakeBlock { Lit(value="record-chunks") }
-                          }
-                        }
-                        Var(name=schedule)
-                      }
+                Return {
+                  AppendChild {
+                    AppendChild {
+                      MakeBlock { Lit(value="parallel-stage") }
+                      Var(name=modulePaths)
+                    }
+                    Call(target=structuralProject.restoreRecordChunks) {
+                      Var(name=records)
+                      Lit(value=0)
+                      MakeBlock { Lit(value="record-chunks") }
                     }
                   }
                 }

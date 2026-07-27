@@ -120,18 +120,38 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - No user-level locks/mutex primitives.
 - No ambient scheduler primitives in language IL.
 
-## Worker Syscall Value Contract
+## Worker and Task Value Contract
 
-- `sys.worker.start(taskName, payload)` returns an int worker handle.
-- `sys.worker.poll(workerHandle)` returns int status:
-- `0` pending
-- `1` completed-success
-- `-1` completed-failure
-- `-2` canceled
-- `-3` unknown-handle
-- `sys.worker.result(workerHandle)` returns string payload (empty when unavailable).
-- `sys.worker.error(workerHandle)` returns string error code (`unknown_worker` for unknown handles).
-- `sys.worker.cancel(workerHandle)` returns bool for cancellation transition success.
+- `Worker` is a structural declaration whose single `Function.target` resolves
+  to an exported AiLang function with the exact initial worker signature
+  `Fn(bytes) -> bytes`.
+- A reachable validated `Worker` declaration produces an opaque `WorkerRef`.
+  `WorkerRef` contains no runtime path, package-cache path, function-name
+  string, closure, captured environment, or parent-heap reference.
+- `Task` is an opaque owner-VM value. It is not an integer and cannot be
+  serialized, compared, hashed, persisted, placed in canonical output, or
+  transported across a worker boundary.
+- `std.worker.run(workerRef,payloadBytes)` returns `Task` on deterministic
+  admission or an immediate stable `Err` on rejection.
+- `std.worker.runAll(workerRef,orderedPayloads)` atomically accepts one ordered
+  logical workload and returns opaque `WorkerTasks`, or an immediate stable
+  `Err`. Physical task materialization remains bounded and VM-owned.
+- `std.worker.taskAt(workerTasks,index)` returns the opaque `Task` for the
+  canonical logical index.
+- `task.then(workerRef)` declares a one-to-one continuation. The continuation
+  receives the prerequisite's successful bytes and becomes runnable without an
+  owner `Await`.
+- `tasks.whenAll()` returns a `Task` whose successful bytes are a canonical
+  envelope ordered by input index, never completion order.
+- `tasks.whenAny()` is operational and non-canonical because it explicitly
+  observes readiness. It must not select compiler output, validation,
+  diagnostics, or canonical data.
+- `Await` consumes a Task exactly once and returns bytes or its specified
+  `Err`. Repeated `Await` through an alias returns stable `TASK_CONSUMED`.
+- `std.task.cancel(task)` returns `true` only when cancellation is accepted for
+  a non-terminal Task. Cancellation does not consume the Task.
+- Worker function input and output use canonical bytes in the initial ABI. No
+  generic language types are introduced by this contract.
 
 ## Bytes Syscall Value Contract
 

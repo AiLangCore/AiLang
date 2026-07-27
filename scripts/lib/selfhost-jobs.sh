@@ -22,26 +22,30 @@ detect_logical_cores() {
 
 resolve_selfhost_jobs() {
   local requested="${AILANG_SELFHOST_JOBS:-auto}"
-  local maximum="${AILANG_SELFHOST_MAX_JOBS:-4}"
+  local maximum="${AILANG_SELFHOST_MAX_JOBS:-}"
   local detected
+  local target
 
   case "${maximum}" in
-    ''|*[!0-9]*)
+    *[!0-9]*)
       echo "AILANG_SELFHOST_MAX_JOBS must be a positive integer" >&2
       return 2
       ;;
   esac
-  if [[ "${maximum}" -lt 1 ]]; then
+  if [[ -n "${maximum}" && "${maximum}" -lt 1 ]]; then
     echo "AILANG_SELFHOST_MAX_JOBS must be at least 1" >&2
     return 2
   fi
   if [[ "${requested}" == "auto" ]]; then
     detected="$(detect_logical_cores)"
-    if [[ "${detected}" -lt "${maximum}" ]]; then
-      echo "${detected}"
-    else
-      echo "${maximum}"
+    target=$((detected * 96 / 100))
+    if [[ "${target}" -lt 1 ]]; then
+      target=1
     fi
+    if [[ -n "${maximum}" && "${target}" -gt "${maximum}" ]]; then
+      target="${maximum}"
+    fi
+    echo "${target}"
     return 0
   fi
   case "${requested}" in

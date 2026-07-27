@@ -5,6 +5,7 @@ Program {
   Import(path="build_telemetry.aos")
   Import(path="structural_project.aos")
   Import(path="structural_project_stage.aos")
+  Import(path="structural_project_queue.aos")
   Export(name=structuralProject.writeProjectObjectFilesParallel)
 
   Let(name=structuralProject.writeProjectObjectFilesParallel) {
@@ -45,213 +46,38 @@ Program {
                   Lit(value="stage") Var(name=stageStartedAt)
                 }
                 Let(name=workersStartedAt) { Call(target=buildTelemetry.now) {} }
-                Let(name=handles) {
-                  Call(target=structuralProject.spawnObjectWorkers) {
+                Let(name=queueResult) {
+                  Call(target=structuralProject.runObjectTaskQueue) {
                     Var(name=projectDir)
                     Var(name=objDir)
                     Var(name=stageDir)
                     Var(name=runtime)
                     Var(name=artifact)
                     Var(name=jobs)
-                    Lit(value=0)
-                    MakeBlock { Lit(value="worker-handles") }
+                    ChildCount { Var(name=modulePaths) }
                   }
                 }
                 If {
-                  Eq { NodeKind { Var(name=handles) } Lit(value="Err") }
-                  Block { Return { Var(name=handles) } }
+                  Eq { NodeKind { Var(name=queueResult) } Lit(value="Err") }
+                  Block { Return { Var(name=queueResult) } }
                   Block {
-                    Let(name=waited) {
-                      Call(target=structuralProject.waitObjectWorkers) {
-                        Var(name=handles)
+                    Call(target=buildTelemetry.phase) {
+                      Lit(value="workers") Var(name=workersStartedAt)
+                    }
+                    Let(name=reloadStartedAt) { Call(target=buildTelemetry.now) {} }
+                    Let(name=objects) {
+                      Call(target=structuralProject.readObjectFilesInOrder) {
+                        Var(name=modulePaths)
+                        Var(name=objDir)
                         Lit(value=0)
+                        MakeBlock { Lit(value="objects") }
+                        Var(name=reloadStartedAt)
                       }
                     }
-                    If {
-                      Eq { NodeKind { Var(name=waited) } Lit(value="Err") }
-                      Block { Return { Var(name=waited) } }
-                      Block {
-                        Call(target=buildTelemetry.phase) {
-                          Lit(value="workers") Var(name=workersStartedAt)
-                        }
-                        Let(name=reloadStartedAt) { Call(target=buildTelemetry.now) {} }
-                        Let(name=objects) {
-                          Call(target=structuralProject.readObjectFilesInOrder) {
-                            Var(name=modulePaths)
-                            Var(name=objDir)
-                            Lit(value=0)
-                            MakeBlock { Lit(value="objects") }
-                            Var(name=reloadStartedAt)
-                          }
-                        }
-                        Call(target=buildTelemetry.phase) {
-                          Lit(value="reload") Var(name=reloadStartedAt)
-                        }
-                        Return {
-                          Var(name=objects)
-                        }
-                      }
+                    Call(target=buildTelemetry.phase) {
+                      Lit(value="reload") Var(name=reloadStartedAt)
                     }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=structuralProject.spawnObjectWorkers) {
-    Fn(params=projectDir,objDir,stageDir,runtime,artifact,jobs,index,handles) {
-      Block {
-        If {
-          Eq { Var(name=index) Var(name=jobs) }
-          Block { Return { Var(name=handles) } }
-          Block {
-            Let(name=arguments) {
-              Call(target=structuralProject.objectWorkerArguments) {
-                Var(name=artifact)
-                Var(name=projectDir)
-                Var(name=stageDir)
-                Var(name=objDir)
-                Var(name=index)
-                Var(name=jobs)
-              }
-            }
-            Let(name=handle) {
-              Call(target=spawn) {
-                Var(name=runtime)
-                Var(name=arguments)
-                Lit(value="")
-                MakeBlock { Lit(value="environment") }
-              }
-            }
-            Return {
-              Call(target=structuralProject.spawnObjectWorkers) {
-                Var(name=projectDir)
-                Var(name=objDir)
-                Var(name=stageDir)
-                Var(name=runtime)
-                Var(name=artifact)
-                Var(name=jobs)
-                Add { Var(name=index) Lit(value=1) }
-                AppendChild {
-                  Var(name=handles)
-                  MakeLitInt { Lit(value="handle") Var(name=handle) }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=structuralProject.objectWorkerArguments) {
-    Fn(params=artifact,projectDir,stageDir,objDir,index,jobs) {
-      Block {
-        Let(name=a0) {
-          AppendChild {
-            MakeBlock { Lit(value="Arguments") }
-            MakeLitString { Lit(value="arg0") Lit(value="run") }
-          }
-        }
-        Let(name=a1) {
-          AppendChild {
-            Var(name=a0)
-            MakeLitString { Lit(value="arg1") Var(name=artifact) }
-          }
-        }
-        Let(name=a2) {
-          AppendChild {
-            Var(name=a1)
-            MakeLitString { Lit(value="arg2") Lit(value="--") }
-          }
-        }
-        Let(name=a3) {
-          AppendChild {
-            Var(name=a2)
-            MakeLitString { Lit(value="arg3") Var(name=projectDir) }
-          }
-        }
-        Let(name=a4) {
-          AppendChild {
-            Var(name=a3)
-            MakeLitString { Lit(value="arg4") Var(name=stageDir) }
-          }
-        }
-        Let(name=a5) {
-          AppendChild {
-            Var(name=a4)
-            MakeLitString { Lit(value="arg5") Var(name=objDir) }
-          }
-        }
-        Let(name=a6) {
-          AppendChild {
-            Var(name=a5)
-            MakeLitString { Lit(value="arg6") ToString { Var(name=index) } }
-          }
-        }
-        Return {
-          AppendChild {
-            Var(name=a6)
-            MakeLitString { Lit(value="arg7") ToString { Var(name=jobs) } }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=structuralProject.waitObjectWorkers) {
-    Fn(params=handles,index) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=handles) } }
-          Block { Return { MakeBlock { Lit(value="workers-complete") } } }
-          Block {
-            Let(name=handle) {
-              AttrValueInt {
-                ChildAt { Var(name=handles) Var(name=index) }
-                Lit(value=0)
-              }
-            }
-            Let(name=code) { Call(target=wait) { Var(name=handle) } }
-            Let(name=stdoutText) {
-              Call(target=bytes.toUtf8String) {
-                Call(target=stdoutRead) { Var(name=handle) }
-              }
-            }
-            Let(name=stderrText) {
-              Call(target=bytes.toUtf8String) {
-                Call(target=stderrRead) { Var(name=handle) }
-              }
-            }
-            If {
-              Eq { Var(name=code) Lit(value=0) }
-              Block {
-                If {
-                  Eq { Var(name=stdoutText) Lit(value="") }
-                  Block { Lit(value=0) }
-                  Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
-                }
-                Return {
-                  Call(target=structuralProject.waitObjectWorkers) {
-                    Var(name=handles)
-                    Add { Var(name=index) Lit(value=1) }
-                  }
-                }
-              }
-              Block {
-                Return {
-                  MakeErr {
-                    Lit(value="structural_project_parallel")
-                    Lit(value="PARBUILD002")
-                    StrConcat {
-                      Lit(value="Module object worker failed: ")
-                      StrConcat { Var(name=stdoutText) Var(name=stderrText) }
-                    }
-                    ToString { Var(name=index) }
+                    Return { Var(name=objects) }
                   }
                 }
               }

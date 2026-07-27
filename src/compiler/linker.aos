@@ -1,7 +1,7 @@
 Program {
   Import(path="parser.aos")
-  Import(path="../std/bytes.aos")
-  Import(path="../std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/str.aos")
   Import(path="linker/paths.aos")
   Import(path="linker/import_discovery.aos")
   Export(name=linker.collectProjectModulePaths)

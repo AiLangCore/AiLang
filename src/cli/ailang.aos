@@ -1,109 +1,21 @@
 Program {
 
-  Import(path="../std/str.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
   Import(path="../compiler/parser.aos")
   Import(path="../compiler/linker.aos")
   Import(path="../compiler/bundle.aos")
   Import(path="../compiler/structural_project_link.aos")
-  Import(path="package.aos")
+  Import(path="manifest.aos")
   Import(path="target_packages.aos")
-  Import(path="commands.g.aos")
+  Import(path="application.aos")
   Export(name=main)
 
   Let(name=main) {
     Fn(params=args) {
       Block {
-        Let(name=cmd) { Call(target=readArg) { Var(name=args) Lit(value=0) } }
-        If {
-          Eq { Var(name=cmd) Lit(value="") }
-          Block { Return { Call(target=runHelp) { Var(name=args) } } }
-          Block {
-            If {
-              Eq { Var(name=cmd) Lit(value="help") }
-              Block { Return { Call(target=runHelp) { Var(name=args) } } }
-              Block {
-                If {
-                  Eq { Var(name=cmd) Lit(value="--help") }
-                  Block { Return { Call(target=runHelp) { Var(name=args) } } }
-                  Block {
-                    If {
-                      Eq { Var(name=cmd) Lit(value="version") }
-                      Block { Return { Call(target=runVersion) { Lit(value=0) } } }
-                      Block {
-                        If {
-                          Eq { Var(name=cmd) Lit(value="--version") }
-                          Block { Return { Call(target=runVersion) { Lit(value=0) } } }
-                          Block {
-                            // Try registry-based commands first
-                            Let(name=cmdFunc) { Call(target=getCommandFunction) { Var(name=cmd) } }
-                            If {
-                              Ne { Var(name=cmdFunc) Lit(value=0) }
-                              Block { Return { Call(target=cmdFunc) { Var(name=args) } } }
-                              Block {
-                            If {
-                              Eq { Var(name=cmd) Lit(value="init") }
-                              Block { Return { Call(target=runInit) { Var(name=args) } } }
-                              Block {
-                                If {
-                                  Eq { Var(name=cmd) Lit(value="template") }
-                                  Block { Return { Call(target=runTemplate) { Var(name=args) } } }
-                                  Block {
-                                    If {
-                                      Eq { Var(name=cmd) Lit(value="agent") }
-                                      Block { Return { Call(target=runAgent) { Var(name=args) } } }
-                                      Block {
-                                        If {
-                                          Eq { Var(name=cmd) Lit(value="build") }
-                                          Block { Return { Call(target=runBuild) { Var(name=args) } } }
-                                          Block {
-                                            If {
-                                              Eq { Var(name=cmd) Lit(value="run") }
-                                              Block { Return { Call(target=runRun) { Var(name=args) } } }
-                                              Block {
-                                                If {
-                                                  Eq { Var(name=cmd) Lit(value="publish") }
-                                                  Block { Return { Call(target=runPublish) { Var(name=args) } } }
-                                                  Block {
-                                                    If {
-                                                      Eq { Var(name=cmd) Lit(value="clean") }
-                                                      Block { Return { Call(target=runClean) { Var(name=args) } } }
-                                                      Block {
-                                                        If {
-                                                          Eq { Var(name=cmd) Lit(value="package") }
-                                                          Block { Return { Call(target=runPackage) { Var(name=args) } } }
-                                                          Block {
-                                                            If {
-                                                              Eq { Var(name=cmd) Lit(value="project") }
-                                                              Block { Return { Call(target=runProject) { Var(name=args) } } }
-                                                              Block { Return { Call(target=unknownCommand) { Var(name=cmd) } } }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        Return { Call(target=run) { Call(target=ailangCliApplication) { Lit(value=0) } Var(name=args) } }
       }
     }
   }
@@ -122,6 +34,61 @@ Program {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let(name=readOption) {
+    Fn(params=args,index,name,defaultValue) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=defaultValue) } }
+          Block {
+            If {
+              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
+              Block { Return { Call(target=readArg) { Var(name=args) Add { Var(name=index) Lit(value=1) } } } }
+              Block { Return { Call(target=readOption) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) Var(name=defaultValue) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=writeTextFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readOptionalLockText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block { Return { Call(target=readTextFile) { Var(name=path) } } }
+          Block { Return { Lit(value="") } }
         }
       }
     }
@@ -245,662 +212,6 @@ Program {
     }
   }
 
-  Let(name=runTemplate) {
-    Fn(params=args) {
-      Block {
-        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
-        Let(name=name) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
-        If {
-          Eq { Var(name=subcmd) Lit(value="list") }
-          Block { Return { Call(target=listTemplates) { Lit(value=0) } } }
-          Block {
-            If {
-              Eq { Var(name=subcmd) Lit(value="show") }
-              Block { Return { Call(target=showTemplate) { Var(name=name) } } }
-              Block {
-                If {
-                  Eq { Var(name=subcmd) Lit(value="path") }
-                  Block { Return { Call(target=pathTemplate) { Var(name=name) } } }
-                  Block { Return { Call(target=unknownCommand) { Lit(value="template") } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=runAgent) {
-    Fn(params=args) {
-      Block {
-        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
-        If {
-          Eq { Var(name=subcmd) Lit(value="list") }
-          Block {
-            Call(target=sys.stdout.writeLine) { Lit(value="codex") }
-            Call(target=sys.stdout.writeLine) { Lit(value="claude") }
-            Call(target=sys.stdout.writeLine) { Lit(value="cursor") }
-            Call(target=sys.stdout.writeLine) { Lit(value="gemini") }
-            Call(target=sys.stdout.writeLine) { Lit(value="copilot") }
-            Call(target=sys.stdout.writeLine) { Lit(value="windsurf") }
-            Return { Lit(value=0) }
-          }
-          Block { Return { Call(target=unknownCommand) { Lit(value="agent") } } }
-        }
-      }
-    }
-  }
-
-  Let(name=runProject) {
-    Fn(params=args) {
-      Block {
-        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
-        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
-        If {
-          Eq { Var(name=subcmd) Lit(value="version") }
-          Block { Return { Call(target=runProjectVersion) { Var(name=path) } } }
-          Block { Return { Call(target=unknownCommand) { Lit(value="project") } } }
-        }
-      }
-    }
-  }
-
-  Let(name=runProjectVersion) {
-    Fn(params=path) {
-      Block {
-        If {
-          Eq { Var(name=path) Lit(value="") }
-          Block { Return { Call(target=missingPath) { Lit(value="project") } } }
-          Block {
-            Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
-            If {
-              Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
-              Block {
-                Let(name=version) {
-                  Call(target=getManifestAttr) {
-                    Call(target=readTextFile) { Var(name=manifestPath) }
-                    Lit(value="version")
-                    Lit(value=9)
-                  }
-                }
-                If {
-                  Eq { Var(name=version) Lit(value="") }
-                  Block { Return { Call(target=buildError) { Lit(value="AILANG012") Lit(value="Project version must be non-empty.") Lit(value="project") } } }
-                  Block {
-                    Call(target=sys.stdout.writeLine) { Var(name=version) }
-                    Return { Lit(value=0) }
-                  }
-                }
-              }
-              Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=showTemplate) {
-    Fn(params=name) {
-      Block {
-        If {
-          Call(target=isKnownTemplate) { Var(name=name) }
-          Block {
-            If {
-              Call(target=isTemplateInstalled) { Var(name=name) }
-              Block {
-                Let(name=templateFile) { StrConcat { StrConcat { Lit(value="templates/projects/") Var(name=name) } Lit(value="/template.toml") } }
-                Call(target=sys.stdout.writeLine) { Call(target=readTextFile) { Var(name=templateFile) } }
-                Return { Lit(value=0) }
-              }
-              Block {
-                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template is not installed.\" nodeId=\"template\")") }
-                Return { Lit(value=1) }
-              }
-            }
-          }
-          Block {
-            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
-            Return { Lit(value=1) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=pathTemplate) {
-    Fn(params=name) {
-      Block {
-        If {
-          Call(target=isKnownTemplate) { Var(name=name) }
-          Block {
-            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="templates/projects/") Var(name=name) } }
-            Return { Lit(value=0) }
-          }
-          Block {
-            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
-            Return { Lit(value=1) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=listTemplates) {
-    Fn(params=_) {
-      Block {
-        If {
-          Call(target=sys.fs.path.exists) { Lit(value="templates/projects/index.toml") }
-          Block {
-            Call(target=sys.stdout.writeLine) {
-              Call(target=readTextFile) { Lit(value="templates/projects/index.toml") }
-            }
-            Return { Lit(value=0) }
-          }
-          Block {
-            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template registry is not installed.\" nodeId=\"template\")") }
-            Return { Lit(value=1) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=runInit) {
-    Fn(params=args) {
-      Block {
-        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
-        Let(name=template) { Call(target=readOption) { Var(name=args) Lit(value=1) Lit(value="--template") Lit(value="cli") } }
-        Let(name=agent) { Call(target=readOption) { Var(name=args) Lit(value=1) Lit(value="--agent") Lit(value="codex") } }
-        Let(name=agents) { Call(target=readOption) { Var(name=args) Lit(value=1) Lit(value="--agents") Var(name=agent) } }
-        Let(name=force) { Call(target=hasFlag) { Var(name=args) Lit(value=1) Lit(value="--force") } }
-        If {
-          Eq { Var(name=path) Lit(value="") }
-          Block { Return { Call(target=missingPath) { Lit(value="init") } } }
-          Block {
-            If {
-              Call(target=isValidAgentList) { Var(name=agents) }
-              Block {
-                If {
-                  Call(target=isKnownTemplate) { Var(name=template) }
-                  Block {
-                    If {
-                      Call(target=isTemplateInstalled) { Var(name=template) }
-                      Block {
-                        If {
-                          Call(target=sys.fs.path.exists) { Var(name=path) }
-                          Block {
-                            If {
-                              Var(name=force)
-                              Block { Return { Call(target=emitInitProject) { Var(name=path) Var(name=template) Var(name=agents) } } }
-                              Block {
-                                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG003 message=\"Directory already exists.\" nodeId=\"init\")") }
-                                Return { Lit(value=1) }
-                              }
-                            }
-                          }
-                          Block { Return { Call(target=emitInitProject) { Var(name=path) Var(name=template) Var(name=agents) } } }
-                        }
-                      }
-                      Block {
-                        Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template is not installed.\" nodeId=\"template\")") }
-                        Return { Lit(value=1) }
-                      }
-                    }
-                  }
-                  Block {
-                    Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
-                    Return { Lit(value=1) }
-                  }
-                }
-              }
-              Block {
-                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG006 message=\"Unknown agent.\" nodeId=\"agent\")") }
-                Return { Lit(value=1) }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=readOption) {
-    Fn(params=args,index,name,defaultValue) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=args) } }
-          Block { Return { Var(name=defaultValue) } }
-          Block {
-            If {
-              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
-              Block { Return { Call(target=readArg) { Var(name=args) Add { Var(name=index) Lit(value=1) } } } }
-              Block { Return { Call(target=readOption) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) Var(name=defaultValue) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=hasFlag) {
-    Fn(params=args,index,name) {
-      Block {
-        If {
-          Eq { Var(name=index) ChildCount { Var(name=args) } }
-          Block { Return { Lit(value=false) } }
-          Block {
-            If {
-              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
-              Block { Return { Lit(value=true) } }
-              Block { Return { Call(target=hasFlag) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=isKnownTemplate) {
-    Fn(params=template) {
-      Block {
-        If {
-          Call(target=sys.fs.path.exists) { Lit(value="templates/projects/index.toml") }
-          Block {
-            Let(name=registry) { Call(target=readTextFile) { Lit(value="templates/projects/index.toml") } }
-            Let(name=needle) { StrConcat { Lit(value="name = \"") StrConcat { Var(name=template) Lit(value="\"") } } }
-            Let(name=found) { Call(target=find) { Var(name=registry) Var(name=needle) Lit(value=0) } }
-            If {
-              Eq { Var(name=found) Lit(value=-1) }
-              Block { Return { Lit(value=false) } }
-              Block { Return { Lit(value=true) } }
-            }
-          }
-          Block { Return { Lit(value=false) } }
-        }
-      }
-    }
-  }
-
-  Let(name=isTemplateInstalled) {
-    Fn(params=template) {
-      Block {
-        Let(name=templateDir) { StrConcat { Lit(value="templates/projects/") Var(name=template) } }
-        If {
-          Call(target=sys.fs.path.exists) { StrConcat { Var(name=templateDir) Lit(value="/template.toml") } }
-          Block {
-            If {
-              Call(target=sys.fs.path.exists) { StrConcat { Var(name=templateDir) Lit(value="/project.aiproj.tpl") } }
-              Block {
-                If {
-                  Call(target=sys.fs.path.exists) { StrConcat { Var(name=templateDir) Lit(value="/src/app.aos.tpl") } }
-                  Block {
-                    If {
-                      Call(target=sys.fs.path.exists) { StrConcat { Var(name=templateDir) Lit(value="/AGENTS.md.tpl") } }
-                      Block {
-                        Return {
-                          Call(target=sys.fs.path.exists) { StrConcat { Var(name=templateDir) Lit(value="/.gitignore.tpl") } }
-                        }
-                      }
-                      Block { Return { Lit(value=false) } }
-                    }
-                  }
-                  Block { Return { Lit(value=false) } }
-                }
-              }
-              Block { Return { Lit(value=false) } }
-            }
-          }
-          Block { Return { Lit(value=false) } }
-        }
-      }
-    }
-  }
-
-  Let(name=emitInitProject) {
-    Fn(params=path,template,agents) {
-      Block {
-        Let(name=srcDir) { StrConcat { Var(name=path) Lit(value="/src") } }
-        Let(name=assetsDir) { StrConcat { Var(name=path) Lit(value="/Assets") } }
-        Let(name=assetsImagesDir) { StrConcat { Var(name=path) Lit(value="/Assets/images") } }
-        Let(name=assetsFontsDir) { StrConcat { Var(name=path) Lit(value="/Assets/fonts") } }
-        Let(name=assetsLocaleDir) { StrConcat { Var(name=path) Lit(value="/Assets/locale") } }
-        Let(name=assetsLocaleFile) { StrConcat { Var(name=path) Lit(value="/Assets/locale/en.toml") } }
-        Let(name=templateDir) { StrConcat { Lit(value="templates/projects/") Var(name=template) } }
-        Let(name=projectTemplateFile) { StrConcat { Var(name=templateDir) Lit(value="/project.aiproj.tpl") } }
-        Let(name=appTemplateFile) { StrConcat { Var(name=templateDir) Lit(value="/src/app.aos.tpl") } }
-        Let(name=agentsTemplateFile) { StrConcat { Var(name=templateDir) Lit(value="/AGENTS.md.tpl") } }
-        Let(name=gitignoreTemplateFile) { StrConcat { Var(name=templateDir) Lit(value="/.gitignore.tpl") } }
-        Let(name=projectFile) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
-        Let(name=appFile) { StrConcat { Var(name=path) Lit(value="/src/app.aos") } }
-        Let(name=agentsFile) { StrConcat { Var(name=path) Lit(value="/AGENTS.md") } }
-        Let(name=gitignoreFile) { StrConcat { Var(name=path) Lit(value="/.gitignore") } }
-        Call(target=sys.fs.dir.create) { Var(name=path) }
-        Call(target=sys.fs.dir.create) { Var(name=srcDir) }
-        Call(target=sys.fs.dir.create) { Var(name=assetsDir) }
-        Call(target=sys.fs.dir.create) { Var(name=assetsImagesDir) }
-        Call(target=sys.fs.dir.create) { Var(name=assetsFontsDir) }
-        Call(target=sys.fs.dir.create) { Var(name=assetsLocaleDir) }
-        Call(target=writeTextFile) { Var(name=projectFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=projectTemplateFile) } Var(name=path) } }
-        Call(target=writeTextFile) { Var(name=appFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=appTemplateFile) } Var(name=path) } }
-        Call(target=writeTextFile) { Var(name=agentsFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=agentsTemplateFile) } Var(name=path) } }
-        Call(target=writeTextFile) { Var(name=gitignoreFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=gitignoreTemplateFile) } Var(name=path) } }
-        Call(target=writeTextFile) { Var(name=assetsLocaleFile) Lit(value="# Locale seed data\n") }
-        Call(target=writeAgentFiles) { Var(name=path) Var(name=agents) }
-        Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"project-created\")") }
-        Return { Lit(value=0) }
-      }
-    }
-  }
-
-  Let(name=writeTextFile) {
-    Fn(params=path,text) {
-      Block {
-        Return {
-          Call(target=sys.fs.file.write) {
-            Var(name=path)
-            Call(target=bytes.fromUtf8String) { Var(name=text) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=readTextFile) {
-    Fn(params=path) {
-      Block {
-        Return {
-          Call(target=bytes.toUtf8String) {
-            Call(target=sys.fs.file.read) { Var(name=path) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=readOptionalLockText) {
-    Fn(params=path) {
-      Block {
-        If {
-          Call(target=sys.fs.path.exists) { Var(name=path) }
-          Block {
-            Return {
-              Call(target=readTextFile) { Var(name=path) }
-            }
-          }
-          Block { Return { Lit(value="") } }
-        }
-      }
-    }
-  }
-
-  Let(name=renderProjectTemplate) {
-    Fn(params=text,projectName) {
-      Block {
-        Let(name=step1) {
-          Call(target=replaceAllKnown) {
-            Var(name=text)
-            Lit(value="{{project.name}}")
-            Lit(value=16)
-            Var(name=projectName)
-          }
-        }
-        Let(name=step2) {
-          Call(target=replaceAllKnown) {
-            Var(name=step1)
-            Lit(value="{{project.entryFile}}")
-            Lit(value=21)
-            Lit(value="src/app.aos")
-          }
-        }
-        Let(name=step3) {
-          Call(target=replaceAllKnown) {
-            Var(name=step2)
-            Lit(value="{{project.entryExport}}")
-            Lit(value=23)
-            Lit(value="start")
-          }
-        }
-        Return {
-          Call(target=replaceAllKnown) {
-            Var(name=step3)
-            Lit(value="{{project.version}}")
-            Lit(value=19)
-            Lit(value="0.0.1")
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=replaceAllKnown) {
-    Fn(params=text,needle,needleLength,replacement) {
-      Block {
-        If {
-          Eq { Var(name=needleLength) Lit(value=0) }
-          Block { Return { Var(name=text) } }
-          Block {
-            Let(name=at) {
-              Call(target=find) {
-                Var(name=text)
-                Var(name=needle)
-                Lit(value=0)
-              }
-            }
-            If {
-              Eq { Var(name=at) Lit(value=-1) }
-              Block { Return { Var(name=text) } }
-              Block {
-                Let(name=prefix) {
-                  Call(target=substring) {
-                    Var(name=text)
-                    Lit(value=0)
-                    Var(name=at)
-                  }
-                }
-                Let(name=suffixStart) { Add { Var(name=at) Var(name=needleLength) } }
-                Let(name=suffix) {
-                  Call(target=substring) {
-                    Var(name=text)
-                    Var(name=suffixStart)
-                    Lit(value=2147483647)
-                  }
-                }
-                Return {
-                  StrConcat {
-                    Var(name=prefix)
-                    StrConcat {
-                      Var(name=replacement)
-                      Call(target=replaceAllKnown) {
-                        Var(name=suffix)
-                        Var(name=needle)
-                        Var(name=needleLength)
-                        Var(name=replacement)
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=writeAgentFiles) {
-    Fn(params=path,agents) {
-      Block {
-        Let(name=claudeFile) { StrConcat { Var(name=path) Lit(value="/CLAUDE.md") } }
-        Let(name=geminiFile) { StrConcat { Var(name=path) Lit(value="/GEMINI.md") } }
-        Let(name=windsurfFile) { StrConcat { Var(name=path) Lit(value="/.windsurfrules") } }
-        Let(name=cursorDir) { StrConcat { Var(name=path) Lit(value="/.cursor") } }
-        Let(name=cursorRulesDir) { StrConcat { Var(name=path) Lit(value="/.cursor/rules") } }
-        Let(name=cursorFile) { StrConcat { Var(name=path) Lit(value="/.cursor/rules/ailang.mdc") } }
-        Let(name=githubDir) { StrConcat { Var(name=path) Lit(value="/.github") } }
-        Let(name=copilotFile) { StrConcat { Var(name=path) Lit(value="/.github/copilot-instructions.md") } }
-        Let(name=claudeTemplateFile) { Lit(value="templates/agents/claude/CLAUDE.md.tpl") }
-        Let(name=geminiTemplateFile) { Lit(value="templates/agents/gemini/GEMINI.md.tpl") }
-        Let(name=windsurfTemplateFile) { Lit(value="templates/agents/windsurf/.windsurfrules.tpl") }
-        Let(name=cursorTemplateFile) { Lit(value="templates/agents/cursor/.cursor/rules/ailang.mdc.tpl") }
-        Let(name=copilotTemplateFile) { Lit(value="templates/agents/copilot/.github/copilot-instructions.md.tpl") }
-        If {
-          Call(target=hasAgent) { Var(name=agents) Lit(value="all") }
-          Block {
-            Call(target=writeTextFile) { Var(name=claudeFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=claudeTemplateFile) } Var(name=path) } }
-            Call(target=writeTextFile) { Var(name=geminiFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=geminiTemplateFile) } Var(name=path) } }
-            Call(target=writeTextFile) { Var(name=windsurfFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=windsurfTemplateFile) } Var(name=path) } }
-            Call(target=sys.fs.dir.create) { Var(name=cursorDir) }
-            Call(target=sys.fs.dir.create) { Var(name=cursorRulesDir) }
-            Call(target=writeTextFile) { Var(name=cursorFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=cursorTemplateFile) } Var(name=path) } }
-            Call(target=sys.fs.dir.create) { Var(name=githubDir) }
-            Call(target=writeTextFile) { Var(name=copilotFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=copilotTemplateFile) } Var(name=path) } }
-            Return { Lit(value=0) }
-          }
-          Block {
-            If {
-              Call(target=hasAgent) { Var(name=agents) Lit(value="claude") }
-              Block { Call(target=writeTextFile) { Var(name=claudeFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=claudeTemplateFile) } Var(name=path) } } }
-              Block { Lit(value=0) }
-            }
-            If {
-              Call(target=hasAgent) { Var(name=agents) Lit(value="gemini") }
-              Block { Call(target=writeTextFile) { Var(name=geminiFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=geminiTemplateFile) } Var(name=path) } } }
-              Block { Lit(value=0) }
-            }
-            If {
-              Call(target=hasAgent) { Var(name=agents) Lit(value="windsurf") }
-              Block { Call(target=writeTextFile) { Var(name=windsurfFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=windsurfTemplateFile) } Var(name=path) } } }
-              Block { Lit(value=0) }
-            }
-            If {
-              Call(target=hasAgent) { Var(name=agents) Lit(value="cursor") }
-              Block {
-                Call(target=sys.fs.dir.create) { Var(name=cursorDir) }
-                Call(target=sys.fs.dir.create) { Var(name=cursorRulesDir) }
-                Call(target=writeTextFile) { Var(name=cursorFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=cursorTemplateFile) } Var(name=path) } }
-              }
-              Block { Lit(value=0) }
-            }
-            If {
-              Call(target=hasAgent) { Var(name=agents) Lit(value="copilot") }
-              Block {
-                Call(target=sys.fs.dir.create) { Var(name=githubDir) }
-                Call(target=writeTextFile) { Var(name=copilotFile) Call(target=renderProjectTemplate) { Call(target=readTextFile) { Var(name=copilotTemplateFile) } Var(name=path) } }
-              }
-              Block { Lit(value=0) }
-            }
-            Return { Lit(value=0) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=isAllAgents) {
-    Fn(params=agents) {
-      Block {
-        If {
-          Eq { Var(name=agents) Lit(value="all") }
-          Block { Return { Lit(value=true) } }
-          Block { Return { Eq { Var(name=agents) Lit(value="claude,cursor,gemini,copilot,windsurf") } } }
-        }
-      }
-    }
-  }
-
-  Let(name=isKnownAgent) {
-    Fn(params=name) {
-      Block {
-        If {
-          Eq { Var(name=name) Lit(value="codex") }
-          Block { Return { Lit(value=true) } }
-          Block {
-            If {
-              Eq { Var(name=name) Lit(value="claude") }
-              Block { Return { Lit(value=true) } }
-              Block {
-                If {
-                  Eq { Var(name=name) Lit(value="cursor") }
-                  Block { Return { Lit(value=true) } }
-                  Block {
-                    If {
-                      Eq { Var(name=name) Lit(value="gemini") }
-                      Block { Return { Lit(value=true) } }
-                      Block {
-                        If {
-                          Eq { Var(name=name) Lit(value="copilot") }
-                          Block { Return { Lit(value=true) } }
-                          Block { Return { Eq { Var(name=name) Lit(value="windsurf") } } }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=isValidAgentList) {
-    Fn(params=agents) {
-      Block {
-        If {
-          Eq { Var(name=agents) Lit(value="all") }
-          Block { Return { Lit(value=true) } }
-          Block {
-            Let(name=comma) { Call(target=find) { Var(name=agents) Lit(value=",") Lit(value=0) } }
-            If {
-              Eq { Var(name=comma) Lit(value=-1) }
-              Block { Return { Call(target=isKnownAgent) { Var(name=agents) } } }
-              Block {
-                Let(name=first) { Call(target=substring) { Var(name=agents) Lit(value=0) Var(name=comma) } }
-                Let(name=restStart) { Add { Var(name=comma) Lit(value=1) } }
-                Let(name=rest) { Call(target=substring) { Var(name=agents) Var(name=restStart) Lit(value=2147483647) } }
-                If {
-                  Call(target=isKnownAgent) { Var(name=first) }
-                  Block { Return { Call(target=isValidAgentList) { Var(name=rest) } } }
-                  Block { Return { Lit(value=false) } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=hasAgent) {
-    Fn(params=agents,name) {
-      Block {
-        If {
-          Eq { Var(name=agents) Lit(value="all") }
-          Block { Return { Lit(value=true) } }
-          Block {
-            If {
-              Eq { Var(name=agents) Var(name=name) }
-              Block { Return { Lit(value=true) } }
-              Block {
-                Let(name=normalizedAgents) { StrConcat { Lit(value=",") StrConcat { Var(name=agents) Lit(value=",") } } }
-                Let(name=needle) { StrConcat { Lit(value=",") StrConcat { Var(name=name) Lit(value=",") } } }
-                Let(name=found) { Call(target=find) { Var(name=normalizedAgents) Var(name=needle) Lit(value=0) } }
-                If {
-                  Eq { Var(name=found) Lit(value=-1) }
-                  Block { Return { Lit(value=false) } }
-                  Block { Return { Lit(value=true) } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
   Let(name=runBuild) {
     Fn(params=args) {
       Block {
@@ -1008,29 +319,6 @@ Program {
       }
     }
   }
-
-    Let(name=getManifestAttr) {
-      Fn(params=text,key,needleLength) {
-        Block {
-        Let(name=needle) { StrConcat { Var(name=key) Lit(value="=\"") } }
-        Let(name=found) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
-        If {
-          Eq { Var(name=found) Lit(value=-1) }
-          Block { Return { Lit(value="") } }
-          Block {
-            Let(name=valueStart) { Add { Var(name=found) Var(name=needleLength) } }
-            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
-            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\"") Lit(value=0) } }
-            If {
-              Eq { Var(name=valueEnd) Lit(value=-1) }
-              Block { Return { Lit(value="") } }
-              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
-            }
-          }
-        }
-        }
-      }
-    }
 
     Let(name=findUndeclaredPackageImport) {
       Fn(params=sourceText,manifestText,start) {
@@ -1258,10 +546,10 @@ Program {
         Let(name=compilerPath) { Call(target=resolveBootstrapCompiler) { Var(name=path) } }
         Let(name=spawnArgs) { Call(target=makeBuildSpawnArgs) { Var(name=path) Var(name=outDir) } }
         Let(name=env) { MakeBlock { Lit(value="env") } }
-        Let(name=handle) { Call(target=sys.process.spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
-        Let(name=code) { Call(target=sys.process.wait) { Var(name=handle) } }
-        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stdout.read) { Var(name=handle) } } }
-        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stderr.read) { Var(name=handle) } } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
         If {
           Eq { Var(name=code) Lit(value=0) }
           Block {
@@ -1697,10 +985,10 @@ Program {
         Let(name=compilerPath) { Call(target=resolveBootstrapCompilerForRun) { Var(name=path) } }
         Let(name=spawnArgs) { Call(target=makeRunSpawnArgs) { Var(name=path) Var(name=args) } }
         Let(name=env) { MakeBlock { Lit(value="env") } }
-        Let(name=handle) { Call(target=sys.process.spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
-        Let(name=code) { Call(target=sys.process.wait) { Var(name=handle) } }
-        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stdout.read) { Var(name=handle) } } }
-        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stderr.read) { Var(name=handle) } } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
         If {
           Eq { Var(name=stdoutText) Lit(value="") }
           Block { Lit(value=0) }
@@ -2162,8 +1450,8 @@ Program {
           }
         }
         Let(name=env) { MakeBlock { Lit(value="env") } }
-        Let(name=handle) { Call(target=sys.process.spawn) { Lit(value="chmod") Var(name=args) Lit(value="") Var(name=env) } }
-        Return { Call(target=sys.process.wait) { Var(name=handle) } }
+        Let(name=handle) { Call(target=spawn) { Lit(value="chmod") Var(name=args) Lit(value="") Var(name=env) } }
+        Return { Call(target=wait) { Var(name=handle) } }
       }
     }
   }
@@ -2498,10 +1786,10 @@ Program {
         Let(name=compilerPath) { Call(target=resolveBootstrapCompiler) { Var(name=path) } }
         Let(name=spawnArgs) { Call(target=makePublishSpawnArgs) { Var(name=path) Var(name=target) Var(name=outDir) } }
         Let(name=env) { MakeBlock { Lit(value="env") } }
-        Let(name=handle) { Call(target=sys.process.spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
-        Let(name=code) { Call(target=sys.process.wait) { Var(name=handle) } }
-        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stdout.read) { Var(name=handle) } } }
-        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=sys.process.stderr.read) { Var(name=handle) } } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
         If {
           Eq { Var(name=code) Lit(value=0) }
           Block {
@@ -2583,53 +1871,6 @@ Program {
           Eq { Var(name=outDir) Lit(value="") }
           Block { Return { StrConcat { Var(name=path) Lit(value="/dist") } } }
           Block { Return { Var(name=outDir) } }
-        }
-      }
-    }
-  }
-
-  Let(name=runClean) {
-    Fn(params=args) {
-      Block {
-        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
-        If {
-          Eq { Var(name=path) Lit(value="") }
-          Block { Return { Call(target=missingPath) { Lit(value="clean") } } }
-          Block { Return { Call(target=cleanProject) { Var(name=path) } } }
-        }
-      }
-    }
-  }
-
-  Let(name=cleanProject) {
-    Fn(params=path) {
-      Block {
-        Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
-        If {
-          Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
-          Block {
-            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/bin") } }
-            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/dist") } }
-            Call(target=deleteDirIfExists) { StrConcat { Var(name=path) Lit(value="/.toolchain") } }
-            Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"clean-complete\")") }
-            Return { Lit(value=0) }
-          }
-          Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
-        }
-      }
-    }
-  }
-
-  Let(name=deleteDirIfExists) {
-    Fn(params=path) {
-      Block {
-        If {
-          Call(target=sys.fs.path.exists) { Var(name=path) }
-          Block {
-            Call(target=sys.fs.dir.delete) { Var(name=path) Lit(value=true) }
-            Return { Lit(value=0) }
-          }
-          Block { Return { Lit(value=0) } }
         }
       }
     }

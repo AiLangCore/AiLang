@@ -1,7 +1,7 @@
 Program {
   Import(path="object_linker_support.aos")
   Import(path="object_linker_native_opcodes.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=objectLinker.emitLinkedPlanBytes)
   Export(name=objectLinker.emitLinkedPlanAibc1Bytes)
   Export(name=objectLinker.emitLinkedCallBytes)

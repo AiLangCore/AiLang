@@ -1,5 +1,5 @@
 Program {
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=bytecode.buildEntryReturnIntMainText)
   Export(name=bytecode.buildEntryReturnIntMainBytes)
 

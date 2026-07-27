@@ -1,0 +1,108 @@
+Program {
+  Export(name=structuralProject.createObjectSchedule)
+  Export(name=structuralProject.scheduleWorkerModuleCount)
+
+  Let(name=structuralProject.createObjectSchedule) {
+    Fn(params=recordChunks,workerCount) {
+      Block {
+        Return {
+          Call(target=structuralProject.assignScheduledModules) {
+            ChildCount { Var(name=recordChunks) }
+            Var(name=workerCount)
+            Lit(value=0)
+            Lit(value=0)
+            MakeBlock { Lit(value="object-schedule") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.assignScheduledModules) {
+    Fn(params=moduleCount,workerCount,moduleIndex,workerIndex,schedule) {
+      Block {
+        If {
+          Eq { Var(name=moduleIndex) Var(name=moduleCount) }
+          Block { Return { Var(name=schedule) } }
+          Block {
+            Return {
+              Call(target=structuralProject.assignScheduledModules) {
+                Var(name=moduleCount)
+                Var(name=workerCount)
+                Add { Var(name=moduleIndex) Lit(value=1) }
+                Call(target=structuralProject.nextScheduleWorker) {
+                  Var(name=workerIndex) Var(name=workerCount)
+                }
+                AppendChild {
+                  Var(name=schedule)
+                  AppendAttr {
+                    AppendAttr {
+                      MakeNode {
+                        Lit(value="Assignment")
+                        StrConcat { Lit(value="module-") ToString { Var(name=moduleIndex) } }
+                      }
+                      MakeLitInt { Lit(value="module") Var(name=moduleIndex) }
+                    }
+                    MakeLitInt { Lit(value="worker") Var(name=workerIndex) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.nextScheduleWorker) {
+    Fn(params=workerIndex,workerCount) {
+      Block {
+        If {
+          Eq { Add { Var(name=workerIndex) Lit(value=1) } Var(name=workerCount) }
+          Block { Return { Lit(value=0) } }
+          Block { Return { Add { Var(name=workerIndex) Lit(value=1) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.scheduleWorkerModuleCount) {
+    Fn(params=schedule,worker,index,total) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=schedule) } }
+          Block { Return { Var(name=total) } }
+          Block {
+            Let(name=assignment) { ChildAt { Var(name=schedule) Var(name=index) } }
+            If {
+              Eq {
+                AttrValueInt { Var(name=assignment) Lit(value=1) }
+                Var(name=worker)
+              }
+              Block {
+                Return {
+                  Call(target=structuralProject.scheduleWorkerModuleCount) {
+                    Var(name=schedule)
+                    Var(name=worker)
+                    Add { Var(name=index) Lit(value=1) }
+                    Add { Var(name=total) Lit(value=1) }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=structuralProject.scheduleWorkerModuleCount) {
+                    Var(name=schedule)
+                    Var(name=worker)
+                    Add { Var(name=index) Lit(value=1) }
+                    Var(name=total)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 Program {
-  Import(path="../../../std/collections/map.aos")
+  Import(sdk="ailang" path="std/collections/map.aos")
   Export(name=lower.buildCallRecordContext)
   Export(name=lower.indexedCallRecord)
 

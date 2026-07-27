@@ -572,6 +572,93 @@ Current self-build frontier:
   semantic frontier: `LOWER024` for a generated `ChildAt` expression in the
   restored `std-json` module. This is a compiler lowering gap, not graph
   discovery, SDK location, parser, process output, or VM memory pressure.
+- The canonical self-host build now stages a project manifest and restores its
+  local `std-cli` dependency through `package restore`; self-host graph
+  discovery consumes the resulting lock file and currently resolves 82
+  modules. `Map` and `Field` literals lower through the focused
+  `lower/expressions/map_literals.aos` module and have an executable pipeline
+  regression. The build now lowers package modules through object index 74 and
+  stops at the next focused frontier: `LOWER024` for nested `ChildAt`
+  (`ChildAt_3366`) at object index 75.
+- Built-in compiler and CLI imports now use canonical
+  `Import(sdk="ailang" path="std/...")` declarations. The staged self-host
+  project no longer carries a second `src/std` tree; its 81-module graph reads
+  standard-library sources only from `AILANG_SDK_ROOT`.
+- Structural `ChildAt` return expressions and `MakeFieldString` construction
+  now have focused lowering coverage. All 81 modules lower and link into 744
+  functions. The resulting 1,127-entry constant pool exposes the current
+  1,024-entry AiVM program capacity boundary. A direct static-capacity increase
+  is not acceptable because it breaks loader/module-cache stack budgets; the
+  next iteration must reduce or segment the linked constant pool before the
+  generation build can proceed.
+- The first executable built-in command iteration adds the modular
+  `std.process` and `std.cli` invocation modules and migrates `clean` to its own
+  `clean.aibc1`. The expanded bootstrap graph lowers and links all 86 modules
+  and 766 functions. Its current monolithic root still contains 1,142 unique
+  constants, confirming that additional command extraction must also remove
+  their implementation modules from the root graph before the standard
+  1,024-entry AiVM limit is met.
+- The second executable built-in iteration moves package-manager policy into
+  `src/cli/Package`, adds a focused executable entry module, emits
+  `package.aibc1`, and registers it through the same `std.cli`/`std.process`
+  contract as `clean`. The root no longer imports or statically dispatches
+  package behavior. The canonical self-host probe now lowers and links 83
+  modules and 711 functions with 1,038 constants, down from 1,142. The
+  remaining frontier is only 14 entries above the standard 1,024-entry AiVM
+  capacity, so the next command extraction must keep its implementation out of
+  the root graph and rerun the generation build.
+- The third executable built-in iteration moves `init`, `template`, and
+  `agent` into focused command modules with independent entry points and
+  `.aibc1` artifacts. Their descriptors use the same `std.cli` executable
+  contract, and no static handler route remains for those commands. The root
+  self-host artifact now links 83 modules and 697 functions with 980 constants,
+  clearing the standard 1,024-entry AiVM capacity without changing VM limits.
+  The generated compiler then emits and links all 83 modules of its own project
+  into `bin/app.aibc1`, and its version smoke succeeds. Self-host staging now
+  installs the runtime and built-in command artifacts before invoking the
+  package sidecar, removing the former bootstrap ordering cycle.
+- The fourth built-in iteration moves `project` metadata behavior into focused
+  implementation and entry modules and emits `project.aibc1`. The shared
+  manifest attribute reader now has its own semantic module instead of living
+  in the root CLI. Built-in artifact generation uses a bounded process pool
+  controlled by `AILANG_BUILTIN_JOBS` and copies successful artifacts in
+  canonical command order; `AILANG_BUILTIN_JOBS=1` remains the diagnostic
+  serial mode. The self-host script reports elapsed seconds for SDK staging,
+  bootstrap linking, built-ins, project staging, restore, generation, and
+  packaging so the next parallelization work targets measured cost. The
+  canonical four-job run passes with bootstrap linking at 129 seconds and
+  self-host generation at 855 seconds; all other reported phases round below
+  one second. Per-module generation is therefore the measured parallelization
+  frontier.
+- The parallel generation iteration stages the project graph once, emits
+  module objects through a core-count-aware pool capped at four workers, and
+  reloads those objects in deterministic module order. The canonical
+  generation phase improved from 855 seconds to approximately 478 seconds.
+  AiVM constant storage now grows beyond its 1,024-entry inline allocation, so
+  larger self-host graphs are not rejected by a fixed constant ceiling.
+- The telemetry iteration adds a focused `build_telemetry.aos` module and
+  reports staging, worker, and reload durations without adding timing policy to
+  the structural compiler facade. On the 88-module canonical build, staging
+  took 20.6 seconds, worker completion took 131.4 seconds, and deterministic
+  object reload/link preparation took 326.1 seconds. Equal 22-module
+  round-robin partitions took 82.6, 131.3, 37.8, and 59.3 seconds, proving that
+  module count is not an adequate scheduling weight. The next optimization
+  must use deterministic estimated module cost and then address the larger
+  serial reload phase.
+- AiVM debug graph diagnostics now allocate traversal state from the VM's
+  configured dynamic node and child capacities rather than the former 16,384
+  compile-time ceiling. The integration smoke runs through 17,001 live nodes
+  and verifies complete root and node-kind attribution.
+- The scheduling iteration introduces a focused, persisted
+  `object-schedule.aos` contract between the parent compiler and module-object
+  workers. Scheduling policy, worker execution, object emission, and
+  deterministic reload remain separate modules. Function-count weighting
+  measured 138.3 seconds and structural-AST weighting measured 135.4 seconds,
+  both slower than the 131.4-second 88-module round-robin baseline, so neither
+  speculative weighting policy remains in production. Stable round-robin is
+  retained through the explicit schedule contract and measures 133.3 seconds
+  on the expanded 89-module graph. The canonical build passes in 495 seconds;
+  its 321.7-second serial object reload is the next measured frontier.
 
 Reproduce the frontier with:
 
@@ -728,6 +815,103 @@ git diff --check
 ```
 
 Add focused tests for each newly extracted module and every behavior changed.
+
+## Parallel Module Generation
+
+Status: implemented and validated on 2026-07-26.
+
+The self-host build now generates independent module objects in worker
+processes and retains a single deterministic parent link. Worker assignments
+use stable strided module indices, and the parent reloads completed objects in
+canonical numeric order before linking.
+
+The default is `min(logical cores, AILANG_SELFHOST_MAX_JOBS)`.
+`AILANG_SELFHOST_MAX_JOBS` defaults to `4` because every worker is a complete
+compiler process with its own graph and symbol view. Set
+`AILANG_SELFHOST_JOBS=1` for serial generation, use another positive integer
+for an explicit worker count, or leave it as `auto`.
+
+Canonical benchmark on a 10-logical-core host:
+
+```text
+serial generation:    855 seconds
+4-worker generation:  478 seconds
+reduction:             377 seconds (44.1%)
+speedup:               1.79x
+```
+
+The bootstrap link remained within current format ceilings at 85 modules, 704
+functions, and 998 constants. Same-source two-worker and serial fixture builds
+produced byte-identical module objects and final AiBC1 output.
+
+### Shared parallel build stage
+
+Status: implemented and validated on 2026-07-26.
+
+The parent compiler now resolves the module graph and validates project-wide
+function records once. A focused `structural_project_stage.aos` module persists
+canonical module paths and function-record chunks for all workers. Workers
+restore the semantic `record-chunks` container after parsing and lower only
+their assigned modules.
+
+The stage reduced serialized module-path input from 51 KiB with an accidentally
+embedded entry program to 4.2 KiB of canonical paths. Function records occupy
+115 KiB. Serial and two-worker fixture builds remain byte-identical, and a
+missing stage returns `PARBUILD005`.
+
+The canonical generation benchmark was 479 seconds, effectively unchanged from
+the preceding 478-second four-worker result. This removes redundant graph and
+symbol construction and should reduce aggregate worker memory/CPU use, but it
+does not shorten the critical path. Assigned module lowering and deterministic
+parent reload/link now dominate.
+
+The canonical build entrypoints now default to self-hosting:
+
+```text
+./build.sh       -> selfhost
+./build.ps1      -> selfhost
+```
+
+The deprecated native C AiLang bootstrap launcher is explicit:
+
+```text
+./build.sh legacy
+./build.ps1 legacy
+```
+
+On a clean checkout, the default self-host target builds the legacy launcher
+only when the required bootstrap tools are absent.
+
+### Dynamic AiBC1 constant storage
+
+Status: implemented and validated on 2026-07-26.
+
+AiBC1 already encodes constant counts as `u32` and instruction operands as
+signed 64-bit values. The former 1,024-constant ceiling was an AiVM storage
+implementation limit, not a bytecode-width limit.
+
+AiVM now retains 1,024 inline constant slots for small programs and allocates
+loader-owned constant storage sized to larger encoded pools. Constant storage,
+release behavior, and cache copying live in the focused
+`aivm_program_constants.c` module. The deprecated native AiLang bootstrap
+builder remains limited to its inline storage; self-hosted AiBC1 loading no
+longer has that ceiling.
+
+A focused VM regression loads 1,025 integer constants, executes `CONST 1024`,
+and verifies that value `1024` reaches the VM stack. The canonical default
+`./build.sh` self-host build also passes using the inline path at 1,007
+constants.
+
+Validation boundary:
+
+- all 30 tests selected by `AiVM/test-aivm-c.sh` passed;
+- loader, dynamic constants, module cache, loader fuzz, security, and runtime
+  stress tests passed;
+- the final cross-repository debug-memory smoke remains stale because its
+  diagnostic traversal assumes the former fixed 16,384-node arena while AiVM
+  node storage is now dynamic;
+- the optional performance harness currently reports its existing string
+  benchmark type mismatch in both smoke and full modes.
 
 ## Acceptance Criteria
 

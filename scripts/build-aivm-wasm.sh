@@ -36,6 +36,7 @@ VM_CORE_SOURCES=(
   "${NATIVE_SRC_DIR}/aivm_vm_text.c"
   "${NATIVE_SRC_DIR}/aivm_vm_value.c"
   "${NATIVE_SRC_DIR}/aivm_program.c"
+  "${NATIVE_SRC_DIR}/aivm_program_constants.c"
   "${NATIVE_SRC_DIR}/aivm_debugger.c"
   "${NATIVE_SRC_DIR}/aivm_module_cache.c"
   "${NATIVE_SRC_DIR}/sys/aivm_syscall.c"

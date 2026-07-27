@@ -51,7 +51,7 @@ jobs:
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
         run: |
-          ./build.sh
+          ./build.sh legacy
           AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./scripts/aivm-bench-gate.sh
 
       - name: Setup Emscripten (Linux)

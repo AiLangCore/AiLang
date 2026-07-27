@@ -2,17 +2,19 @@ $ErrorActionPreference = 'Stop'
 
 function Show-Usage {
   @'
-Usage: ./build.ps1 [host|selfhost|shared|wasm|all]
+Usage: ./build.ps1 [selfhost|legacy|shared|wasm|all]
 
 Builds AiLang tooling through the selected installed SDK.
 
 Targets:
-  host    Stage host tools from the selected installed SDK (default).
   selfhost
-          Build the AiLang compiler and CLI through the self-hosted pipeline.
+          Build the AiLang compiler and CLI (default).
+          Module generation defaults to min(logical cores, 4 workers).
+          Override with AILANG_SELFHOST_JOBS or AILANG_SELFHOST_MAX_JOBS.
+  legacy  Build the deprecated native C AiLang bootstrap launcher.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
-  all     Build host and self-hosted tools, then delegated compatibility targets.
+  all     Build self-hosted tools, then delegated compatibility targets.
 '@
 }
 
@@ -97,11 +99,19 @@ function Invoke-StageInstalledToolchain {
 
 function Invoke-BuildTarget([string]$Target) {
   switch ($Target) {
-    'host' {
+    'legacy' {
       & "$PSScriptRoot/scripts/build-ailang-native.ps1"
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      bash "$PSScriptRoot/scripts/build-ailang-builtins.sh"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     'selfhost' {
+      $bootstrap = Join-Path $PSScriptRoot 'tools/ailang'
+      $runtime = Join-Path $PSScriptRoot 'tools/aivm-runtime'
+      if (-not (Test-Path $bootstrap) -or -not (Test-Path $runtime)) {
+        Write-Host 'selfhost-bootstrap=legacy reason=missing-bootstrap-tools'
+        Invoke-BuildTarget 'legacy'
+      }
       bash "$PSScriptRoot/scripts/build-ailang-selfhost.sh"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
@@ -114,9 +124,7 @@ function Invoke-BuildTarget([string]$Target) {
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     'all' {
-      Invoke-BuildTarget 'host'
-      bash "$PSScriptRoot/scripts/build-ailang-selfhost.sh"
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      Invoke-BuildTarget 'selfhost'
       Invoke-BuildTarget 'shared'
       Invoke-BuildTarget 'wasm'
     }
@@ -131,5 +139,5 @@ function Invoke-BuildTarget([string]$Target) {
   }
 }
 
-$target = if ($args.Length -gt 0) { $args[0] } else { 'host' }
+$target = if ($args.Length -gt 0) { $args[0] } else { 'selfhost' }
 Invoke-BuildTarget $target

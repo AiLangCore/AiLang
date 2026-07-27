@@ -1,0 +1,15 @@
+Program {
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="package.aos")
+  Export(name=main)
+
+  Let(name=main) {
+    Fn(params=args) {
+      Block {
+        Let(name=exitCode) { Call(target=runPackage) { Var(name=args) } }
+        Call(target=exit) { Var(name=exitCode) }
+        Return { Var(name=exitCode) }
+      }
+    }
+  }
+}

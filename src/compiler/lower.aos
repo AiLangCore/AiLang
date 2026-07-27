@@ -26,6 +26,7 @@ Program {
   Import(path="lower/expressions/opcodes.aos")
   Import(path="lower/expressions/variadic.aos")
   Import(path="lower/expressions/syscalls.aos")
+  Import(path="lower/expressions/map_literals.aos")
   Import(path="lower/expressions/emission.aos")
   Import(path="lower/plans/dispatch.aos")
   Import(path="lower/plans/native_records.aos")

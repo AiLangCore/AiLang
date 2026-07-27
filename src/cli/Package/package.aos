@@ -1,7 +1,9 @@
 Program {
-  Import(path="../std/str.aos")
-  Import(path="../std/bytes.aos")
-  Import(path="package/arguments.aos")
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="arguments.aos")
+  Import(path="local_restore.aos")
   Export(name=runPackage)
 
   Let(name=runPackage) {
@@ -413,6 +415,7 @@ Program {
             Let(name=includeText) { Call(target=substring) { Var(name=afterInclude) Lit(value=0) Var(name=closePos) } }
             Let(name=packageName) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="name") Lit(value=6) } }
             Let(name=packageVersion) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="version") Lit(value=9) } }
+            Let(name=packagePath) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="path") Lit(value=6) } }
             Let(name=nextIndex) { Add { Add { Var(name=includePos) Var(name=closePos) } Lit(value=1) } }
             If {
               Call(target=packageSeenContains) { Var(name=seen) Var(name=packageName) }
@@ -420,10 +423,48 @@ Program {
               Block {
                 Return {
                   StrConcat {
-                    Call(target=restorePackageLockEntrySeen) { Var(name=projectDir) Var(name=registryDir) Var(name=packageName) Var(name=packageVersion) Lit(value="") }
+                    Call(target=restoreManifestPackageLockEntry) {
+                      Var(name=projectDir)
+                      Var(name=registryDir)
+                      Var(name=packageName)
+                      Var(name=packageVersion)
+                      Var(name=packagePath)
+                    }
                     Call(target=restoreIncludeLockEntries) { Var(name=projectDir) Var(name=registryDir) Var(name=manifestText) Var(name=nextIndex) Call(target=packageSeenAdd) { Var(name=seen) Var(name=packageName) } }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restoreManifestPackageLockEntry) {
+    Fn(params=projectDir,registryDir,packageName,packageVersion,packagePath) {
+      Block {
+        If {
+          Eq { Var(name=packagePath) Lit(value="") }
+          Block {
+            Return {
+              Call(target=restorePackageLockEntrySeen) {
+                Var(name=projectDir)
+                Var(name=registryDir)
+                Var(name=packageName)
+                Var(name=packageVersion)
+                Lit(value="")
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=restoreLocalPackageLockEntry) {
+                Var(name=projectDir)
+                Var(name=registryDir)
+                Var(name=packageName)
+                Var(name=packageVersion)
+                Var(name=packagePath)
               }
             }
           }
@@ -1202,8 +1243,8 @@ Program {
       Block {
         Let(name=args) { Call(target=makeGitCloneArgs) { Var(name=repo) Var(name=dest) } }
         Let(name=env) { MakeBlock { Lit(value="env") } }
-        Let(name=handle) { Call(target=sys.process.spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
-        Return { Call(target=sys.process.wait) { Var(name=handle) } }
+        Let(name=handle) { Call(target=spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
+        Return { Call(target=wait) { Var(name=handle) } }
       }
     }
   }
@@ -1217,8 +1258,8 @@ Program {
           Block {
             Let(name=args) { Call(target=makeGitCheckoutArgs) { Var(name=dest) Var(name=commit) } }
             Let(name=env) { MakeBlock { Lit(value="env") } }
-            Let(name=handle) { Call(target=sys.process.spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
-            Return { Call(target=sys.process.wait) { Var(name=handle) } }
+            Let(name=handle) { Call(target=spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
+            Return { Call(target=wait) { Var(name=handle) } }
           }
         }
       }

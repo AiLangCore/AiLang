@@ -180,7 +180,8 @@ native bridge libraries, but not in AiLang command implementation.
   implemented in AiLang.
   - [x] Bytecode CLI owns `package` command dispatch.
   - [x] Package command behavior lives in focused AiLang module
-    `src/cli/package.aos`; the main CLI file only imports and dispatches it.
+    `src/cli/Package/package.aos`; the root CLI registers and invokes its
+    independently built `package.aibc1` executable through `std.cli`.
   - [x] `package list <project-dir>` is implemented in AiLang for restored
     projects by reading `ailang.lock.toml`.
   - [x] `package restore <project-dir>` is implemented in AiLang for direct
@@ -212,14 +213,11 @@ native bridge libraries, but not in AiLang command implementation.
   - [x] `publish` now routes project compilation through the same AiLang
     `buildProject` path instead of calling the bootstrap binary emitter
     directly.
-  - [x] `build` now emits `obj/bytecode-emitter-report.aos`, writes
-    `obj/app.bytecode.aos` for inspection, writes the entry module object to
-    `obj/app.aibco`, and writes the linked program to `bin/app.aibc1`
-    through AiLang-authored object and linker code for the currently supported
-    lowering shapes.
-  - [x] `build` now emits `obj/build-input-report.aos` and uses generated
-    bytecode objects as the runnable build input when the current assembler can
-    encode them.
+  - [x] `build` emits `obj/bytecode-emitter-report.aos`, writes the canonical
+    entry module object to `obj/app.aibco`, and writes the linked program to
+    `bin/app.aibc1` through AiLang-authored object and linker code. The former
+    transitional `obj/app.bytecode.aos` and `obj/build-input-report.aos`
+    artifacts are no longer part of the build contract.
   - [x] The self-hosted bytecode emitter now also lowers the current
     `cli-args` template shape with `ChildCount(args)`, deterministic branching,
     first-argument extraction, stdout writes, and integer returns.

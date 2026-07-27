@@ -78,7 +78,7 @@ Program {
   }
 
   Let(name=collectObjects) {
-    Fn(params=paths,records,callContext,index,objects) {
+    Fn(params=paths,records,callContext,lockText,index,objects) {
       Block {
         If {
           Eq { Var(name=index) ChildCount { Var(name=paths) } }
@@ -90,7 +90,7 @@ Program {
               Block { Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=trace-parse-begin") } }
               Block { Lit(value=0) }
             }
-            Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Var(name=index) } }
+            Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=paths) Lit(value="${PROJECT_DIR}") Var(name=lockText) Var(name=index) } }
             If {
               Eq { Var(name=index) Lit(value=${TRACE_OBJECT_INDEX}) }
               Block { Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=trace-parse-done") } }
@@ -126,7 +126,18 @@ Program {
             Let(name=object) { Call(target=structuralObject.emitModuleObjectForProgram) { Var(name=program) Var(name=modulePath) Var(name=moduleRecords) Var(name=callContext) } }
             If {
               Eq { NodeKind { Var(name=object) } Lit(value="Err") }
-              Block { Return { Var(name=object) } }
+              Block {
+                Call(target=sys.stdout.writeLine) {
+                  StrConcat {
+                    Lit(value="selfhost-link=object-failed index=")
+                    StrConcat {
+                      ToString { Var(name=index) }
+                      StrConcat { Lit(value=" module=") Var(name=modulePath) }
+                    }
+                  }
+                }
+                Return { Var(name=object) }
+              }
               Block {
                 Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=object-done index=") ToString { Var(name=index) } } }
                 Let(name=nextObjects) { AppendChild { Var(name=objects) Var(name=object) } }
@@ -137,6 +148,7 @@ Program {
                     Return {
                       Call(target=collectObjects) {
                         Var(name=paths) Var(name=records) Var(name=callContext)
+                        Var(name=lockText)
                         Add { Var(name=index) Lit(value=1) }
                         Var(name=nextObjects)
                       }
@@ -157,14 +169,46 @@ Program {
         Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=graph-begin") }
         Let(name=entryText) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Lit(value="${PROJECT_DIR}/${ENTRY_FILE}") } } }
         Let(name=entryProgram) { Call(target=parse.parseDocument) { Var(name=entryText) } }
-        Let(name=paths) { Call(target=linker.collectProjectModulePathsWithLock) { Lit(value="${PROJECT_DIR}") Var(name=entryProgram) Lit(value="${ENTRY_FILE}") Lit(value="") } }
+        Let(name=lockText) {
+          If {
+            Call(target=sys.fs.path.exists) { Lit(value="${PROJECT_DIR}/ailang.lock.toml") }
+            Block { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Lit(value="${PROJECT_DIR}/ailang.lock.toml") } } }
+            Block { Lit(value="") }
+          }
+        }
+        Let(name=paths) { Call(target=linker.collectProjectModulePathsWithLock) { Lit(value="${PROJECT_DIR}") Var(name=entryProgram) Lit(value="${ENTRY_FILE}") Var(name=lockText) } }
+        If {
+          Eq { NodeKind { Var(name=paths) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) {
+              StrConcat {
+                Lit(value="selfhost-link=graph-error code=")
+                StrConcat {
+                  AttrValueString { Var(name=paths) Lit(value=0) }
+                  StrConcat {
+                    Lit(value=" message=")
+                    StrConcat {
+                      AttrValueString { Var(name=paths) Lit(value=1) }
+                      StrConcat {
+                        Lit(value=" node=")
+                        AttrValueString { Var(name=paths) Lit(value=2) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            Return { Var(name=paths) }
+          }
+          Block { Lit(value=0) }
+        }
         Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=symbols-begin modules=") ToString { ChildCount { Var(name=paths) } } } }
-        Let(name=records) { Call(target=structuralProject.collectProjectSymbolChunks) { Var(name=paths) Lit(value="${PROJECT_DIR}") Lit(value="") Lit(value=0) MakeBlock { Lit(value="record-chunks") } } }
+        Let(name=records) { Call(target=structuralProject.collectProjectSymbolChunks) { Var(name=paths) Lit(value="${PROJECT_DIR}") Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="record-chunks") } } }
         Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=symbols-done chunks=") ToString { ChildCount { Var(name=records) } } } }
         Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
         Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=validation-done") }
         Let(name=callContext) { Call(target=lower.buildCallRecordContext) { Var(name=validated) } }
-        Let(name=objects) { Call(target=collectObjects) { Var(name=paths) Var(name=validated) Var(name=callContext) Lit(value=0) MakeBlock { Lit(value="objects") } } }
+        Let(name=objects) { Call(target=collectObjects) { Var(name=paths) Var(name=validated) Var(name=callContext) Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="objects") } } }
         If {
           Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
           Block {
@@ -244,7 +288,9 @@ Program {
 AOS
 
 "${ROOT_DIR}/tools/ailang" build "${TMP_DIR}/app.aos" --out "${TMP_DIR}" --no-cache >/dev/null
-AILANG_VM_PROFILE=tooling "${ROOT_DIR}/tools/aivm-runtime" run "${TMP_DIR}/app.aibc1"
+AILANG_SDK_ROOT="${AILANG_SDK_ROOT:-${ROOT_DIR}/.artifacts/ailang-selfhost}" \
+AILANG_VM_PROFILE=tooling \
+  "${ROOT_DIR}/tools/aivm-runtime" run "${TMP_DIR}/app.aibc1"
 
 test -s "${TMP_DIR}/bin/${OUTPUT_NAME}"
 echo 'self-host compiler link probe: PASS'

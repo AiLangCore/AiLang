@@ -1,0 +1,125 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="../structural_project_incremental.aos")
+  Import(path="../structural_project_stage.aos")
+  Import(path="../structural_project_schedule.aos")
+  Export(name=moduleObjectWorkerRun)
+
+  Let(name=moduleObjectWorkerRun) {
+    Fn(params=args) {
+      Block {
+        Let(name=projectDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=0) } }
+        Let(name=stageDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=1) } }
+        Let(name=objDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=2) } }
+        Let(name=workerIndexText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=3) } }
+        Let(name=workerCountText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=4) } }
+        If {
+          Eq { Var(name=workerCountText) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="module_object_worker")
+                Lit(value="WORKER001")
+                Lit(value="Module object worker requires project, entry, object directory, index, and count.")
+                Lit(value="arguments")
+              }
+            }
+          }
+          Block {
+            Let(name=lockPath) { StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") } }
+            Let(name=lockText) {
+              Call(target=moduleObjectWorkerReadOptionalText) { Var(name=lockPath) }
+            }
+            Let(name=stage) {
+              Call(target=structuralProject.readParallelStage) { Var(name=stageDir) }
+            }
+            If {
+              Eq { NodeKind { Var(name=stage) } Lit(value="Err") }
+              Block { Return { Var(name=stage) } }
+              Block {
+                Let(name=writeResult) {
+                  Call(target=structuralProject.writePreparedProjectObjectSchedule) {
+                    ChildAt { Var(name=stage) Lit(value=0) }
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                    ChildAt { Var(name=stage) Lit(value=1) }
+                    ChildAt { Var(name=stage) Lit(value=2) }
+                    Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
+                    Lit(value=0)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=writeResult) } Lit(value="Err") }
+                  Block { Return { Var(name=writeResult) } }
+                  Block {
+                    Return {
+                      AppendAttr {
+                        AppendAttr {
+                          MakeNode {
+                            Lit(value="WorkerResult")
+                            Lit(value="module-object-worker-result")
+                          }
+                          MakeLitInt {
+                            Lit(value="index")
+                            Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
+                          }
+                        }
+                        MakeLitInt {
+                          Lit(value="modules")
+                          Call(target=structuralProject.scheduleWorkerModuleCount) {
+                            ChildAt { Var(name=stage) Lit(value=2) }
+                            Call(target=parse.parseIntValue) { Var(name=workerIndexText) }
+                            Lit(value=0)
+                            Lit(value=0)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Lt { Var(name=index) ChildCount { Var(name=args) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerReadOptionalText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Return {
+              Call(target=bytes.toUtf8String) {
+                Call(target=sys.fs.file.read) { Var(name=path) }
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

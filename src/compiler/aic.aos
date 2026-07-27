@@ -10,7 +10,7 @@ Program {
   Import(path="bootstrap_io.aos")
   Import(path="value.aos")
   Import(path="eval.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=main)
 
   Let(name=main) {

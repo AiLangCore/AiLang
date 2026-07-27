@@ -1,6 +1,6 @@
 Program {
   Import(path="structural_object.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=structuralProject.collectModuleRecordsIncremental)
   Export(name=structuralProject.collectModuleRecordChunks)
   Export(name=structuralProject.parseModuleProgram)

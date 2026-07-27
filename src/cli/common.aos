@@ -1,6 +1,6 @@
 Program {
-  Import(path="../std/str.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
 
   Export(name=readArg)
   Export(name=readOption)

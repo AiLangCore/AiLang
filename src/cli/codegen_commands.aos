@@ -1,5 +1,5 @@
 Program {
-  Import(path="../std/str.aos")
+  Import(sdk="ailang" path="std/str.aos")
   Import(path="common.aos")
 
   Export(name=generateCommandRegistry)

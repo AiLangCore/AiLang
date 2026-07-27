@@ -4,6 +4,22 @@ Program {
       Block {
         Let(name=kind) { NodeKind { Var(name=expr) } }
         If {
+          Eq { Var(name=kind) Lit(value="Map") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq {
+            Eq {
+              Call(target=lower.structuralNativeIndexOpcode) { Var(name=kind) }
+              Lit(value="")
+            }
+            Lit(value=false)
+          }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
           Eq { Var(name=kind) Lit(value="StrConcat") }
           Block { Return { Lit(value=true) } }
           Block {
@@ -15,60 +31,64 @@ Program {
                   Eq { Var(name=kind) Lit(value="AppendAttr") }
                   Block { Return { Lit(value=true) } }
                   Block {
-            If {
-              Eq { Var(name=kind) Lit(value="Eq") }
-              Block { Return { Lit(value=true) } }
-              Block {
-                If {
-                  Eq { Var(name=kind) Lit(value="Lt") }
-                  Block { Return { Lit(value=true) } }
-                  Block {
                     If {
-                      Call(target=lower.isStructuralNumericBinaryExpression) { Var(name=expr) }
+                      Eq { Var(name=kind) Lit(value="Eq") }
                       Block { Return { Lit(value=true) } }
                       Block {
                         If {
-                          Eq { Var(name=kind) Lit(value="AttrKey") }
+                          Eq { Var(name=kind) Lit(value="Lt") }
                           Block { Return { Lit(value=true) } }
                           Block {
                             If {
-                              Eq { Var(name=kind) Lit(value="AttrValueString") }
+                              Call(target=lower.isStructuralNumericBinaryExpression) { Var(name=expr) }
                               Block { Return { Lit(value=true) } }
                               Block {
                                 If {
-                                  Eq { Call(target=lower.isStructuralNativeUnaryKind) { Var(name=kind) } Lit(value=false) }
+                                  Eq { Var(name=kind) Lit(value="AttrKey") }
+                                  Block { Return { Lit(value=true) } }
                                   Block {
                                     If {
-                                      Eq { Var(name=kind) Lit(value="ChildCount") }
+                                      Eq { Var(name=kind) Lit(value="AttrValueString") }
                                       Block { Return { Lit(value=true) } }
                                       Block {
                                         If {
-                                          Eq { Var(name=kind) Lit(value="MakeBlock") }
-                                          Block { Return { Lit(value=true) } }
+                                          Eq { Call(target=lower.isStructuralNativeUnaryKind) { Var(name=kind) } Lit(value=false) }
                                           Block {
                                             If {
-                                              Eq { Var(name=kind) Lit(value="MakeLitString") }
+                                              Eq { Var(name=kind) Lit(value="ChildCount") }
                                               Block { Return { Lit(value=true) } }
                                               Block {
                                                 If {
-                                                  Eq { Var(name=kind) Lit(value="MakeLitInt") }
+                                                  Eq { Var(name=kind) Lit(value="MakeBlock") }
                                                   Block { Return { Lit(value=true) } }
                                                   Block {
                                                     If {
-                                                      Call(target=lower.isStructuralNativeBinaryKind) { Var(name=kind) }
+                                                      Eq { Var(name=kind) Lit(value="MakeLitString") }
                                                       Block { Return { Lit(value=true) } }
-                                                      Block { Return { Call(target=lower.isStructuralNativeVariadicKind) { Var(name=kind) } } }
+                                                      Block {
+                                                        If {
+                                                          Eq { Var(name=kind) Lit(value="MakeLitInt") }
+                                                          Block { Return { Lit(value=true) } }
+                                                          Block {
+                                                            If {
+                                                              Call(target=lower.isStructuralNativeBinaryKind) { Var(name=kind) }
+                                                              Block { Return { Lit(value=true) } }
+                                                              Block { Return { Call(target=lower.isStructuralNativeVariadicKind) { Var(name=kind) } } }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
                                                     }
                                                   }
                                                 }
                                               }
                                             }
                                           }
+                                          Block { Return { Lit(value=true) } }
                                         }
                                       }
                                     }
                                   }
-                                  Block { Return { Lit(value=true) } }
                                 }
                               }
                             }
@@ -80,14 +100,10 @@ Program {
                 }
               }
             }
-                  }
-                }
-              }
           }
         }
       }
     }
-  }
   }
 
   Let(name=lower.isStructuralNativeUnaryKind) {

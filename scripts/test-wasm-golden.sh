@@ -3501,7 +3501,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 if [[ ! -x "${AILANG_CLI}" ]]; then
-  "${ROOT_DIR}/build.sh" host >/dev/null
+  "${ROOT_DIR}/build.sh" legacy >/dev/null
 fi
 if [[ ! -x "${AILANG_CLI}" ]]; then
   echo "ailang CLI is required to run wasm golden tests" >&2

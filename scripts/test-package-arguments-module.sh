@@ -9,7 +9,7 @@ mkdir -p "${TMP_DIR}"
 
 cat > "${TMP_DIR}/app.aos" <<'AOS'
 Program {
-  Import(path="../../src/cli/package/arguments.aos")
+  Import(path="../../src/cli/Package/arguments.aos")
   Export(name=start)
 
   Let(name=start) {

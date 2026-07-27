@@ -1,0 +1,35 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="result.aos")
+
+  Let(name=runCaptured) {
+    Fn(params=executable,arguments,workingDirectory,environment) {
+      Block {
+        Let(name=handle) {
+          Call(target=sys.process.spawn) {
+            Var(name=executable)
+            Var(name=arguments)
+            Var(name=workingDirectory)
+            Var(name=environment)
+          }
+        }
+        Let(name=exitCode) {
+          Call(target=sys.process.wait) { Var(name=handle) }
+        }
+        Let(name=stdoutBytes) {
+          Call(target=sys.process.stdout.read) { Var(name=handle) }
+        }
+        Let(name=stderrBytes) {
+          Call(target=sys.process.stderr.read) { Var(name=handle) }
+        }
+        Return {
+          Call(target=processResult) {
+            Var(name=exitCode)
+            Call(target=bytes.toUtf8String) { Var(name=stdoutBytes) }
+            Call(target=bytes.toUtf8String) { Var(name=stderrBytes) }
+          }
+        }
+      }
+    }
+  }
+}

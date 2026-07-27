@@ -1,5 +1,5 @@
 Program {
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=bootstrapIo.pathExists)
   Export(name=bootstrapIo.makeDir)
   Export(name=bootstrapIo.writeFile)

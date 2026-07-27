@@ -2,14 +2,17 @@
 
 This directory contains the AiLang command-line interface implementation.
 
-## Future std-cli Package
+## std.cli Framework
 
-**Important**: The future `std-cli` package will be an **optional package** maintained in the `ailang-core-packages` repository (https://github.com/AiLangCore/ailang-core-packages), not part of the core AiLang language.
+The CLI uses the optional `std-cli` package maintained in the
+`ailang-core-packages` repository. `application.aos` owns the AiLang command
+descriptors and application dispatcher; the package owns deterministic
+registration, parsing, intrinsic help/version, validation, and diagnostics.
 
-- Will be published to the `ailang-packages` registry
-- Will be added as a dependency in this CLI's `project.aiproj`
-- Can be used by other AiLang projects for building CLI tools
-- Will evolve independently of the language specification
+- It remains entirely implemented in AiLang.
+- It uses explicit registration and has no generated-source dependency.
+- It can be reused by other AiLang command-line applications.
+- It evolves independently of the language specification.
 
 ## Current Structure
 
@@ -17,20 +20,31 @@ The CLI has been reorganized into a modular command structure to prepare for thi
 
 ```text
 src/cli/
-├── ailang.aos                  # Root CLI entry point (explicit dispatch)
+├── ailang.aos                  # Root CLI entry point and command implementations
+├── application.aos            # std.cli descriptors and application dispatch
 ├── common.aos                  # Shared CLI utilities
 ├── command.md                  # Root command documentation
-├── package.aos                 # Package command implementation
+├── Package/
+│   ├── arguments.aos           # Package argument access
+│   ├── local_restore.aos       # Local package restore
+│   ├── main.aos                # Standalone command entry point
+│   └── package.aos             # Package command implementation
 ├── Clean/
 │   ├── command.md              # Clean command documentation
-│   └── clean.aos               # Clean command implementation
+│   ├── clean.aos               # Clean command implementation
+│   └── main.aos                # Standalone command entry point
 ├── Init/
 │   ├── command.md              # Init command documentation
-│   └── init.aos                # Init command implementation
+│   ├── init.aos                # Init command implementation
+│   └── main.aos                # Standalone command entry point
 ├── Template/
-│   └── command.md              # Template command documentation
+│   ├── command.md              # Template command documentation
+│   ├── template.aos            # Template command implementation
+│   └── main.aos                # Standalone command entry point
 ├── Agent/
-│   └── command.md              # Agent command documentation
+│   ├── command.md              # Agent command documentation
+│   ├── agent.aos               # Agent command implementation
+│   └── main.aos                # Standalone command entry point
 ├── Build/
 │   └── command.md              # Build command documentation
 ├── Run/
@@ -38,7 +52,9 @@ src/cli/
 ├── Publish/
 │   └── command.md              # Publish command documentation
 └── Project/
-    └── command.md              # Project command documentation
+    ├── command.md              # Project command documentation
+    ├── project.aos             # Project metadata implementation
+    └── main.aos                # Standalone command entry point
 ```
 
 ## Implementation Status
@@ -46,24 +62,21 @@ src/cli/
 ### Fully Extracted Commands
 
 - **Clean** (`Clean/clean.aos`) - Removes build artifacts from a project
+- **Package** (`Package/package.aos`) - Manages project dependencies
 - **Init** (`Init/init.aos`) - Initializes new projects from templates
+- **Template** (`Template/template.aos`) - Lists and inspects templates
+- **Agent** (`Agent/agent.aos`) - Lists supported coding agents
+- **Project** (`Project/project.aos`) - Inspects project metadata
 
 These serve as reference implementations for the command module pattern.
 
-### Partially Modular Commands
-
-- **Package** (`package.aos`) - Already modular, manages project dependencies
-
 ### Remaining in Root CLI
 
-The following commands remain in `ailang.aos` for self-hosting compatibility:
+The following commands remain statically linked into the root CLI:
 
-- **Template** - Template management
-- **Agent** - Agent configuration listing
 - **Build** - Project compilation
 - **Run** - Program execution
 - **Publish** - Distribution packaging
-- **Project** - Project metadata management
 
 ## Command Module Convention
 
@@ -74,7 +87,8 @@ Each command module follows this structure:
 ```text
 <CommandName>/
 ├── command.md           # Command metadata and documentation
-└── <command>.aos        # Command implementation
+├── <command>.aos        # Command implementation
+└── main.aos             # Standalone executable entry point
 ```
 
 ### command.md Format
@@ -148,7 +162,8 @@ The `common.aos` module provides:
 
 ## Future Direction
 
-See [Design/std-cli-future.md](/Design/std-cli-future.md) for the planned evolution toward a generated command registry and the `std-cli` package.
+Future command generation may emit calls to the same explicit registration API.
+Runtime scanning and markdown parsing are not part of the framework contract.
 
 ### Migration Phases
 
@@ -162,10 +177,10 @@ See [Design/std-cli-future.md](/Design/std-cli-future.md) for the planned evolut
    - Verify all tests pass
    - Maintain self-hosting
 
-3. **Phase 3: Generated Registry** (Future)
-   - Implement `std-cli` pre-build tool
-   - Generate `commands.g.aos`
-   - Update root CLI to use registry
+3. **✅ Phase 3: Explicit std.cli Registry**
+   - Construct descriptors in `application.aos`
+   - Dispatch through the package framework
+   - Keep generation optional and out of the runtime contract
 
 ## Development Guidelines
 
@@ -174,8 +189,8 @@ See [Design/std-cli-future.md](/Design/std-cli-future.md) for the planned evolut
 1. Create command directory: `src/cli/NewCommand/`
 2. Add `command.md` with metadata and documentation
 3. Implement `newcommand.aos` with `runNewCommand` export
-4. Import in `ailang.aos` (currently)
-5. Add dispatch case in `ailang.aos` main function
+4. Import the implementation into the CLI program
+5. Register its descriptor and add its handler case in `application.aos`
 
 ### Modifying Existing Commands
 

@@ -2,7 +2,7 @@ Program {
   Import(path="parser.aos")
   Import(path="function_layout.aos")
   Import(path="structural_bundle.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=objectLinker.collectFunctions)
   Export(name=objectLinker.resolveTargetName)
   Export(name=objectLinker.assignOffsets)

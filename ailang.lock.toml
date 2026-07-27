@@ -1,0 +1,9 @@
+schema = "ailang.lock.v1"
+
+[[package]]
+name = "std-cli"
+version = "0.0.1-alpha.2"
+path = "../ailang-core-packages/packages/std-cli"
+packageRoot = "."
+namespaces = ["std.cli"]
+

@@ -1,0 +1,128 @@
+Program {
+  Let(name=lower.appendStructuralMapLiteral) {
+    Fn(params=context,map,params,records) {
+      Block {
+        Let(name=withFields) {
+          Call(target=lower.appendStructuralMapFields) {
+            Var(name=context)
+            Var(name=map)
+            Var(name=params)
+            Var(name=records)
+            Lit(value=0)
+          }
+        }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withFields) }
+          Block { Return { Var(name=withFields) } }
+          Block {
+            Let(name=withCount) {
+              Call(target=blockBuilder.emit) {
+                Var(name=withFields)
+                Lit(value="CONST")
+                StrConcat {
+                  Lit(value="int:")
+                  ToString { ChildCount { Var(name=map) } }
+                }
+              }
+            }
+            Return {
+              Call(target=blockBuilder.emit) {
+                Var(name=withCount)
+                Lit(value="MAKE_MAP")
+                Lit(value="")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralMapFields) {
+    Fn(params=context,map,params,records,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=map) } }
+          Block { Return { Var(name=context) } }
+          Block {
+            Let(name=field) { ChildAt { Var(name=map) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=field) } Lit(value="Field") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=field) } Lit(value=1) }
+                  Block {
+                    Let(name=withKey) {
+                      Call(target=blockBuilder.emit) {
+                        Var(name=context)
+                        Lit(value="CONST")
+                        StrConcat {
+                          Lit(value="string:")
+                          Call(target=lower.getAttr) {
+                            Var(name=field)
+                            Lit(value="key")
+                            Lit(value=0)
+                          }
+                        }
+                      }
+                    }
+                    Let(name=withValue) {
+                      Call(target=lower.appendStructuralNativeExpression) {
+                        Var(name=withKey)
+                        ChildAt { Var(name=field) Lit(value=0) }
+                        Var(name=params)
+                        Var(name=records)
+                      }
+                    }
+                    If {
+                      Call(target=lower.isStructuralError) { Var(name=withValue) }
+                      Block { Return { Var(name=withValue) } }
+                      Block {
+                        Let(name=withField) {
+                          Call(target=blockBuilder.emit) {
+                            Var(name=withValue)
+                            Lit(value="MAKE_FIELD_STRING")
+                            Lit(value="")
+                          }
+                        }
+                        Return {
+                          Call(target=lower.appendStructuralMapFields) {
+                            Var(name=withField)
+                            Var(name=map)
+                            Var(name=params)
+                            Var(name=records)
+                            Add { Var(name=index) Lit(value=1) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="lower")
+                        Lit(value="LOWER033")
+                        Lit(value="Map Field must contain exactly one value.")
+                        NodeId { Var(name=field) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="lower")
+                    Lit(value="LOWER032")
+                    Lit(value="Map child must be a Field.")
+                    NodeId { Var(name=field) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

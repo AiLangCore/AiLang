@@ -1,6 +1,6 @@
 Program {
   Import(path="structural_object.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=structuralProject.collectModulePrograms)
   Export(name=structuralProject.emitProjectPlans)
   Export(name=structuralProject.emitProjectObjectTexts)

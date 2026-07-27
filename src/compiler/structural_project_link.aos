@@ -1,6 +1,7 @@
 Program {
   Import(path="structural_project.aos")
   Import(path="structural_project_incremental.aos")
+  Import(path="structural_project_parallel.aos")
   Import(path="object_linker.aos")
   Export(name=structuralProject.writeProjectAibc1FromObjectFiles)
   Export(name=structuralProject.emitProjectAibc1Bytes)
@@ -21,7 +22,15 @@ Program {
   Let(name=structuralProject.writeProjectAibc1FromObjectFiles) {
     Fn(params=modulePaths,projectDir,lockText,objDir,outputPath,entryFile,entryExport) {
       Block {
-        Let(name=objects) { Call(target=structuralProject.writeProjectObjectFilesIncremental) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=objDir) } }
+        Let(name=objects) {
+          Call(target=structuralProject.writeProjectObjectFilesSelected) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Var(name=objDir)
+            Var(name=entryFile)
+          }
+        }
         If {
           Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
           Block { Return { Var(name=objects) } }
@@ -49,6 +58,70 @@ Program {
                     }
                     Call(target=sys.fs.file.write) { Var(name=outputPath) Var(name=linkedProgramBytes) }
                     Return { MakeBlock { Lit(value="structural-link-ok") } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeProjectObjectFilesSelected) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,entryFile) {
+      Block {
+        Let(name=jobs) { Call(target=sys.process.env.get) { Lit(value="AILANG_BUILD_JOBS") } }
+        Let(name=workerArtifact) {
+          Call(target=sys.process.env.get) { Lit(value="AILANG_BUILD_WORKER_ARTIFACT") }
+        }
+        If {
+          Eq { Var(name=jobs) Lit(value="") }
+          Block {
+            Return {
+              Call(target=structuralProject.writeProjectObjectFilesIncremental) {
+                Var(name=modulePaths)
+                Var(name=projectDir)
+                Var(name=lockText)
+                Var(name=objDir)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { Var(name=jobs) Lit(value="1") }
+              Block {
+                Return {
+                  Call(target=structuralProject.writeProjectObjectFilesIncremental) {
+                    Var(name=modulePaths)
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=workerArtifact) Lit(value="") }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="structural_project_parallel")
+                        Lit(value="PARBUILD004")
+                        Lit(value="Parallel object build requires a worker artifact.")
+                        Lit(value="AILANG_BUILD_WORKER_ARTIFACT")
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=structuralProject.writeProjectObjectFilesParallel) {
+                        Var(name=modulePaths)
+                        Var(name=projectDir)
+                        Var(name=lockText)
+                        Var(name=objDir)
+                      }
+                    }
                   }
                 }
               }

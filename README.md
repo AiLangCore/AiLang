@@ -213,21 +213,21 @@ such as `./test.sh`. See
 
 ## Build Tooling
 
-Stage `tools/ailang` from the selected installed SDK:
+Build the self-hosted compiler and CLI:
 
 ```bash
 ./build.sh
 ```
 
-`build.sh` is the canonical bootstrap entrypoint for AiLang tooling during the
-repository split. The long-term target is self-hosted AiLang command behavior;
-the temporary native launcher supplied by AiVM should shrink to VM execution and
-host adapter responsibilities.
+`build.sh` is the canonical self-hosted build entrypoint. The deprecated
+native launcher remains available only as the `legacy` bootstrap target; AiVM
+continues to own VM execution and host adapter responsibilities.
 
-- `./build.sh` stages host tools from the selected SDK.
+- `./build.sh` builds the self-hosted AiLang compiler and CLI.
+- `./build.sh legacy` builds the deprecated native C bootstrap launcher.
 - `./build.sh shared` is delegated to AiVM and remains temporarily for migration compatibility.
 - `./build.sh wasm` is delegated to AiVM and remains temporarily for migration compatibility.
-- `./build.sh all` runs the compatibility target set.
+- `./build.sh all` builds self-hosted tools and the compatibility targets.
 
 The underlying `scripts/build-*.sh` files remain implementation details behind this entrypoint.
 

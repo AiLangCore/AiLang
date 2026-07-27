@@ -5,7 +5,7 @@ Program {
   Import(path="object_linker_map_opcodes.aos")
   Import(path="object_linker_byte_ranges.aos")
   Import(path="object_linker_constant_plan.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=objectLinker.emitAibc1Bytes)
   Export(name=objectLinker.emitAibc1BytesFromLayout)
   Export(name=objectLinker.emitAibc1BytesFromPlan)

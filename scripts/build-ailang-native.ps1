@@ -77,6 +77,7 @@ $sources = @(
   (Join-Path $nativeSrc 'aivm_vm_text.c'),
   (Join-Path $nativeSrc 'aivm_vm_value.c'),
   (Join-Path $nativeSrc 'aivm_program.c'),
+  (Join-Path $nativeSrc 'aivm_program_constants.c'),
   (Join-Path $nativeSrc 'aivm_host_abi.c'),
   (Join-Path $nativeSrc 'aivm_debugger.c'),
   (Join-Path $nativeSrc 'aivm_module_cache.c'),

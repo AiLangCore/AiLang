@@ -1,5 +1,5 @@
 Program {
-  Import(path="../std/collections/map.aos")
+  Import(sdk="ailang" path="std/collections/map.aos")
   Export(name=objectLinker.stringIndexEmpty)
   Export(name=objectLinker.stringIndexFinish)
   Export(name=objectLinker.stringIndexGet)

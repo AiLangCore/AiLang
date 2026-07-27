@@ -54,6 +54,8 @@ Program {
                                                                             If { Eq { Var(name=op) Lit(value="MAKE_LIT_STRING") } Block { Return { Lit(value=44) } } Block {
                                                                               If { Eq { Var(name=op) Lit(value="MAKE_LIT_INT") } Block { Return { Lit(value=45) } } Block {
                                                                                 If { Eq { Var(name=op) Lit(value="MAKE_LIT_BOOL") } Block { Return { Lit(value=46) } } Block {
+                                                                                  If { Eq { Var(name=op) Lit(value="MAKE_FIELD_STRING") } Block { Return { Lit(value=48) } } Block {
+                                                                                    If { Eq { Var(name=op) Lit(value="MAKE_MAP") } Block { Return { Lit(value=49) } } Block {
                                                                                   If { Eq { Var(name=op) Lit(value="MAKE_NODE_EMPTY") } Block { Return { Lit(value=50) } } Block {
                                                                                     If { Eq { Var(name=op) Lit(value="APPEND_ATTR") } Block { Return { Lit(value=51) } } Block {
                                                                                       If { Eq { Var(name=op) Lit(value="STR_FIND") } Block { Return { Lit(value=52) } } Block {
@@ -67,6 +69,8 @@ Program {
                                                                                           } }
                                                                                         } }
                                                                                       } }
+                                                                                    } }
+                                                                                  } }
                                                                                     } }
                                                                                   } }
                                                                                 } }

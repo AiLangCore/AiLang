@@ -1,0 +1,54 @@
+Program {
+  Import(path="../common.aos")
+  Import(path="../manifest.aos")
+  Export(name=runProject)
+
+  Let(name=runProject) {
+    Fn(params=args) {
+      Block {
+        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
+        If {
+          Eq { Var(name=subcmd) Lit(value="version") }
+          Block { Return { Call(target=runProjectVersion) { Var(name=path) } } }
+          Block { Return { Call(target=unknownCommand) { Lit(value="project") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=runProjectVersion) {
+    Fn(params=path) {
+      Block {
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Call(target=missingPath) { Lit(value="project") } } }
+          Block {
+            Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+              Block {
+                Let(name=version) {
+                  Call(target=getManifestAttr) {
+                    Call(target=readTextFile) { Var(name=manifestPath) }
+                    Lit(value="version")
+                    Lit(value=9)
+                  }
+                }
+                If {
+                  Eq { Var(name=version) Lit(value="") }
+                  Block { Return { Call(target=buildError) { Lit(value="AILANG012") Lit(value="Project version must be non-empty.") Lit(value="project") } } }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Var(name=version) }
+                    Return { Lit(value=0) }
+                  }
+                }
+              }
+              Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

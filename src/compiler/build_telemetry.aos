@@ -1,0 +1,121 @@
+Program {
+  Import(sdk="ailang" path="std/time.aos")
+  Export(name=buildTelemetry.now)
+  Export(name=buildTelemetry.phase)
+  Export(name=buildTelemetry.worker)
+  Export(name=buildTelemetry.reloadProgress)
+
+  Let(name=buildTelemetry.now) {
+    Fn() {
+      Block { Return { Call(target=monotonicMs) { Lit(value=0) } } }
+    }
+  }
+
+  Let(name=buildTelemetry.phase) {
+    Fn(params=name,startedAt) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="selfhost-build-phase=")
+            StrConcat {
+              Var(name=name)
+              StrConcat {
+                Lit(value=" milliseconds=")
+                ToString { Sub { Call(target=buildTelemetry.now) {} Var(name=startedAt) } }
+              }
+            }
+          }
+        }
+        Return { Lit(value=0) }
+      }
+    }
+  }
+
+  Let(name=buildTelemetry.worker) {
+    Fn(params=index,moduleCount,startedAt) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="selfhost-worker=")
+            StrConcat {
+              ToString { Var(name=index) }
+              StrConcat {
+                Lit(value=" modules=")
+                StrConcat {
+                  ToString { Var(name=moduleCount) }
+                  StrConcat {
+                    Lit(value=" milliseconds=")
+                    ToString { Sub { Call(target=buildTelemetry.now) {} Var(name=startedAt) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return { Lit(value=0) }
+      }
+    }
+  }
+
+  Let(name=buildTelemetry.reloadProgress) {
+    Fn(params=objectCount,startedAt) {
+      Block {
+        If {
+          Call(target=buildTelemetry.isReloadMilestone) { Var(name=objectCount) }
+          Block {
+            Call(target=sys.stdout.writeLine) {
+              StrConcat {
+                Lit(value="selfhost-reload-objects=")
+                StrConcat {
+                  ToString { Var(name=objectCount) }
+                  StrConcat {
+                    Lit(value=" milliseconds=")
+                    ToString { Sub { Call(target=buildTelemetry.now) {} Var(name=startedAt) } }
+                  }
+                }
+              }
+            }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Lit(value=0) } }
+        }
+      }
+    }
+  }
+
+  Let(name=buildTelemetry.isReloadMilestone) {
+    Fn(params=count) {
+      Block {
+        Return {
+          Call(target=buildTelemetry.isReloadMilestoneAt) {
+            Var(name=count) Lit(value=10)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=buildTelemetry.isReloadMilestoneAt) {
+    Fn(params=count,expected) {
+      Block {
+        If {
+          Eq { Var(name=expected) Lit(value=90) }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { Var(name=count) Var(name=expected) }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=buildTelemetry.isReloadMilestoneAt) {
+                    Var(name=count) Add { Var(name=expected) Lit(value=10) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

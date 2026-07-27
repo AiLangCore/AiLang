@@ -224,9 +224,9 @@ fi
 
 echo "building AiLang from ${AILANG_DIR}..."
 if [[ -d "${AIVM_DIR}/src" ]]; then
-  (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/src" ./build.sh host)
+  (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/src" ./build.sh legacy)
 else
-  (cd "${AILANG_DIR}" && ./build.sh host)
+  (cd "${AILANG_DIR}" && ./build.sh legacy)
 fi
 
 copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"

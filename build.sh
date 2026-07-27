@@ -5,27 +5,38 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 print_usage() {
   cat <<'EOF'
-Usage: ./build.sh [host|selfhost|shared|wasm|all]
+Usage: ./build.sh [selfhost|legacy|shared|wasm|all]
 
 Builds AiLang tooling through the selected installed SDK.
 
 Targets:
-  host    Stage host tools from the selected installed SDK (default).
   selfhost
-          Build the AiLang compiler and CLI through the self-hosted pipeline.
+          Build the AiLang compiler and CLI (default).
+          Module generation defaults to min(logical cores, 4 workers).
+          Override with AILANG_SELFHOST_JOBS or AILANG_SELFHOST_MAX_JOBS.
+  legacy  Build the deprecated native C AiLang bootstrap launcher.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
-  all     Build host and self-hosted tools, then delegated compatibility targets.
+  all     Build self-hosted tools, then delegated compatibility targets.
 EOF
+}
+
+ensure_legacy_bootstrap() {
+  if [[ ! -x "${ROOT_DIR}/tools/ailang" || ! -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+    echo "selfhost-bootstrap=legacy reason=missing-bootstrap-tools" >&2
+    run_target legacy
+  fi
 }
 
 run_target() {
   local target="$1"
   case "${target}" in
-    host)
+    legacy)
       "${ROOT_DIR}/scripts/build-ailang-native.sh"
+      "${ROOT_DIR}/scripts/build-ailang-builtins.sh"
       ;;
     selfhost)
+      ensure_legacy_bootstrap
       "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
       ;;
     shared)
@@ -35,8 +46,7 @@ run_target() {
       "${ROOT_DIR}/scripts/build-aivm-wasm.sh"
       ;;
     all)
-      run_target host
-      "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+      run_target selfhost
       run_target shared
       run_target wasm
       ;;
@@ -51,4 +61,4 @@ run_target() {
   esac
 }
 
-run_target "${1:-host}"
+run_target "${1:-selfhost}"

@@ -3,7 +3,7 @@ Program {
   Import(path="object_linker_emit.aos")
   Import(path="object_linker_core.aos")
   Import(path="object_linker_entry.aos")
-  Import(path="../std/bytes.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
   Export(name=objectLinker.collectFunctions)
   Export(name=objectLinker.resolveTargetName)
   Export(name=objectLinker.assignOffsets)

@@ -472,7 +472,7 @@ jobs:
           set -euo pipefail
           AILANG_NATIVE_PLATFORM=linux \
           AILANG_NATIVE_ARCH=x64 \
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
 
       - name: Build canonical bytecode CLI payload
         shell: bash

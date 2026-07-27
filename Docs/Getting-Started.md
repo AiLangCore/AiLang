@@ -45,7 +45,9 @@ cat examples/golden/run_var.in.aos | ./tools/ailang run --vm=ast src/compiler/ai
 
 ## Expected Output
 
-- `build.sh`: canonical tooling bootstrap entrypoint. Default target rebuilds `tools/ailang`.
+- `build.sh`: canonical build entrypoint. The default target builds the
+  self-hosted AiLang compiler and CLI.
+- `build.sh legacy`: rebuilds the deprecated native C bootstrap launcher.
 - `build.sh shared`: builds the shared AiVM native library.
 - `build.sh wasm`: builds wasm runtime artifacts.
 - `build.sh all`: builds all bootstrap artifacts.

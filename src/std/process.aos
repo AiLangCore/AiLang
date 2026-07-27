@@ -1,4 +1,7 @@
 Program {
+  Import(path="process/execute.aos")
+  Import(path="process/result.aos")
+
   Let(name=args) {
     Fn(params=_) {
       Block {
@@ -96,4 +99,9 @@ Program {
   Export(name=stdoutRead)
   Export(name=stderrRead)
   Export(name=exit)
+  Export(name=runCaptured)
+  Export(name=processResult)
+  Export(name=processResultExitCode)
+  Export(name=processResultStdoutText)
+  Export(name=processResultStderrText)
 }

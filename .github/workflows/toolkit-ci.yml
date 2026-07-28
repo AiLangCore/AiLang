@@ -104,10 +104,9 @@ jobs:
         shell: bash
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
-          AILANG_SELFHOST_MAX_JOBS: 1
         run: |
           set -euo pipefail
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
           test -x ./tools/ailang
 
       - name: Stage AiLang tools (Windows)
@@ -115,10 +114,9 @@ jobs:
         shell: pwsh
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
-          AILANG_SELFHOST_MAX_JOBS: 1
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
-          ./build.ps1
+          ./build.ps1 legacy
           if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
       - name: Stage frontend parser (non-Windows)

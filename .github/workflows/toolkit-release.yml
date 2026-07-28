@@ -91,6 +91,7 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
           AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
           AILANG_BUILD_CHANNEL: beta
+          AILANG_SELFHOST_MAX_JOBS: 1
         run: |
           set -euo pipefail
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
@@ -103,6 +104,7 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
           AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
           AILANG_BUILD_CHANNEL: beta
+          AILANG_SELFHOST_MAX_JOBS: 1
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
@@ -273,7 +275,7 @@ jobs:
           set -euo pipefail
           AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
           AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./scripts/build-ailang-native.sh
 
       - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
@@ -284,8 +286,9 @@ jobs:
           AILANG_BUILD_CHANNEL: beta
         run: |
           $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_PLATFORM = '${{ matrix.platform }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
-          ./build.ps1
+          ./scripts/build-ailang-native.ps1
 
       - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'

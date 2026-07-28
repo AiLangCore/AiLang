@@ -98,7 +98,7 @@ jobs:
           mkdir -p ./dist
           AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
           AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
-          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
 
@@ -112,7 +112,7 @@ jobs:
           $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
           $env:AILANG_NATIVE_PLATFORM = '${{ matrix.platform }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
-          ./build.ps1
+          ./build.ps1 legacy
           Copy-Item .\tools\ailang.exe ".\dist\${{ matrix.airun }}"
 
       - name: Stage frontend parser (Unix)

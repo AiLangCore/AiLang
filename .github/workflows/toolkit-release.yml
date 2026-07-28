@@ -452,6 +452,20 @@ jobs:
           ref: develop
           path: AiVM
 
+      - name: Checkout AiLang core packages
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/ailang-core-packages
+          ref: main
+          path: ailang-core-packages
+
+      - name: Checkout AiLang package registry
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/ailang-packages
+          ref: main
+          path: ailang-packages
+
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v16
         with:
@@ -469,18 +483,21 @@ jobs:
         shell: bash
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+          AILANG_PACKAGE_REGISTRY: ${{ github.workspace }}/ailang-packages
+          AILANG_STD_CLI_SOURCE_DIR: ${{ github.workspace }}/ailang-core-packages/packages/std-cli
         run: |
           set -euo pipefail
           AILANG_NATIVE_PLATFORM=linux \
           AILANG_NATIVE_ARCH=x64 \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
+          ./build.sh selfhost
 
       - name: Build canonical bytecode CLI payload
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist/libexec/ailang/cli
-          ./tools/ailang build ./src/cli/ailang.aos --out ./dist/libexec/ailang/cli --no-cache >/dev/null
+          cp ./.artifacts/ailang-selfhost/bin/ailang.aibc1 ./dist/libexec/ailang/cli/app.aibc1
           test -f ./dist/libexec/ailang/cli/app.aibc1
 
       - name: Upload bytecode CLI payload

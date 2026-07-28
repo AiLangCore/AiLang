@@ -78,7 +78,7 @@ phase_begin stage-project
 phase_end
 
 phase_begin package-restore
-AILANG_PACKAGE_REGISTRY="${ROOT_DIR}/../ailang-packages" \
+AILANG_PACKAGE_REGISTRY="${AILANG_PACKAGE_REGISTRY:-${ROOT_DIR}/../ailang-packages}" \
 AILANG_COMMAND_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_COMMAND_ROOT="${OUT_DIR}/bin/commands" \
 AILANG_VM_PROFILE=tooling \

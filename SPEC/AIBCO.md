@@ -41,7 +41,7 @@ Object(
 }
 ```
 
-`Object`, `Import`, `Export`, `Function`, and `Reloc` are compiler/linker
+`Object`, `Import`, `Export`, `Function`, `WorkerDecl`, and `Reloc` are compiler/linker
 metadata. They are not runtime semantic nodes and are not passed to AiVM.
 
 ## Required Fields
@@ -60,6 +60,18 @@ metadata. They are not runtime semantic nodes and are not passed to AiVM.
   duplicate fully-qualified `Symbol.symbol`. The linker repeats that check for
   independently supplied objects.
 - `Function.params` and `Function.locals` use canonical comma-separated order.
+- `WorkerDecl.name` is the structural declaration name.
+- `WorkerDecl.symbol` is `<modulePath>::worker::<name>`.
+- `WorkerDecl.targetSymbol` is the already-resolved exported function symbol.
+  Ordered `RequiredSyscall(target=...)` children record statically reachable
+  host boundaries in deterministic first-structural-use order. Artifact
+  identity, ABI, bytecode version, and capability-mask fields are added only by
+  the later bundling/catalog-enrichment phase; source and AiBCO producers do
+  not invent them.
+- `WorkerRef(name=<worker-name>)` lowers to `Inst(op="WORKER_REF" a=0)`
+  followed by `Reloc(kind="worker" instruction=<canonical instruction index>
+  targetSymbol="<modulePath>::worker::<worker-name>")`. The placeholder operand
+  is never used as the catalog selection result.
 - `Reloc.kind` is one of `call`, `const`, `jump`, `entry`, or `worker`.
 - `Reloc.instruction` is a zero-based instruction index in its owning function.
 - A `call` relocation has exactly one of `Reloc.targetName` or

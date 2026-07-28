@@ -34,13 +34,43 @@ Program {
           Block { Return { Lit(value=3) } }
         }
         If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="WORKER_REF") } Lit(value=88) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=7) } }
+        }
+        If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="WORKER_RUN") } Lit(value=89) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=8) } }
+        }
+        If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="TASK_CANCEL") } Lit(value=90) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=9) } }
+        }
+        If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="WORKER_RUN_ALL") } Lit(value=91) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=11) } }
+        }
+        If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="WORKER_TASK_AT") } Lit(value=92) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=12) } }
+        }
+        If {
+          Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="AWAIT") } Lit(value=25) }
+          Block { Lit(value=0) }
+          Block { Return { Lit(value=10) } }
+        }
+        If {
           Eq { Call(target=objectLinker.nativeOpcode) { Lit(value="UNKNOWN") } Lit(value=-1) }
           Block { Lit(value=0) }
           Block { Return { Lit(value=4) } }
         }
         Let(name=object) {
           Call(target=parse.parseDocument) {
-            Lit(value="Object(format=AiBCO1 version=1 modulePath=\"app.aos\") { Function(name=start symbol=\"app.aos::start\" params=\"\") { Inst(op=STR_REMOVE) Inst(op=STR_FROM_CODEPOINT) Inst(op=BYTES_LENGTH) Inst(op=NODE_BUILDER_FINISH) Inst(op=RETURN) } }")
+            Lit(value="Object(format=AiBCO1 version=1 modulePath=\"app.aos\") { Function(name=start symbol=\"app.aos::start\" params=\"\") { Inst(op=STR_REMOVE) Inst(op=STR_FROM_CODEPOINT) Inst(op=BYTES_LENGTH) Inst(op=NODE_BUILDER_FINISH) Inst(op=WORKER_REF a=0) Inst(op=WORKER_RUN) Inst(op=TASK_CANCEL) Inst(op=WORKER_RUN_ALL a=1) Inst(op=WORKER_TASK_AT) Inst(op=AWAIT) Inst(op=RETURN) } }")
           }
         }
         Let(name=functions) { Call(target=objectLinker.collectFunctions) { AppendChild { MakeBlock { Lit(value="objects") } Var(name=object) } } }

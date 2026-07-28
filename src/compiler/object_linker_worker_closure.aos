@@ -1,0 +1,309 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Export(name=objectLinker.workerFunctionClosure)
+
+  Let(name=objectLinker.workerFunctionClosure) {
+    Fn(params=functions,targetSymbol) {
+      Block {
+        Let(name=seed) {
+          AppendChild {
+            MakeBlock { Lit(value="worker-reachable-symbols") }
+            MakeLitString { Lit(value="symbol") Var(name=targetSymbol) }
+          }
+        }
+        Let(name=expanded) {
+          Call(target=objectLinker.expandWorkerSymbols) {
+            Var(name=functions) Var(name=seed) Lit(value=0)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=expanded) } Lit(value="Err") }
+          Block { Return { Var(name=expanded) } }
+          Block {
+            Return {
+              Call(target=objectLinker.filterWorkerFunctions) {
+                Var(name=functions) Var(name=expanded) Lit(value=0)
+                MakeBlock { Lit(value="worker-functions") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.expandWorkerSymbols) {
+    Fn(params=functions,symbols,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=symbols) } }
+          Block { Return { Var(name=symbols) } }
+          Block {
+            Let(name=symbol) {
+              AttrValueString { ChildAt { Var(name=symbols) Var(name=index) } Lit(value=0) }
+            }
+            Let(name=record) {
+              Call(target=objectLinker.workerFunctionBySymbol) {
+                Var(name=functions) Var(name=symbol) Lit(value=0)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=record) } Lit(value="Err") }
+              Block { Return { Var(name=record) } }
+              Block {
+                Let(name=withCalls) {
+                  Call(target=objectLinker.collectWorkerFunctionCalls) {
+                    ChildAt { Var(name=record) Lit(value=4) }
+                    Var(name=functions) Lit(value=0) Var(name=symbols)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=withCalls) } Lit(value="Err") }
+                  Block { Return { Var(name=withCalls) } }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.expandWorkerSymbols) {
+                        Var(name=functions) Var(name=withCalls)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectWorkerFunctionCalls) {
+    Fn(params=functionNode,functions,index,symbols) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { Var(name=symbols) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextSymbols) {
+              If {
+                Eq { NodeKind { Var(name=child) } Lit(value="Reloc") }
+                Block {
+                  If {
+                    Eq {
+                      Call(target=objectLinker.workerClosureAttr) {
+                        Var(name=child) Lit(value="kind") Lit(value=0)
+                      }
+                      Lit(value="call")
+                    }
+                    Block {
+                      Let(name=resolved) {
+                        Call(target=objectLinker.resolveWorkerCallSymbol) {
+                          Var(name=child) Var(name=functions)
+                        }
+                      }
+                      If {
+                        Eq { NodeKind { Var(name=resolved) } Lit(value="Err") }
+                        Block { Var(name=resolved) }
+                        Block {
+                          Let(name=resolvedSymbol) {
+                            AttrValueString { Var(name=resolved) Lit(value=0) }
+                          }
+                          If {
+                            Call(target=objectLinker.workerSymbolContains) {
+                              Var(name=symbols) Var(name=resolvedSymbol) Lit(value=0)
+                            }
+                            Block { Var(name=symbols) }
+                            Block {
+                              AppendChild {
+                                Var(name=symbols)
+                                MakeLitString {
+                                  Lit(value="symbol") Var(name=resolvedSymbol)
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    Block { Var(name=symbols) }
+                  }
+                }
+                Block { Var(name=symbols) }
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=nextSymbols) } Lit(value="Err") }
+              Block { Return { Var(name=nextSymbols) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.collectWorkerFunctionCalls) {
+                    Var(name=functionNode) Var(name=functions)
+                    Add { Var(name=index) Lit(value=1) } Var(name=nextSymbols)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerCallSymbol) {
+    Fn(params=relocation,functions) {
+      Block {
+        Let(name=targetSymbol) {
+          Call(target=objectLinker.workerClosureAttr) {
+            Var(name=relocation) Lit(value="targetSymbol") Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=targetSymbol) Lit(value="") }
+          Block {
+            Return {
+              Call(target=objectLinker.resolveTargetName) {
+                Var(name=functions)
+                Call(target=objectLinker.workerClosureAttr) {
+                  Var(name=relocation) Lit(value="targetName") Lit(value=0)
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=found) {
+              Call(target=objectLinker.workerFunctionBySymbol) {
+                Var(name=functions) Var(name=targetSymbol) Lit(value=0)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=found) } Lit(value="Err") }
+              Block { Return { Var(name=found) } }
+              Block {
+                Return { MakeLitString { Lit(value="symbol") Var(name=targetSymbol) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.filterWorkerFunctions) {
+    Fn(params=functions,symbols,index,result) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=result) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=symbol) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) }
+            }
+            Let(name=next) {
+              If {
+                Call(target=objectLinker.workerSymbolContains) {
+                  Var(name=symbols) Var(name=symbol) Lit(value=0)
+                }
+                Block { AppendChild { Var(name=result) Var(name=record) } }
+                Block { Var(name=result) }
+              }
+            }
+            Return {
+              Call(target=objectLinker.filterWorkerFunctions) {
+                Var(name=functions) Var(name=symbols)
+                Add { Var(name=index) Lit(value=1) } Var(name=next)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerFunctionBySymbol) {
+    Fn(params=functions,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="object_linker") Lit(value="LINKW007")
+                Lit(value="Worker reachable function is unresolved.") Var(name=symbol)
+              }
+            }
+          }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            If {
+              Eq {
+                AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) }
+                Var(name=symbol)
+              }
+              Block { Return { Var(name=record) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerFunctionBySymbol) {
+                    Var(name=functions) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerSymbolContains) {
+    Fn(params=symbols,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=symbols) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString { ChildAt { Var(name=symbols) Var(name=index) } Lit(value=0) }
+                Var(name=symbol)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerSymbolContains) {
+                    Var(name=symbols) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerClosureAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerClosureAttr) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

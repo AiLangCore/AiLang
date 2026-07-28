@@ -15,6 +15,8 @@ Program {
   Import(path="lower/returns/routing.aos")
   Import(path="lower/returns/parameters.aos")
   Import(path="lower/returns/void.aos")
+  Import(path="lower/returns/workers.aos")
+  Import(path="lower/returns/worker_batches.aos")
   Import(path="lower/control/value_if.aos")
   Import(path="lower/control/native_branches.aos")
   Import(path="lower/control/statement_binding.aos")
@@ -23,6 +25,7 @@ Program {
   Import(path="lower/expressions/policy.aos")
   Import(path="lower/expressions/byte_opcodes.aos")
   Import(path="lower/expressions/map_opcodes.aos")
+  Import(path="lower/expressions/worker_opcodes.aos")
   Import(path="lower/expressions/opcodes.aos")
   Import(path="lower/expressions/variadic.aos")
   Import(path="lower/expressions/syscalls.aos")
@@ -120,26 +123,38 @@ Program {
           Block {
             Let(name=value) { ChildAt { Var(name=returnNode) Lit(value=0) } }
             If {
-              Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+              Eq { NodeKind { Var(name=value) } Lit(value="WorkerRef") }
               Block {
-                Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
-                Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
-                Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
-                Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Var(name=params) Call(target=lower.literalConstantTarget) { Var(name=value) } } }
+                Return {
+                  Call(target=lower.emitStructuralWorkerRefRecordPlan) {
+                    Var(name=record) Var(name=value)
+                  }
+                }
               }
               Block {
                 If {
-                  Eq { NodeKind { Var(name=value) } Lit(value="Call") }
-                  Block { Return { Call(target=lower.emitStructuralCallRecordPlan) { Var(name=record) } } }
+                  Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+                  Block {
+                    Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+                    Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+                    Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+                    Return { Call(target=lower.emitStructuralReturnLiteralPlan) { Var(name=name) Var(name=symbol) Var(name=params) Call(target=lower.literalConstantTarget) { Var(name=value) } } }
+                  }
                   Block {
                     If {
-                      Eq { NodeKind { Var(name=value) } Lit(value="Match") }
-                      Block { Return { Call(target=lower.emitStructuralMatchRecordPlan) { Var(name=record) } } }
+                      Eq { NodeKind { Var(name=value) } Lit(value="Call") }
+                      Block { Return { Call(target=lower.emitStructuralCallRecordPlan) { Var(name=record) } } }
                       Block {
                         If {
-                          Eq { NodeKind { Var(name=value) } Lit(value="Var") }
-                          Block { Return { Call(target=lower.emitStructuralParameterReturnRecordPlan) { Var(name=record) } } }
-                          Block { Return { Call(target=lower.emitStructuralParameterBinaryRecordPlan) { Var(name=record) } } }
+                          Eq { NodeKind { Var(name=value) } Lit(value="Match") }
+                          Block { Return { Call(target=lower.emitStructuralMatchRecordPlan) { Var(name=record) } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=value) } Lit(value="Var") }
+                              Block { Return { Call(target=lower.emitStructuralParameterReturnRecordPlan) { Var(name=record) } } }
+                              Block { Return { Call(target=lower.emitStructuralParameterBinaryRecordPlan) { Var(name=record) } } }
+                            }
+                          }
                         }
                       }
                     }

@@ -48,6 +48,32 @@ Catalog entries contain no host path, package-cache path, runtime module name,
 or raw function-name lookup. The loader verifies embedded artifact identity
 before producing an opaque non-forgeable `WorkerRef`.
 
+The binary WorkerCatalog section uses section type `3`. Its payload begins with
+`entryCount:u32`, followed by canonical entries:
+
+```text
+functionTarget:u32
+capabilityMask:u32
+transportAbi:u32
+bytecodeVersion:u32
+artifactLength:u32
+identity:bytes[32]
+artifact:bytes[artifactLength]
+```
+
+All integers are little-endian. `transportAbi=1` is the initial
+`Fn(bytes)->bytes` ABI. The initial capability-mask bits are filesystem `1`,
+process `2`, network `4`, environment `8`, clock `16`, random `32`, UI `64`,
+debug `128`, remote `256`, and standard streams `512`.
+
+The 32-byte content identity is eight deterministic unsigned 32-bit rolling
+lanes over the little-endian metadata prefix followed by the exact artifact
+bytes. Each byte updates lane `i` as
+`state=(state*16777619+byte+i) mod 2^32`; lane seeds and output order are fixed
+by the matching AiLang emitter and AiVM loader golden. This identity detects
+accidental or post-build substitution. Package authenticity remains the
+package-signature and trust-policy layer's responsibility.
+
 ## Constant Pool
 
 Each `Const` child represents one constant.
@@ -107,6 +133,42 @@ The initial collection opcode assignments are:
 | `MAP_COUNT` | 85 | `map -- int` |
 | `MAP_HAS_STRING` | 86 | `map string -- bool` |
 | `MAP_GET_STRING_INT_OR` | 87 | `map string int -- int` |
+
+The initial worker/Task opcode assignments are:
+
+| Opcode | Number | Stack contract |
+|---|---:|---|
+| `WORKER_REF` | 88 | `-- workerRef` (`a` is a validated catalog index) |
+| `WORKER_RUN` | 89 | `workerRef bytes -- task` |
+| `TASK_CANCEL` | 90 | `task -- bool` |
+| `WORKER_RUN_ALL` | 91 | `workerRef batchBytes -- workerTasks` (`a=1` transport version) |
+| `WORKER_TASK_AT` | 92 | `workerTasks int -- task` |
+
+`WORKER_REF` performs no path, package, or function-name lookup. Its operand is
+the zero-based index of an entry in the already validated bundled
+`WorkerCatalog`. `WORKER_RUN` copies its bytes payload into owner-bound task
+storage and submits the catalog capability to the VM-owned scheduler.
+`TASK_CANCEL` is general Task syntax; this initial runtime stage accepts
+cancellation for queued worker Tasks and returns `false` for already-running or
+terminal work. Later cooperative cancellation may extend the accepted states
+without exposing physical worker handles.
+
+`WORKER_RUN_ALL` transport version `1` accepts canonical batch bytes consisting
+of zero or more `u32le payloadLength` plus exact payload-byte records. At least
+one record is required. Record order is canonical workload index order.
+Truncated framing, trailing partial records, unsupported transport versions,
+and workloads exceeding profile transport or workload-metadata limits are
+rejected before returning a `WorkerTasks` value.
+
+`WORKER_RUN_ALL` preserves record order as canonical workload index order.
+The VM retains the immutable batch bytes and canonical record offsets, then
+materializes only the deterministic owner Task window. Physical execution
+remains bounded independently and drains pending work in completion order.
+Consuming a Task through `AWAIT` releases one owner-visible materialization
+credit and refills the next canonical logical index. `WORKER_TASK_AT` selects
+only by explicit canonical index; completion order is not observable through
+it. Canonical forward observation therefore progresses through workloads larger
+than the owner Task table without unbounded Task or result storage.
 
 `mapBuilder` is transient compiler/library construction state and must not cross
 message, syscall, persistence, or debugger boundaries. `map` is immutable after

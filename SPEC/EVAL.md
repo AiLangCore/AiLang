@@ -145,12 +145,29 @@ This file is normative for `aic run` evaluation behavior.
 
 ## Worker Execution Contract
 
+- `WorkerRef(name=<worker-name>)` has no runtime name-resolution step. The
+  builder replaces its canonical worker relocation with a validated catalog
+  index, and `WORKER_REF` mechanically creates the opaque capability for that
+  already-resolved entry.
 - The owner VM owns a bounded, work-conserving mechanical scheduler. AiLang
   declares logical work and dependencies; AiVM chooses physical concurrency,
   pending dispatch, isolation mechanism, slot reuse, buffering, and cleanup.
 - `std.worker.run` admits one logical invocation. `std.worker.runAll` atomically
   admits an ordered logical workload which may be larger than the bounded
   materialized pending queue.
+- `WORKER_RUN_ALL` retains one immutable logical workload but materializes no
+  more than the deterministic owner Task bound. Pending tasks may exceed active
+  worker slots, and physical workers remain work-conserving within that window.
+  First `Await` consumption releases one materialization credit and admits the
+  next canonical logical index. Background completion alone does not change
+  owner-visible admission or materialization credit.
+- Canonical forward `taskAt`/`Await` observation is guaranteed to progress
+  across windows. Requesting an index beyond the current materialized window
+  produces a stable resource-bound failure in this stage; arbitrary
+  out-of-window observation requires the follow-up virtual-Task contract.
+- `std.worker.batch.append` deterministically appends one length-prefixed bytes
+  payload to the canonical batch envelope. AiVM validates only this mechanical
+  framing and never interprets an individual payload.
 - Admission depends only on owner-visible accounting established before
   execution. Background completion must not change whether a later owner
   submission succeeds. Rejection is an immediate stable `Err` and allocates no

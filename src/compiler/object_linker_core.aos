@@ -9,6 +9,7 @@ Program {
   Export(name=objectLinker.emitAibc1Bytes)
   Export(name=objectLinker.emitAibc1BytesFromLayout)
   Export(name=objectLinker.emitAibc1BytesFromPlan)
+  Export(name=objectLinker.emitAibc1BytesWithWorkerSection)
   Export(name=objectLinker.validateSupported)
   Let(name=objectLinker.emitAibc1Bytes) {
     Fn(params=functions) {
@@ -31,6 +32,49 @@ Program {
         Return {
           Call(target=objectLinker.emitAibc1BytesFromPlan) {
             Var(name=functions) Var(name=layout) Var(name=constants) PairSecond { Var(name=constantPlan) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitAibc1BytesWithWorkerSection) {
+    Fn(params=functions,workerSection) {
+      Block {
+        Let(name=layout) { Call(target=objectLinker.assignOffsets) { Var(name=functions) } }
+        Let(name=constantPlan) { Call(target=objectLinker.buildConstantPlan) { Var(name=functions) } }
+        Let(name=constants) { PairFirst { Var(name=constantPlan) } }
+        Let(name=constantOperands) { PairSecond { Var(name=constantPlan) } }
+        Let(name=instructions) {
+          Call(target=objectLinker.emitFunctionsBytes) {
+            Var(name=functions) Var(name=functions) Var(name=layout) Var(name=constants)
+            Var(name=constantOperands) Lit(value=0)
+          }
+        }
+        Let(name=constantBytes) {
+          Call(target=objectLinker.emitConstantBytes) { Var(name=constants) Lit(value=0) }
+        }
+        Let(name=instructionPayloadSize) {
+          Add { Lit(value=4) Call(target=bytes.length) { Var(name=instructions) } }
+        }
+        Let(name=constantPayloadSize) {
+          Add { Lit(value=4) Call(target=bytes.length) { Var(name=constantBytes) } }
+        }
+        Return {
+          Call(target=objectLinker.cat2) {
+            Call(target=objectLinker.cat3) {
+              Call(target=objectLinker.header) { Lit(value=3) }
+              Call(target=objectLinker.instructionSection) {
+                Var(name=instructionPayloadSize)
+                Call(target=objectLinker.totalInstructionCount) { Var(name=layout) Lit(value=0) }
+                Var(name=instructions)
+              }
+              Call(target=objectLinker.constantSection) {
+                Var(name=constantPayloadSize) ChildCount { Var(name=constants) }
+                Var(name=constantBytes)
+              }
+            }
+            Var(name=workerSection)
           }
         }
       }
@@ -591,7 +635,16 @@ Program {
                                                                         If {
                                                                           Eq { Var(name=op) Lit(value="LT_NUM") }
                                                                           Block { Return { Call(target=objectLinker.inst) { Lit(value=72) Lit(value=0) } } }
-                                                                          Block { Return { Call(target=objectLinker.inst) { Call(target=objectLinker.nativeOpcode) { Var(name=op) } Lit(value=0) } } }
+                                                                          Block {
+                                                                            Return {
+                                                                              Call(target=objectLinker.inst) {
+                                                                                Call(target=objectLinker.nativeOpcode) { Var(name=op) }
+                                                                                Call(target=objectLinker.workerNativeOperand) {
+                                                                                  Var(name=op) Var(name=instructionNode)
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
                                                                         }
                                                                       }
                                                                     }

@@ -1,4 +1,4 @@
-# Task: AiLang Self-Hosting Rewrite
+# AiLang Self-Hosting Rewrite
 
 Status: active migration plan.
 

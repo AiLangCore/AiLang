@@ -1,0 +1,277 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_workers.aos")
+  Export(name=objectLinker.resolveWorkerFunctionRelocations)
+
+  Let(name=objectLinker.resolveWorkerFunctionRelocations) {
+    Fn(params=functions,catalog) {
+      Block {
+        Return {
+          Call(target=objectLinker.resolveWorkerFunctionRecordsAt) {
+            Var(name=functions) Var(name=catalog) Lit(value=0)
+            MakeBlock { Lit(value="functions") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerFunctionRecordsAt) {
+    Fn(params=functions,catalog,index,resolvedFunctions) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=resolvedFunctions) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=resolvedRecord) {
+              Call(target=objectLinker.resolveWorkerFunctionRecord) {
+                Var(name=record) Var(name=catalog)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=resolvedRecord) } Lit(value="Err") }
+              Block { Return { Var(name=resolvedRecord) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.resolveWorkerFunctionRecordsAt) {
+                    Var(name=functions) Var(name=catalog)
+                    Add { Var(name=index) Lit(value=1) }
+                    AppendChild { Var(name=resolvedFunctions) Var(name=resolvedRecord) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerFunctionRecord) {
+    Fn(params=record,catalog) {
+      Block {
+        Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=resolvedFunction) {
+          Call(target=objectLinker.resolveWorkerFunctionChildrenAt) {
+            Var(name=functionNode) Var(name=catalog) Lit(value=0) Lit(value=0)
+            Call(target=objectLinker.workerFunctionShell) { Var(name=functionNode) }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=resolvedFunction) } Lit(value="Err") }
+          Block { Return { Var(name=resolvedFunction) } }
+          Block {
+            Let(name=withModule) {
+              AppendChild {
+                MakeBlock { Lit(value="worker-resolved-function-record") }
+                ChildAt { Var(name=record) Lit(value=0) }
+              }
+            }
+            Let(name=withName) {
+              AppendChild { Var(name=withModule) ChildAt { Var(name=record) Lit(value=1) } }
+            }
+            Let(name=withSymbol) {
+              AppendChild { Var(name=withName) ChildAt { Var(name=record) Lit(value=2) } }
+            }
+            Let(name=withParams) {
+              AppendChild { Var(name=withSymbol) ChildAt { Var(name=record) Lit(value=3) } }
+            }
+            Return { AppendChild { Var(name=withParams) Var(name=resolvedFunction) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerFunctionShell) {
+    Fn(params=functionNode) {
+      Block {
+        Let(name=base) {
+          MakeNode {
+            Lit(value="Function")
+            StrConcat { Lit(value="worker-resolved:") NodeId { Var(name=functionNode) } }
+          }
+        }
+        Let(name=withName) {
+          AppendAttr {
+            Var(name=base)
+            MakeLitString {
+              Lit(value="name")
+              Call(target=objectLinker.getAttr) {
+                Var(name=functionNode) Lit(value="name") Lit(value=0)
+              }
+            }
+          }
+        }
+        Let(name=withSymbol) {
+          AppendAttr {
+            Var(name=withName)
+            MakeLitString {
+              Lit(value="symbol")
+              Call(target=objectLinker.getAttr) {
+                Var(name=functionNode) Lit(value="symbol") Lit(value=0)
+              }
+            }
+          }
+        }
+        Let(name=withParams) {
+          AppendAttr {
+            Var(name=withSymbol)
+            MakeLitString {
+              Lit(value="params")
+              Call(target=objectLinker.getAttr) {
+                Var(name=functionNode) Lit(value="params") Lit(value=0)
+              }
+            }
+          }
+        }
+        Return {
+          AppendAttr {
+            Var(name=withParams)
+            MakeLitString {
+              Lit(value="locals")
+              Call(target=objectLinker.getAttr) {
+                Var(name=functionNode) Lit(value="locals") Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerFunctionChildrenAt) {
+    Fn(params=functionNode,catalog,childIndex,instructionIndex,resolvedFunction) {
+      Block {
+        If {
+          Eq { Var(name=childIndex) ChildCount { Var(name=functionNode) } }
+          Block { Return { Var(name=resolvedFunction) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=childIndex) } }
+            Let(name=isInstruction) {
+              Eq { NodeKind { Var(name=child) } Lit(value="Inst") }
+            }
+            Let(name=resolvedChild) {
+              Call(target=objectLinker.resolveWorkerChild) {
+                Var(name=functionNode) Var(name=child) Var(name=isInstruction)
+                Var(name=childIndex) Var(name=instructionIndex) Var(name=catalog)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=resolvedChild) } Lit(value="Err") }
+              Block { Return { Var(name=resolvedChild) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.resolveWorkerFunctionChildrenAt) {
+                    Var(name=functionNode) Var(name=catalog)
+                    Add { Var(name=childIndex) Lit(value=1) }
+                    Call(target=objectLinker.nextWorkerInstructionIndex) {
+                      Var(name=instructionIndex) Var(name=isInstruction)
+                    }
+                    AppendChild { Var(name=resolvedFunction) Var(name=resolvedChild) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerChild) {
+    Fn(params=functionNode,child,isInstruction,childIndex,instructionIndex,catalog) {
+      Block {
+        If {
+          Var(name=isInstruction)
+          Block {
+            If {
+              Eq {
+                Call(target=objectLinker.getAttr) {
+                  Var(name=child) Lit(value="op") Lit(value=0)
+                }
+                Lit(value="WORKER_REF")
+              }
+              Block {
+                Return {
+                  Call(target=objectLinker.resolveWorkerInstruction) {
+                    Var(name=functionNode) Var(name=child)
+                    Var(name=childIndex) Var(name=instructionIndex) Var(name=catalog)
+                  }
+                }
+              }
+              Block { Return { Var(name=child) } }
+            }
+          }
+          Block { Return { Var(name=child) } }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.nextWorkerInstructionIndex) {
+    Fn(params=instructionIndex,isInstruction) {
+      Block {
+        If {
+          Var(name=isInstruction)
+          Block { Return { Add { Var(name=instructionIndex) Lit(value=1) } } }
+          Block { Return { Var(name=instructionIndex) } }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerInstruction) {
+    Fn(params=functionNode,instruction,childIndex,instructionIndex,catalog) {
+      Block {
+        Let(name=relocation) {
+          Call(target=objectLinker.findReloc) {
+            Var(name=functionNode) Var(name=instructionIndex)
+            Add { Var(name=childIndex) Lit(value=1) }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=relocation) } Lit(value="Err") }
+          Block { Return { Var(name=relocation) } }
+          Block {
+            Let(name=resolved) {
+              Call(target=objectLinker.resolveWorkerRelocation) {
+                Var(name=catalog) Var(name=relocation)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=resolved) } Lit(value="Err") }
+              Block { Return { Var(name=resolved) } }
+              Block {
+                Let(name=base) {
+                  MakeNode {
+                    Lit(value="Inst")
+                    StrConcat {
+                      Lit(value="worker-ref-inst:")
+                      ToString { Var(name=instructionIndex) }
+                    }
+                  }
+                }
+                Let(name=withOp) {
+                  AppendAttr {
+                    Var(name=base)
+                    MakeLitString { Lit(value="op") Lit(value="WORKER_REF") }
+                  }
+                }
+                Return {
+                  AppendAttr {
+                    Var(name=withOp)
+                    MakeLitInt {
+                      Lit(value="a") AttrValueInt { Var(name=resolved) Lit(value=0) }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

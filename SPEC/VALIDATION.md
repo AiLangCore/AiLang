@@ -124,6 +124,10 @@ This file is normative for semantic validation used by `aic check` (default path
 - `Worker` declarations resolve structurally through the restored project and
   package graph. Their `Function.target` must exist, be exported, have exact
   signature `Fn(bytes) -> bytes`, and have no captured environment.
+- An unqualified worker `Function.target` is resolved only among functions in
+  the declaring module. Same-named functions in other modules do not satisfy
+  the declaration; qualified imported/package targets require their specified
+  project/package resolution form.
 - Validation computes the target's transitive reachable code, immutable data,
   and statically required capabilities. Required capabilities must be permitted
   by the worker declaration when a ceiling is present and by project policy.
@@ -132,8 +136,14 @@ This file is normative for semantic validation used by `aic check` (default path
 - `WorkerRef`, `Task`, and `WorkerTasks` values are opaque and non-forgeable.
   They are rejected in constants, worker payloads/results, persisted values,
   linker records, canonical output, equality, ordering, and hashing.
+- `WorkerRef(name=<worker-name>)` must name a validated `Worker` declaration in
+  the current module. Missing, empty, duplicate, or non-worker targets are
+  rejected before final bytecode emission. The validated reference lowers to a
+  worker relocation whose target is `<modulePath>::worker::<worker-name>`.
 - `std.worker.run` accepts `(WorkerRef,bytes)`.
 - `std.worker.runAll` accepts `(WorkerRef,ordered bytes collection)`.
+- The initial ordered bytes collection is the canonical worker batch envelope:
+  repeated `u32le length` plus exact payload bytes, with at least one record.
 - `std.worker.taskAt` accepts `(WorkerTasks,int)`.
 - `std.task.cancel` accepts `Task`.
 - `Await` accepts only `Task`; first consumption is one-shot.

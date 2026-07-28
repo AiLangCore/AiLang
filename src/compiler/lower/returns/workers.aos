@@ -1,0 +1,154 @@
+Program {
+  Let(name=lower.emitWorkerReturnWithParameters) {
+    Fn(params=expr,params) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=expr) } }
+        If {
+          Eq { Var(name=kind) Lit(value="WorkerRunAll") }
+          Block {
+            Return {
+              Call(target=lower.emitWorkerBatchReturn) {
+                Var(name=expr) Var(name=params) Lit(value=0) Lit(value="")
+              }
+            }
+          }
+          Block { Lit(value=0) }
+        }
+        If {
+          Call(target=lower.isWorkerBinaryReturnKind) { Var(name=kind) }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=expr) } Lit(value=2) }
+              Block {
+                Let(name=workerSlot) {
+                  Call(target=lower.workerParameterSlot) {
+                    Var(name=params) ChildAt { Var(name=expr) Lit(value=0) }
+                  }
+                }
+                Let(name=payloadSlot) {
+                  Call(target=lower.workerParameterSlot) {
+                    Var(name=params) ChildAt { Var(name=expr) Lit(value=1) }
+                  }
+                }
+                If {
+                  Eq { Var(name=workerSlot) Lit(value=-1) }
+                  Block { Return { Lit(value="Unsupported(reason=\"worker-ref-parameter\") ") } }
+                  Block {
+                    If {
+                      Eq { Var(name=payloadSlot) Lit(value=-1) }
+                      Block { Return { Lit(value="Unsupported(reason=\"worker-payload-parameter\") ") } }
+                      Block {
+                        Return {
+                          StrConcat {
+                            Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+                            StrConcat {
+                              ToString { Var(name=workerSlot) }
+                              StrConcat {
+                                Lit(value=") Inst(op=\"LOAD_LOCAL\" a=")
+                                StrConcat {
+                                  ToString { Var(name=payloadSlot) }
+                                  StrConcat {
+                                    Lit(value=") Inst(op=\"")
+                                    StrConcat {
+                                      Call(target=lower.structuralNativeWorkerBinaryOpcode) { Var(name=kind) }
+                                      Lit(value="\" a=0) Inst(op=\"RETURN\") ")
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"worker-run-arity\") ") } }
+            }
+          }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="TaskCancel") }
+              Block { Return { Call(target=lower.emitWorkerUnaryReturn) { Var(name=expr) Var(name=params) Lit(value="TASK_CANCEL") } } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Await") }
+                  Block { Return { Call(target=lower.emitWorkerUnaryReturn) { Var(name=expr) Var(name=params) Lit(value="AWAIT") } } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.isWorkerBinaryReturnKind) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="WorkerRun") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            Return { Eq { Var(name=kind) Lit(value="WorkerTaskAt") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitWorkerUnaryReturn) {
+    Fn(params=expr,params,opcode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=expr) } Lit(value=1) }
+          Block {
+            Let(name=slot) {
+              Call(target=lower.workerParameterSlot) {
+                Var(name=params) ChildAt { Var(name=expr) Lit(value=0) }
+              }
+            }
+            If {
+              Eq { Var(name=slot) Lit(value=-1) }
+              Block { Return { Lit(value="Unsupported(reason=\"task-parameter\") ") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+                    StrConcat {
+                      ToString { Var(name=slot) }
+                      StrConcat { Lit(value=") Inst(op=\"") StrConcat { Var(name=opcode) Lit(value="\" a=0) Inst(op=\"RETURN\") ") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value="Unsupported(reason=\"task-unary-arity\") ") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.workerParameterSlot) {
+    Fn(params=params,expression) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=expression) } Lit(value="Var") }
+          Block {
+            Return {
+              Call(target=lower.parameterSlot) {
+                Var(name=params)
+                Call(target=lower.getAttr) { Var(name=expression) Lit(value="name") Lit(value=0) }
+                Lit(value=0) Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Lit(value=-1) } }
+        }
+      }
+    }
+  }
+}

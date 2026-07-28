@@ -1,0 +1,57 @@
+Program {
+  Let(name=lower.emitWorkerBatchReturn) {
+    Fn(params=expr,params,index,text) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=expr) } }
+          Block {
+            If {
+              Lt { Var(name=index) Lit(value=2) }
+              Block { Return { Lit(value="Unsupported(reason=\"worker-run-all-arity\") ") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Var(name=text)
+                    StrConcat {
+                      Lit(value="Inst(op=\"WORKER_RUN_ALL\" a=")
+                      StrConcat {
+                        ToString { Sub { Var(name=index) Lit(value=1) } }
+                        Lit(value=") Inst(op=\"RETURN\") ")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=slot) {
+              Call(target=lower.workerParameterSlot) {
+                Var(name=params) ChildAt { Var(name=expr) Var(name=index) }
+              }
+            }
+            If {
+              Eq { Var(name=slot) Lit(value=-1) }
+              Block { Return { Lit(value="Unsupported(reason=\"worker-run-all-parameter\") ") } }
+              Block {
+                Return {
+                  Call(target=lower.emitWorkerBatchReturn) {
+                    Var(name=expr) Var(name=params)
+                    Add { Var(name=index) Lit(value=1) }
+                    StrConcat {
+                      Var(name=text)
+                      StrConcat {
+                        Lit(value="Inst(op=\"LOAD_LOCAL\" a=")
+                        StrConcat { ToString { Var(name=slot) } Lit(value=") ") }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

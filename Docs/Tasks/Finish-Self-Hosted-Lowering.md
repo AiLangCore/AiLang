@@ -1,4 +1,4 @@
-# Task: Finish Modularizing and Self-Hosting Compiler Lowering
+# Finish Modularizing and Self-Hosting Compiler Lowering
 
 ## Objective
 

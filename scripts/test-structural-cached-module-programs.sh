@@ -29,6 +29,14 @@ Program {
             Lit(value="src/compiler/parser.aos")
           }
         }
+        If {
+          Eq { NodeKind { Var(name=paths) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) { ToString { Var(name=paths) } }
+            Return { Lit(value=1) }
+          }
+          Block { Lit(value=0) }
+        }
         Let(name=programs) {
           Call(target=structuralProject.collectModulePrograms) {
             Var(name=paths)
@@ -52,7 +60,7 @@ Program {
 }
 AOS
 
-OUT="$(cd "${ROOT_DIR}" && ./tools/ailang run "${TMP_DIR}/app.aos")"
-printf '%s\n' "${OUT}" | rg -x '3'
+OUT="$(cd "${ROOT_DIR}" && AILANG_SDK_ROOT="${ROOT_DIR}/src" ./tools/ailang run "${TMP_DIR}/app.aos")"
+printf '%s\n' "${OUT}" | rg -x '4'
 printf '%s\n' "${OUT}" | rg -Fq 'Ok#ok1(type=int value=0)'
 echo 'structural cached module programs: PASS'

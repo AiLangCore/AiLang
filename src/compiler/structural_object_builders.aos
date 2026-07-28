@@ -233,6 +233,9 @@ Program {
         Let(name=params) {
           AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) }
         }
+        Let(name=modulePath) {
+          AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) }
+        }
         Let(name=base) {
           MakeNodeBuilder {
             Lit(value="Function")
@@ -261,7 +264,7 @@ Program {
         }
         Return {
           Call(target=structuralObject.appendInstructionChildren) {
-            Var(name=functionBuilder) Var(name=plan) Lit(value=0)
+            Var(name=functionBuilder) Var(name=plan) Var(name=modulePath) Lit(value=0)
           }
         }
       }
@@ -269,7 +272,7 @@ Program {
   }
 
   Let(name=structuralObject.appendInstructionChildren) {
-    Fn(params=builder,plan,index) {
+    Fn(params=builder,plan,modulePath,index) {
       Block {
         If {
           Eq { Var(name=index) ChildCount { Var(name=plan) } }
@@ -284,12 +287,13 @@ Program {
             }
             Let(name=withRelocation) {
               Call(target=structuralObject.appendRelocationChild) {
-                Var(name=withInstruction) Var(name=instruction) Var(name=index)
+                Var(name=withInstruction) Var(name=instruction)
+                Var(name=modulePath) Var(name=index)
               }
             }
             Return {
               Call(target=structuralObject.appendInstructionChildren) {
-                Var(name=withRelocation) Var(name=plan)
+                Var(name=withRelocation) Var(name=plan) Var(name=modulePath)
                 Add { Var(name=index) Lit(value=1) }
               }
             }
@@ -300,12 +304,24 @@ Program {
   }
 
   Let(name=structuralObject.appendRelocationChild) {
-    Fn(params=builder,instruction,index) {
+    Fn(params=builder,instruction,modulePath,index) {
       Block {
         Let(name=op) {
           Call(target=structuralObject.getAttr) {
             Var(name=instruction) Lit(value="op") Lit(value=0)
           }
+        }
+        If {
+          Eq { Var(name=op) Lit(value="WORKER_REF") }
+          Block {
+            Return {
+              Call(target=structuralObject.appendWorkerRefRelocationChild) {
+                Var(name=builder) Var(name=instruction)
+                Var(name=modulePath) Var(name=index)
+              }
+            }
+          }
+          Block { Lit(value=0) }
         }
         If {
           Eq { Var(name=op) Lit(value="CONST") }

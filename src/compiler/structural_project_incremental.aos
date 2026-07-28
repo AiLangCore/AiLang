@@ -4,6 +4,9 @@ Program {
   Import(path="structural_object_chunks.aos")
   Import(path="structural_project_records.aos")
   Import(path="structural_project_symbols.aos")
+  Import(path="structural_project_module_object.aos")
+  Import(path="workers/declarations.aos")
+  Import(path="structural_object_workers.aos")
   Export(name=structuralProject.writeProjectObjectFilesIncremental)
   Export(name=structuralProject.writeProjectObjectPartition)
   Export(name=structuralProject.writePreparedProjectObjectPartition)
@@ -139,64 +142,36 @@ Program {
         If {
           Lt { Var(name=index) ChildCount { Var(name=modulePaths) } }
           Block {
-            Let(name=modulePath) {
-              AttrValueString {
-                ChildAt { Var(name=modulePaths) Var(name=index) }
-                Lit(value=0)
-              }
-            }
-            Let(name=program) {
-              Call(target=structuralProject.parseModuleProgram) {
-                Var(name=modulePaths)
-                Var(name=projectDir)
-                Var(name=lockText)
-                Var(name=index)
+            Let(name=objectWithWorkers) {
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=records) Var(name=index)
               }
             }
             If {
-              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
-              Block { Return { Var(name=program) } }
+              Eq { NodeKind { Var(name=objectWithWorkers) } Lit(value="Err") }
+              Block { Return { Var(name=objectWithWorkers) } }
               Block {
-                Let(name=moduleRecords) {
-                  Call(target=lower.collectFunctionRecords) {
-                    Var(name=program)
-                    Var(name=modulePath)
-                  }
-                }
-                Let(name=object) {
-                  Call(target=structuralObject.emitModuleObjectForProgram) {
-                    Var(name=program)
-                    Var(name=modulePath)
-                    Var(name=moduleRecords)
-                    Var(name=records)
+                Let(name=persisted) {
+                  Call(target=structuralProject.writeObjectFileAt) {
+                    Call(target=format.format) { Var(name=objectWithWorkers) }
+                    Var(name=objDir)
+                    Var(name=index)
                   }
                 }
                 If {
-                  Eq { NodeKind { Var(name=object) } Lit(value="Err") }
-                  Block { Return { Var(name=object) } }
+                  Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
+                  Block { Return { Var(name=persisted) } }
                   Block {
-                    Let(name=persisted) {
-                      Call(target=structuralProject.writeObjectFileAt) {
-                        Call(target=format.format) { Var(name=object) }
+                    Return {
+                      Call(target=structuralProject.writeModuleObjectPartition) {
+                        Var(name=modulePaths)
+                        Var(name=projectDir)
+                        Var(name=lockText)
                         Var(name=objDir)
-                        Var(name=index)
-                      }
-                    }
-                    If {
-                      Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
-                      Block { Return { Var(name=persisted) } }
-                      Block {
-                        Return {
-                          Call(target=structuralProject.writeModuleObjectPartition) {
-                            Var(name=modulePaths)
-                            Var(name=projectDir)
-                            Var(name=lockText)
-                            Var(name=objDir)
-                            Var(name=records)
-                            Add { Var(name=index) Var(name=workerCount) }
-                            Var(name=workerCount)
-                          }
-                        }
+                        Var(name=records)
+                        Add { Var(name=index) Var(name=workerCount) }
+                        Var(name=workerCount)
                       }
                     }
                   }
@@ -217,38 +192,34 @@ Program {
           Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
           Block { Return { Var(name=objects) } }
           Block {
-            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
-            Let(name=program) {
-              Call(target=structuralProject.parseModuleProgram) {
-                Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=index)
+            Let(name=objectWithWorkers) {
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=records) Var(name=index)
               }
             }
             If {
-              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
-              Block { Return { Var(name=program) } }
+              Eq { NodeKind { Var(name=objectWithWorkers) } Lit(value="Err") }
+              Block { Return { Var(name=objectWithWorkers) } }
               Block {
-                Let(name=moduleRecords) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
-                Let(name=object) { Call(target=structuralObject.emitModuleObjectForProgram) { Var(name=program) Var(name=modulePath) Var(name=moduleRecords) Var(name=records) } }
+                Let(name=persisted) {
+                  Call(target=structuralProject.writeObjectFileAt) {
+                    Call(target=format.format) { Var(name=objectWithWorkers) }
+                    Var(name=objDir) Var(name=index)
+                  }
+                }
                 If {
-                  Eq { NodeKind { Var(name=object) } Lit(value="Err") }
-                  Block { Return { Var(name=object) } }
+                  Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
+                  Block { Return { Var(name=persisted) } }
                   Block {
-                    Let(name=persisted) {
-                      Call(target=structuralProject.writeObjectFileAt) {
-                        Call(target=format.format) { Var(name=object) } Var(name=objDir) Var(name=index)
-                      }
+                    Let(name=nextObjects) {
+                      AppendChild { Var(name=objects) Var(name=objectWithWorkers) }
                     }
-                    If {
-                      Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
-                      Block { Return { Var(name=persisted) } }
-                      Block {
-                        Let(name=nextObjects) { Call(target=structuralProject.appendParsedObject) { Var(name=objects) Var(name=persisted) Lit(value="") } }
-                        Return {
-                          Call(target=structuralProject.writeModuleObjectsIncremental) {
-                            Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=objDir) Var(name=records)
-                            Add { Var(name=index) Lit(value=1) } Var(name=nextObjects)
-                          }
-                        }
+                    Return {
+                      Call(target=structuralProject.writeModuleObjectsIncremental) {
+                        Var(name=modulePaths) Var(name=projectDir)
+                        Var(name=lockText) Var(name=objDir) Var(name=records)
+                        Add { Var(name=index) Lit(value=1) } Var(name=nextObjects)
                       }
                     }
                   }

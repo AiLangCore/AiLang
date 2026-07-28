@@ -12,6 +12,9 @@ fi
 
 mkdir -p "${PROJECT_DIR}/.ailang/packages"
 cp -R "${ROOT_DIR}/src" "${PROJECT_DIR}/src"
+cp \
+  "${ROOT_DIR}/src/compiler/structural_project_object_selection_worker.aos" \
+  "${PROJECT_DIR}/src/compiler/structural_project_object_selection.aos"
 rm -rf "${PROJECT_DIR}/src/std"
 cp -R "${STD_CLI_DIR}" "${PROJECT_DIR}/.ailang/packages/std-cli"
 find "${PROJECT_DIR}/src" -name app.aibc1 -delete

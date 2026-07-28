@@ -107,7 +107,14 @@ Program {
                                                                 Let(name=mapOpcode) { Call(target=lower.structuralNativeMapUnaryOpcode) { Var(name=kind) } }
                                                                 If {
                                                                   Eq { Var(name=mapOpcode) Lit(value="") }
-                                                                  Block { Return { Call(target=lower.structuralNativeByteUnaryOpcode) { Var(name=kind) } } }
+                                                                  Block {
+                                                                    Let(name=workerOpcode) { Call(target=lower.structuralNativeWorkerUnaryOpcode) { Var(name=kind) } }
+                                                                    If {
+                                                                      Eq { Var(name=workerOpcode) Lit(value="") }
+                                                                      Block { Return { Call(target=lower.structuralNativeByteUnaryOpcode) { Var(name=kind) } } }
+                                                                      Block { Return { Var(name=workerOpcode) } }
+                                                                    }
+                                                                  }
                                                                   Block { Return { Var(name=mapOpcode) } }
                                                                 }
                                                               }
@@ -187,6 +194,12 @@ Program {
                                       Eq { Var(name=kind) Lit(value="StringRemove") }
                                       Block { Return { Lit(value="STR_REMOVE") } }
                                   Block {
+                                    Let(name=workerOpcode) { Call(target=lower.structuralNativeWorkerVariadicOpcode) { Var(name=kind) } }
+                                    If {
+                                      Eq { Var(name=workerOpcode) Lit(value="") }
+                                      Block { Lit(value=0) }
+                                      Block { Return { Var(name=workerOpcode) } }
+                                    }
                                     Let(name=mapOpcode) { Call(target=lower.structuralNativeMapVariadicOpcode) { Var(name=kind) } }
                                     If {
                                       Eq { Var(name=mapOpcode) Lit(value="") }
@@ -244,10 +257,22 @@ Program {
                       Eq { Var(name=kind) Lit(value="StringDecodeUnicodeSurrogatePairHex4") }
                       Block { Return { Lit(value="STR_DECODE_UNICODE_SURROGATE_PAIR_HEX4") } }
                       Block {
+                        Let(name=workerOpcode) { Call(target=lower.structuralNativeWorkerBinaryOpcode) { Var(name=kind) } }
+                        If {
+                          Eq { Var(name=workerOpcode) Lit(value="") }
+                          Block { Lit(value=0) }
+                          Block { Return { Var(name=workerOpcode) } }
+                        }
                         Let(name=mapOpcode) { Call(target=lower.structuralNativeMapBinaryOpcode) { Var(name=kind) } }
                         If {
                           Eq { Var(name=mapOpcode) Lit(value="") }
-                          Block { Return { Call(target=lower.structuralNativeByteBinaryOpcode) { Var(name=kind) } } }
+                          Block {
+                            Return {
+                              Call(target=lower.structuralNativeByteBinaryOpcode) {
+                                Var(name=kind)
+                              }
+                            }
+                          }
                           Block { Return { Var(name=mapOpcode) } }
                         }
                       }

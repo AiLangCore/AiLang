@@ -22,15 +22,18 @@ SELF_CONTAINED_DIR="${TMP_DIR}/publish-self-contained"
 PACKAGE_REGISTRY_DIR="${TMP_DIR}/registry"
 
 rm -rf "${TMP_DIR}"
-mkdir -p "${SDK_ROOT}/bin" "${SDK_ROOT}/libexec/ailang/cli" "${SDK_ROOT}/runtimes/host" "${CLI_BYTECODE_DIR}" "${PACKAGE_REGISTRY_DIR}/packages"
+mkdir -p "${SDK_ROOT}/bin/commands" "${SDK_ROOT}/libexec/ailang/cli" "${SDK_ROOT}/runtimes/host" "${CLI_BYTECODE_DIR}" "${PACKAGE_REGISTRY_DIR}/packages"
 cp "${ROOT_DIR}/sdk-runtime.toml" "${SDK_ROOT}/sdk-runtime.toml"
 cp -R "${ROOT_DIR}/src/std" "${SDK_ROOT}/std"
 
 ./tools/ailang build src/cli/ailang.aos --out "${CLI_BYTECODE_DIR}" --no-cache >/dev/null
 cp "${CLI_BYTECODE_DIR}/app.aibc1" "${SDK_ROOT}/libexec/ailang/cli/app.aibc1"
 cp "${AIVM_BIN}" "${SDK_ROOT}/bin/aivm"
+cp "${ROOT_DIR}/tools/aivm-runtime" "${SDK_ROOT}/bin/aivm-runtime"
 cp "${AIVM_BIN}" "${SDK_ROOT}/runtimes/host/aivm"
-chmod +x "${SDK_ROOT}/bin/aivm" "${SDK_ROOT}/runtimes/host/aivm"
+chmod +x "${SDK_ROOT}/bin/aivm" "${SDK_ROOT}/bin/aivm-runtime" "${SDK_ROOT}/runtimes/host/aivm"
+AILANG_BUILTIN_SDK_ROOT="${SDK_ROOT}" \
+  ./scripts/build-ailang-builtins.sh "${SDK_ROOT}/bin/commands" >/dev/null
 
 cat > "${SDK_ROOT}/bin/ailang" <<'EOF'
 #!/usr/bin/env sh
@@ -50,7 +53,10 @@ fi
 VERSION_OUT="$("${SDK_ROOT}/bin/ailang" --version)"
 printf '%s\n' "${VERSION_OUT}" | rg -q '^ailang [0-9]+\.[0-9]+\.[0-9]+'
 HELP_OUT="$("${SDK_ROOT}/bin/ailang" help)"
-printf '%s\n' "${HELP_OUT}" | rg -q 'Commands: init, template, agent, build, run, publish, clean, package, project, version, help'
+printf '%s\n' "${HELP_OUT}" | rg -q '^Commands:$'
+for COMMAND_NAME in init template agent build run publish clean package project help version; do
+  printf '%s\n' "${HELP_OUT}" | rg -q "^  ${COMMAND_NAME}  "
+done
 TEMPLATE_OUT="$("${SDK_ROOT}/bin/ailang" template list)"
 printf '%s\n' "${TEMPLATE_OUT}" | rg -q 'name = "cli"'
 AGENT_OUT="$("${SDK_ROOT}/bin/ailang" agent list)"
@@ -68,7 +74,7 @@ PROJECT_VERSION_OUT="$("${SDK_ROOT}/bin/ailang" project version "${APP_DIR}")"
 printf '%s\n' "${PROJECT_VERSION_OUT}" | rg -q '^0\.0\.1$'
 AILANG_PACKAGE_REGISTRY="${PACKAGE_REGISTRY_DIR}" "${SDK_ROOT}/bin/ailang" package restore "${APP_DIR}" | rg -q 'Ok#ok1\(type=int value=0\)'
 test -f "${APP_DIR}/ailang.lock.toml"
-rg -q '^aivmVersion = "0\.0\.1-rc\.4"$' "${SDK_ROOT}/sdk-runtime.toml"
+rg -q '^aivmVersion = "0\.0\.1-rc\.5"$' "${SDK_ROOT}/sdk-runtime.toml"
 
 AILANG_INSTALL_ROOT="${TMP_DIR}/sdk" "${SDK_ROOT}/bin/ailang" build "${APP_DIR}" --out "${BUILD_DIR}" >/dev/null
 test -f "${BUILD_DIR}/app.aibc1"

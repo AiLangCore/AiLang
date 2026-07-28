@@ -2,6 +2,16 @@ Program {
   Let(name=lower.emitReturnExpressionWithParamsCore) {
     Fn(params=expr,params,instructionIndex) {
       Block {
+        Let(name=workerReturn) {
+          Call(target=lower.emitWorkerReturnWithParameters) {
+            Var(name=expr) Var(name=params)
+          }
+        }
+        If {
+          Eq { Var(name=workerReturn) Lit(value="") }
+          Block { Lit(value=0) }
+          Block { Return { Var(name=workerReturn) } }
+        }
         If {
           Eq { NodeKind { Var(name=expr) } Lit(value="Var") }
           Block {

@@ -1,5 +1,6 @@
 Program {
   Import(path="structural_object.aos")
+  Import(path="structural_project_workers.aos")
   Import(sdk="ailang" path="std/bytes.aos")
   Export(name=structuralProject.collectModulePrograms)
   Export(name=structuralProject.emitProjectPlans)
@@ -25,7 +26,18 @@ Program {
                 If {
                   Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
                   Block { Return { Var(name=validated) } }
-                  Block { Return { Call(target=structuralObject.emitProjectPlans) { Var(name=validated) } } }
+                  Block {
+                    Let(name=workers) {
+                      Call(target=structuralProject.validateProjectWorkers) {
+                        Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=workers) } Lit(value="Err") }
+                      Block { Return { Var(name=workers) } }
+                      Block { Return { Call(target=structuralObject.emitProjectPlans) { Var(name=validated) } } }
+                    }
+                  }
                 }
               }
             }
@@ -52,7 +64,25 @@ Program {
                 If {
                   Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
                   Block { Return { Var(name=validated) } }
-                  Block { Return { Call(target=structuralObject.emitProjectObjectTextsForPrograms) { Var(name=programs) Var(name=modulePaths) Var(name=validated) } } }
+                  Block {
+                    Let(name=workers) {
+                      Call(target=structuralProject.validateProjectWorkers) {
+                        Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=workers) } Lit(value="Err") }
+                      Block { Return { Var(name=workers) } }
+                      Block {
+                        Return {
+                          Call(target=structuralObject.emitProjectObjectTextsForProgramsWithWorkers) {
+                            Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                            Var(name=workers)
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

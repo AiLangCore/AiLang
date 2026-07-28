@@ -1,0 +1,73 @@
+Program {
+  Import(path="lower.aos")
+  Import(path="structural_object.aos")
+  Import(path="structural_object_workers.aos")
+  Import(path="structural_project.aos")
+  Import(path="workers/declarations.aos")
+  Export(name=structuralProject.prepareModuleObjectAt)
+
+  Let(name=structuralProject.prepareModuleObjectAt) {
+    Fn(params=modulePaths,projectDir,lockText,records,moduleIndex) {
+      Block {
+        Let(name=modulePath) {
+          AttrValueString {
+            ChildAt { Var(name=modulePaths) Var(name=moduleIndex) }
+            Lit(value=0)
+          }
+        }
+        Let(name=program) {
+          Call(target=structuralProject.parseModuleProgram) {
+            Var(name=modulePaths) Var(name=projectDir)
+            Var(name=lockText) Var(name=moduleIndex)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+          Block { Return { Var(name=program) } }
+          Block {
+            Let(name=moduleRecords) {
+              Call(target=lower.collectFunctionRecords) {
+                Var(name=program) Var(name=modulePath)
+              }
+            }
+            Let(name=object) {
+              Call(target=structuralObject.emitModuleObjectForProgram) {
+                Var(name=program) Var(name=modulePath)
+                Var(name=moduleRecords) Var(name=records)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+              Block { Return { Var(name=object) } }
+              Block {
+                Let(name=exports) {
+                  Call(target=workerDeclarations.collectExportedFunctionSymbols) {
+                    Var(name=program) Var(name=modulePath)
+                  }
+                }
+                Let(name=workers) {
+                  Call(target=workerDeclarations.validateProgram) {
+                    Var(name=program) Var(name=modulePath)
+                    Var(name=moduleRecords) Var(name=exports)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=workers) } Lit(value="Err") }
+                  Block { Return { Var(name=workers) } }
+                  Block {
+                    Return {
+                      Call(target=structuralObject.appendWorkerDeclarations) {
+                        Var(name=object) Var(name=workers)
+                        Var(name=modulePath) Lit(value=0)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

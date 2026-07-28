@@ -1,0 +1,629 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="format.aos")
+  Import(path="parser.aos")
+  Export(name=structuralRecord.encode)
+  Export(name=structuralRecord.decode)
+
+  Let(name=structuralRecord.encode) {
+    Fn(params=node) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=node) } Lit(value="Err") }
+          Block {
+            Return {
+              Call(target=bytes.concat) {
+                Call(target=bytes.fromUtf8String) { Lit(value="AOER") }
+                Call(target=bytes.fromUtf8String) {
+                  Call(target=format.format) { Var(name=node) }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=bytes.concat) {
+                Call(target=bytes.fromUtf8String) { Lit(value="AOLR") }
+                Call(target=bytes.concat) {
+                  Call(target=bytes.fromByte) { Lit(value=1) }
+                  Call(target=structuralRecord.encodeNode) { Var(name=node) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decode) {
+    Fn(params=data) {
+      Block {
+        If {
+          Lt { Call(target=bytes.length) { Var(name=data) } Lit(value=5) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_record_codec") Lit(value="RECORD001")
+                Lit(value="Compact structural record is truncated.")
+                Lit(value="header")
+              }
+            }
+          }
+          Block {
+            Let(name=magic) {
+              Call(target=bytes.toUtf8String) {
+                Call(target=bytes.slice) { Var(name=data) Lit(value=0) Lit(value=4) }
+              }
+            }
+            If {
+              Eq { Var(name=magic) Lit(value="AOER") }
+              Block {
+                Return {
+                  Call(target=parse.parseDocument) {
+                    Call(target=bytes.toUtf8String) {
+                      Call(target=bytes.slice) {
+                        Var(name=data) Lit(value=4)
+                        Sub { Call(target=bytes.length) { Var(name=data) } Lit(value=4) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Let(name=version) {
+                  Call(target=bytes.at) { Var(name=data) Lit(value=4) }
+                }
+                If {
+                  Eq { Var(name=magic) Lit(value="AOLR") }
+                  Block {
+                    If {
+                      Eq { Var(name=version) Lit(value=1) }
+                      Block {
+                        Let(name=decoded) {
+                          Call(target=structuralRecord.decodeNode) {
+                            Var(name=data) Lit(value=5)
+                          }
+                        }
+                        If {
+                          Eq { NodeKind { Var(name=decoded) } Lit(value="Err") }
+                          Block { Return { Var(name=decoded) } }
+                          Block {
+                            If {
+                              Eq {
+                                AttrValueInt {
+                                  ChildAt { Var(name=decoded) Lit(value=1) }
+                                  Lit(value=0)
+                                }
+                                Call(target=bytes.length) { Var(name=data) }
+                              }
+                              Block { Return { ChildAt { Var(name=decoded) Lit(value=0) } } }
+                              Block {
+                                Return {
+                                  MakeErr {
+                                    Lit(value="structural_record_codec") Lit(value="RECORD004")
+                                    Lit(value="Compact structural record has trailing bytes.")
+                                    Lit(value="payload")
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          MakeErr {
+                            Lit(value="structural_record_codec") Lit(value="RECORD003")
+                            Lit(value="Compact structural record version is unsupported.")
+                            Lit(value="version")
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="structural_record_codec") Lit(value="RECORD002")
+                        Lit(value="Compact structural record magic is invalid.")
+                        Lit(value="magic")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.encodeNode) {
+    Fn(params=node) {
+      Block {
+        Let(name=head) {
+          Call(target=bytes.concat) {
+            Call(target=structuralRecord.encodeString) { NodeKind { Var(name=node) } }
+            Call(target=structuralRecord.encodeVarUInt) { AttrCount { Var(name=node) } }
+          }
+        }
+        Let(name=attrs) {
+          Call(target=structuralRecord.encodeAttrs) {
+            Var(name=node) Lit(value=0)
+            Call(target=bytes.fromUtf8String) { Lit(value="") }
+          }
+        }
+        Let(name=children) {
+          Call(target=structuralRecord.encodeChildren) {
+            Var(name=node) Lit(value=0)
+            Call(target=bytes.fromUtf8String) { Lit(value="") }
+          }
+        }
+        Return {
+          Call(target=bytes.concat) {
+            Call(target=bytes.concat) { Var(name=head) Var(name=attrs) }
+            Call(target=bytes.concat) {
+              Call(target=structuralRecord.encodeVarUInt) { ChildCount { Var(name=node) } }
+              Var(name=children)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.encodeAttrs) {
+    Fn(params=node,index,encoded) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Var(name=encoded) } }
+          Block {
+            Let(name=kind) { AttrValueKind { Var(name=node) Var(name=index) } }
+            Let(name=value) {
+              If {
+                Eq { Var(name=kind) Lit(value="int") }
+                Block {
+                  Call(target=structuralRecord.encodeString) {
+                    ToString { AttrValueInt { Var(name=node) Var(name=index) } }
+                  }
+                }
+                Block {
+                  If {
+                    Eq { Var(name=kind) Lit(value="bool") }
+                    Block {
+                      If {
+                        AttrValueBool { Var(name=node) Var(name=index) }
+                        Block { Call(target=bytes.fromByte) { Lit(value=1) } }
+                        Block { Call(target=bytes.fromByte) { Lit(value=0) } }
+                      }
+                    }
+                    Block {
+                      Call(target=structuralRecord.encodeString) {
+                        AttrValueString { Var(name=node) Var(name=index) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            Let(name=tag) {
+              If {
+                Eq { Var(name=kind) Lit(value="int") }
+                Block { Call(target=bytes.fromByte) { Lit(value=2) } }
+                Block {
+                  If {
+                    Eq { Var(name=kind) Lit(value="bool") }
+                    Block { Call(target=bytes.fromByte) { Lit(value=3) } }
+                    Block { Call(target=bytes.fromByte) { Lit(value=1) } }
+                  }
+                }
+              }
+            }
+            Let(name=entry) {
+              Call(target=bytes.concat) {
+                Call(target=structuralRecord.encodeString) {
+                  AttrKey { Var(name=node) Var(name=index) }
+                }
+                Call(target=bytes.concat) { Var(name=tag) Var(name=value) }
+              }
+            }
+            Return {
+              Call(target=structuralRecord.encodeAttrs) {
+                Var(name=node) Add { Var(name=index) Lit(value=1) }
+                Call(target=bytes.concat) { Var(name=encoded) Var(name=entry) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.encodeChildren) {
+    Fn(params=node,index,encoded) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=encoded) } }
+          Block {
+            Return {
+              Call(target=structuralRecord.encodeChildren) {
+                Var(name=node) Add { Var(name=index) Lit(value=1) }
+                Call(target=bytes.concat) {
+                  Var(name=encoded)
+                  Call(target=structuralRecord.encodeNode) {
+                    ChildAt { Var(name=node) Var(name=index) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.encodeString) {
+    Fn(params=text) {
+      Block {
+        Let(name=raw) { Call(target=bytes.fromUtf8String) { Var(name=text) } }
+        Return {
+          Call(target=bytes.concat) {
+            Call(target=structuralRecord.encodeVarUInt) {
+              Call(target=bytes.length) { Var(name=raw) }
+            }
+            Var(name=raw)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeNode) {
+    Fn(params=data,offset) {
+      Block {
+        Let(name=kindResult) {
+          Call(target=structuralRecord.decodeString) { Var(name=data) Var(name=offset) }
+        }
+        If {
+          Eq { NodeKind { Var(name=kindResult) } Lit(value="Err") }
+          Block { Return { Var(name=kindResult) } }
+          Block {
+            Let(name=kind) {
+              AttrValueString { ChildAt { Var(name=kindResult) Lit(value=0) } Lit(value=0) }
+            }
+            Let(name=afterKind) {
+              AttrValueInt { ChildAt { Var(name=kindResult) Lit(value=1) } Lit(value=0) }
+            }
+            Let(name=attrCountResult) {
+              Call(target=structuralRecord.decodeVarUInt) {
+                Var(name=data) Var(name=afterKind) Lit(value=1) Lit(value=0)
+              }
+            }
+            Let(name=attrCount) {
+              AttrValueInt { ChildAt { Var(name=attrCountResult) Lit(value=0) } Lit(value=0) }
+            }
+            Let(name=afterAttrCount) {
+              AttrValueInt { ChildAt { Var(name=attrCountResult) Lit(value=1) } Lit(value=0) }
+            }
+            Let(name=attrsResult) {
+              Call(target=structuralRecord.decodeAttrs) {
+                Var(name=data) Var(name=afterAttrCount)
+                Var(name=attrCount) Lit(value=0)
+                MakeNode { Var(name=kind) Lit(value="compact-record") }
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=attrsResult) } Lit(value="Err") }
+              Block { Return { Var(name=attrsResult) } }
+              Block {
+                Let(name=withAttrs) { ChildAt { Var(name=attrsResult) Lit(value=0) } }
+                Let(name=afterAttrs) {
+                  AttrValueInt { ChildAt { Var(name=attrsResult) Lit(value=1) } Lit(value=0) }
+                }
+                Let(name=childCountResult) {
+                  Call(target=structuralRecord.decodeVarUInt) {
+                    Var(name=data) Var(name=afterAttrs) Lit(value=1) Lit(value=0)
+                  }
+                }
+                Let(name=childCount) {
+                  AttrValueInt { ChildAt { Var(name=childCountResult) Lit(value=0) } Lit(value=0) }
+                }
+                Let(name=afterChildCount) {
+                  AttrValueInt { ChildAt { Var(name=childCountResult) Lit(value=1) } Lit(value=0) }
+                }
+                Return {
+                  Call(target=structuralRecord.decodeChildren) {
+                    Var(name=data) Var(name=afterChildCount)
+                    Var(name=childCount) Lit(value=0) Var(name=withAttrs)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeAttrs) {
+    Fn(params=data,offset,count,index,node) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=count) }
+          Block { Return { Call(target=structuralRecord.decodeResult) { Var(name=node) Var(name=offset) } } }
+          Block {
+            Let(name=keyResult) {
+              Call(target=structuralRecord.decodeString) { Var(name=data) Var(name=offset) }
+            }
+            If {
+              Eq { NodeKind { Var(name=keyResult) } Lit(value="Err") }
+              Block { Return { Var(name=keyResult) } }
+              Block {
+                Let(name=key) {
+                  AttrValueString { ChildAt { Var(name=keyResult) Lit(value=0) } Lit(value=0) }
+                }
+                Let(name=tagOffset) {
+                  AttrValueInt { ChildAt { Var(name=keyResult) Lit(value=1) } Lit(value=0) }
+                }
+                Let(name=tag) { Call(target=bytes.at) { Var(name=data) Var(name=tagOffset) } }
+                Let(name=valueResult) {
+                  Call(target=structuralRecord.decodeAttrValue) {
+                    Var(name=data) Add { Var(name=tagOffset) Lit(value=1) }
+                    Var(name=key) Var(name=tag)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=valueResult) } Lit(value="Err") }
+                  Block { Return { Var(name=valueResult) } }
+                  Block {
+                    Return {
+                      Call(target=structuralRecord.decodeAttrs) {
+                        Var(name=data)
+                        AttrValueInt { ChildAt { Var(name=valueResult) Lit(value=1) } Lit(value=0) }
+                        Var(name=count) Add { Var(name=index) Lit(value=1) }
+                        AppendAttr {
+                          Var(name=node) ChildAt { Var(name=valueResult) Lit(value=0) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeAttrValue) {
+    Fn(params=data,offset,key,tag) {
+      Block {
+        If {
+          Eq { Var(name=tag) Lit(value=3) }
+          Block {
+            Return {
+              Call(target=structuralRecord.decodeResult) {
+                MakeLitBool {
+                  Var(name=key)
+                  Eq { Call(target=bytes.at) { Var(name=data) Var(name=offset) } Lit(value=1) }
+                }
+                Add { Var(name=offset) Lit(value=1) }
+              }
+            }
+          }
+          Block {
+            Let(name=textResult) {
+              Call(target=structuralRecord.decodeString) { Var(name=data) Var(name=offset) }
+            }
+            If {
+              Eq { NodeKind { Var(name=textResult) } Lit(value="Err") }
+              Block { Return { Var(name=textResult) } }
+              Block {
+                Let(name=text) {
+                  AttrValueString { ChildAt { Var(name=textResult) Lit(value=0) } Lit(value=0) }
+                }
+                Let(name=next) {
+                  AttrValueInt { ChildAt { Var(name=textResult) Lit(value=1) } Lit(value=0) }
+                }
+                If {
+                  Eq { Var(name=tag) Lit(value=2) }
+                  Block {
+                    Return {
+                      Call(target=structuralRecord.decodeResult) {
+                        MakeLitInt {
+                          Var(name=key)
+                          Call(target=parse.parseIntValue) { Var(name=text) }
+                        }
+                        Var(name=next)
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { Var(name=tag) Lit(value=1) }
+                      Block {
+                        Return {
+                          Call(target=structuralRecord.decodeResult) {
+                            MakeLitString { Var(name=key) Var(name=text) }
+                            Var(name=next)
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          MakeErr {
+                            Lit(value="structural_record_codec") Lit(value="RECORD006")
+                            Lit(value="Compact structural record attribute tag is invalid.")
+                            Var(name=key)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeChildren) {
+    Fn(params=data,offset,count,index,node) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=count) }
+          Block { Return { Call(target=structuralRecord.decodeResult) { Var(name=node) Var(name=offset) } } }
+          Block {
+            Let(name=childResult) {
+              Call(target=structuralRecord.decodeNode) { Var(name=data) Var(name=offset) }
+            }
+            If {
+              Eq { NodeKind { Var(name=childResult) } Lit(value="Err") }
+              Block { Return { Var(name=childResult) } }
+              Block {
+                Return {
+                  Call(target=structuralRecord.decodeChildren) {
+                    Var(name=data)
+                    AttrValueInt { ChildAt { Var(name=childResult) Lit(value=1) } Lit(value=0) }
+                    Var(name=count) Add { Var(name=index) Lit(value=1) }
+                    AppendChild { Var(name=node) ChildAt { Var(name=childResult) Lit(value=0) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeString) {
+    Fn(params=data,offset) {
+      Block {
+        Let(name=lengthResult) {
+          Call(target=structuralRecord.decodeVarUInt) {
+            Var(name=data) Var(name=offset) Lit(value=1) Lit(value=0)
+          }
+        }
+        Let(name=length) {
+          AttrValueInt { ChildAt { Var(name=lengthResult) Lit(value=0) } Lit(value=0) }
+        }
+        Let(name=start) {
+          AttrValueInt { ChildAt { Var(name=lengthResult) Lit(value=1) } Lit(value=0) }
+        }
+        Let(name=next) { Add { Var(name=start) Var(name=length) } }
+        If {
+          Lt { Call(target=bytes.length) { Var(name=data) } Var(name=next) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_record_codec") Lit(value="RECORD005")
+                Lit(value="Compact structural record string is truncated.")
+                Lit(value="string")
+              }
+            }
+          }
+          Block {
+            Return {
+              AppendChild {
+                AppendChild {
+                  MakeBlock { Lit(value="decoded-string") }
+                  MakeLitString {
+                    Lit(value="value")
+                    Call(target=bytes.toUtf8String) {
+                      Call(target=bytes.slice) {
+                        Var(name=data) Var(name=start) Var(name=length)
+                      }
+                    }
+                  }
+                }
+                MakeLitInt { Lit(value="offset") Var(name=next) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeResult) {
+    Fn(params=value,offset) {
+      Block {
+        Return {
+          AppendChild {
+            AppendChild { MakeBlock { Lit(value="decoded") } Var(name=value) }
+            MakeLitInt { Lit(value="offset") Var(name=offset) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.encodeVarUInt) {
+    Fn(params=value) {
+      Block {
+        If {
+          Lt { Var(name=value) Lit(value=128) }
+          Block { Return { Call(target=bytes.fromByte) { Var(name=value) } } }
+          Block {
+            Return {
+              Call(target=bytes.concat) {
+                Call(target=bytes.fromByte) {
+                  Add { Mod { Var(name=value) Lit(value=128) } Lit(value=128) }
+                }
+                Call(target=structuralRecord.encodeVarUInt) {
+                  Div { Var(name=value) Lit(value=128) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralRecord.decodeVarUInt) {
+    Fn(params=data,offset,factor,value) {
+      Block {
+        Let(name=byte) { Call(target=bytes.at) { Var(name=data) Var(name=offset) } }
+        If {
+          Lt { Var(name=byte) Lit(value=128) }
+          Block {
+            Return {
+              Call(target=structuralRecord.decodeResult) {
+                MakeLitInt {
+                  Lit(value="value")
+                  Add { Var(name=value) Mul { Var(name=byte) Var(name=factor) } }
+                }
+                Add { Var(name=offset) Lit(value=1) }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=structuralRecord.decodeVarUInt) {
+                Var(name=data) Add { Var(name=offset) Lit(value=1) }
+                Mul { Var(name=factor) Lit(value=128) }
+                Add {
+                  Var(name=value)
+                  Mul {
+                    Sub { Var(name=byte) Lit(value=128) }
+                    Var(name=factor)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

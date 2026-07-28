@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${SELFHOST_LINK_WORK_DIR:-${ROOT_DIR}/.tmp/selfhost-compiler-link}"
 PROJECT_DIR="${1:-${ROOT_DIR}}"
 STOP_AFTER_OBJECT_INDEX="${STOP_AFTER_OBJECT_INDEX:--1}"
+START_OBJECT_INDEX="${START_OBJECT_INDEX:-0}"
 TRACE_OBJECT_INDEX="${TRACE_OBJECT_INDEX:--1}"
 ENTRY_FILE="${ENTRY_FILE:-src/cli/ailang.aos}"
 ENTRY_EXPORT="${ENTRY_EXPORT:-main}"
@@ -163,6 +164,53 @@ Program {
     }
   }
 
+  Let(name=validateModuleParsing) {
+    Fn(params=paths,lockText,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=paths) } }
+          Block { Return { MakeBlock { Lit(value="modules-parse-ok") } } }
+          Block {
+            Let(name=modulePath) {
+              AttrValueString {
+                ChildAt { Var(name=paths) Var(name=index) } Lit(value=0)
+              }
+            }
+            Let(name=program) {
+              Call(target=structuralProject.parseModuleProgram) {
+                Var(name=paths) Lit(value="${PROJECT_DIR}")
+                Var(name=lockText) Var(name=index)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+              Block {
+                Call(target=sys.stdout.writeLine) {
+                  StrConcat {
+                    Lit(value="selfhost-link=parse-error index=")
+                    StrConcat {
+                      ToString { Var(name=index) }
+                      StrConcat { Lit(value=" module=") Var(name=modulePath) }
+                    }
+                  }
+                }
+                Return { Var(name=program) }
+              }
+              Block {
+                Return {
+                  Call(target=validateModuleParsing) {
+                    Var(name=paths) Var(name=lockText)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let(name=start) {
     Fn() {
       Block {
@@ -202,13 +250,48 @@ Program {
           }
           Block { Lit(value=0) }
         }
+        Let(name=parseStatus) {
+          Call(target=validateModuleParsing) {
+            Var(name=paths) Var(name=lockText) Lit(value=0)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=parseStatus) } Lit(value="Err") }
+          Block { Return { Var(name=parseStatus) } }
+          Block { Lit(value=0) }
+        }
         Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=symbols-begin modules=") ToString { ChildCount { Var(name=paths) } } } }
         Let(name=records) { Call(target=structuralProject.collectProjectSymbolChunks) { Var(name=paths) Lit(value="${PROJECT_DIR}") Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="record-chunks") } } }
+        If {
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) {
+              StrConcat {
+                Lit(value="selfhost-link=symbol-error code=")
+                StrConcat {
+                  AttrValueString { Var(name=records) Lit(value=0) }
+                  StrConcat {
+                    Lit(value=" message=")
+                    StrConcat {
+                      AttrValueString { Var(name=records) Lit(value=1) }
+                      StrConcat {
+                        Lit(value=" node=")
+                        AttrValueString { Var(name=records) Lit(value=2) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            Return { Var(name=records) }
+          }
+          Block { Lit(value=0) }
+        }
         Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="selfhost-link=symbols-done chunks=") ToString { ChildCount { Var(name=records) } } } }
         Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
         Call(target=sys.stdout.writeLine) { Lit(value="selfhost-link=validation-done") }
         Let(name=callContext) { Call(target=lower.buildCallRecordContext) { Var(name=validated) } }
-        Let(name=objects) { Call(target=collectObjects) { Var(name=paths) Var(name=validated) Var(name=callContext) Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="objects") } } }
+        Let(name=objects) { Call(target=collectObjects) { Var(name=paths) Var(name=validated) Var(name=callContext) Var(name=lockText) Lit(value=${START_OBJECT_INDEX}) MakeBlock { Lit(value="objects") } } }
         If {
           Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
           Block {

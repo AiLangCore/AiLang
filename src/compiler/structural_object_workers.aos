@@ -1,0 +1,151 @@
+Program {
+  Export(name=structuralObject.appendWorkerDeclarations)
+  Export(name=structuralObject.appendProjectWorkerDeclarations)
+
+  Let(name=structuralObject.appendProjectWorkerDeclarations) {
+    Fn(params=objects,modulePaths,workerRecords,index,updated) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objects) } }
+          Block { Return { Var(name=updated) } }
+          Block {
+            Let(name=modulePath) {
+              AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) }
+            }
+            Let(name=withWorkers) {
+              Call(target=structuralObject.appendWorkerDeclarations) {
+                ChildAt { Var(name=objects) Var(name=index) }
+                Var(name=workerRecords) Var(name=modulePath) Lit(value=0)
+              }
+            }
+            Return {
+              Call(target=structuralObject.appendProjectWorkerDeclarations) {
+                Var(name=objects) Var(name=modulePaths) Var(name=workerRecords)
+                Add { Var(name=index) Lit(value=1) }
+                AppendChild { Var(name=updated) Var(name=withWorkers) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendWorkerDeclarations) {
+    Fn(params=object,workerRecords,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=workerRecords) } }
+          Block { Return { Var(name=object) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=workerRecords) Var(name=index) } }
+            Let(name=recordModule) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) }
+            }
+            Let(name=nextObject) {
+              If {
+                Eq { Var(name=recordModule) Var(name=modulePath) }
+                Block {
+                  AppendChild {
+                    Var(name=object)
+                    Call(target=structuralObject.workerDeclarationNode) {
+                      Var(name=record)
+                    }
+                  }
+                }
+                Block { Var(name=object) }
+              }
+            }
+            Return {
+              Call(target=structuralObject.appendWorkerDeclarations) {
+                Var(name=nextObject) Var(name=workerRecords) Var(name=modulePath)
+                Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.workerDeclarationNode) {
+    Fn(params=record) {
+      Block {
+        Let(name=name) {
+          AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) }
+        }
+        Let(name=modulePath) {
+          AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) }
+        }
+        Let(name=targetSymbol) {
+          AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) }
+        }
+        Let(name=symbol) {
+          StrConcat {
+            Var(name=modulePath)
+            StrConcat { Lit(value="::worker::") Var(name=name) }
+          }
+        }
+        Let(name=base) {
+          MakeNode {
+            Lit(value="WorkerDecl")
+            StrConcat { Lit(value="worker-decl:") Var(name=symbol) }
+          }
+        }
+        Let(name=withName) {
+          AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } }
+        }
+        Let(name=withSymbol) {
+          AppendAttr {
+            Var(name=withName) MakeLitString { Lit(value="symbol") Var(name=symbol) }
+          }
+        }
+        Let(name=withTarget) {
+          AppendAttr {
+            Var(name=withSymbol)
+            MakeLitString { Lit(value="targetSymbol") Var(name=targetSymbol) }
+          }
+        }
+        Return {
+          Call(target=structuralObject.appendRequiredSyscalls) {
+            Var(name=withTarget) ChildAt { Var(name=record) Lit(value=4) } Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendRequiredSyscalls) {
+    Fn(params=declaration,required,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=required) } }
+          Block { Return { Var(name=declaration) } }
+          Block {
+            Let(name=target) {
+              AttrValueString { ChildAt { Var(name=required) Var(name=index) } Lit(value=0) }
+            }
+            Let(name=requiredNode) {
+              MakeNode {
+                Lit(value="RequiredSyscall")
+                StrConcat { Lit(value="worker-required-syscall:") Var(name=target) }
+              }
+            }
+            Return {
+              Call(target=structuralObject.appendRequiredSyscalls) {
+                AppendChild {
+                  Var(name=declaration)
+                  AppendAttr {
+                    Var(name=requiredNode)
+                    MakeLitString { Lit(value="target") Var(name=target) }
+                  }
+                }
+                Var(name=required) Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -12,8 +12,8 @@ Builds AiLang tooling through the selected installed SDK.
 Targets:
   selfhost
           Build the AiLang compiler and CLI (default).
-          Module generation defaults to min(logical cores, 4 workers).
-          Override with AILANG_SELFHOST_JOBS or AILANG_SELFHOST_MAX_JOBS.
+          Module generation uses std.worker and AiVM's capacity-derived
+          scheduler. Bootstrap tools are refreshed only when missing or stale.
   legacy  Build the deprecated native C AiLang bootstrap launcher.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
@@ -25,6 +25,11 @@ ensure_legacy_bootstrap() {
   if [[ ! -x "${ROOT_DIR}/tools/ailang" || ! -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
     echo "selfhost-bootstrap=legacy reason=missing-bootstrap-tools" >&2
     run_target legacy
+  elif [[ -f "${ROOT_DIR}/../AiVM/src/aivm_program.c" ]] &&
+       [[ "${ROOT_DIR}/../AiVM/src/aivm_program.c" -nt "${ROOT_DIR}/tools/aivm-runtime" ||
+          "${ROOT_DIR}/../AiVM/src/aivm_program_instructions.c" -nt "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+    echo "selfhost-bootstrap=legacy reason=stale-bootstrap-runtime" >&2
+    AILANG_ALLOW_SIBLING_AIVM_SOURCE=1 run_target legacy
   fi
 }
 

@@ -1,0 +1,99 @@
+Program {
+  Import(path="structural_project_incremental.aos")
+  Import(path="structural_project_parallel.aos")
+  Import(path="structural_project_worker_pipeline.aos")
+  Export(name=structuralProject.writeProjectObjectFilesSelected)
+
+  Let(name=structuralProject.writeProjectObjectFilesSelected) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,entryFile) {
+      Block {
+        Let(name=mode) {
+          Call(target=sys.process.env.get) {
+            Lit(value="AILANG_OBJECT_PIPELINE")
+          }
+        }
+        If {
+          Eq { Var(name=mode) Lit(value="legacy") }
+          Block {
+            Return {
+              Call(target=structuralProject.writeProjectObjectFilesLegacy) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=objDir) Var(name=entryFile)
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=structuralProject.writeProjectObjectRecordsWithWorkers) {
+                Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+                StrConcat { Var(name=objDir) Lit(value="/worker-stage") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeProjectObjectFilesLegacy) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,entryFile) {
+      Block {
+        Let(name=jobs) {
+          Call(target=sys.process.env.get) { Lit(value="AILANG_BUILD_JOBS") }
+        }
+        Let(name=workerArtifact) {
+          Call(target=sys.process.env.get) {
+            Lit(value="AILANG_BUILD_WORKER_ARTIFACT")
+          }
+        }
+        If {
+          Eq { Var(name=jobs) Lit(value="") }
+          Block {
+            Return {
+              Call(target=structuralProject.writeProjectObjectFilesIncremental) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=objDir)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { Var(name=jobs) Lit(value="1") }
+              Block {
+                Return {
+                  Call(target=structuralProject.writeProjectObjectFilesIncremental) {
+                    Var(name=modulePaths) Var(name=projectDir)
+                    Var(name=lockText) Var(name=objDir)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=workerArtifact) Lit(value="") }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="structural_project_parallel")
+                        Lit(value="PARBUILD004")
+                        Lit(value="Legacy parallel object build requires a worker artifact.")
+                        Lit(value="AILANG_BUILD_WORKER_ARTIFACT")
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=structuralProject.writeProjectObjectFilesParallel) {
+                        Var(name=modulePaths) Var(name=projectDir)
+                        Var(name=lockText) Var(name=objDir)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

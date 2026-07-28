@@ -1,4 +1,4 @@
-# Task: Implement Fast Deterministic Standard Collections
+# Implement Fast Deterministic Standard Collections
 
 ## Objective
 

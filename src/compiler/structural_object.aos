@@ -4,6 +4,8 @@ Program {
   Import(path="format.aos")
   Import(path="linker.aos")
   Import(path="structural_object_builders.aos")
+  Import(path="structural_object_workers.aos")
+  Import(path="structural_object_worker_refs.aos")
   Export(name=structuralObject.collectModuleRecords)
   Export(name=structuralObject.validateProjectFunctionRecords)
   Export(name=structuralObject.emitProjectPlans)
@@ -13,6 +15,8 @@ Program {
   Export(name=structuralObject.emitProjectObjects)
   Export(name=structuralObject.emitProjectObjectTexts)
   Export(name=structuralObject.emitProjectObjectTextsForPrograms)
+  Export(name=structuralObject.emitProjectObjectTextsForProgramsWithWorkers)
+  Export(name=structuralObject.emitProjectObjectsForProgramsWithWorkers)
   Export(name=structuralObject.recordsForModule)
 
   Let(name=structuralObject.collectModuleRecords) {
@@ -174,6 +178,54 @@ Program {
           Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
           Block { Return { Var(name=objects) } }
           Block { Return { Call(target=structuralObject.formatProjectObjects) { Var(name=objects) Lit(value=0) MakeBlock { Lit(value="object-texts") } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjectTextsForProgramsWithWorkers) {
+    Fn(params=modulePrograms,modulePaths,records,workers) {
+      Block {
+        Let(name=objects) {
+          Call(target=structuralObject.emitProjectObjectsForProgramsWithWorkers) {
+            Var(name=modulePrograms) Var(name=modulePaths) Var(name=records)
+            Var(name=workers)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Return {
+              Call(target=structuralObject.formatProjectObjects) {
+                Var(name=objects) Lit(value=0) MakeBlock { Lit(value="object-texts") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.emitProjectObjectsForProgramsWithWorkers) {
+    Fn(params=modulePrograms,modulePaths,records,workers) {
+      Block {
+        Let(name=objects) {
+          Call(target=structuralObject.emitProjectObjectsForPrograms) {
+            Var(name=modulePrograms) Var(name=modulePaths) Var(name=records)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Return {
+              Call(target=structuralObject.appendProjectWorkerDeclarations) {
+                Var(name=objects) Var(name=modulePaths) Var(name=workers) Lit(value=0)
+                MakeBlock { Lit(value="objects") }
+              }
+            }
+          }
         }
       }
     }
@@ -388,17 +440,28 @@ Program {
         Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
         Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
         Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=modulePath) { AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) } }
         Let(name=base) { MakeNode { Lit(value="Function") StrConcat { Lit(value="structural-function:") Var(name=symbol) } } }
         Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } } }
         Let(name=withSymbol) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
         Let(name=withParams) { AppendAttr { Var(name=withSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
-        Return { Call(target=structuralObject.appendInstructions) { AppendAttr { Var(name=withParams) MakeLitString { Lit(value="locals") Var(name=params) } } Var(name=plan) Lit(value=0) } }
+        Let(name=withInstructions) {
+          Call(target=structuralObject.appendInstructions) {
+            AppendAttr { Var(name=withParams) MakeLitString { Lit(value="locals") Var(name=params) } }
+            Var(name=plan) Var(name=modulePath) Lit(value=0)
+          }
+        }
+        Return {
+          Call(target=structuralObject.appendWorkerRefRelocations) {
+            Var(name=withInstructions) Var(name=plan) Var(name=modulePath) Lit(value=0)
+          }
+        }
       }
     }
   }
 
   Let(name=structuralObject.appendInstructions) {
-    Fn(params=function,plan,index) {
+    Fn(params=function,plan,modulePath,index) {
       Block {
         If {
           Eq { Var(name=index) ChildCount { Var(name=plan) } }
@@ -406,8 +469,13 @@ Program {
           Block {
             Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
             Let(name=withInstruction) { AppendChild { Var(name=function) Call(target=structuralObject.instructionNode) { Var(name=instruction) } } }
-            Let(name=withReloc) { Call(target=structuralObject.appendRelocation) { Var(name=withInstruction) Var(name=instruction) Var(name=index) } }
-            Return { Call(target=structuralObject.appendInstructions) { Var(name=withReloc) Var(name=plan) Add { Var(name=index) Lit(value=1) } } }
+            Let(name=withReloc) {
+              Call(target=structuralObject.appendRelocation) {
+                Var(name=withInstruction) Var(name=instruction)
+                Var(name=modulePath) Var(name=index)
+              }
+            }
+            Return { Call(target=structuralObject.appendInstructions) { Var(name=withReloc) Var(name=plan) Var(name=modulePath) Add { Var(name=index) Lit(value=1) } } }
           }
         }
       }
@@ -428,6 +496,16 @@ Program {
   Let(name=structuralObject.instructionOperand) {
     Fn(params=instruction,op) {
       Block {
+        Let(name=workerOperand) {
+          Call(target=structuralObject.workerInstructionOperand) {
+            Var(name=instruction) Var(name=op)
+          }
+        }
+        If {
+          Eq { Var(name=workerOperand) Lit(value=-1) }
+          Block { Lit(value=0) }
+          Block { Return { Var(name=workerOperand) } }
+        }
         If {
           Eq { Var(name=op) Lit(value="LOAD_LOCAL") }
           Block { Return { Call(target=parse.parseIntValue) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="a") Lit(value=0) } } } }
@@ -450,7 +528,7 @@ Program {
   }
 
   Let(name=structuralObject.appendRelocation) {
-    Fn(params=function,instruction,index) {
+    Fn(params=function,instruction,modulePath,index) {
       Block {
         Let(name=op) { Call(target=structuralObject.getAttr) { Var(name=instruction) Lit(value="op") Lit(value=0) } }
         If {

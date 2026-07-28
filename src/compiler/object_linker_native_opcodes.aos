@@ -1,5 +1,6 @@
 Program {
   Import(path="object_linker_map_opcodes.aos")
+  Import(path="object_linker_worker_opcodes.aos")
   Export(name=objectLinker.nativeOpcode)
   Export(name=objectLinker.isNativeInstruction)
 
@@ -11,6 +12,12 @@ Program {
           Eq { Var(name=mapOpcode) Lit(value=-1) }
           Block { Lit(value=0) }
           Block { Return { Var(name=mapOpcode) } }
+        }
+        Let(name=workerOpcode) { Call(target=objectLinker.workerNativeOpcode) { Var(name=op) } }
+        If {
+          Eq { Var(name=workerOpcode) Lit(value=-1) }
+          Block { Lit(value=0) }
+          Block { Return { Var(name=workerOpcode) } }
         }
         If { Eq { Var(name=op) Lit(value="HALT") } Block { Return { Lit(value=12) } } Block {
         If { Eq { Var(name=op) Lit(value="STR_CONCAT") } Block { Return { Lit(value=16) } } Block {

@@ -1,0 +1,11 @@
+Program {
+  Export(name=task.cancel)
+
+  Let(name=task.cancel) {
+    Fn(params=taskValue) {
+      Block {
+        Return { TaskCancel { Var(name=taskValue) } }
+      }
+    }
+  }
+}

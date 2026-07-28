@@ -1,8 +1,70 @@
 Program {
   Import(sdk="ailang" path="std/bytes.aos")
   Import(path="../structural_project_incremental.aos")
+  Import(path="../structural_project_module_object.aos")
   Import(path="../structural_project_stage.aos")
+  Import(path="../structural_record_codec.aos")
+  Import(path="../format.aos")
+  Import(path="../parser.aos")
   Export(name=moduleObjectWorkerRun)
+  Export(name=moduleObjectCompileRecordPayload)
+
+  Let(name=moduleObjectCompileRecordPayload) {
+    Fn(params=payloadBytes) {
+      Block {
+        Let(name=payload) {
+          Call(target=parse.parseDocument) {
+            Call(target=bytes.toUtf8String) { Var(name=payloadBytes) }
+          }
+        }
+        Let(name=stageDir) {
+          Call(target=moduleObjectWorkerAttrString) {
+            Var(name=payload) Lit(value="stageDir") Lit(value=0)
+          }
+        }
+        Let(name=projectDir) {
+          Call(target=moduleObjectWorkerAttrString) {
+            Var(name=payload) Lit(value="projectDir") Lit(value=0)
+          }
+        }
+        Let(name=moduleIndex) {
+          Call(target=moduleObjectWorkerAttrInt) {
+            Var(name=payload) Lit(value="moduleIndex") Lit(value=0)
+          }
+        }
+        Let(name=stage) {
+          Call(target=structuralProject.readParallelStage) { Var(name=stageDir) }
+        }
+        Let(name=result) {
+          If {
+            Eq { NodeKind { Var(name=stage) } Lit(value="Err") }
+            Block { Var(name=stage) }
+            Block {
+              Let(name=lockPath) {
+                StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") }
+              }
+              Let(name=lockText) {
+                Call(target=moduleObjectWorkerReadOptionalText) {
+                  Var(name=lockPath)
+                }
+              }
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                ChildAt { Var(name=stage) Lit(value=0) }
+                Var(name=projectDir) Var(name=lockText)
+                ChildAt { Var(name=stage) Lit(value=1) }
+                Var(name=moduleIndex)
+              }
+            }
+          }
+        }
+        Return {
+          Call(target=structuralRecord.encode) {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
 
   Let(name=moduleObjectWorkerRun) {
     Fn(params=args) {
@@ -108,6 +170,58 @@ Program {
             }
           }
           Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerAttrString) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block {
+                Return { AttrValueString { Var(name=node) Var(name=index) } }
+              }
+              Block {
+                Return {
+                  Call(target=moduleObjectWorkerAttrString) {
+                    Var(name=node) Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=moduleObjectWorkerAttrInt) {
+                    Var(name=node) Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

@@ -125,9 +125,18 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `Worker` is a structural declaration whose single `Function.target` resolves
   to an exported AiLang function with the exact initial worker signature
   `Fn(bytes) -> bytes`.
+- An unqualified `Function.target` is resolved only within the module declaring
+  the `Worker`. A same-named function in another module cannot satisfy it.
+  Qualified imported/package target syntax is reserved for the project/package
+  resolution contract.
 - A reachable validated `Worker` declaration produces an opaque `WorkerRef`.
   `WorkerRef` contains no runtime path, package-cache path, function-name
   string, closure, captured environment, or parent-heap reference.
+- `WorkerRef(name=<worker-name>)` is the structural value expression for a
+  worker declared in the current module. The builder resolves `worker-name`
+  against validated `Worker` declarations and emits a canonical worker-symbol
+  relocation. It is not a runtime string lookup. Imported/package-qualified
+  worker reference syntax is reserved for the package-resolution contract.
 - `Task` is an opaque owner-VM value. It is not an integer and cannot be
   serialized, compared, hashed, persisted, placed in canonical output, or
   transported across a worker boundary.
@@ -136,6 +145,10 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `std.worker.runAll(workerRef,orderedPayloads)` atomically accepts one ordered
   logical workload and returns opaque `WorkerTasks`, or an immediate stable
   `Err`. Physical task materialization remains bounded and VM-owned.
+- In the initial concrete API, `orderedPayloads` is canonical batch bytes built
+  by `std.worker.batch.empty` and repeated `std.worker.batch.append` calls.
+  Each append contributes `u32le byteLength` followed by the exact payload.
+  This is a worker transport envelope, not a new generic collection type.
 - `std.worker.taskAt(workerTasks,index)` returns the opaque `Task` for the
   canonical logical index.
 - `task.then(workerRef)` declares a one-to-one continuation. The continuation

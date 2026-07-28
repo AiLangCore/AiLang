@@ -1,0 +1,123 @@
+Program {
+  Export(name=structuralObject.workerRefRelocation)
+  Export(name=structuralObject.appendWorkerRefRelocations)
+  Export(name=structuralObject.appendWorkerRefRelocationChild)
+  Export(name=structuralObject.workerInstructionOperand)
+
+  Let(name=structuralObject.workerInstructionOperand) {
+    Fn(params=instruction,op) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="WORKER_RUN_ALL") }
+          Block {
+            Return {
+              Call(target=parse.parseIntValue) {
+                Call(target=structuralObject.getAttr) {
+                  Var(name=instruction) Lit(value="a") Lit(value=0)
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value=-1) } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendWorkerRefRelocationChild) {
+    Fn(params=builder,instruction,modulePath,index) {
+      Block {
+        Return {
+          BuilderAppendChild {
+            Var(name=builder)
+            Call(target=structuralObject.workerRefRelocation) {
+              Var(name=modulePath) Var(name=instruction) Var(name=index)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.appendWorkerRefRelocations) {
+    Fn(params=function,plan,modulePath,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plan) } }
+          Block { Return { Var(name=function) } }
+          Block {
+            Let(name=instruction) { ChildAt { Var(name=plan) Var(name=index) } }
+            Let(name=withRelocation) {
+              If {
+                Eq {
+                  AttrValueString { Var(name=instruction) Lit(value=0) }
+                  Lit(value="WORKER_REF")
+                }
+                Block {
+                  AppendChild {
+                    Var(name=function)
+                    Call(target=structuralObject.workerRefRelocation) {
+                      Var(name=modulePath) Var(name=instruction) Var(name=index)
+                    }
+                  }
+                }
+                Block { Var(name=function) }
+              }
+            }
+            Return {
+              Call(target=structuralObject.appendWorkerRefRelocations) {
+                Var(name=withRelocation) Var(name=plan) Var(name=modulePath)
+                Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralObject.workerRefRelocation) {
+    Fn(params=modulePath,instruction,index) {
+      Block {
+        Let(name=workerName) {
+          Call(target=structuralObject.getAttr) {
+            Var(name=instruction) Lit(value="a") Lit(value=0)
+          }
+        }
+        Let(name=base) {
+          MakeNode {
+            Lit(value="Reloc")
+            StrConcat { Lit(value="structural-worker:") ToString { Var(name=index) } }
+          }
+        }
+        Let(name=withKind) {
+          AppendAttr {
+            Var(name=base)
+            MakeLitString { Lit(value="kind") Lit(value="worker") }
+          }
+        }
+        Let(name=withInstruction) {
+          AppendAttr {
+            Var(name=withKind)
+            MakeLitInt { Lit(value="instruction") Var(name=index) }
+          }
+        }
+        Return {
+          AppendAttr {
+            Var(name=withInstruction)
+            MakeLitString {
+              Lit(value="targetSymbol")
+              StrConcat {
+                Var(name=modulePath)
+                StrConcat {
+                  Lit(value="::worker::")
+                  Var(name=workerName)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

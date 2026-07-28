@@ -1,0 +1,266 @@
+Program {
+  Import(path="object_linker_core.aos")
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_worker_closure.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=objectLinker.buildWorkerArtifacts)
+
+  Let(name=objectLinker.buildWorkerArtifacts) {
+    Fn(params=catalogPlan,functions) {
+      Block {
+        Return {
+          Call(target=objectLinker.buildWorkerArtifactsAt) {
+            Var(name=catalogPlan) Var(name=functions) Lit(value=0)
+            MakeBlock { Lit(value="worker-artifacts") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildWorkerArtifactsAt) {
+    Fn(params=catalogPlan,functions,index,artifacts) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=catalogPlan) } }
+          Block { Return { Var(name=artifacts) } }
+          Block {
+            Let(name=entry) { ChildAt { Var(name=catalogPlan) Var(name=index) } }
+            Let(name=targetSymbol) {
+              Call(target=objectLinker.workerArtifactAttr) {
+                Var(name=entry) Lit(value="targetSymbol") Lit(value=0)
+              }
+            }
+            Let(name=closure) {
+              Call(target=objectLinker.workerFunctionClosure) {
+                Var(name=functions) Var(name=targetSymbol)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=closure) } Lit(value="Err") }
+              Block { Return { Var(name=closure) } }
+              Block {
+                Let(name=layout) { Call(target=objectLinker.assignOffsets) { Var(name=closure) } }
+                If {
+                  Eq { NodeKind { Var(name=layout) } Lit(value="Err") }
+                  Block { Return { Var(name=layout) } }
+                  Block {
+                    Let(name=targetOffset) {
+                      Call(target=objectLinker.resolveCallOffset) {
+                        Var(name=layout) Var(name=targetSymbol) Lit(value=0)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=targetOffset) } Lit(value="Err") }
+                      Block { Return { Var(name=targetOffset) } }
+                      Block {
+                        Let(name=artifactBytes) {
+                          Call(target=objectLinker.emitAibc1Bytes) { Var(name=closure) }
+                        }
+                        Let(name=artifactBase) {
+                          MakeNode {
+                            Lit(value="WorkerArtifact")
+                            StrConcat {
+                              Lit(value="worker-artifact:")
+                              Call(target=objectLinker.workerArtifactAttr) {
+                                Var(name=entry) Lit(value="symbol") Lit(value=0)
+                              }
+                            }
+                          }
+                        }
+                        Let(name=withSymbol) {
+                          AppendAttr {
+                            Var(name=artifactBase)
+                            MakeLitString {
+                              Lit(value="symbol")
+                              Call(target=objectLinker.workerArtifactAttr) {
+                                Var(name=entry) Lit(value="symbol") Lit(value=0)
+                              }
+                            }
+                          }
+                        }
+                        Let(name=withTarget) {
+                          AppendAttr {
+                            Var(name=withSymbol)
+                            MakeLitInt {
+                              Lit(value="functionTarget")
+                              AttrValueInt { Var(name=targetOffset) Lit(value=0) }
+                            }
+                          }
+                        }
+                        Let(name=withVersion) {
+                          AppendAttr {
+                            Var(name=withTarget)
+                            MakeLitInt { Lit(value="bytecodeVersion") Lit(value=2) }
+                          }
+                        }
+                        Let(name=withBytes) {
+                          AppendAttr {
+                            Var(name=withVersion)
+                            MakeLitString {
+                              Lit(value="artifactBase64")
+                              Call(target=bytes.toBase64) { Var(name=artifactBytes) }
+                            }
+                          }
+                        }
+                        Let(name=artifact) {
+                          Call(target=objectLinker.collectWorkerClosureSyscalls) {
+                            Var(name=closure) Lit(value=0) Var(name=withBytes)
+                          }
+                        }
+                        Return {
+                          Call(target=objectLinker.buildWorkerArtifactsAt) {
+                            Var(name=catalogPlan) Var(name=functions)
+                            Add { Var(name=index) Lit(value=1) }
+                            AppendChild { Var(name=artifacts) Var(name=artifact) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectWorkerClosureSyscalls) {
+    Fn(params=functions,index,artifact) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Var(name=artifact) } }
+          Block {
+            Return {
+              Call(target=objectLinker.collectWorkerClosureSyscalls) {
+                Var(name=functions) Add { Var(name=index) Lit(value=1) }
+                Call(target=objectLinker.collectWorkerNodeSyscalls) {
+                  ChildAt { ChildAt { Var(name=functions) Var(name=index) } Lit(value=4) }
+                  Lit(value=0) Var(name=artifact)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectWorkerNodeSyscalls) {
+    Fn(params=node,index,artifact) {
+      Block {
+        Let(name=withSelf) {
+          If {
+            Eq { NodeKind { Var(name=node) } Lit(value="Call") }
+            Block {
+              Let(name=target) {
+                Call(target=objectLinker.workerArtifactAttr) {
+                  Var(name=node) Lit(value="target") Lit(value=0)
+                }
+              }
+              If {
+                Eq { StringFind { Var(name=target) Lit(value="sys.") Lit(value=0) } Lit(value=0) }
+                Block {
+                  If {
+                    Call(target=objectLinker.workerArtifactHasSyscall) {
+                      Var(name=artifact) Var(name=target) Lit(value=0)
+                    }
+                    Block { Var(name=artifact) }
+                    Block {
+                      Let(name=required) {
+                        MakeNode {
+                          Lit(value="RequiredSyscall")
+                          StrConcat { Lit(value="worker-artifact-syscall:") Var(name=target) }
+                        }
+                      }
+                      AppendChild {
+                        Var(name=artifact)
+                        AppendAttr {
+                          Var(name=required)
+                          MakeLitString { Lit(value="target") Var(name=target) }
+                        }
+                      }
+                    }
+                  }
+                }
+                Block { Var(name=artifact) }
+              }
+            }
+            Block { Var(name=artifact) }
+          }
+        }
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=withSelf) } }
+          Block {
+            Return {
+              Call(target=objectLinker.collectWorkerNodeSyscalls) {
+                Var(name=node) Add { Var(name=index) Lit(value=1) }
+                Call(target=objectLinker.collectWorkerNodeSyscalls) {
+                  ChildAt { Var(name=node) Var(name=index) } Lit(value=0) Var(name=withSelf)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerArtifactHasSyscall) {
+    Fn(params=artifact,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=artifact) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=artifact) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="RequiredSyscall") }
+              Block {
+                If {
+                  Eq { AttrValueString { Var(name=child) Lit(value=0) } Var(name=target) }
+                  Block { Return { Lit(value=true) } }
+                  Block { Lit(value=0) }
+                }
+              }
+              Block { Lit(value=0) }
+            }
+            Return {
+              Call(target=objectLinker.workerArtifactHasSyscall) {
+                Var(name=artifact) Var(name=target) Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerArtifactAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerArtifactAttr) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

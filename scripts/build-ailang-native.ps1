@@ -55,42 +55,20 @@ if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
   throw 'MSVC cl.exe is required. Use ilammy/msvc-dev-cmd in CI.'
 }
 
+$coreSourceManifest = Join-Path $nativeSrc 'aivm_core_sources.txt'
+if (-not (Test-Path $coreSourceManifest)) {
+  throw "AiVM core source manifest not found: $coreSourceManifest"
+}
+$coreSources = Get-Content $coreSourceManifest |
+  Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+  ForEach-Object { Join-Path $nativeSrc $_ }
+
 $sources = @(
   $sourcePath,
   $uiHostWindowsPath,
   (Join-Path $nativeSrc 'ailang_native_bridge.c'),
-  (Join-Path $nativeSrc 'ailang_package_manager.c'),
-  (Join-Path $nativeSrc 'aivm_types.c'),
-  (Join-Path $nativeSrc 'aivm_vm.c'),
-  (Join-Path $nativeSrc 'aivm_vm_arena.c'),
-  (Join-Path $nativeSrc 'aivm_vm_blob.c'),
-  (Join-Path $nativeSrc 'aivm_vm_error.c'),
-  (Join-Path $nativeSrc 'aivm_vm_history.c'),
-  (Join-Path $nativeSrc 'aivm_vm_lifecycle.c'),
-  (Join-Path $nativeSrc 'aivm_vm_node.c'),
-  (Join-Path $nativeSrc 'aivm_vm_node_create.c'),
-  (Join-Path $nativeSrc 'aivm_vm_node_gc.c'),
-  (Join-Path $nativeSrc 'aivm_vm_profile.c'),
-  (Join-Path $nativeSrc 'aivm_vm_stack.c'),
-  (Join-Path $nativeSrc 'aivm_vm_storage.c'),
-  (Join-Path $nativeSrc 'aivm_vm_string_copy.c'),
-  (Join-Path $nativeSrc 'aivm_vm_text.c'),
-  (Join-Path $nativeSrc 'aivm_vm_value.c'),
-  (Join-Path $nativeSrc 'aivm_program.c'),
-  (Join-Path $nativeSrc 'aivm_program_constants.c'),
-  (Join-Path $nativeSrc 'aivm_host_abi.c'),
-  (Join-Path $nativeSrc 'aivm_debugger.c'),
-  (Join-Path $nativeSrc 'aivm_module_cache.c'),
-  (Join-Path $nativeSrc 'sys\aivm_syscall.c'),
-  (Join-Path $nativeSrc 'sys\aivm_syscall_contracts.c'),
-  (Join-Path $nativeSrc 'aivm_parity.c'),
-  (Join-Path $nativeSrc 'aivm_runtime.c'),
-  (Join-Path $nativeSrc 'aivm_c_api.c'),
-  (Join-Path $nativeSrc 'remote\aivm_remote_channel.c'),
-  (Join-Path $nativeSrc 'remote\aivm_remote_session.c'),
-  (Join-Path $nativeSrc 'remote\aivm_remote_transport.c'),
-  (Join-Path $nativeSrc 'remote\aivm_remote_ws_frame.c')
-)
+  (Join-Path $nativeSrc 'ailang_package_manager.c')
+) + $coreSources
 $commonArgs = @(
   '/nologo',
   '/O2',

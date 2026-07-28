@@ -148,52 +148,17 @@ elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   fi
 fi
 
-VM_CORE_SOURCES=(
-  "${NATIVE_SRC_DIR}/aivm_types.c"
-  "${NATIVE_SRC_DIR}/aivm_vm.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_arena.c"
-  "${NATIVE_SRC_DIR}/aivm_host_memory.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_blob.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_error.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_history.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_lifecycle.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_map.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_node.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_node_arena.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_node_create.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_node_builder.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_node_gc.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_profile.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_stack.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_storage.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_string_copy.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_text.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_value.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_worker_batches.c"
-  "${NATIVE_SRC_DIR}/aivm_vm_worker_tasks.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_capacity.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_capabilities.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_catalog.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_invocation.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_program.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_runtime.c"
-  "${NATIVE_SRC_DIR}/aivm_worker_scheduler.c"
-  "${NATIVE_SRC_DIR}/aivm_program.c"
-  "${NATIVE_SRC_DIR}/aivm_program_constants.c"
-  "${NATIVE_SRC_DIR}/aivm_program_instructions.c"
-  "${NATIVE_SRC_DIR}/aivm_host_abi.c"
-  "${NATIVE_SRC_DIR}/aivm_debugger.c"
-  "${NATIVE_SRC_DIR}/aivm_module_cache.c"
-  "${NATIVE_SRC_DIR}/sys/aivm_syscall.c"
-  "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c"
-  "${NATIVE_SRC_DIR}/aivm_parity.c"
-  "${NATIVE_SRC_DIR}/aivm_runtime.c"
-  "${NATIVE_SRC_DIR}/aivm_c_api.c"
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c"
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c"
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_transport.c"
-  "${NATIVE_SRC_DIR}/remote/aivm_remote_ws_frame.c"
-)
+CORE_SOURCE_MANIFEST="${NATIVE_SRC_DIR}/aivm_core_sources.txt"
+if [[ ! -f "${CORE_SOURCE_MANIFEST}" ]]; then
+  echo "AiVM core source manifest not found: ${CORE_SOURCE_MANIFEST}" >&2
+  exit 1
+fi
+
+VM_CORE_SOURCES=()
+while IFS= read -r source_path; do
+  [[ -z "${source_path}" ]] && continue
+  VM_CORE_SOURCES+=("${NATIVE_SRC_DIR}/${source_path}")
+done < "${CORE_SOURCE_MANIFEST}"
 
 COMMON_SOURCES=(
   "${SOURCE_PATH}"

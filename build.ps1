@@ -9,8 +9,8 @@ Builds AiLang tooling through the selected installed SDK.
 Targets:
   selfhost
           Build the AiLang compiler and CLI (default).
-          Module generation defaults to min(logical cores, 4 workers).
-          Override with AILANG_SELFHOST_JOBS or AILANG_SELFHOST_MAX_JOBS.
+          Module generation uses AiVM's capacity-derived worker scheduler.
+          Override its profile ceiling with AILANG_SELFHOST_MAX_JOBS.
   legacy  Build the deprecated native C AiLang bootstrap launcher.
   shared  Delegated to AiVM; kept temporarily for migration compatibility.
   wasm    Delegated to AiVM; kept temporarily for migration compatibility.
@@ -106,11 +106,30 @@ function Invoke-BuildTarget([string]$Target) {
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     'selfhost' {
-      $bootstrap = Join-Path $PSScriptRoot 'tools/ailang'
-      $runtime = Join-Path $PSScriptRoot 'tools/aivm-runtime'
+      $bootstrap = Join-Path $PSScriptRoot 'tools/ailang.exe'
+      $runtime = Join-Path $PSScriptRoot 'tools/aivm-runtime.exe'
       if (-not (Test-Path $bootstrap) -or -not (Test-Path $runtime)) {
-        Write-Host 'selfhost-bootstrap=legacy reason=missing-bootstrap-tools'
-        Invoke-BuildTarget 'legacy'
+        try {
+          Invoke-StageInstalledToolchain
+          Write-Host 'selfhost-bootstrap=installed-sdk'
+        } catch {
+          Write-Host 'selfhost-bootstrap=legacy reason=installed-sdk-unavailable'
+          Invoke-BuildTarget 'legacy'
+        }
+      }
+      $aivmSource = Join-Path (Split-Path $PSScriptRoot -Parent) 'AiVM/src'
+      if ((Test-Path $runtime) -and (Test-Path $aivmSource)) {
+        $runtimeTime = (Get-Item $runtime).LastWriteTimeUtc
+        $staleSource = Get-ChildItem $aivmSource -Recurse -File |
+          Where-Object {
+            ($_.Extension -eq '.c' -or $_.Extension -eq '.h') -and
+            $_.LastWriteTimeUtc -gt $runtimeTime
+          } |
+          Select-Object -First 1
+        if ($staleSource) {
+          Write-Host 'selfhost-bootstrap=legacy reason=stale-bootstrap-runtime'
+          Invoke-BuildTarget 'legacy'
+        }
       }
       bash "$PSScriptRoot/scripts/build-ailang-selfhost.sh"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

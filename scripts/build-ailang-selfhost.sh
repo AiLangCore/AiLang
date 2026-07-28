@@ -10,6 +10,19 @@ PROJECT_DIR="${WORK_DIR}/project"
 SELFHOST_BIN="${OUT_DIR}/bin/ailang.aibc1"
 WORKER_DIR="${OUT_DIR}/libexec/ailang/build-workers"
 
+resolve_tool() {
+  local name="$1"
+  if [[ -x "${ROOT_DIR}/tools/${name}" ]]; then
+    printf '%s\n' "${ROOT_DIR}/tools/${name}"
+    return 0
+  fi
+  if [[ -x "${ROOT_DIR}/tools/${name}.exe" ]]; then
+    printf '%s\n' "${ROOT_DIR}/tools/${name}.exe"
+    return 0
+  fi
+  return 1
+}
+
 phase_begin() {
   SELFHOST_PHASE_NAME="$1"
   SELFHOST_PHASE_STARTED_AT="$(date +%s)"
@@ -22,7 +35,9 @@ phase_end() {
   echo "selfhost-phase=${SELFHOST_PHASE_NAME} status=done seconds=$((finished_at - SELFHOST_PHASE_STARTED_AT))"
 }
 
-if [[ ! -x "${ROOT_DIR}/tools/ailang" || ! -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+AILANG_BIN="$(resolve_tool ailang || true)"
+AIVM_RUNTIME="$(resolve_tool aivm-runtime || true)"
+if [[ -z "${AILANG_BIN}" || -z "${AIVM_RUNTIME}" ]]; then
   echo "self-host build requires bootstrap tools; run ./build.sh legacy first" >&2
   exit 1
 fi
@@ -40,17 +55,21 @@ phase_end
 phase_begin bootstrap-link
 AILANG_SDK_ROOT="${OUT_DIR}" \
 SELFHOST_LINK_WORK_DIR="${BOOTSTRAP_DIR}" \
+AILANG_BIN="${AILANG_BIN}" \
+AIVM_RUNTIME="${AIVM_RUNTIME}" \
   "${ROOT_DIR}/scripts/probe-selfhost-compiler-link.sh"
 phase_end
 
 phase_begin builtins
-cp "${ROOT_DIR}/tools/aivm-runtime" "${OUT_DIR}/bin/aivm-runtime"
+cp "${AIVM_RUNTIME}" "${OUT_DIR}/bin/aivm-runtime"
 AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
+AILANG_BIN="${AILANG_BIN}" \
   "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
 phase_end
 
 phase_begin build-workers
 AILANG_WORKER_SDK_ROOT="${OUT_DIR}" \
+AILANG_BIN="${AILANG_BIN}" \
   "${ROOT_DIR}/scripts/build-ailang-workers.sh" "${WORKER_DIR}"
 phase_end
 
@@ -63,7 +82,7 @@ AILANG_PACKAGE_REGISTRY="${ROOT_DIR}/../ailang-packages" \
 AILANG_COMMAND_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_COMMAND_ROOT="${OUT_DIR}/bin/commands" \
 AILANG_VM_PROFILE=tooling \
-  "${ROOT_DIR}/tools/aivm-runtime" \
+  "${AIVM_RUNTIME}" \
   run "${BOOTSTRAP_DIR}/bin/ailang.aibc1" -- package restore "${PROJECT_DIR}"
 
 test -s "${PROJECT_DIR}/ailang.lock.toml"
@@ -75,7 +94,7 @@ AILANG_BUILD_JOBS="${SELFHOST_JOBS}" \
 AILANG_BUILD_WORKER_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_BUILD_WORKER_ARTIFACT="${WORKER_DIR}/module-object.aibc1" \
 AILANG_VM_PROFILE=tooling \
-  "${ROOT_DIR}/tools/aivm-runtime" \
+  "${AIVM_RUNTIME}" \
   run "${BOOTSTRAP_DIR}/bin/ailang.aibc1" -- build "${PROJECT_DIR}"
 
 test -s "${PROJECT_DIR}/bin/app.aibc1"
@@ -86,7 +105,7 @@ cp "${PROJECT_DIR}/bin/app.aibc1" "${SELFHOST_BIN}"
 AILANG_VM_PROFILE=tooling \
 AILANG_COMMAND_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_COMMAND_ROOT="${OUT_DIR}/bin/commands" \
-  "${ROOT_DIR}/tools/aivm-runtime" run "${SELFHOST_BIN}" -- version >/dev/null
+  "${AIVM_RUNTIME}" run "${SELFHOST_BIN}" -- version >/dev/null
 phase_end
 
 echo "self-hosted AiLang compiler: ${SELFHOST_BIN}"

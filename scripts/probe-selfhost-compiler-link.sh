@@ -370,10 +370,10 @@ Program {
 }
 AOS
 
-"${ROOT_DIR}/tools/ailang" build "${TMP_DIR}/app.aos" --out "${TMP_DIR}" --no-cache >/dev/null
+"${AILANG_BIN:-${ROOT_DIR}/tools/ailang}" build "${TMP_DIR}/app.aos" --out "${TMP_DIR}" --no-cache >/dev/null
 AILANG_SDK_ROOT="${AILANG_SDK_ROOT:-${ROOT_DIR}/.artifacts/ailang-selfhost}" \
 AILANG_VM_PROFILE=tooling \
-  "${ROOT_DIR}/tools/aivm-runtime" run "${TMP_DIR}/app.aibc1"
+  "${AIVM_RUNTIME:-${ROOT_DIR}/tools/aivm-runtime}" run "${TMP_DIR}/app.aibc1"
 
 test -s "${TMP_DIR}/bin/${OUTPUT_NAME}"
 echo 'self-host compiler link probe: PASS'

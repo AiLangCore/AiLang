@@ -5,6 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 cd "${ROOT_DIR}"
 
+if [[ ! -x "${ROOT_DIR}/tools/ailang" ||
+      ! -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+  "${ROOT_DIR}/scripts/stage-installed-toolchain.sh"
+fi
+
 bash ./scripts/check-doc-taxonomy.sh
 ./scripts/check-aos-module-size.sh
 ./scripts/test-stdlib-conformance.sh
@@ -61,6 +66,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-selfhost-lowering-error-propagation.sh
 ./scripts/test-selfhost-transitive-module-symbol-pipeline.sh
 ./scripts/test-object-linker-structural-call-module.sh
+./scripts/test-clean-bootstrap-routing.sh
 ./scripts/test-local-toolchain-shim.sh
 ./scripts/test-installed-bytecode-cli.sh
 ./scripts/test-validator-unknown-kind.sh

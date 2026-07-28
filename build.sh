@@ -23,11 +23,17 @@ EOF
 
 ensure_legacy_bootstrap() {
   if [[ ! -x "${ROOT_DIR}/tools/ailang" || ! -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
-    echo "selfhost-bootstrap=legacy reason=missing-bootstrap-tools" >&2
-    run_target legacy
-  elif [[ -f "${ROOT_DIR}/../AiVM/src/aivm_program.c" ]] &&
-       [[ "${ROOT_DIR}/../AiVM/src/aivm_program.c" -nt "${ROOT_DIR}/tools/aivm-runtime" ||
-          "${ROOT_DIR}/../AiVM/src/aivm_program_instructions.c" -nt "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+    if "${ROOT_DIR}/scripts/stage-installed-toolchain.sh"; then
+      echo "selfhost-bootstrap=installed-sdk"
+    else
+      echo "selfhost-bootstrap=legacy reason=installed-sdk-unavailable" >&2
+      run_target legacy
+    fi
+  elif [[ -d "${ROOT_DIR}/../AiVM/src" ]] &&
+       find "${ROOT_DIR}/../AiVM/src" \
+         -type f \( -name '*.c' -o -name '*.h' \) \
+         -newer "${ROOT_DIR}/tools/aivm-runtime" -print -quit |
+         rg -q .; then
     echo "selfhost-bootstrap=legacy reason=stale-bootstrap-runtime" >&2
     AILANG_ALLOW_SIBLING_AIVM_SOURCE=1 run_target legacy
   fi

@@ -78,8 +78,8 @@ if [[ -z "${AILANG_BIN}" ]]; then
 fi
 
 mkdir -p "${TOOLS_DIR}"
-copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
 rm -f "${TOOLS_DIR}/ailang" "${TOOLS_DIR}/ailang.exe"
+copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
 
 RUNTIME_BIN="$(resolve_sdk_executable aivm-runtime || true)"
 if [[ -n "${RUNTIME_BIN}" ]]; then

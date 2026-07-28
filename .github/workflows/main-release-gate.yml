@@ -96,8 +96,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
-          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
+          AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
+          AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
@@ -109,7 +109,8 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
-          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_PLATFORM = '${{ matrix.platform }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
           Copy-Item .\tools\ailang.exe ".\dist\${{ matrix.airun }}"
@@ -232,8 +233,8 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
-          AIVM_AIRUN_PLATFORM=linux \
-          AIVM_AIRUN_ARCH=x64 \
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=x64 \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
 
       - name: Setup wasmtime

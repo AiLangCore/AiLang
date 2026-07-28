@@ -2,4 +2,4 @@
 # The self-hosted CLI payload is executed by AiVM. Keep this pinned to the
 # release-tested runtime rather than inferring a potentially incompatible
 # channel release at installation time.
-aivmVersion = "0.0.1-rc.6"
+aivmVersion = "0.0.1-rc.7"

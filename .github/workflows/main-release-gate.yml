@@ -87,6 +87,15 @@ jobs:
         run: |
           set -euo pipefail
           sudo dpkg --add-architecture arm64
+          sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          {
+            echo 'Types: deb'
+            echo 'URIs: http://ports.ubuntu.com/ubuntu-ports'
+            echo 'Suites: noble noble-updates noble-backports noble-security'
+            echo 'Components: main universe restricted multiverse'
+            echo 'Architectures: arm64'
+            echo 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg'
+          } | sudo tee /etc/apt/sources.list.d/ubuntu-arm64.sources >/dev/null
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross libssl-dev:arm64
 

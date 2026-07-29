@@ -41,6 +41,12 @@ rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/scripts/test.sh"
 rg -q 'AILANG_NATIVE_PLATFORM=' "${ROOT_DIR}/.github/workflows/main-release-gate.yml"
 rg -q 'AILANG_NATIVE_ARCH=' "${ROOT_DIR}/.github/workflows/main-release-gate.yml"
+rg -q 'AILANG_RELEASE_CLI_SHA256:' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'gh release download.*needs.prepare.outputs.tag' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'sha256sum --check' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
 if rg -q 'AIVM_AIRUN_(PLATFORM|ARCH)=' \
     "${ROOT_DIR}/.github/workflows/main-release-gate.yml"; then
   echo "clean bootstrap routing: obsolete cross-target variable remains" >&2

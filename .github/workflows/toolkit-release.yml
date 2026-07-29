@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AILANG_RELEASE_CLI_SHA256: 0725750a1ca85ab9dcab463b16c5b71498f355016768c4f22d93e1fd94299297
 
 permissions:
   contents: write
@@ -452,20 +453,6 @@ jobs:
           ref: develop
           path: AiVM
 
-      - name: Checkout AiLang core packages
-        uses: actions/checkout@v6
-        with:
-          repository: AiLangCore/ailang-core-packages
-          ref: main
-          path: ailang-core-packages
-
-      - name: Checkout AiLang package registry
-        uses: actions/checkout@v6
-        with:
-          repository: AiLangCore/ailang-packages
-          ref: main
-          path: ailang-packages
-
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v16
         with:
@@ -483,21 +470,29 @@ jobs:
         shell: bash
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
-          AILANG_PACKAGE_REGISTRY: ${{ github.workspace }}/ailang-packages
-          AILANG_STD_CLI_SOURCE_DIR: ${{ github.workspace }}/ailang-core-packages/packages/std-cli
         run: |
           set -euo pipefail
           AILANG_NATIVE_PLATFORM=linux \
           AILANG_NATIVE_ARCH=x64 \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
-          ./build.sh selfhost
 
-      - name: Build canonical bytecode CLI payload
+      - name: Stage validated self-hosted CLI payload
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist/libexec/ailang/cli
-          cp ./.artifacts/ailang-selfhost/bin/ailang.aibc1 ./dist/libexec/ailang/cli/app.aibc1
+          gh release download "${{ needs.prepare.outputs.tag }}" \
+            --pattern ailang-cli.aibc1 \
+            --dir ./dist/libexec/ailang/cli
+          mv \
+            ./dist/libexec/ailang/cli/ailang-cli.aibc1 \
+            ./dist/libexec/ailang/cli/app.aibc1
+          printf '%s  %s\n' \
+            "${AILANG_RELEASE_CLI_SHA256}" \
+            ./dist/libexec/ailang/cli/app.aibc1 |
+            sha256sum --check -
           test -f ./dist/libexec/ailang/cli/app.aibc1
 
       - name: Upload bytecode CLI payload
@@ -733,11 +728,14 @@ jobs:
             exit 1
           fi
           if gh release view "${TAG}" >/dev/null 2>&1; then
-            echo "Release ${TAG} already exists; immutable releases cannot be republished." >&2
-            exit 1
+            gh release edit "${TAG}" \
+              --title "${TAG}" \
+              --notes-file ./RELEASE_NOTES.md
+            gh release upload "${TAG}" "${release_files[@]}" --clobber
+          else
+            args+=("${release_files[@]}")
+            gh "${args[@]}"
           fi
-          args+=("${release_files[@]}")
-          gh "${args[@]}"
           publish_args=(release edit "${TAG}" --draft=false --latest=false)
           if [[ "${PRERELEASE}" == "true" ]]; then
             publish_args+=(--prerelease)

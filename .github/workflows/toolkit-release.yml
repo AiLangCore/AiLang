@@ -366,6 +366,8 @@ jobs:
             'export AILANG_SDK_ROOT="$SDK_ROOT"' \
             'export AILANG_SDK_VERSION="'"${VERSION}"'"' \
             'export AILANG_COMMAND_ROOT="$SDK_ROOT/libexec/ailang/commands"' \
+            'export AILANG_OBJECT_PIPELINE="${AILANG_OBJECT_PIPELINE:-legacy}"' \
+            'export AILANG_BUILD_JOBS="${AILANG_BUILD_JOBS:-1}"' \
             'exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"' \
             > "${PACKAGE_DIR}/bin/ailang"
           chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm" "${PACKAGE_DIR}/bin/aivm-runtime"
@@ -418,6 +420,8 @@ jobs:
           set "SDK_ROOT=%~dp0.."
           set "AILANG_SDK_ROOT=%SDK_ROOT%"
           set "AILANG_COMMAND_ROOT=%SDK_ROOT%\libexec\ailang\commands"
+          if not defined AILANG_OBJECT_PIPELINE set "AILANG_OBJECT_PIPELINE=legacy"
+          if not defined AILANG_BUILD_JOBS set "AILANG_BUILD_JOBS=1"
           "%SDK_ROOT%\bin\aivm-runtime.exe" run "%SDK_ROOT%\libexec\ailang\cli\app.aibc1" -- %*
           exit /b %ERRORLEVEL%
           '@ -replace '(?m)^[ \t]{10}', '' | Set-Content -NoNewline "$packageDir\bin\ailang.cmd"

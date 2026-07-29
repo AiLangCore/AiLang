@@ -15,7 +15,7 @@ if rg -n 'copy_if_exists "\$\{AILANG_DIR\}/tools/ailang" "\$\{TMP_ROOT\}/bin/ail
 fi
 
 rg -q 'write_sdk_ailang_shim' "${SCRIPT}"
-rg -q 'exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "\$@"' "${SCRIPT}"
+rg -q 'exec "\$SDK_ROOT/bin/aivm-runtime" run "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "\$@"' "${SCRIPT}"
 rg -q 'staged ailang must be a non-C shim' "${SCRIPT}"
 
 if rg -n 'cp "\./\$\{\{ matrix\.artifact_dir \}\}/\$\{\{ matrix\.tool \}\}" "\$\{PACKAGE_DIR\}/bin/ailang"' "${RELEASE_WORKFLOW}" >/tmp/ailang-release-shim-copy.out; then
@@ -30,7 +30,7 @@ if rg -n 'Copy-Item "\.\\\\\$\{\{ matrix\.artifact_dir \}\}\\\\\$\{\{ matrix\.to
   exit 1
 fi
 
-rg -q 'exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "\$@"' "${RELEASE_WORKFLOW}"
+rg -q 'exec "\$SDK_ROOT/bin/aivm-runtime" run "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "\$@"' "${RELEASE_WORKFLOW}"
 rg -q 'release package violation: bin/ailang must be a non-C shim' "${RELEASE_WORKFLOW}"
 rg -q 'ailang\.cmd' "${RELEASE_WORKFLOW}"
 rg -q 'release package violation: bin/ailang\.exe must not be staged as native command' "${RELEASE_WORKFLOW}"

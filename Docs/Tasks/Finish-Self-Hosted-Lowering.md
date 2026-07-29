@@ -924,6 +924,22 @@ Validation boundary:
 - the optional performance harness currently reports its existing string
   benchmark type mismatch in both smoke and full modes.
 
+### Canonical installed runtime invocation
+
+Status: implemented and validated on 2026-07-29.
+
+Installed bytecode execution now resolves the SDK-owned `aivm-runtime` and uses
+the canonical `run <artifact> -- <application arguments>` contract. Runtime
+selection and argument construction live in the focused
+`src/cli/runtime_invocation.aos` module instead of the large CLI facade.
+
+The focused argument golden, complete CLI contract suite, and installed
+bytecode CLI gate pass. The published beta.53 self-host compiled the complete
+updated CLI project, and that generated CLI built and ran the restored
+`std-json` package application through the installed runtime boundary. This
+removes the `DEV008` failure that followed the package-owned
+`std.json.stringify` correction.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

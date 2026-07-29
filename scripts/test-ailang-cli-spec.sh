@@ -485,13 +485,15 @@ printf '%s\n' "${MULTI_STDOUT_OUT}" | rg -q '^second$'
 mkdir -p "${FAKE_INSTALL_ROOT}/local/bin" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli"
 cp "${AIVM_BIN}" "${FAKE_INSTALL_ROOT}/local/bin/aivm"
 chmod +x "${FAKE_INSTALL_ROOT}/local/bin/aivm"
+cp "${ROOT_DIR}/tools/aivm-runtime" "${FAKE_INSTALL_ROOT}/local/bin/aivm-runtime"
+chmod +x "${FAKE_INSTALL_ROOT}/local/bin/aivm-runtime"
 cp "${CLI_BYTECODE_DIR}/app.aibc1" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli/app.aibc1"
 cat > "${FAKE_INSTALL_ROOT}/local/bin/ailang" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 export AILANG_SDK_ROOT="$SDK_ROOT"
-exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
+exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"
 EOF
 chmod +x "${FAKE_INSTALL_ROOT}/local/bin/ailang"
 if file "${FAKE_INSTALL_ROOT}/local/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
@@ -540,8 +542,10 @@ UNAVAILABLE_TARGET_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" publi
 printf '%s\n' "${UNAVAILABLE_TARGET_OUT}" | rg -q 'code=AILANG019'
 unset AILANG_INSTALL_ROOT
 
-run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${APP_DIR}" >/dev/null
-AIVM="${AIVM_BIN}" run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${BUILD_DIR}/app.aibc1" >/dev/null
+AIVM="${ROOT_DIR}/tools/aivm-runtime" \
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${APP_DIR}" >/dev/null
+AIVM="${ROOT_DIR}/tools/aivm-runtime" \
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${BUILD_DIR}/app.aibc1" >/dev/null
 
 mkdir -p "${APP_DIR}/bin" "${APP_DIR}/dist" "${APP_DIR}/.toolchain"
 touch "${APP_DIR}/bin/app.aibc1" "${APP_DIR}/dist/app.aibc1" "${APP_DIR}/.toolchain/cache"

@@ -940,6 +940,25 @@ updated CLI project, and that generated CLI built and ran the restored
 removes the `DEV008` failure that followed the package-owned
 `std.json.stringify` correction.
 
+### Build-validated dynamic call lowering
+
+Status: binding, statement, conditional-branch, and return continuations
+implemented on 2026-07-29; loop continuation pending.
+
+The self-hosted lowerer now owns single-candidate `CallDynamic` dispatch in
+focused control modules. It evaluates and stores the runtime target, compares
+it with the build-validated candidate, invokes the resolved canonical symbol,
+and preserves the `sys.dynamic.missingFunction` fallback. Binding, discarded
+statement, statement-`If` branch, and return continuations have executable
+coverage.
+
+The restored Weather graph advances through all dynamic calls before its
+application loop. Its current deterministic frontier is `Loop_13000`, reported
+as `LOWER032` because structural terminal-sequence lowering does not yet accept
+`Loop`. The next acceptance step is modular loop/body lowering with canonical
+back edges and explicit `Break`/`Continue` handling; no loop policy belongs in
+AiVM.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

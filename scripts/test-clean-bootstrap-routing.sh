@@ -51,7 +51,7 @@ rg -q 'sha256sum --check' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
 rg -q 'commands/package.aibc1' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
-rg -q 'bin/aivm" run.*cli/app.aibc1.*--' \
+rg -q 'bin/aivm-runtime" run.*cli/app.aibc1.*--' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
 if rg -q 'AIVM_AIRUN_(PLATFORM|ARCH)=' \
     "${ROOT_DIR}/.github/workflows/main-release-gate.yml"; then

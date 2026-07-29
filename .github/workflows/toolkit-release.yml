@@ -366,7 +366,7 @@ jobs:
             'export AILANG_SDK_ROOT="$SDK_ROOT"' \
             'export AILANG_SDK_VERSION="'"${VERSION}"'"' \
             'export AILANG_COMMAND_ROOT="$SDK_ROOT/libexec/ailang/commands"' \
-            'exec "$SDK_ROOT/bin/aivm" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"' \
+            'exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"' \
             > "${PACKAGE_DIR}/bin/ailang"
           chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm" "${PACKAGE_DIR}/bin/aivm-runtime"
           if file "${PACKAGE_DIR}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
@@ -418,7 +418,7 @@ jobs:
           set "SDK_ROOT=%~dp0.."
           set "AILANG_SDK_ROOT=%SDK_ROOT%"
           set "AILANG_COMMAND_ROOT=%SDK_ROOT%\libexec\ailang\commands"
-          "%SDK_ROOT%\bin\aivm.exe" run "%SDK_ROOT%\libexec\ailang\cli\app.aibc1" -- %*
+          "%SDK_ROOT%\bin\aivm-runtime.exe" run "%SDK_ROOT%\libexec\ailang\cli\app.aibc1" -- %*
           exit /b %ERRORLEVEL%
           '@ -replace '(?m)^[ \t]{10}', '' | Set-Content -NoNewline "$packageDir\bin\ailang.cmd"
           if (Test-Path "$packageDir\bin\ailang.exe") { throw 'release package violation: bin/ailang.exe must not be staged as native command' }

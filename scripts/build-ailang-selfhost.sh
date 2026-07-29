@@ -71,7 +71,7 @@ AILANG_COMMAND_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_COMMAND_ROOT="${OUT_DIR}/bin/commands" \
 AILANG_VM_PROFILE=tooling \
   "${AIVM_RUNTIME}" \
-  run "${BOOTSTRAP_DIR}/bin/ailang.aibc1" -- package restore "${PROJECT_DIR}"
+  run "${OUT_DIR}/bin/commands/package.aibc1" -- package restore "${PROJECT_DIR}"
 
 test -s "${PROJECT_DIR}/ailang.lock.toml"
 cp "${PROJECT_DIR}/ailang.lock.toml" "${BOOTSTRAP_PROJECT_DIR}/ailang.lock.toml"

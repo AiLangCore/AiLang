@@ -178,6 +178,11 @@ Program {
   Let(name=objectLinker.isSupportedInstruction) {
     Fn(params=op) {
       Block {
+        If {
+          Eq { Var(name=op) Lit(value="POW_NUM") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
         If { Eq { Var(name=op) Lit(value="RETURN") } Block { Return { Lit(value=true) } } Block {
           If { Eq { Var(name=op) Lit(value="CONST") } Block { Return { Lit(value=true) } } Block {
             If { Eq { Var(name=op) Lit(value="CALL") } Block { Return { Lit(value=true) } } Block {
@@ -540,6 +545,11 @@ Program {
   Let(name=objectLinker.emitInstructionBytes) {
     Fn(params=op,instructionNode,functionNode,instructionIndex,relocSearchIndex,functions,layout,constants,functionOffset,resolvedConstantIndex) {
       Block {
+        If {
+          Eq { Var(name=op) Lit(value="POW_NUM") }
+          Block { Return { Call(target=objectLinker.inst) { Lit(value=71) Lit(value=0) } } }
+          Block { Lit(value=0) }
+        }
         If {
           Eq { Var(name=op) Lit(value="RETURN") }
           Block { Return { Call(target=objectLinker.inst) { Lit(value=19) Lit(value=0) } } }

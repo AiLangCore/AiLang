@@ -48,30 +48,9 @@ Program {
         If {
           Eq { ChildCount { Var(name=body) } Lit(value=2) }
           Block {
-            Let(name=first) { ChildAt { Var(name=body) Lit(value=0) } }
-            If {
-              Eq { NodeKind { Var(name=first) } Lit(value="Call") }
-              Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
-              Block {
-                Let(name=second) { ChildAt { Var(name=body) Lit(value=1) } }
-                If {
-                  Eq { NodeKind { Var(name=first) } Lit(value="Let") }
-                  Block {
-                    If {
-                      Eq { NodeKind { Var(name=second) } Lit(value="Return") }
-                      Block {
-                        Let(name=value) { ChildAt { Var(name=second) Lit(value=0) } }
-                        If {
-                          Eq { NodeKind { Var(name=value) } Lit(value="Match") }
-                          Block { Return { Call(target=lower.emitStructuralLocalMatchRecordPlan) { Var(name=record) } } }
-                          Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
-                        }
-                      }
-                      Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
-                    }
-                  }
-                  Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
-                }
+            Return {
+              Call(target=lower.twoStatement.plan) {
+                Var(name=record) Var(name=records)
               }
             }
           }

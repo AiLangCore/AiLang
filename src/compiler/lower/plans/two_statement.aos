@@ -1,0 +1,68 @@
+Program {
+  Let(name=lower.twoStatement.plan) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        Let(name=first) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=second) { ChildAt { Var(name=body) Lit(value=1) } }
+        If {
+          Eq { NodeKind { Var(name=first) } Lit(value="Let") }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=second) } Lit(value="Return") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=second) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=second) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Match") }
+                      Block {
+                        Return {
+                          Call(target=lower.emitStructuralLocalMatchRecordPlan) {
+                            Var(name=record)
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          Call(target=lower.emitStructuralNativeSequenceRecordPlan) {
+                            Var(name=record) Var(name=records)
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="lower")
+                        Lit(value="LOWER021")
+                        Lit(value="Structural lowerer requires one return value.")
+                        NodeId { Var(name=second) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=lower.emitStructuralNativeSequenceRecordPlan) {
+                    Var(name=record) Var(name=records)
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=lower.emitStructuralNativeSequenceRecordPlan) {
+                Var(name=record) Var(name=records)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

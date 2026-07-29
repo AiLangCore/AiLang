@@ -1,0 +1,81 @@
+Program {
+  Let(name=lower.structuralBinaryOp) {
+    Fn(params=expr) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=expr) } }
+        If {
+          Eq { Var(name=kind) Lit(value="Add") }
+          Block { Return { Lit(value="ADD_INT") } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Sub") }
+          Block { Return { Lit(value="SUB_NUM") } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Mul") }
+          Block { Return { Lit(value="MUL_NUM") } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Div") }
+          Block { Return { Lit(value="DIV_NUM") } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Mod") }
+          Block { Return { Lit(value="MOD_NUM") } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Pow") }
+          Block { Return { Lit(value="POW_NUM") } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="lower")
+                Lit(value="LOWER025")
+                Lit(value="Structural binary operation is unsupported.")
+                NodeId { Var(name=expr) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.isStructuralNumericBinaryExpression) {
+    Fn(params=expr) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=expr) } }
+        If {
+          Eq { Var(name=kind) Lit(value="Add") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Sub") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Mul") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Div") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=kind) Lit(value="Mod") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Eq { Var(name=kind) Lit(value="Pow") } } }
+        }
+      }
+    }
+  }
+}

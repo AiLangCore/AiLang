@@ -65,6 +65,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-selfhost-statement-call-pipeline.sh
 ./scripts/test-selfhost-syscall-statement-pipeline.sh
 ./scripts/test-selfhost-native-primitive-pipeline.sh
+./scripts/test-selfhost-numeric-operators-pipeline.sh
 ./scripts/test-selfhost-lowering-error-propagation.sh
 ./scripts/test-selfhost-transitive-module-symbol-pipeline.sh
 ./scripts/test-object-linker-structural-call-module.sh

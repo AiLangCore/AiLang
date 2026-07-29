@@ -28,6 +28,7 @@ Program {
   Import(path="lower/control/statement_return.aos")
   Import(path="lower/control/statement_if.aos")
   Import(path="lower/expressions/policy.aos")
+  Import(path="lower/expressions/numeric.aos")
   Import(path="lower/expressions/byte_opcodes.aos")
   Import(path="lower/expressions/map_opcodes.aos")
   Import(path="lower/expressions/worker_opcodes.aos")
@@ -37,6 +38,7 @@ Program {
   Import(path="lower/expressions/map_literals.aos")
   Import(path="lower/expressions/emission.aos")
   Import(path="lower/plans/dispatch.aos")
+  Import(path="lower/plans/two_statement.aos")
   Import(path="lower/plans/native_records.aos")
   Import(path="lower/plans/if_calls.aos")
   Import(path="lower/records/index.aos")
@@ -458,73 +460,6 @@ Program {
         Let(name=withValue) { Call(target=lower.appendStructuralValue) { Var(name=withParams) Var(name=value) Var(name=params) Lit(value="") Lit(value=-1) } }
         Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } }
         Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
-      }
-    }
-  }
-
-  Let(name=lower.structuralBinaryOp) {
-    Fn(params=expr) {
-      Block {
-        If {
-          Eq { NodeKind { Var(name=expr) } Lit(value="Add") }
-          Block { Return { Lit(value="ADD_INT") } }
-          Block {
-            If {
-              Eq { NodeKind { Var(name=expr) } Lit(value="Sub") }
-              Block { Return { Lit(value="SUB_NUM") } }
-              Block {
-                If {
-                  Eq { NodeKind { Var(name=expr) } Lit(value="Mul") }
-                  Block { Return { Lit(value="MUL_NUM") } }
-                  Block {
-                    If {
-                      Eq { NodeKind { Var(name=expr) } Lit(value="Div") }
-                      Block { Return { Lit(value="DIV_NUM") } }
-                      Block {
-                        If {
-                          Eq { NodeKind { Var(name=expr) } Lit(value="Mod") }
-                          Block { Return { Lit(value="MOD_NUM") } }
-                          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER025") Lit(value="Structural binary operation is unsupported.") NodeId { Var(name=expr) } } } }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=lower.isStructuralNumericBinaryExpression) {
-    Fn(params=expr) {
-      Block {
-        Let(name=kind) { NodeKind { Var(name=expr) } }
-        If {
-          Eq { Var(name=kind) Lit(value="Add") }
-          Block { Return { Lit(value=true) } }
-          Block {
-            If {
-              Eq { Var(name=kind) Lit(value="Sub") }
-              Block { Return { Lit(value=true) } }
-              Block {
-                If {
-                  Eq { Var(name=kind) Lit(value="Mul") }
-                  Block { Return { Lit(value=true) } }
-                  Block {
-                    If {
-                      Eq { Var(name=kind) Lit(value="Div") }
-                      Block { Return { Lit(value=true) } }
-                      Block { Return { Eq { Var(name=kind) Lit(value="Mod") } } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
       }
     }
   }

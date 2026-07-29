@@ -958,15 +958,19 @@ control module with canonical entry, body, and exit blocks. `Break` and
 branches, and loop-local rebinding reuses the existing local slot. Focused
 coverage includes a dynamic call binding nested in a loop conditional.
 
-The restored Weather graph now lowers its complete application loop. Removing
-AiVectra's unused pre-release `guiRun`/`guiLoop` facade exposes the next
-deterministic frontier in the self-hosted compiler: the legacy two-statement
-record planner selects `lower.emitStructuralLocalBinaryRecordPlan` for a
-non-binary return value and reaches an invalid `ChildAt` instead of selecting
-the native sequence planner. The next acceptance step is to move that
-two-statement classification into a focused plan module, validate the return
-shape before destructuring it, and route all other supported values through the
-symbol-aware native sequence path.
+The restored Weather graph now lowers its complete application loop. The
+two-statement classification has moved into a focused plan module: only a
+validated local `Match` uses its specialized plan, while other supported
+records route through the symbol-aware native sequence planner. This removes
+the former invalid `ChildAt` failure. Numeric expression policy and opcode
+selection have also moved into a focused module, including the specified
+`Pow` to `POW_NUM` mapping.
+
+Weather now advances through both of those frontiers. Its current deterministic
+frontier is `If_6031`, a value-producing `If` nested where structural native
+expression lowering does not yet accept `If`. The next acceptance step is to
+route nested value conditionals through the existing focused value-`If`
+lowering without moving conditional semantics into AiVM.
 
 ## Acceptance Criteria
 

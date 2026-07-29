@@ -10,13 +10,19 @@ Program {
   Import(path="manifest.aos")
   Import(path="target_packages.aos")
   Import(path="application.aos")
+  Import(path="package_tool_dispatch.aos")
   Import(path="runtime_invocation.aos")
   Export(name=main)
 
   Let(name=main) {
     Fn(params=args) {
       Block {
-        Return { Call(target=run) { Call(target=ailangCliApplication) { Lit(value=0) } Var(name=args) } }
+        Return {
+          Call(target=runAilangCommand) {
+            Call(target=ailangCliApplication) { Lit(value=0) }
+            Var(name=args)
+          }
+        }
       }
     }
   }

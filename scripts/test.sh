@@ -67,6 +67,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-selfhost-transitive-module-symbol-pipeline.sh
 ./scripts/test-object-linker-structural-call-module.sh
 ./scripts/test-clean-bootstrap-routing.sh
+./scripts/test-runtime-invocation-module.sh
 ./scripts/test-local-toolchain-shim.sh
 ./scripts/test-installed-bytecode-cli.sh
 ./scripts/test-validator-unknown-kind.sh

@@ -41,7 +41,7 @@ set -eu
 SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 export AILANG_SDK_ROOT="$SDK_ROOT"
 export AILANG_SDK_VERSION="0.0.1-test.0"
-exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
+exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"
 EOF
 chmod +x "${SDK_ROOT}/bin/ailang"
 
@@ -72,7 +72,11 @@ EOF
 perl -0pi -e 's{\Q'"${APP_DIR}"': no app args\E}{app: no app args}' "${APP_DIR}/src/app.aos"
 PROJECT_VERSION_OUT="$("${SDK_ROOT}/bin/ailang" project version "${APP_DIR}")"
 printf '%s\n' "${PROJECT_VERSION_OUT}" | rg -q '^0\.0\.1$'
-AILANG_PACKAGE_REGISTRY="${PACKAGE_REGISTRY_DIR}" "${SDK_ROOT}/bin/ailang" package restore "${APP_DIR}" | rg -q 'Ok#ok1\(type=int value=0\)'
+PACKAGE_RESTORE_OUT="$(
+  AILANG_PACKAGE_REGISTRY="${PACKAGE_REGISTRY_DIR}" \
+    "${SDK_ROOT}/bin/ailang" package restore "${APP_DIR}"
+)"
+rg -q 'Ok#ok1\(type=int value=0\)' <<<"${PACKAGE_RESTORE_OUT}"
 test -f "${APP_DIR}/ailang.lock.toml"
 rg -q '^aivmVersion = "0\.0\.1-rc\.9"$' "${SDK_ROOT}/sdk-runtime.toml"
 

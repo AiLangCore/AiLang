@@ -45,6 +45,11 @@ rg -q 'AILANG_RELEASE_CLI_SHA256:' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
 rg -q 'AILANG_RELEASE_BUILTINS_SHA256:' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+test -x "${ROOT_DIR}/scripts/package-selfhost-release-payloads.sh"
+rg -q 'bin/ailang\.aibc1' \
+  "${ROOT_DIR}/scripts/package-selfhost-release-payloads.sh"
+rg -q 'bin/commands' \
+  "${ROOT_DIR}/scripts/package-selfhost-release-payloads.sh"
 rg -q 'gh release download.*needs.prepare.outputs.tag' \
   "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
 rg -q 'sha256sum --check' \

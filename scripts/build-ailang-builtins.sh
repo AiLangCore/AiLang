@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${1:-${ROOT_DIR}/.artifacts/ailang-builtins}"
 BUILD_DIR="${ROOT_DIR}/.tmp/build-ailang-builtins"
 AILANG_BIN="${AILANG_BIN:-${ROOT_DIR}/tools/ailang}"
+AILANG_COMMAND_COMPILER="${AILANG_COMMAND_COMPILER:-}"
+AILANG_COMMAND_RUNTIME="${AILANG_COMMAND_RUNTIME:-}"
 SDK_ROOT="${AILANG_BUILTIN_SDK_ROOT:-${ROOT_DIR}/src}"
 JOB_LIMIT="${AILANG_BUILTIN_JOBS:-4}"
 
@@ -39,11 +41,35 @@ build_builtin() {
   local entry="$2"
   local command_build_dir="${BUILD_DIR}/${name}"
 
-  AILANG_SDK_ROOT="${SDK_ROOT}" \
-    "${AILANG_BIN}" build \
-    "${ROOT_DIR}/src/cli/${entry}" \
-    --out "${command_build_dir}" \
-    --no-cache
+  if [[ -n "${AILANG_COMMAND_COMPILER}" ]]; then
+    local command_project_dir="${command_build_dir}/project"
+    if [[ -z "${AILANG_COMMAND_RUNTIME}" ]]; then
+      echo "AILANG_COMMAND_RUNTIME is required with AILANG_COMMAND_COMPILER" >&2
+      return 2
+    fi
+    mkdir -p "${command_project_dir}"
+    cp -R "${ROOT_DIR}/src" "${command_project_dir}/src"
+    cat > "${command_project_dir}/project.aiproj" <<EOF
+Program {
+  Project(
+    name="ailang-builtin-${name}"
+    entryFile="src/cli/${entry}"
+    entryExport="main"
+    version="0.0.1"
+  ) {}
+}
+EOF
+    AILANG_SDK_ROOT="${SDK_ROOT}" \
+      "${AILANG_COMMAND_RUNTIME}" run "${AILANG_COMMAND_COMPILER}" -- \
+      build "${command_project_dir}" \
+      --out "${command_build_dir}"
+  else
+    AILANG_SDK_ROOT="${SDK_ROOT}" \
+      "${AILANG_BIN}" build \
+      "${ROOT_DIR}/src/cli/${entry}" \
+      --out "${command_build_dir}" \
+      --no-cache
+  fi
 }
 
 wait_for_batch() {

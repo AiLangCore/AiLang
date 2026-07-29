@@ -8,6 +8,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   AILANG_RELEASE_CLI_SHA256: 0725750a1ca85ab9dcab463b16c5b71498f355016768c4f22d93e1fd94299297
+  AILANG_RELEASE_BUILTINS_SHA256: 1296e3bd522d3ef133ce1cdd63510e65704ed7388008c3a7bfcb7c40f6c8d6d6
 
 permissions:
   contents: write
@@ -232,6 +233,12 @@ jobs:
           name: ailang-cli-bytecode
           path: ./dist/libexec/ailang/cli
 
+      - name: Download built-in command payloads
+        uses: actions/download-artifact@v8
+        with:
+          name: ailang-builtin-commands
+          path: ./dist/libexec/ailang/commands
+
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -376,7 +383,9 @@ jobs:
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           mkdir -p "${PACKAGE_DIR}/libexec/ailang"
           cp -R ./dist/libexec/ailang/cli "${PACKAGE_DIR}/libexec/ailang/cli"
+          cp -R ./dist/libexec/ailang/commands "${PACKAGE_DIR}/libexec/ailang/commands"
           test -f "${PACKAGE_DIR}/libexec/ailang/cli/app.aibc1"
+          test -f "${PACKAGE_DIR}/libexec/ailang/commands/package.aibc1"
           cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
           cp ./sdk-runtime.toml "${PACKAGE_DIR}/sdk-runtime.toml"
@@ -418,7 +427,9 @@ jobs:
           Copy-Item .\dist\compiler $packageDir -Recurse
           New-Item -ItemType Directory -Force "$packageDir\libexec\ailang" | Out-Null
           Copy-Item .\dist\libexec\ailang\cli "$packageDir\libexec\ailang\cli" -Recurse
+          Copy-Item .\dist\libexec\ailang\commands "$packageDir\libexec\ailang\commands" -Recurse
           if (-not (Test-Path "$packageDir\libexec\ailang\cli\app.aibc1")) { throw 'missing bytecode CLI payload' }
+          if (-not (Test-Path "$packageDir\libexec\ailang\commands\package.aibc1")) { throw 'missing built-in command payloads' }
           Copy-Item .\src\std "$packageDir\std" -Recurse
           Copy-Item .\templates $packageDir -Recurse
           Copy-Item .\sdk-runtime.toml "$packageDir\sdk-runtime.toml"
@@ -495,11 +506,35 @@ jobs:
             sha256sum --check -
           test -f ./dist/libexec/ailang/cli/app.aibc1
 
+      - name: Stage validated self-hosted built-in commands
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download "${{ needs.prepare.outputs.tag }}" \
+            --pattern ailang-builtins.tar.gz \
+            --dir "${RUNNER_TEMP}"
+          printf '%s  %s\n' \
+            "${AILANG_RELEASE_BUILTINS_SHA256}" \
+            "${RUNNER_TEMP}/ailang-builtins.tar.gz" |
+            sha256sum --check -
+          mkdir -p ./dist/libexec/ailang
+          tar -xzf "${RUNNER_TEMP}/ailang-builtins.tar.gz" \
+            -C ./dist/libexec/ailang
+          test -f ./dist/libexec/ailang/commands/package.aibc1
+
       - name: Upload bytecode CLI payload
         uses: actions/upload-artifact@v7
         with:
           name: ailang-cli-bytecode
           path: ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Upload built-in command payloads
+        uses: actions/upload-artifact@v7
+        with:
+          name: ailang-builtin-commands
+          path: ./dist/libexec/ailang/commands
 
       - name: Setup wasmtime
         shell: bash

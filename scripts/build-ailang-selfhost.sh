@@ -105,6 +105,21 @@ phase_end
 
 phase_begin package-selfhost
 cp "${PROJECT_DIR}/bin/app.aibc1" "${SELFHOST_BIN}"
+phase_end
+
+phase_begin selfhost-builtins
+AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
+AILANG_BUILTIN_JOBS=1 \
+AILANG_COMMAND_COMPILER="${SELFHOST_BIN}" \
+AILANG_COMMAND_RUNTIME="${AIVM_RUNTIME}" \
+AILANG_OBJECT_PIPELINE=legacy \
+AILANG_BUILD_JOBS=1 \
+AILANG_BUILD_WORKER_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
+AILANG_BUILD_WORKER_ARTIFACT="${WORKER_DIR}/module-object.aibc1" \
+  "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
+phase_end
+
+phase_begin validate-selfhost
 AILANG_VM_PROFILE=tooling \
 AILANG_COMMAND_RUNTIME="${OUT_DIR}/bin/aivm-runtime" \
 AILANG_COMMAND_ROOT="${OUT_DIR}/bin/commands" \

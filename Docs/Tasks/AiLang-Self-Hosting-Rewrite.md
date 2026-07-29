@@ -74,6 +74,11 @@ Current bootstrap status:
   first bytecode-runnable implementations.
 - `init` renders installed `.tpl` files under `templates/projects`. Missing
   template files are an error.
+- `template list projects|files <project-dir>` discovers restored package
+  template catalogs in canonical lockfile order. Package catalogs are
+  deterministic `templates/<kind>/index.toml` files; the AiLang command
+  qualifies entries as `<package>/<template>` without host directory
+  enumeration.
 - The self-hosted compiler pipeline already produces deterministic per-module
   AiBCO1 objects in `obj/module-<index>.aibco`, writes `obj/app.aibco` as the
   stable entry object, links `bin/app.aibc1`, and executes supported linked

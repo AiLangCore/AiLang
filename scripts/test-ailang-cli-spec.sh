@@ -34,6 +34,7 @@ PACKAGE_RESTORE_DUP_DIR="${TMP_DIR}/package-restore-dup-app"
 PACKAGE_RESTORE_CYCLE_DIR="${TMP_DIR}/package-restore-cycle-app"
 PACKAGE_REGISTRY_DIR="${TMP_DIR}/package-registry"
 PACKAGE_SOURCE_REPO="${TMP_DIR}/package-source-repo"
+TEMPLATE_PACKAGE_DIR="${TMP_DIR}/template-package-app"
 
 run_aivm_program() {
   local program="$1"
@@ -90,6 +91,34 @@ printf '%s\n' "${TEMPLATE_SHOW_OUT}" | rg -q 'entry_file = "src/app.aos"'
 
 TEMPLATE_PATH_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template path cli)"
 printf '%s\n' "${TEMPLATE_PATH_OUT}" | rg -q '^templates/projects/cli$'
+
+mkdir -p \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/projects/hello" \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/view"
+cat > "${TEMPLATE_PACKAGE_DIR}/ailang.lock.toml" <<'EOF'
+schema = "ailang.lock.v1"
+
+[[package]]
+name = "sample-kit"
+version = "0.0.1"
+path = ".ailang/packages/sample-kit"
+packageRoot = "."
+namespaces = []
+EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/projects/index.toml" <<'EOF'
+[[template]]
+name = "hello"
+path = "templates/projects/hello"
+EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/index.toml" <<'EOF'
+[[template]]
+name = "view"
+path = "templates/files/view"
+EOF
+TEMPLATE_PROJECTS_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list projects "${TEMPLATE_PACKAGE_DIR}")"
+printf '%s\n' "${TEMPLATE_PROJECTS_OUT}" | rg -q '^sample-kit/hello$'
+TEMPLATE_FILES_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list files "${TEMPLATE_PACKAGE_DIR}")"
+printf '%s\n' "${TEMPLATE_FILES_OUT}" | rg -q '^sample-kit/view$'
 
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" init "${APP_DIR}" --template cli-args --agents all >/dev/null
 test -f "${APP_DIR}/project.aiproj"

@@ -17,8 +17,7 @@ Program {
     Fn(params=args,index) {
       Block {
         If {
-          Eq { Var(name=index) ChildCount { Var(name=args) } }
-          Block { Return { Lit(value="") } }
+          Lt { Var(name=index) ChildCount { Var(name=args) } }
           Block {
             Return {
               AttrValueString {
@@ -27,6 +26,7 @@ Program {
               }
             }
           }
+          Block { Return { Lit(value="") } }
         }
       }
     }

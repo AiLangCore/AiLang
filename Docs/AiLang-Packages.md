@@ -178,7 +178,10 @@ Publisher workflow:
 3. Put importable library source under nested domain paths in `src/`, such as
    `src/format/`, `src/net/`, `src/media/`, or `src/ui/`.
 4. Put package templates under `templates/projects/` or `templates/files/`
-   when the package exposes templates.
+   when the package exposes templates. Each populated template kind owns a
+   deterministic `index.toml` catalog in that directory. The CLI reads package
+   catalogs in lockfile order and qualifies each template as
+   `<package>/<template>`.
 5. Put package tools under the package-owned tool path once tool dispatch is
    hardened for beta.
 6. Run the package's own validation script.

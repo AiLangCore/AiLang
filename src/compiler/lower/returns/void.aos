@@ -1,0 +1,13 @@
+Program {
+  Let(name=lower.appendVoidReturnValue) {
+    Fn(params=context) {
+      Block {
+        Return {
+          Call(target=blockBuilder.emit) {
+            Var(name=context) Lit(value="CONST") Lit(value="int:0")
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,155 @@
+Program {
+  Export(name=value.toString)
+  Export(name=value.makeStringLit)
+  Export(name=value.makeBoolLit)
+  Export(name=value.makeIntLit)
+  Export(name=value.emitOkFromValue)
+
+  Let(name=value.toString) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+          Block {
+            Let(name=k) { AttrValueKind { Var(name=value) Lit(value=0) } }
+            If {
+              Eq { Var(name=k) Lit(value="string") }
+              Block { Return { AttrValueString { Var(name=value) Lit(value=0) } } }
+              Block {
+                If {
+                  Eq { Var(name=k) Lit(value="int") }
+                  Block { Return { ToString { AttrValueInt { Var(name=value) Lit(value=0) } } } }
+                  Block {
+                    If {
+                      AttrValueBool { Var(name=value) Lit(value=0) }
+                      Block { Return { Lit(value="true") } }
+                      Block { Return { Lit(value="false") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=value) } Lit(value="Err") }
+              Block {
+                Return {
+                  StrConcat {
+                    Lit(value="Err#")
+                    NodeId { Var(name=value) }
+                  }
+                }
+              }
+              Block { Return { Lit(value="value") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=value.makeStringLit) {
+    Fn(params=env,text) {
+      Block {
+        Let(name=i) { ChildCount { Var(name=env) } }
+        Let(name=id) { StrConcat { Lit(value="s") ToString { Var(name=i) } } }
+        Return { MakeLitString { Var(name=id) Var(name=text) } }
+      }
+    }
+  }
+
+  Let(name=value.makeBoolLit) {
+    Fn(params=b) {
+      Block {
+        Let(name=id) {
+          If {
+            Var(name=b)
+            Block { Lit(value="b1") }
+            Block { Lit(value="b0") }
+          }
+        }
+        Return {
+          MakeLitBool {
+            Var(name=id)
+            Var(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=value.makeIntLit) {
+    Fn(params=n) {
+      Block {
+        Return {
+          MakeLitInt {
+            Lit(value="i")
+            Var(name=n)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=value.emitOkFromValue) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+          Block {
+            Let(name=k) { AttrValueKind { Var(name=value) Lit(value=0) } }
+            If {
+              Eq { Var(name=k) Lit(value="string") }
+              Block {
+                Call(target=sys.stdout.writeLine) {
+                  StrConcat {
+                    Lit(value="Ok#ok0(type=string value=\"")
+                    StrConcat {
+                      StrEscape { AttrValueString { Var(name=value) Lit(value=0) } }
+                      Lit(value="\")")
+                    }
+                  }
+                }
+                Return
+              }
+              Block {
+                If {
+                  Eq { Var(name=k) Lit(value="int") }
+                  Block {
+                    Call(target=sys.stdout.writeLine) {
+                      StrConcat {
+                        Lit(value="Ok#ok0(type=int value=")
+                        StrConcat {
+                          ToString { AttrValueInt { Var(name=value) Lit(value=0) } }
+                          Lit(value=")")
+                        }
+                      }
+                    }
+                    Return
+                  }
+                  Block {
+                    If {
+                      AttrValueBool { Var(name=value) Lit(value=0) }
+                      Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=bool value=true)") } }
+                      Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=bool value=false)") } }
+                    }
+                    Return
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeId { Var(name=value) } Lit(value="void") }
+              Block { Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=void)") } }
+              Block { Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
+            }
+            Return
+          }
+        }
+      }
+    }
+  }
+}

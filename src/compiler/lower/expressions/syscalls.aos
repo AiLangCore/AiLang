@@ -1,0 +1,25 @@
+Program {
+  Let(name=lower.canonicalStructuralSyscallTarget) {
+    Fn(params=target) {
+      Block {
+        If {
+          Eq { StringSlice { Var(name=target) Lit(value=0) Lit(value=4) } Lit(value="sys.") }
+          Block { Return { Var(name=target) } }
+          Block {
+            If {
+              Eq { Var(name=target) Lit(value="io.write") }
+              Block { Return { Lit(value="sys.stdout.writeLine") } }
+              Block {
+                If {
+                  Eq { Var(name=target) Lit(value="io.print") }
+                  Block { Return { Lit(value="sys.stdout.writeLine") } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

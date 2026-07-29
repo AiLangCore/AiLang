@@ -1,0 +1,962 @@
+Program {
+  Let(name=equals) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Eq { Var(name=a) Var(name=b) }
+        }
+      }
+    }
+  }
+
+  Let(name=assert) {
+    Fn(params=condition,code,message) {
+      Block {
+        Call(target=sys.debug.assert) {
+          Var(name=condition)
+          Var(name=code)
+          Var(name=message)
+        }
+        Return { Var(name=condition) }
+      }
+    }
+  }
+
+  Let(name=resultOkString) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitString { Lit(value="value") Var(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultOkInt) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitInt { Lit(value="value") Var(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultOkBool) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitBool { Lit(value="value") Var(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultOkNode) {
+    Fn(params=valueNode) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return { AppendChild { Var(name=withOk) Var(name=valueNode) } }
+      }
+    }
+  }
+
+  Let(name=resultOkNull) {
+    Fn(params=_) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withOk)
+            Lit(value=null)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultErr) {
+    Fn(params=code,message) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="result") } }
+        Let(name=withOk) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="ok") Lit(value=false) }
+          }
+        }
+        Let(name=withCode) {
+          AppendChild {
+            Var(name=withOk)
+            MakeLitString { Lit(value="code") Var(name=code) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withCode)
+            MakeLitString { Lit(value="message") Var(name=message) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultIsOk) {
+    Fn(params=resultNode) {
+      Block {
+        Return {
+          AttrValueBool {
+            ChildAt { Var(name=resultNode) Lit(value=0) }
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultValueOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=1) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Var(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resultCodeOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=1) }
+                Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultMessageOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=resultNode) Lit(value=2) }
+                Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resultNodeOr) {
+    Fn(params=resultNode,fallback) {
+      Block {
+        If {
+          Call(target=resultIsOk) { Var(name=resultNode) }
+          Block { Return { ChildAt { Var(name=resultNode) Lit(value=1) } } }
+          Block { Return { Var(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let(name=optionSomeString) {
+    Fn(params=value) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="option") } }
+        Let(name=withHas) {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="has") Lit(value=true) }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withHas)
+            MakeLitString { Lit(value="value") Var(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=optionNone) {
+    Fn(params=_) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="option") } }
+        Return {
+          AppendChild {
+            Var(name=base)
+            MakeLitBool { Lit(value="has") Lit(value=false) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=optionHas) {
+    Fn(params=optionNode) {
+      Block {
+        Return {
+          AttrValueBool {
+            ChildAt { Var(name=optionNode) Lit(value=0) }
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=optionValueOr) {
+    Fn(params=optionNode,fallback) {
+      Block {
+        If {
+          Call(target=optionHas) { Var(name=optionNode) }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=optionNode) Lit(value=1) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Var(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeEmpty) {
+    Fn(params=kind) {
+      Block { Return { MakeBlock { Var(name=kind) } } }
+    }
+  }
+
+  Let(name=nodeWithString) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitString {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeWithInt) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitInt {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=nodeWithBool) {
+    Fn(params=kind,key,value) {
+      Block {
+        Return {
+          AppendChild {
+            Call(target=nodeEmpty) { Var(name=kind) }
+            MakeLitBool {
+              Var(name=key)
+              Var(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapFieldKey) {
+    Fn(params=field) {
+      Block {
+        Return {
+          AttrValueString {
+            Var(name=field)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapFieldValue) {
+    Fn(params=field) {
+      Block {
+        Return {
+          ChildAt {
+            Var(name=field)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapHasAt) {
+    Fn(params=mapNode,key,index) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=mapHasAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapHas) {
+    Fn(params=mapNode,key) {
+      Block {
+        Return {
+          Call(target=mapHasAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetNodeOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block {
+                Return { Call(target=mapFieldValue) { Var(name=field) } }
+              }
+              Block {
+                Return {
+                  Call(target=mapGetNodeOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    Var(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetNodeOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetNodeOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetStringOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
+                }
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
+                    }
+                    Lit(value="string")
+                  }
+                  Block {
+                    Return {
+                      AttrValueString {
+                        Var(name=valueNode)
+                        Lit(value=0)
+                      }
+                    }
+                  }
+                  Block { Return { Var(name=fallback) } }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=mapGetStringOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    Var(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetStringOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetStringOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetIntOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
+                }
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
+                    }
+                    Lit(value="int")
+                  }
+                  Block {
+                    Return {
+                      AttrValueInt {
+                        Var(name=valueNode)
+                        Lit(value=0)
+                      }
+                    }
+                  }
+                  Block { Return { Var(name=fallback) } }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=mapGetIntOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    Var(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetIntOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetIntOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetBoolOrAt) {
+    Fn(params=mapNode,key,index,fallback) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block { Return { Var(name=fallback) } }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block {
+                Let(name=valueNode) {
+                  Call(target=mapFieldValue) { Var(name=field) }
+                }
+                If {
+                  Eq {
+                    AttrValueKind {
+                      Var(name=valueNode)
+                      Lit(value=0)
+                    }
+                    Lit(value="bool")
+                  }
+                  Block {
+                    Return {
+                      AttrValueBool {
+                        Var(name=valueNode)
+                        Lit(value=0)
+                      }
+                    }
+                  }
+                  Block { Return { Var(name=fallback) } }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=mapGetBoolOrAt) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    Var(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapGetBoolOr) {
+    Fn(params=mapNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetBoolOrAt) {
+            Var(name=mapNode)
+            Var(name=key)
+            Lit(value=0)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapSetFold) {
+    Fn(params=mapNode,key,value,index,acc,replaced) {
+      Block {
+        If {
+          Eq {
+            Var(name=index)
+            ChildCount { Var(name=mapNode) }
+          }
+          Block {
+            If {
+              Var(name=replaced)
+              Block { Return { Var(name=acc) } }
+              Block {
+                Return {
+                  AppendChild {
+                    Var(name=acc)
+                    MakeFieldString {
+                      Var(name=key)
+                      Var(name=value)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=field) {
+              ChildAt {
+                Var(name=mapNode)
+                Var(name=index)
+              }
+            }
+            If {
+              Eq {
+                Call(target=mapFieldKey) { Var(name=field) }
+                Var(name=key)
+              }
+              Block {
+                Return {
+                  Call(target=mapSetFold) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Var(name=value)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    AppendChild {
+                      Var(name=acc)
+                      MakeFieldString {
+                        Var(name=key)
+                        Var(name=value)
+                      }
+                    }
+                    Lit(value=true)
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=mapSetFold) {
+                    Var(name=mapNode)
+                    Var(name=key)
+                    Var(name=value)
+                    Add {
+                      Var(name=index)
+                      Lit(value=1)
+                    }
+                    AppendChild {
+                      Var(name=acc)
+                      Var(name=field)
+                    }
+                    Var(name=replaced)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=mapSet) {
+    Fn(params=mapNode,key,value) {
+      Block {
+        Return {
+          Call(target=mapSetFold) {
+            Var(name=mapNode)
+            Var(name=key)
+            Var(name=value)
+            Lit(value=0)
+            MakeBlock { Lit(value="Map") }
+            Lit(value=false)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordEmpty) {
+    Fn(params=kind) {
+      Block {
+        Return {
+          Call(target=nodeEmpty) {
+            Var(name=kind)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordHas) {
+    Fn(params=recordNode,key) {
+      Block {
+        Return {
+          Call(target=mapHas) {
+            Var(name=recordNode)
+            Var(name=key)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordGetNodeOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetNodeOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordGetStringOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordGetIntOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordGetBoolOr) {
+    Fn(params=recordNode,key,fallback) {
+      Block {
+        Return {
+          Call(target=mapGetBoolOr) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=recordSet) {
+    Fn(params=recordNode,key,value) {
+      Block {
+        Return {
+          Call(target=mapSet) {
+            Var(name=recordNode)
+            Var(name=key)
+            Var(name=value)
+          }
+        }
+      }
+    }
+  }
+
+  Export(name=equals)
+  Export(name=assert)
+  Export(name=resultOkString)
+  Export(name=resultOkInt)
+  Export(name=resultOkBool)
+  Export(name=resultOkNode)
+  Export(name=resultOkNull)
+  Export(name=resultErr)
+  Export(name=resultIsOk)
+  Export(name=resultValueOr)
+  Export(name=resultCodeOr)
+  Export(name=resultMessageOr)
+  Export(name=resultNodeOr)
+  Export(name=optionSomeString)
+  Export(name=optionNone)
+  Export(name=optionHas)
+  Export(name=optionValueOr)
+  Export(name=nodeEmpty)
+  Export(name=nodeWithString)
+  Export(name=nodeWithInt)
+  Export(name=nodeWithBool)
+  Export(name=mapFieldKey)
+  Export(name=mapFieldValue)
+  Export(name=mapHasAt)
+  Export(name=mapHas)
+  Export(name=mapGetNodeOrAt)
+  Export(name=mapGetNodeOr)
+  Export(name=mapGetStringOrAt)
+  Export(name=mapGetStringOr)
+  Export(name=mapGetIntOrAt)
+  Export(name=mapGetIntOr)
+  Export(name=mapGetBoolOrAt)
+  Export(name=mapGetBoolOr)
+  Export(name=mapSetFold)
+  Export(name=mapSet)
+  Export(name=recordEmpty)
+  Export(name=recordHas)
+  Export(name=recordGetNodeOr)
+  Export(name=recordGetStringOr)
+  Export(name=recordGetIntOr)
+  Export(name=recordGetBoolOr)
+  Export(name=recordSet)
+}

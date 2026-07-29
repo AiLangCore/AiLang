@@ -1,1 +1,1 @@
-Program#p1 { Lit#l1(value=1) }
+Program { Lit(value=1) }

@@ -1,0 +1,85 @@
+Program {
+  Let(name=lower.structuralNativeByteUnaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BytesLength") }
+          Block { Return { Lit(value="BYTES_LENGTH") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="BytesFromUtf8String") }
+              Block { Return { Lit(value="BYTES_FROM_UTF8_STRING") } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="BytesToUtf8String") }
+                  Block { Return { Lit(value="BYTES_TO_UTF8_STRING") } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="BytesFromBase64") }
+                      Block { Return { Lit(value="BYTES_FROM_BASE64") } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="BytesToBase64") }
+                          Block { Return { Lit(value="BYTES_TO_BASE64") } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="BytesFromByte") }
+                              Block { Return { Lit(value="BYTES_FROM_BYTE") } }
+                              Block {
+                                If {
+                                  Eq { Var(name=kind) Lit(value="BytesU32LE") }
+                                  Block { Return { Lit(value="BYTES_U32_LE") } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=kind) Lit(value="BytesI64LE") }
+                                      Block { Return { Lit(value="BYTES_I64_LE") } }
+                                      Block { Return { Lit(value="") } }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeByteBinaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BytesAt") }
+          Block { Return { Lit(value="BYTES_AT") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="BytesConcat") }
+              Block { Return { Lit(value="BYTES_CONCAT") } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeByteVariadicOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="BytesSlice") }
+          Block { Return { Lit(value="BYTES_SLICE") } }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

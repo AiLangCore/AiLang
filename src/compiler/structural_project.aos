@@ -1,0 +1,223 @@
+Program {
+  Import(path="structural_object.aos")
+  Import(path="structural_project_workers.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=structuralProject.collectModulePrograms)
+  Export(name=structuralProject.emitProjectPlans)
+  Export(name=structuralProject.emitProjectObjectTexts)
+  Export(name=structuralProject.writeProjectObjectFiles)
+  Export(name=structuralProject.writeObjectFileAt)
+  Export(name=structuralProject.appendParsedObject)
+
+  Let(name=structuralProject.emitProjectPlans) {
+    Fn(params=modulePaths,projectDir,lockText) {
+      Block {
+        Let(name=programs) { Call(target=structuralProject.collectModulePrograms) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="modules") } } }
+        If {
+          Eq { NodeKind { Var(name=programs) } Lit(value="Err") }
+          Block { Return { Var(name=programs) } }
+          Block {
+            Let(name=records) { Call(target=structuralObject.collectModuleRecords) { Var(name=programs) Var(name=modulePaths) Lit(value=0) MakeBlock { Lit(value="records") } } }
+            If {
+              Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+              Block { Return { Var(name=records) } }
+              Block {
+                Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecords) { Var(name=records) } }
+                If {
+                  Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
+                  Block { Return { Var(name=validated) } }
+                  Block {
+                    Let(name=workers) {
+                      Call(target=structuralProject.validateProjectWorkers) {
+                        Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=workers) } Lit(value="Err") }
+                      Block { Return { Var(name=workers) } }
+                      Block { Return { Call(target=structuralObject.emitProjectPlans) { Var(name=validated) } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.emitProjectObjectTexts) {
+    Fn(params=modulePaths,projectDir,lockText) {
+      Block {
+        Let(name=programs) { Call(target=structuralProject.collectModulePrograms) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Lit(value=0) MakeBlock { Lit(value="modules") } } }
+        If {
+          Eq { NodeKind { Var(name=programs) } Lit(value="Err") }
+          Block { Return { Var(name=programs) } }
+          Block {
+            Let(name=records) { Call(target=structuralObject.collectModuleRecords) { Var(name=programs) Var(name=modulePaths) Lit(value=0) MakeBlock { Lit(value="records") } } }
+            If {
+              Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+              Block { Return { Var(name=records) } }
+              Block {
+                Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecords) { Var(name=records) } }
+                If {
+                  Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
+                  Block { Return { Var(name=validated) } }
+                  Block {
+                    Let(name=workers) {
+                      Call(target=structuralProject.validateProjectWorkers) {
+                        Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=workers) } Lit(value="Err") }
+                      Block { Return { Var(name=workers) } }
+                      Block {
+                        Return {
+                          Call(target=structuralObject.emitProjectObjectTextsForProgramsWithWorkers) {
+                            Var(name=programs) Var(name=modulePaths) Var(name=validated)
+                            Var(name=workers)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeProjectObjectFiles) {
+    Fn(params=modulePaths,projectDir,lockText,objDir) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Let(name=objectTexts) { Call(target=structuralProject.emitProjectObjectTexts) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) } }
+        If {
+          Eq { NodeKind { Var(name=objectTexts) } Lit(value="Err") }
+          Block { Return { Var(name=objectTexts) } }
+          Block { Return { Call(target=structuralProject.writeObjectFiles) { Var(name=objectTexts) Var(name=objDir) Lit(value=0) MakeBlock { Lit(value="objects") } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeObjectFiles) {
+    Fn(params=objectTexts,objDir,index,objects) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objectTexts) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=result) { Call(target=structuralProject.writeNextObjectFile) { Var(name=objectTexts) Var(name=objDir) Var(name=index) Var(name=objects) } }
+            Return { Var(name=result) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeNextObjectFile) {
+    Fn(params=objectTexts,objDir,index,objects) {
+      Block {
+        Let(name=objectText) { AttrValueString { ChildAt { Var(name=objectTexts) Var(name=index) } Lit(value=0) } }
+        Let(name=object) { Call(target=structuralProject.writeObjectFileAt) { Var(name=objectText) Var(name=objDir) Var(name=index) } }
+        If {
+          Eq { NodeKind { Var(name=object) } Lit(value="Err") }
+          Block { Return { Var(name=object) } }
+          Block {
+            Let(name=nextObjects) { Call(target=structuralProject.appendParsedObject) { Var(name=objects) Var(name=object) Lit(value="") } }
+            If {
+              Eq { NodeKind { Var(name=nextObjects) } Lit(value="Err") }
+              Block { Return { Var(name=nextObjects) } }
+              Block {
+                Let(name=result) { Call(target=structuralProject.writeObjectFiles) { Var(name=objectTexts) Var(name=objDir) Add { Var(name=index) Lit(value=1) } Var(name=nextObjects) } }
+                Return { Var(name=result) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeObjectFileAt) {
+    Fn(params=objectText,objDir,index) {
+      Block {
+        Let(name=objectPath) { StrConcat { Var(name=objDir) StrConcat { Lit(value="/module-") StrConcat { ToString { Var(name=index) } Lit(value=".aibco") } } } }
+        Call(target=sys.fs.file.write) { Var(name=objectPath) BytesFromUtf8String { Var(name=objectText) } }
+        If {
+          Eq { Var(name=index) Lit(value=0) }
+          Block {
+            Let(name=entryObjectPath) { StrConcat { Var(name=objDir) Lit(value="/app.aibco") } }
+            Call(target=sys.fs.file.write) { Var(name=entryObjectPath) BytesFromUtf8String { Var(name=objectText) } }
+            Lit(value=0)
+          }
+          Block { Lit(value=0) }
+        }
+        Let(name=persistedText) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=objectPath) } } }
+        Return { Call(target=parse.parseDocument) { Var(name=persistedText) } }
+      }
+    }
+  }
+
+  Let(name=structuralProject.appendParsedObject) {
+    Fn(params=objects,object,objectPath) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Block") }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=object) } Lit(value="Object") }
+              Block { Return { AppendChild { Var(name=objects) Var(name=object) } } }
+              Block { Return { MakeErr { Lit(value="structural_project") Lit(value="OBJ032") Lit(value="Persisted object text did not parse as an Object.") Var(name=objectPath) } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="structural_project") Lit(value="OBJ033") Lit(value="Object writer accumulator must be a Block.") Var(name=objectPath) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.collectModulePrograms) {
+    Fn(params=modulePaths,projectDir,lockText,index,programs) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=programs) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=readPath) { Call(target=linker.resolveModuleReadPath) { Var(name=projectDir) Var(name=modulePath) Var(name=lockText) } }
+            If {
+              Eq { Var(name=readPath) Lit(value="") }
+              Block { Return { MakeErr { Lit(value="structural_project") Lit(value="OBJ031") Lit(value="Linked module could not be resolved for structural emission.") Var(name=modulePath) } } }
+              Block {
+                Let(name=programRecord) { ChildAt { Var(name=modulePaths) Var(name=index) } }
+                Let(name=program) {
+                  If {
+                    Eq { ChildCount { Var(name=programRecord) } Lit(value=0) }
+                    Block { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=readPath) } } } }
+                    Block { ChildAt { Var(name=programRecord) Lit(value=0) } }
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+                  Block { Return { Var(name=program) } }
+                  Block {
+                    Let(name=nextPrograms) { AppendChild { Var(name=programs) Var(name=program) } }
+                    Let(name=result) { Call(target=structuralProject.collectModulePrograms) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Add { Var(name=index) Lit(value=1) } Var(name=nextPrograms) } }
+                    Return { Var(name=result) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

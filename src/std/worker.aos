@@ -1,0 +1,72 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+
+  Export(name=worker.run)
+  Export(name=worker.runAll)
+  Export(name=worker.taskAt)
+  Export(name=worker.batch.empty)
+  Export(name=worker.batch.append)
+
+  Let(name=worker.run) {
+    Fn(params=workerRef,payloadBytes) {
+      Block {
+        Return {
+          WorkerRun {
+            Var(name=workerRef)
+            Var(name=payloadBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=worker.runAll) {
+    Fn(params=workerRef,orderedPayloadBytes) {
+      Block {
+        Return {
+          WorkerRunAll {
+            Var(name=workerRef)
+            Var(name=orderedPayloadBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=worker.taskAt) {
+    Fn(params=tasks,index) {
+      Block {
+        Return {
+          WorkerTaskAt {
+            Var(name=tasks)
+            Var(name=index)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=worker.batch.empty) {
+    Fn() {
+      Block {
+        Return { BytesFromUtf8String { Lit(value="") } }
+      }
+    }
+  }
+
+  Let(name=worker.batch.append) {
+    Fn(params=batchBytes,payloadBytes) {
+      Block {
+        Return {
+          BytesConcat {
+            Var(name=batchBytes)
+            BytesConcat {
+              BytesU32LE { BytesLength { Var(name=payloadBytes) } }
+              Var(name=payloadBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+}

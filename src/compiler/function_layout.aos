@@ -1,0 +1,98 @@
+Program {
+  Export(name=functionLayout.assign)
+  Export(name=functionLayout.resolve)
+  Export(name=functionLayout.resolveOffset)
+
+  Let(name=functionLayout.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=functionLayout.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=functionLayout.assign) {
+    Fn(params=plans) {
+      Block { Return { Call(target=functionLayout.assignAt) { Var(name=plans) Lit(value=0) Lit(value=0) MakeBlock { Lit(value="ir-function-layout") } } } }
+    }
+  }
+
+  Let(name=functionLayout.assignAt) {
+    Fn(params=plans,index,offset,layout) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=plans) } }
+          Block { Return { Var(name=layout) } }
+          Block {
+            Let(name=plan) { ChildAt { Var(name=plans) Var(name=index) } }
+            Let(name=symbol) { Call(target=functionLayout.getAttr) { Var(name=plan) Lit(value="symbol") Lit(value=0) } }
+            If {
+              Eq { Var(name=symbol) Lit(value="") }
+              Block { Return { MakeErr { Lit(value="function_layout") Lit(value="LINK030") Lit(value="Linked function is missing symbol.") NodeId { Var(name=plan) } } } }
+              Block {
+                If {
+                  Call(target=functionLayout.resolve) { Var(name=layout) Var(name=symbol) Lit(value=0) }
+                  Block { Return { MakeErr { Lit(value="function_layout") Lit(value="LINK031") Lit(value="Duplicate linked function symbol.") Var(name=symbol) } } }
+                  Block {
+                    Let(name=record) { MakeBlock { StrConcat { Lit(value="ir-function-offset:") Var(name=symbol) } } }
+                    Let(name=withSymbol) { AppendAttr { Var(name=record) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+                    Let(name=withOffset) { AppendAttr { Var(name=withSymbol) MakeLitInt { Lit(value="offset") Var(name=offset) } } }
+                    Return { Call(target=functionLayout.assignAt) { Var(name=plans) Add { Var(name=index) Lit(value=1) } Add { Var(name=offset) ChildCount { Var(name=plan) } } AppendChild { Var(name=layout) Var(name=withOffset) } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=functionLayout.resolve) {
+    Fn(params=layout,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=layout) Var(name=index) } }
+            If {
+              Eq { Call(target=functionLayout.getAttr) { Var(name=record) Lit(value="symbol") Lit(value=0) } Var(name=symbol) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=functionLayout.resolve) { Var(name=layout) Var(name=symbol) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=functionLayout.resolveOffset) {
+    Fn(params=layout,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=layout) } }
+          Block { Return { MakeErr { Lit(value="function_layout") Lit(value="LINK032") Lit(value="Call target symbol is unknown.") Var(name=symbol) } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=layout) Var(name=index) } }
+            If {
+              Eq { Call(target=functionLayout.getAttr) { Var(name=record) Lit(value="symbol") Lit(value=0) } Var(name=symbol) }
+              Block { Return { AttrValueInt { Var(name=record) Lit(value=1) } } }
+              Block { Return { Call(target=functionLayout.resolveOffset) { Var(name=layout) Var(name=symbol) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+// Generated command registry
+// This file will eventually be auto-generated from command directories
+
+Program {
+  Import(path="Clean/clean.aos")
+  Import(path="Init/init.aos")
+
+  Export(name=commandRegistry)
+  Export(name=getCommandFunction)
+
+  // Registry returns a function for the given command name
+  Let(name=getCommandFunction) {
+    Fn(params=cmd) {
+      Block {
+        If {
+          Eq { Var(name=cmd) Lit(value="clean") }
+          Block { Return { Var(name=runClean) } }
+          Block {
+            If {
+              Eq { Var(name=cmd) Lit(value="init") }
+              Block { Return { Var(name=runInit) } }
+              Block { Return { Lit(value=0) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // List of available commands
+  Let(name=commandRegistry) {
+    Fn(params=_) {
+      Block {
+        Return {
+          List {
+            Lit(value="clean")
+            Lit(value="init")
+          }
+        }
+      }
+    }
+  }
+}

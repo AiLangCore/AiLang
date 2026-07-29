@@ -1,0 +1,48 @@
+Program {
+  Import(path="parser.aos")
+  Import(path="resolve.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=moduleGraph.detectSimpleCycleNodeId)
+
+  Let(name=moduleGraph.detectSimpleCycleNodeId) {
+    Fn(params=dir,firstImport,entryFile) {
+      Block {
+        If {
+          Eq { Var(name=firstImport) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=depPath) {
+              StrConcat {
+                Var(name=dir)
+                StrConcat { Lit(value="/") Var(name=firstImport) }
+              }
+            }
+            Let(name=depText) {
+              Call(target=bytes.toUtf8String) {
+                Call(target=sys.fs.file.read) { Var(name=depPath) }
+              }
+            }
+            Let(name=depParsed) {
+              Call(target=parse.parseDocument) {
+                Var(name=depText)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=depParsed) } Lit(value="Err") }
+              Block { Return { Lit(value="") } }
+              Block {
+                Return {
+                  Call(target=resolve.findImportNodeIdByPath) {
+                    Var(name=depParsed)
+                    Var(name=entryFile)
+                    Lit(value=0)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

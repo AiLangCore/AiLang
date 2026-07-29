@@ -2,6 +2,15 @@
 
 This workflow is tooling-only. Do not modify app source to debug runtime behavior.
 
+## Prime Directive
+
+- Prefer AiLang and AiVectra built-in debug and automation surfaces over external tooling.
+- If the current debug surface cannot complete the task cleanly, improve the debug surface first.
+- Human verification is exception-only. Repeated need for human confirmation means the runtime or UI tooling is still incomplete.
+- Production `aivm` may be intentionally limited. Full debugger, profiler,
+  stack trace, capture, replay, and artifact inspection belong to
+  `aivm-debug`/debug-profile tooling.
+
 ## Commands
 
 1. Bootstrap fixtures from a clean checkout:
@@ -13,19 +22,44 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 2. Run app with artifact capture:
 
 ```bash
-./tools/airun debug /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
+./tools/ailang debug capture run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
 ```
 
-3. Run deterministic replay from event fixture:
+3. Run app with trace output:
 
 ```bash
-./tools/airun debug /absolute/or/relative/path/to/app.aos --events examples/debug/events/minimal.events.toml --out .artifacts/debug/replay-run
+./tools/ailang debug trace run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/trace-run
 ```
 
-4. Run one named scenario fixture:
+4. Use runtime-owned synthetic input when UI automation is required:
 
 ```bash
-./tools/airun debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal
+./tools/ailang debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
+```
+
+4a. Use built-in deterministic waits and close/finalization for live UI flows against an existing sample project:
+
+```bash
+./tools/ailang debug capture run ./samples/weather-site/project.aiproj --inject-wait 10 --inject-close --out .artifacts/debug/weather-site-run
+```
+
+4b. For multi-step live scenarios, prefer a script file over long flag chains:
+
+```text
+text 76103
+key enter
+wait 60
+close
+```
+
+```bash
+./tools/ailang debug capture run ./samples/weather-site/project.aiproj --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-site-run
+```
+
+5. When a debug command needs both tool flags and compiled-app argv, put app argv after `--`:
+
+```bash
+./tools/ailang debug capture run ./samples/cli-fetch/project.aiproj --out .artifacts/debug/cli-fetch -- Fort\ Worth
 ```
 
 5. CI-parity local path:
@@ -36,28 +70,57 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 
 ## Artifact Bundle
 
-Each debug run writes one directory with deterministic files:
+Each debug capture run writes one directory with deterministic files:
 
 - `config.toml`: run configuration + exit status
-- `stdout.txt`: canonical CLI output
-- `vm_trace.toml`: step trace (`nodeId`, `op`, `function`, `pc`)
+- `runtime_trace.log`: host/runtime trace with UI, async, and syscall activity
+- `vm_trace.toml`: VM step trace (`nodeId`, `op`, `function`, `pc`)
 - `state_snapshots.toml`: stack/locals/env snapshots
-- `syscalls.toml`: syscall args/results
-- `events.toml`: lifecycle/input events (includes `sys.ui_pollEvent`)
-- `diagnostics.toml`: deterministic diagnostics captured during run
 
-## Scenario Fixture Format
+Target debug/profile artifact bundles should also grow toward:
 
-Scenario fixtures are TOML files with `[[scenario]]` rows:
+- `stdout.txt`
+- `stderr.txt`
+- `syscall_trace.toml`
+- `stack_trace.toml`
+- `profile.toml`
+- `memory.toml`
+- `events.toml`
+- `ui_capture.toml`
+- `suggestions.toml`
 
-```toml
-[[scenario]]
-name = "my-case"
-app_path = "../apps/debug_minimal.aos"
-vm = "bytecode"
-debug_mode = "replay"
-events_path = "../events/minimal.events.toml"
-compare_path = "../golden/minimal.stdout.txt"
-out_dir = ".artifacts/debug/minimal"
-args = []
+Agent-facing debug tools should be able to inspect those files without requiring
+screenshots or human interpretation as the primary evidence.
+
+## Agent Inspection Commands
+
+The intended agent-facing command family is:
+
+```bash
+aivm-debug explain <debug-run-dir>
+aivm-debug suggest <debug-run-dir>
+aivm-debug inspect stack <debug-run-dir>
+aivm-debug inspect profile <debug-run-dir>
+aivm-debug inspect memory <debug-run-dir>
+aivm-debug inspect syscalls <debug-run-dir>
+aivm-debug compare <left-debug-run-dir> <right-debug-run-dir>
 ```
+
+Until those commands are implemented, agents should inspect the TOML artifacts
+directly and prefer adding missing machine-readable evidence over adding
+source-level diagnostic prints.
+
+When interactive behavior is required, prefer runtime-owned injected events over external UI scripting so the captured artifact and the executed interaction stay in the same debug surface.
+
+The built-in injected-event script format is line-oriented and deterministic:
+
+- `click x,y`
+- `text value`
+- `key name`
+- `wait polls`
+- `close`
+- `enter`
+- `backspace`
+- `quit`
+
+When compiled-app argv are present, treat `--` as mandatory delimiter between debug-tool flags and app argv so higher-layer CLIs can preserve indefinite subcommand depth.

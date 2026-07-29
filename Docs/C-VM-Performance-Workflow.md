@@ -2,6 +2,11 @@
 
 Use these scripts to validate a C VM against the canonical runtime behavior and collect repeatable performance data.
 
+Normal bootstrap and verification should still go through:
+
+- `./build.sh`
+- `./test.sh`
+
 ## Scripts
 
 - `./scripts/test-c-vm.sh`
@@ -10,7 +15,7 @@ Use these scripts to validate a C VM against the canonical runtime behavior and 
 
 ## 1) Correctness testing
 
-Compares candidate VM output to canonical `./tools/airun` for deterministic cases.
+Compares candidate VM output to canonical `./tools/ailang` for deterministic cases.
 
 ```bash
 ./scripts/test-c-vm.sh
@@ -19,13 +24,13 @@ Compares candidate VM output to canonical `./tools/airun` for deterministic case
 Use a custom VM binary:
 
 ```bash
-C_VM_BIN=./tools/airun-c ./scripts/test-c-vm.sh
+C_VM_BIN=./tools/ailang-c ./scripts/test-c-vm.sh
 ```
 
 Override how `run` is invoked:
 
 ```bash
-C_VM_BIN=./tools/airun-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/test-c-vm.sh
+C_VM_BIN=./tools/ailang-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/test-c-vm.sh
 ```
 
 Optional custom case file format:
@@ -59,7 +64,7 @@ ITERATIONS=50 WARMUP=10 ./scripts/bench-c-vm.sh
 Use custom VM binary:
 
 ```bash
-C_VM_BIN=./tools/airun-c ./scripts/bench-c-vm.sh
+C_VM_BIN=./tools/ailang-c ./scripts/bench-c-vm.sh
 ```
 
 Optional custom benchmark case file format:
@@ -89,8 +94,8 @@ AIVM_BENCH_ITERATIONS=10 AIVM_BENCH_MAX_REGRESSION_PCT=5 ./scripts/aivm-bench-ga
 
 Inputs:
 
-- Baseline file: `src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv`
-- Current run: `./tools/airun bench --iterations <n> --human`
+- Baseline file: `../AiVM/tests/stress/compiler_runtime_bench_baseline.tsv`
+- Current run: `./tools/ailang bench --iterations <n> --human`
 - Policy: fail if any baseline case is missing from current output or exceeds `max_regression_pct`.
 
 ## 3) Profiling
@@ -117,33 +122,33 @@ PROFILE_MODE=perf PERF_RUNS=10 ./scripts/profile-c-vm.sh examples/bench/map_crea
 With VM args:
 
 ```bash
-C_VM_BIN=./tools/airun-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/profile-c-vm.sh examples/bench/loop_compute.aos
+C_VM_BIN=./tools/ailang-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/profile-c-vm.sh examples/bench/loop_compute.aos
 ```
 
 ## 4) Memory leak gate
 
-Built-in CLI command (`airun debug profile`) runs repeated deterministic executions and enforces RSS-growth threshold.
+Built-in CLI command (`ailang debug profile`) runs repeated deterministic executions and enforces RSS-growth threshold.
 
 Direct CLI usage:
 
 ```bash
-./tools/airun debug profile ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --iterations 20 --max-growth-kb 2048 --out .tmp/aivm-mem-audit.toml --vm=c
+./tools/ailang debug profile ./../AiVM/tests/golden/parity_cases/vm_c_execute_src_main_params.aos --iterations 20 --max-growth-kb 2048 --out .tmp/aivm-mem-audit.toml --vm=c
 ```
 
 ```bash
-./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+./scripts/aivm-mem-audit.sh ./../AiVM/tests/golden/parity_cases/vm_c_execute_src_main_params.aos 20
 ```
 
 Optional threshold tuning (KB):
 
 ```bash
-AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit.sh ./../AiVM/tests/golden/parity_cases/vm_c_execute_src_main_params.aos 20
 ```
 
 Windows:
 
 ```powershell
-./scripts/aivm-mem-audit.ps1 .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos 20
+./scripts/aivm-mem-audit.ps1 ..\AiVM\tests\golden\parity_cases\vm_c_execute_src_main_params.aos 20
 ```
 
 Report path can be overridden with `AIVM_MEM_AUDIT_REPORT`.

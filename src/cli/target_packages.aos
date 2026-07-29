@@ -1,0 +1,366 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+
+  Export(name=isPackageTarget)
+  Export(name=targetPackageName)
+  Export(name=targetDefaultRunner)
+  Export(name=targetSupportsArtifactType)
+  Export(name=targetRequiredTool)
+  Export(name=targetRequiredCommand)
+  Export(name=targetMissingRequirementDiagnostic)
+  Export(name=resolveTargetRunner)
+
+  Let(name=isPackageTarget) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Return { Call(target=hasTarget) { Var(name=lockfileText) Var(name=target) } }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=hasTarget) {
+    Fn(params=text,target) {
+      Block {
+        Let(name=targetSection) { Call(target=findTargetSection) { Var(name=text) Var(name=target) } }
+        If {
+          Eq { Var(name=targetSection) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=findTargetSection) {
+    Fn(params=text,target) {
+      Block {
+        Let(name=needle) { StrConcat { Lit(value="id = \"") Var(name=target) Lit(value="\"") } }
+        Let(name=aliasNeedle) { StrConcat { Lit(value="\"") Var(name=target) Lit(value="\"") } }
+        Let(name=section) { Call(target=findTargetSectionFrom) { Var(name=text) Var(name=needle) Var(name=aliasNeedle) Lit(value=0) } }
+        Return { Var(name=section) }
+      }
+    }
+  }
+
+  Let(name=findTargetSectionFrom) {
+    Fn(params=text,needle,aliasNeedle,startIndex) {
+      Block {
+        Let(name=start) { Call(target=find) { Var(name=text) Lit(value="[[target]]") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=start) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=2147483647) } }
+            Let(name=end) { Call(target=find) { Var(name=rest) Lit(value="\n[[") Lit(value=1) } }
+            Let(name=section) { Call(target=sliceTargetSection) { Var(name=rest) Var(name=end) } }
+            If {
+              Call(target=targetSectionMatches) { Var(name=section) Var(name=needle) Var(name=aliasNeedle) }
+              Block { Return { Var(name=section) } }
+              Block {
+                Return {
+                  Call(target=findTargetSectionFrom) {
+                    Var(name=text)
+                    Var(name=needle)
+                    Var(name=aliasNeedle)
+                    Add { Var(name=start) Lit(value=10) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=sliceTargetSection) {
+    Fn(params=rest,end) {
+      Block {
+        If {
+          Eq { Var(name=end) Lit(value=-1) }
+          Block { Return { Var(name=rest) } }
+          Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetSectionMatches) {
+    Fn(params=section,needle,aliasNeedle) {
+      Block {
+        If {
+          Call(target=contains) { Var(name=section) Var(name=needle) }
+          Block { Return { Lit(value=true) } }
+          Block {
+            Return {
+              Call(target=contains) {
+                Call(target=getValue) { Var(name=section) Lit(value="aliases") }
+                Var(name=aliasNeedle)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=findSection) {
+    Fn(params=text,sectionName) {
+      Block {
+        Let(name=start) { Call(target=find) { Var(name=text) Var(name=sectionName) Lit(value=0) } }
+        If {
+          Eq { Var(name=start) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=2147483647) } }
+            Let(name=end) { Call(target=find) { Var(name=rest) Lit(value="\n[") Lit(value=1) } }
+            If {
+              Eq { Var(name=end) Lit(value=-1) }
+              Block { Return { Var(name=rest) } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=end) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=getValue) {
+    Fn(params=text,key) {
+      Block {
+        If {
+          Eq { Var(name=key) Lit(value="aliases") }
+          Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="aliases") Lit(value=10) } } }
+          Block {
+            If {
+              Eq { Var(name=key) Lit(value="package") }
+              Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="package") Lit(value=10) } } }
+              Block {
+                If {
+                  Eq { Var(name=key) Lit(value="defaultRunner") }
+                  Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="defaultRunner") Lit(value=16) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=key) Lit(value="artifactTypes") }
+                      Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="artifactTypes") Lit(value=16) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=key) Lit(value="runTools") }
+                          Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="runTools") Lit(value=11) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=key) Lit(value="publishTools") }
+                              Block { Return { Call(target=getValueFixed) { Var(name=text) Lit(value="publishTools") Lit(value=15) } } }
+                              Block { Return { Lit(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=getValueFixed) {
+    Fn(params=text,key,needleLength) {
+      Block {
+        Let(name=keyStart) { Call(target=find) { Var(name=text) StrConcat { Var(name=key) Lit(value=" = ") } Lit(value=0) } }
+        If {
+          Eq { Var(name=keyStart) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=keyStart) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\n") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Var(name=rest) } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=targetPackageName) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Return { Call(target=getValue) { Var(name=targetSection) Lit(value="package") } }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetDefaultRunner) {
+    Fn(params=target,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Return { Call(target=getValue) { Var(name=targetSection) Lit(value="defaultRunner") } }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetSupportsArtifactType) {
+    Fn(params=target,artifactType,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=targetSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Let(name=artifactTypes) { Call(target=getValue) { Var(name=targetSection) Lit(value="artifactTypes") } }
+            Return { Call(target=contains) { Var(name=artifactTypes) Var(name=artifactType) } }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=contains) {
+    Fn(params=text,value) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=value) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetRequiredTool) {
+    Fn(params=target,operation,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=packageSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            Let(name=requiredFor) { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } }
+            If {
+              Eq { Var(name=operation) Lit(value="publish") }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="publishTools") } } }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetRequiredCommand) {
+    Fn(params=target,operation,projectPath) {
+      Block {
+        Let(name=lockfilePath) { StrConcat { Var(name=projectPath) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockfilePath) }
+          Block {
+            Let(name=lockfileText) { Call(target=readTextFile) { Var(name=lockfilePath) } }
+            Let(name=packageSection) { Call(target=findTargetSection) { Var(name=lockfileText) Var(name=target) } }
+            If {
+              Eq { Var(name=operation) Lit(value="publish") }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="publishTools") } } }
+              Block { Return { Call(target=getValue) { Var(name=packageSection) Lit(value="runTools") } } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveTargetRunner) {
+    Fn(params=target,requestedRunner,projectPath) {
+      Block {
+        If {
+          Eq { Var(name=requestedRunner) Lit(value="") }
+          Block { Return { Call(target=targetDefaultRunner) { Var(name=target) Var(name=projectPath) } } }
+          Block { Return { Var(name=requestedRunner) } }
+        }
+      }
+    }
+  }
+
+  Let(name=targetMissingRequirementDiagnostic) {
+    Fn(params=packageName,target,operation,requirement,command) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="AILANG-PKG-REQ001: ")
+            StrConcat {
+              Var(name=packageName)
+              StrConcat {
+                Lit(value=" requires ")
+                StrConcat {
+                  Var(name=requirement)
+                  StrConcat {
+                    Lit(value=" for ")
+                    StrConcat {
+                      Var(name=operation)
+                      StrConcat {
+                        Lit(value=".\nMissing command: ")
+                        StrConcat {
+                          Var(name=command)
+                          Lit(value="\n\nInstall:\n  macOS: brew install qemu\n  Linux: Install qemu-system with the distro package manager.\n  Windows: winget install SoftwareFreedomConservancy.QEMU")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

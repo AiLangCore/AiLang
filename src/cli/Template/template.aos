@@ -1,0 +1,129 @@
+Program {
+  Import(path="../common.aos")
+  Export(name=runTemplate)
+
+  Let(name=runTemplate) {
+    Fn(params=args) {
+      Block {
+        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        Let(name=name) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
+        If {
+          Eq { Var(name=subcmd) Lit(value="list") }
+          Block { Return { Call(target=listTemplates) { Lit(value=0) } } }
+          Block {
+            If {
+              Eq { Var(name=subcmd) Lit(value="show") }
+              Block { Return { Call(target=showTemplate) { Var(name=name) } } }
+              Block {
+                If {
+                  Eq { Var(name=subcmd) Lit(value="path") }
+                  Block { Return { Call(target=pathTemplate) { Var(name=name) } } }
+                  Block { Return { Call(target=unknownCommand) { Lit(value="template") } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=showTemplate) {
+    Fn(params=name) {
+      Block {
+        If {
+          Call(target=isKnownTemplate) { Var(name=name) }
+          Block {
+            If {
+              Call(target=isTemplateInstalled) { Var(name=name) }
+              Block {
+                Let(name=templateFile) { StrConcat { StrConcat { Lit(value="templates/projects/") Var(name=name) } Lit(value="/template.toml") } }
+                Call(target=sys.stdout.writeLine) { Call(target=readTextFile) { Var(name=templateFile) } }
+                Return { Lit(value=0) }
+              }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template is not installed.\" nodeId=\"template\")") }
+                Return { Lit(value=1) }
+              }
+            }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
+            Return { Lit(value=1) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=pathTemplate) {
+    Fn(params=name) {
+      Block {
+        If {
+          Call(target=isKnownTemplate) { Var(name=name) }
+          Block {
+            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="templates/projects/") Var(name=name) } }
+            Return { Lit(value=0) }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
+            Return { Lit(value=1) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=listTemplates) {
+    Fn(params=_) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Lit(value="templates/projects/index.toml") }
+          Block {
+            Call(target=sys.stdout.writeLine) {
+              Call(target=readTextFile) { Lit(value="templates/projects/index.toml") }
+            }
+            Return { Lit(value=0) }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template registry is not installed.\" nodeId=\"template\")") }
+            Return { Lit(value=1) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isKnownTemplate) {
+    Fn(params=name) {
+      Block {
+        If {
+          Eq { Var(name=name) Lit(value="cli") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=name) Lit(value="cli-args") }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isTemplateInstalled) {
+    Fn(params=name) {
+      Block {
+        Return {
+          Call(target=sys.fs.path.exists) {
+            StrConcat {
+              StrConcat { Lit(value="templates/projects/") Var(name=name) }
+              Lit(value="/template.toml")
+            }
+          }
+        }
+      }
+    }
+  }
+}

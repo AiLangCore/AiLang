@@ -1,0 +1,176 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+
+  Export(name=readArg)
+  Export(name=readOption)
+  Export(name=hasFlag)
+  Export(name=writeTextFile)
+  Export(name=readTextFile)
+  Export(name=readOptionalLockText)
+  Export(name=missingPath)
+  Export(name=buildError)
+  Export(name=unknownCommand)
+  Export(name=notImplemented)
+
+  Let(name=readArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readOption) {
+    Fn(params=args,index,name,defaultValue) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=defaultValue) } }
+          Block {
+            If {
+              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
+              Block { Return { Call(target=readArg) { Var(name=args) Add { Var(name=index) Lit(value=1) } } } }
+              Block { Return { Call(target=readOption) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) Var(name=defaultValue) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=hasFlag) {
+    Fn(params=args,index,name) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Call(target=hasFlag) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=writeTextFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readOptionalLockText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Return {
+              Call(target=readTextFile) { Var(name=path) }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=missingPath) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG001 message=\"Missing path.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=buildError) {
+    Fn(params=code,message,nodeId) {
+      Block {
+        Let(name=line1) {
+          StrConcat {
+            Lit(value="Err#err0(code=")
+            StrConcat { Var(name=code) Lit(value=" message=\"") }
+          }
+        }
+        Let(name=line2) {
+          StrConcat {
+            Var(name=line1)
+            StrConcat { Var(name=message) Lit(value="\" nodeId=\"") }
+          }
+        }
+        Call(target=sys.stdout.writeLine) {
+          StrConcat { Var(name=line2) StrConcat { Var(name=nodeId) Lit(value="\")") } }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=unknownCommand) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG002 message=\"Unknown command.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=notImplemented) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG900 message=\"Command is declared but not implemented in AiLang CLI yet.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+Program {
+  Export(name=project.isProjectManifest)
+  Export(name=project.buildDefaultManifest)
+
+  Let(name=project.isProjectManifest) {
+    Fn(params=parsed) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=parsed) } Lit(value="Program") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=parsed) } Lit(value=1) }
+              Block {
+                Return {
+                  Eq {
+                    NodeKind { ChildAt { Var(name=parsed) Lit(value=0) } }
+                    Lit(value="Project")
+                  }
+                }
+              }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=project.buildDefaultManifest) {
+    Fn(params=name) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Program#p1 {\nProject#proj1(\nname=\"")
+            StrConcat {
+              StrEscape { Var(name=name) }
+              Lit(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
+            }
+          }
+        }
+      }
+    }
+  }
+}

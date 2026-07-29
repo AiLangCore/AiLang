@@ -1,0 +1,52 @@
+Program {
+  Import(path="structural_project_records.aos")
+  Export(name=structuralProject.collectProjectSymbolChunks)
+
+  Let(name=structuralProject.collectProjectSymbolChunks) {
+    Fn(params=modulePaths,projectDir,lockText,index,chunks) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+              Block { Return { Var(name=program) } }
+              Block {
+                Let(name=records) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
+                Let(name=symbols) { Call(target=structuralProject.projectSymbolsForRecords) { Var(name=records) Lit(value=0) MakeBlock { Lit(value="symbols") } } }
+                Return {
+                  Call(target=structuralProject.collectProjectSymbolChunks) {
+                    Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+                    Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=chunks) Var(name=symbols) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.projectSymbolsForRecords) {
+    Fn(params=records,index,symbols) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Var(name=symbols) } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=symbolBase) { MakeBlock { Lit(value="function-symbol") } }
+            Let(name=withModule) { AppendChild { Var(name=symbolBase) ChildAt { Var(name=record) Lit(value=0) } } }
+            Let(name=withName) { AppendChild { Var(name=withModule) ChildAt { Var(name=record) Lit(value=1) } } }
+            Let(name=symbol) { AppendChild { Var(name=withName) ChildAt { Var(name=record) Lit(value=2) } } }
+            Return { Call(target=structuralProject.projectSymbolsForRecords) { Var(name=records) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=symbols) Var(name=symbol) } } }
+          }
+        }
+      }
+    }
+  }
+}

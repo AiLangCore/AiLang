@@ -3,8 +3,8 @@
 ## File Organization
 
 - Keep public entry types near file top.
-- Prefer partial files when a class exceeds one responsibility:
-  - example: VM adapters and bytecode compiler in dedicated `AosInterpreter.*.cs` files.
+- Prefer splitting large implementation surfaces by responsibility:
+  - example: native host adapters in dedicated `airun_*_host.inc` files and VM subsystems in `aivm_*` source files.
 
 ## Naming
 
@@ -26,7 +26,7 @@
 
 ## Validation Checklist
 
-- Run `./scripts/test.sh`.
+- Run `./test.sh`.
 - If runtime host changes are involved, also rebuild and re-run:
-  - `./scripts/build-airun.sh`
-  - `./scripts/test.sh`
+  - `./build.sh`
+  - `./test.sh`

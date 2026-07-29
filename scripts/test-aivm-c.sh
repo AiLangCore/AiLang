@@ -2,26 +2,52 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+AIVM_C_REPO_DIR="$(cd "${AIVM_C_SOURCE_DIR}/.." && pwd)"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_REPO_DIR}/tests}"
 BUILD_SUFFIX="native"
-BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+if [[ "${AIVM_C_SOURCE_DIR}" == "${ROOT_DIR}/../AiVM/src" ]]; then
+  BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+else
+  BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+fi
+PRESET_FILE="${AIVM_C_SOURCE_DIR}/CMakePresets.json"
 PARITY_REPORT="${AIVM_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt}"
-PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_SOURCE_DIR}/tests/parity_commands_ci.txt}"
+PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_TESTS_DIR}/golden/parity_commands_ci.txt}"
 SHARED_FLAG="-DAIVM_BUILD_SHARED=OFF"
 if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
   SHARED_FLAG="-DAIVM_BUILD_SHARED=ON"
 fi
+PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
-cmake --build "${BUILD_DIR}"
-ctest --test-dir "${BUILD_DIR}" --output-on-failure
+if [[ -f "${PRESET_FILE}" && "${AIVM_BUILD_SHARED:-0}" != "1" ]]; then
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix
+  cmake --build --preset aivm-native-unix-build
+  ctest --preset aivm-native-unix-test --output-on-failure -LE wasm
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
+  cmake --build "${BUILD_DIR}"
+  ctest --test-dir "${BUILD_DIR}" --output-on-failure -LE wasm
+fi
 
-if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
-  "${ROOT_DIR}/tools/airun" run "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
+if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
+  AILANG_HELP_TEXT="$("${ROOT_DIR}/tools/ailang" 2>&1 || true)"
+  AILANG_HAS_BUILD=0
+  AILANG_HAS_CLEAN=0
+  if printf "%s\n" "${AILANG_HELP_TEXT}" | rg -q '^\s+build(\s|$)'; then
+    AILANG_HAS_BUILD=1
+  fi
+  if printf "%s\n" "${AILANG_HELP_TEXT}" | rg -q '^\s+clean(\s|$)'; then
+    AILANG_HAS_CLEAN=1
+  fi
+
+  "${ROOT_DIR}/tools/ailang" run "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
   TMP_NATIVE_PUBLISH_DIR="${ROOT_DIR}/.tmp/aivm-c-native-publish-smoke"
   rm -rf "${TMP_NATIVE_PUBLISH_DIR}"
-  "${ROOT_DIR}/tools/airun" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
+  "${ROOT_DIR}/tools/ailang" publish "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
   if [[ ! -f "${TMP_NATIVE_PUBLISH_DIR}/app.aibc1" ]]; then
     echo "native publish smoke failed: app.aibc1 was not produced" >&2
     exit 1
@@ -62,22 +88,527 @@ Program#p1 {
 }
 EOF
     cat > "${TMP_NATIVE_PROJECT_DIR}/main.aos" <<'EOF'
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
 }
 EOF
-    "${ROOT_DIR}/tools/airun" publish "${TMP_NATIVE_PROJECT_DIR}" --out "${TMP_NATIVE_PROJECT_OUT}" >/dev/null
+    "${ROOT_DIR}/tools/ailang" publish "${TMP_NATIVE_PROJECT_DIR}" --out "${TMP_NATIVE_PROJECT_OUT}" >/dev/null
     if [[ ! -x "${TMP_NATIVE_PROJECT_OUT}/projtarget" ]]; then
       echo "native publish target-from-manifest failed: projtarget executable missing" >&2
       exit 1
     fi
   fi
+
+  TMP_NATIVE_CACHE_PROJECT="${ROOT_DIR}/.tmp/aivm-c-native-cache-smoke"
+  TMP_NATIVE_CACHE_OUT_NO="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-no"
+  TMP_NATIVE_CACHE_OUT_YES="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-yes"
+  rm -rf "${TMP_NATIVE_CACHE_PROJECT}" "${TMP_NATIVE_CACHE_OUT_NO}" "${TMP_NATIVE_CACHE_OUT_YES}"
+  mkdir -p "${TMP_NATIVE_CACHE_PROJECT}"
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="cache_smoke" entryFile="app.aos" entryExport="start")
+}
+EOF
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/app.aos" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Return#r1 { Lit#i1(value=0) }
+      }
+    }
+  }
+}
+EOF
+  if [[ "${AILANG_HAS_BUILD}" == "1" && "${AILANG_HAS_CLEAN}" == "1" ]]; then
+    "${ROOT_DIR}/tools/ailang" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    "${ROOT_DIR}/tools/ailang" build --no-cache "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_NO}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: --no-cache build populated cache unexpectedly" >&2
+      exit 1
+    fi
+    "${ROOT_DIR}/tools/ailang" build "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_YES}" >/dev/null
+    if ! find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: cached build did not write cache artifact" >&2
+      exit 1
+    fi
+    "${ROOT_DIR}/tools/ailang" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+      echo "native cache smoke failed: clean did not remove cache artifacts" >&2
+      exit 1
+    fi
+  else
+    echo "Skipping native cache smoke: tools/ailang build/clean commands unavailable." >&2
+  fi
+
+  TMP_NATIVE_CALL_FIXUP_REPRO="${ROOT_DIR}/.tmp/aivm-c-native-call-fixup-repro.aos"
+  cat > "${TMP_NATIVE_CALL_FIXUP_REPRO}" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Let#l2(name=v) {
+          Call#c1(target=helper) { Lit#i1(value=1) }
+        }
+        Return#r1 { Var#v1(name=v) }
+      }
+    }
+  }
+  Let#l3(name=helper) {
+    Fn#f2(params=x) {
+      Block#b2 {
+        Return#r2 { Add#a1 { Var#v2(name=x) Lit#i2(value=1) } }
+      }
+    }
+  }
+}
+EOF
+  TMP_NATIVE_CALL_FIXUP_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_NATIVE_CALL_FIXUP_REPRO}" 2>&1 || true)"
+  if [[ "${TMP_NATIVE_CALL_FIXUP_OUT}" != *"Ok#ok1(type=int value=2)"* ]]; then
+    echo "native call fixup smoke failed: expected value=2 from helper call" >&2
+    printf '%s\n' "${TMP_NATIVE_CALL_FIXUP_OUT}" >&2
+    exit 1
+  fi
+
+  TMP_NATIVE_TAILCALL_REPRO="${ROOT_DIR}/.tmp/aivm-c-native-tailcall-repro.aos"
+  cat > "${TMP_NATIVE_TAILCALL_REPRO}" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Return#r1 { Call#c1(target=loop) { Lit#i1(value=0) Lit#i2(value=6) Lit#i3(value=0) } }
+      }
+    }
+  }
+  Let#l2(name=loop) {
+    Fn#f2(params=i,limit,acc) {
+      Block#b2 {
+        If#i4 {
+          Eq#e2 { Var#v1(name=i) Var#v2(name=limit) }
+          Block#b3 { Return#r2 { Var#v3(name=acc) } }
+          Block#b4 { }
+        }
+        Return#r3 {
+          Call#c2(target=loop) {
+            Add#a1 { Var#v4(name=i) Lit#i5(value=1) }
+            Var#v5(name=limit)
+            Add#a2 { Var#v6(name=acc) Lit#i6(value=1) }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+  TMP_NATIVE_TAILCALL_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_NATIVE_TAILCALL_REPRO}" 2>&1 || true)"
+  if [[ "${TMP_NATIVE_TAILCALL_OUT}" != *"Ok#ok1(type=int value=6)"* ]]; then
+    echo "native tail-call smoke failed: expected value=6 from recursive loop" >&2
+    printf '%s\n' "${TMP_NATIVE_TAILCALL_OUT}" >&2
+    exit 1
+  fi
+
+  TMP_NATIVE_DEBUG_MEM_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem"
+  TMP_NATIVE_DEBUG_MEM_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-mem-out"
+  TMP_NATIVE_DEBUG_MEM_APP="${TMP_NATIVE_DEBUG_MEM_DIR}/memory_pressure.aos"
+  TMP_NATIVE_NODE_CAPACITY="$(sed -n 's/.*AIVM_VM_NODE_CAPACITY = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  TMP_NATIVE_NODE_ATTR_CAPACITY="$(sed -n 's/.*AIVM_VM_NODE_ATTR_CAPACITY = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  TMP_NATIVE_NODE_CHILD_CAPACITY="$(sed -n 's/.*AIVM_VM_NODE_CHILD_CAPACITY = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  TMP_NATIVE_NODE_GC_INTERVAL="$(sed -n 's/.*AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  TMP_NATIVE_NODE_GC_NUMERATOR="$(sed -n 's/.*AIVM_VM_NODE_GC_PRESSURE_THRESHOLD_NUMERATOR = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  TMP_NATIVE_NODE_GC_DENOMINATOR="$(sed -n 's/.*AIVM_VM_NODE_GC_PRESSURE_THRESHOLD_DENOMINATOR = \([0-9][0-9]*\).*/\1/p' "${AIVM_C_SOURCE_DIR}/include/aivm_vm.h" | head -1)"
+  if [[ -z "${TMP_NATIVE_NODE_CAPACITY}" ||
+        -z "${TMP_NATIVE_NODE_ATTR_CAPACITY}" ||
+        -z "${TMP_NATIVE_NODE_CHILD_CAPACITY}" ||
+        -z "${TMP_NATIVE_NODE_GC_INTERVAL}" ||
+        -z "${TMP_NATIVE_NODE_GC_NUMERATOR}" ||
+        -z "${TMP_NATIVE_NODE_GC_DENOMINATOR}" ]]; then
+    echo "native debug memory smoke failed: could not read VM memory constants" >&2
+    exit 1
+  fi
+  TMP_NATIVE_NODE_PRESSURE_THRESHOLD=$((TMP_NATIVE_NODE_CAPACITY * TMP_NATIVE_NODE_GC_NUMERATOR / TMP_NATIVE_NODE_GC_DENOMINATOR))
+  TMP_NATIVE_NODE_ATTR_PRESSURE_THRESHOLD=$((TMP_NATIVE_NODE_ATTR_CAPACITY * TMP_NATIVE_NODE_GC_NUMERATOR / TMP_NATIVE_NODE_GC_DENOMINATOR))
+  TMP_NATIVE_NODE_CHILD_PRESSURE_THRESHOLD=$((TMP_NATIVE_NODE_CHILD_CAPACITY * TMP_NATIVE_NODE_GC_NUMERATOR / TMP_NATIVE_NODE_GC_DENOMINATOR))
+  TMP_NATIVE_DEBUG_MEM_NODE_COUNT=$((TMP_NATIVE_NODE_CAPACITY + 1))
+  rm -rf "${TMP_NATIVE_DEBUG_MEM_DIR}" "${TMP_NATIVE_DEBUG_MEM_OUT}"
+  mkdir -p "${TMP_NATIVE_DEBUG_MEM_DIR}"
+  {
+    echo 'Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {'
+    echo '  Const#k0(kind=string value="n")'
+    echo '  Func#f1(name=main params="argv" locals="") {'
+    echo '    Inst#i1(op=PUSH_INT a=0)'
+    echo '    Inst#i2(op=STORE_LOCAL a=0)'
+    echo '    Inst#i3(op=CONST a=0)'
+    echo '    Inst#i4(op=MAKE_BLOCK)'
+    echo '    Inst#i5(op=LOAD_LOCAL a=0)'
+    echo '    Inst#i6(op=PUSH_INT a=1)'
+    echo '    Inst#i7(op=ADD_INT)'
+    echo '    Inst#i8(op=STORE_LOCAL a=0)'
+    echo '    Inst#i9(op=LOAD_LOCAL a=0)'
+    echo "    Inst#i10(op=PUSH_INT a=${TMP_NATIVE_DEBUG_MEM_NODE_COUNT})"
+    echo '    Inst#i11(op=EQ_INT)'
+    echo '    Inst#i12(op=JUMP_IF_FALSE a=2)'
+    echo '    Inst#i13(op=HALT)'
+    echo '  }'
+    echo '}'
+  } > "${TMP_NATIVE_DEBUG_MEM_APP}"
+  if "${ROOT_DIR}/tools/ailang" debug run "${TMP_NATIVE_DEBUG_MEM_APP}" --out "${TMP_NATIVE_DEBUG_MEM_OUT}" >/dev/null 2>&1; then
+    echo "native debug memory smoke failed: expected memory-pressure failure" >&2
+    exit 1
+  fi
+  if [[ ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml" || ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml" ]]; then
+    echo "native debug memory smoke failed: expected debug artifacts missing" >&2
+    exit 1
+  fi
+  if [[ ! -f "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml" ]]; then
+    echo "native debug memory smoke failed: expected config.toml missing" >&2
+    exit 1
+  fi
+  if ! grep -q "status = \"error\"" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: expected status=error in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations = ${TMP_NATIVE_NODE_GC_INTERVAL}" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected gc interval policy value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes = ${TMP_NATIVE_NODE_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = ${TMP_NATIVE_NODE_ATTR_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = ${TMP_NATIVE_NODE_CHILD_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "vm_code=AIVM011" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected vm_code=AIVM011 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -Eq "detail=(AIVMM005: )?node arena capacity exceeded\\." "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node arena capacity detail in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "stack_count" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: stack snapshot missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "locals_count" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: locals snapshot missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: gc interval policy missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations = ${TMP_NATIVE_NODE_GC_INTERVAL}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected gc interval policy value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_allocations_since_gc" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: gc allocation counter missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_allocations_since_gc = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected gc allocation counter reset in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_count = ${TMP_NATIVE_NODE_CAPACITY}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_count=${TMP_NATIVE_NODE_CAPACITY} in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_high_water = ${TMP_NATIVE_NODE_CAPACITY}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_high_water=${TMP_NATIVE_NODE_CAPACITY} in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_capacity" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_capacity in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: gc pressure threshold missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes = ${TMP_NATIVE_NODE_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected gc pressure threshold value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = ${TMP_NATIVE_NODE_ATTR_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = ${TMP_NATIVE_NODE_CHILD_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_root_stack_slots" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: root attribution missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_root_process_argv_slots" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: argv root attribution missing in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_allocations_since_gc" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: gc allocation counter missing in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_compactions = [1-9][0-9]*" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected gc compaction activity in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_attempts = [1-9][0-9]*" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected gc attempt activity in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_reclaimed_nodes = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected no reclaimed nodes in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 1" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_arena_pressure_count=1 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_attempts = [1-9][0-9]*" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_gc_attempts>0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected string_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected bytes_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_count = ${TMP_NATIVE_NODE_CAPACITY}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node_count=${TMP_NATIVE_NODE_CAPACITY} in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_high_water = ${TMP_NATIVE_NODE_CAPACITY}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node_high_water=${TMP_NATIVE_NODE_CAPACITY} in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_count=0 in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_capacity" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected scratch_pair_capacity in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_allocations_since_gc = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected gc allocation counter reset in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_reclaimed_nodes = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected no reclaimed nodes in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 1" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node_arena_pressure_count=1 in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected string_arena_pressure_count=0 in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected bytes_arena_pressure_count=0 in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_interval_allocations = ${TMP_NATIVE_NODE_GC_INTERVAL}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected gc interval policy value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_nodes = ${TMP_NATIVE_NODE_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected gc pressure threshold value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = ${TMP_NATIVE_NODE_ATTR_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = ${TMP_NATIVE_NODE_CHILD_PRESSURE_THRESHOLD}" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_roots = {" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: root attribution missing in diagnostics.toml" >&2
+    exit 1
+  fi
+
+  TMP_NATIVE_DEBUG_OK_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-ok"
+  TMP_NATIVE_DEBUG_OK_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-ok-out"
+  TMP_NATIVE_DEBUG_OK_APP="${TMP_NATIVE_DEBUG_OK_DIR}/success_path.aos"
+  rm -rf "${TMP_NATIVE_DEBUG_OK_DIR}" "${TMP_NATIVE_DEBUG_OK_OUT}"
+  mkdir -p "${TMP_NATIVE_DEBUG_OK_DIR}"
+  cat > "${TMP_NATIVE_DEBUG_OK_APP}" <<'EOF'
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
+  Func#f1(name=main params="argv" locals="") {
+    Inst#i1(op=HALT)
+  }
+}
+EOF
+  if ! "${ROOT_DIR}/tools/ailang" debug run "${TMP_NATIVE_DEBUG_OK_APP}" --out "${TMP_NATIVE_DEBUG_OK_OUT}" >/dev/null 2>&1; then
+    echo "native debug success smoke failed: expected successful debug run" >&2
+    exit 1
+  fi
+  if ! grep -q "status = \"ok\"" "${TMP_NATIVE_DEBUG_OK_OUT}/config.toml"; then
+    echo "native debug success smoke failed: expected status=ok in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "vm_code=AIVM000" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected vm_code=AIVM000 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected string_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected bytes_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected node_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected scratch_pair_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected string_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected bytes_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected node_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "scratch_pair_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected scratch_pair_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_root_stack_slots" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected root attribution in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_attempts = [0-9]+" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected node_gc_attempts counter in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_attempts = [0-9]+" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected node_gc_attempts counter in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_roots = {" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected root attribution in diagnostics.toml" >&2
+    exit 1
+  fi
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
-printf 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover\n' > "${PARITY_REPORT}"
+if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
+  TASK_EDGE_TMP_DIR="${ROOT_DIR}/.tmp/aivm-task-edge-parity"
+  mkdir -p "${TASK_EDGE_TMP_DIR}"
+  TASK_EDGE_TOTAL=0
+  TASK_EDGE_PASSED=0
+  TASK_EDGE_FAILED=0
+  {
+    echo "task edge parity checks"
+    echo "name|status|actual_exit|expected_exit"
+  } > "${PARITY_REPORT}"
+
+  run_task_edge_case() {
+    local name="$1"
+    local input="$2"
+    local expected_output="$3"
+    local expected_exit="$4"
+    local actual_output="${TASK_EDGE_TMP_DIR}/${name}.actual.out"
+    local actual_exit=0
+    local status="PASS"
+
+    set +e
+    "${ROOT_DIR}/tools/ailang" run "${input}" --vm=c > "${actual_output}" 2>&1
+    actual_exit=$?
+    set -e
+
+    if [[ "${actual_exit}" != "${expected_exit}" ]]; then
+      status="FAIL"
+    fi
+    if [[ "${status}" == "PASS" && -n "${expected_output}" ]]; then
+      if ! "${PARITY_CLI}" "${actual_output}" "${expected_output}" >/dev/null 2>&1; then
+        status="FAIL"
+      fi
+    fi
+    if [[ "${status}" == "PASS" && -z "${expected_output}" ]]; then
+      if [[ -s "${actual_output}" ]]; then
+        status="FAIL"
+      fi
+    fi
+
+    TASK_EDGE_TOTAL=$((TASK_EDGE_TOTAL + 1))
+    if [[ "${status}" == "PASS" ]]; then
+      TASK_EDGE_PASSED=$((TASK_EDGE_PASSED + 1))
+    else
+      TASK_EDGE_FAILED=$((TASK_EDGE_FAILED + 1))
+      echo "task edge parity failed: ${name}" >&2
+      if [[ -f "${actual_output}" ]]; then
+        cat "${actual_output}" >&2
+      fi
+    fi
+    printf '%s|%s|%s|%s\n' "${name}" "${status}" "${actual_exit}" "${expected_exit}" >> "${PARITY_REPORT}"
+  }
+
+  run_task_edge_case \
+    "await_edge_invalid" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
+    "3"
+  run_task_edge_case \
+    "par_join_edge_invalid" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
+    "3"
+  run_task_edge_case \
+    "par_cancel_edge_noop" \
+    "${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
+    "" \
+    "0"
+
+  printf 'summary|passed=%s|total=%s|failed=%s\n' "${TASK_EDGE_PASSED}" "${TASK_EDGE_TOTAL}" "${TASK_EDGE_FAILED}" >> "${PARITY_REPORT}"
+  if [[ "${TASK_EDGE_FAILED}" != "0" ]]; then
+    exit 1
+  fi
+else
+  {
+    echo "task edge parity checks"
+    echo "summary|passed=0|total=0|failed=0|skipped=tools/ailang-missing"
+  } > "${PARITY_REPORT}"
+fi
+
+if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
+  leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"
+  leak_target="${AIVM_LEAK_CHECK_TARGET:-${AIVM_C_TESTS_DIR}/golden/parity_cases/vm_c_execute_src_main_params.aos}"
+  AIVM_LEAK_MAX_GROWTH_KB="${AIVM_LEAK_MAX_GROWTH_KB:-2048}" \
+    "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" "${leak_target}" "${leak_iterations}" >/dev/null
+fi
 
 if [[ "${AIVM_PERF_SMOKE:-0}" == "1" ]]; then
   "${ROOT_DIR}/scripts/aivm-c-perf-smoke.sh" "${AIVM_PERF_RUNS:-10}"

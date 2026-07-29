@@ -1,0 +1,27 @@
+Program {
+  Let(name=lower.statementIf.appendReturn) {
+    Fn(params=function,context,returnNode,bindings,records) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=returnNode) } Lit(value=0) }
+          Block {
+            Let(name=withVoid) { Call(target=lower.appendVoidReturnValue) { Var(name=context) } }
+            Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withVoid) } }
+            Return { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } }
+          }
+          Block {
+            Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) ChildAt { Var(name=returnNode) Lit(value=0) } Var(name=bindings) Var(name=records) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=withValue) }
+              Block { Return { Var(name=withValue) } }
+              Block {
+                Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } }
+                Return { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

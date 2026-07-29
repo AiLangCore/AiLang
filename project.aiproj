@@ -1,3 +1,5 @@
 Program#p1 {
-  Project#proj1(name="myapp" entryFile="src/main.aos" entryExport="main")
+  Project#proj1(name="AiLang" entryFile="src/compiler/aic.aos" entryExport="main" version="0.0.1") {
+    Include#dep1(name="std-cli" version="0.0.1-alpha.2" path="../ailang-core-packages/packages/std-cli")
+  }
 }

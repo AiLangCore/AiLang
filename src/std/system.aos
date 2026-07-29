@@ -1,38 +1,74 @@
-Program#std_system_p1 {
-  Let#std_system_l1(name=platform) {
-    Fn#std_system_f1(params=_) {
-      Block#std_system_b1 {
-        Return#std_system_r1 { Call#std_system_c1(target=sys.platform) }
+Program {
+  Let(name=platform) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.platform) }
       }
     }
   }
 
-  Let#std_system_l2(name=arch) {
-    Fn#std_system_f2(params=_) {
-      Block#std_system_b2 {
-        Return#std_system_r2 { Call#std_system_c2(target=sys.arch) }
+  Let(name=arch) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.arch) }
       }
     }
   }
 
-  Let#std_system_l3(name=osVersion) {
-    Fn#std_system_f3(params=_) {
-      Block#std_system_b3 {
-        Return#std_system_r3 { Call#std_system_c3(target=sys.os_version) }
+  Let(name=osVersion) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.os.version) }
       }
     }
   }
 
-  Let#std_system_l4(name=runtime) {
-    Fn#std_system_f4(params=_) {
-      Block#std_system_b4 {
-        Return#std_system_r4 { Call#std_system_c4(target=sys.runtime) }
+  Let(name=runtime) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.runtime) }
       }
     }
   }
 
-  Export#std_system_e1(name=platform)
-  Export#std_system_e2(name=arch)
-  Export#std_system_e3(name=osVersion)
-  Export#std_system_e4(name=runtime)
+  Let(name=runtimeTarget) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.runtime.target) }
+      }
+    }
+  }
+
+  Let(name=runtimePlatform) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.runtime.platform) }
+      }
+    }
+  }
+
+  Let(name=openDefault) {
+    Fn(params=target) {
+      Block {
+        Return { Call(target=sys.host.openDefault) { Var(name=target) } }
+      }
+    }
+  }
+
+  Let(name=openUrl) {
+    Fn(params=url) {
+      Block {
+        Return { Call(target=openDefault) { Var(name=url) } }
+      }
+    }
+  }
+
+  Export(name=platform)
+  Export(name=arch)
+  Export(name=osVersion)
+  Export(name=runtime)
+  Export(name=runtimeTarget)
+  Export(name=runtimePlatform)
+  Export(name=openDefault)
+  Export(name=openUrl)
 }

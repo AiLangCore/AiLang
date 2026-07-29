@@ -1,0 +1,46 @@
+Program {
+  Let(name=value) {
+    Fn(params=_) {
+      Block {
+        Return { Lit(value=null) }
+      }
+    }
+  }
+
+  Let(name=isNull) {
+    Fn(params=input) {
+      Block {
+        Return { Eq { Var(name=input) Lit(value=null) } }
+      }
+    }
+  }
+
+  Let(name=isNotNull) {
+    Fn(params=input) {
+      Block {
+        If {
+          Call(target=isNull) { Var(name=input) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=coalesce) {
+    Fn(params=input,fallback) {
+      Block {
+        If {
+          Call(target=isNull) { Var(name=input) }
+          Block { Return { Var(name=fallback) } }
+          Block { Return { Var(name=input) } }
+        }
+      }
+    }
+  }
+
+  Export(name=value)
+  Export(name=isNull)
+  Export(name=isNotNull)
+  Export(name=coalesce)
+}

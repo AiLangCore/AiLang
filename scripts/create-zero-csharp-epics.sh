@@ -6,6 +6,20 @@ if [[ -z "${REPO}" ]]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 fi
 
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
+
+contains_exact_line() {
+  local needle="$1"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -Fxq -- "${needle}"
+  else
+    grep -Fxq -- "${needle}"
+  fi
+}
+
 "$(dirname "$0")/sync-zero-csharp-project-meta.sh" "${REPO}" >/dev/null || true
 
 create_epic() {
@@ -14,7 +28,7 @@ create_epic() {
   local labels="$3"
   local body="$4"
 
-  if gh issue list -R "${REPO}" --state all --search "${title} in:title" --json title --jq '.[].title' | rg -Fxq "${title}"; then
+  if gh issue list -R "${REPO}" --state all --search "${title} in:title" --json title --jq '.[].title' | contains_exact_line "${title}"; then
     echo "exists: ${title}"
     return 0
   fi

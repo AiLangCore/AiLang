@@ -1,0 +1,106 @@
+Program {
+  Import(sdk="ailang" path="std/process.aos")
+
+  Let(name=ailangBuiltinRuntime) {
+    Fn(params=_) {
+      Block {
+        Let(name=explicitRuntime) {
+          Call(target=envGet) { Lit(value="AILANG_COMMAND_RUNTIME") }
+        }
+        If {
+          Eq { Eq { Var(name=explicitRuntime) Lit(value="") } Lit(value=false) }
+          Block { Return { Var(name=explicitRuntime) } }
+          Block {
+            Let(name=sdkRoot) {
+              Call(target=envGet) { Lit(value="AILANG_SDK_ROOT") }
+            }
+            If {
+              Eq { Var(name=sdkRoot) Lit(value="") }
+              Block { Return { Lit(value="aivm") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Var(name=sdkRoot)
+                    Lit(value="/bin/aivm-runtime")
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangBuiltinCommandRoot) {
+    Fn(params=_) {
+      Block {
+        Let(name=explicitRoot) {
+          Call(target=envGet) { Lit(value="AILANG_COMMAND_ROOT") }
+        }
+        If {
+          Eq { Eq { Var(name=explicitRoot) Lit(value="") } Lit(value=false) }
+          Block { Return { Var(name=explicitRoot) } }
+          Block {
+            Let(name=sdkRoot) {
+              Call(target=envGet) { Lit(value="AILANG_SDK_ROOT") }
+            }
+            Return {
+              StrConcat {
+                Var(name=sdkRoot)
+                Lit(value="/bin/commands")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangBuiltinArtifact) {
+    Fn(params=name) {
+      Block {
+        Return {
+          StrConcat {
+            Call(target=ailangBuiltinCommandRoot) { Lit(value=0) }
+            StrConcat { Lit(value="/") StrConcat { Var(name=name) Lit(value=".aibc1") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangBuiltinArgumentPrefix) {
+    Fn(params=name) {
+      Block {
+        Let(name=withRun) {
+          AppendChild {
+            MakeBlock { Lit(value="Arguments") }
+            MakeLitString { Lit(value="arg0") Lit(value="run") }
+          }
+        }
+        Let(name=withArtifact) {
+          AppendChild {
+            Var(name=withRun)
+            MakeLitString {
+              Lit(value="arg1")
+              Call(target=ailangBuiltinArtifact) { Var(name=name) }
+            }
+          }
+        }
+        Let(name=withMarker) {
+          AppendChild {
+            Var(name=withArtifact)
+            MakeLitString { Lit(value="arg2") Lit(value="--") }
+          }
+        }
+        Return {
+          AppendChild {
+            Var(name=withMarker)
+            MakeLitString { Lit(value="arg3") Var(name=name) }
+          }
+        }
+      }
+    }
+  }
+}

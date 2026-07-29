@@ -1,0 +1,98 @@
+name: AiOS Runtime Payloads
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - ".github/workflows/aios-runtime-payloads.yml"
+      - "scripts/build-ailang-native.sh"
+      - "scripts/aivm-native-paths.sh"
+      - "build.sh"
+      - "tools/**"
+      - "src/**"
+
+permissions:
+  contents: read
+
+jobs:
+  framebuffer:
+    name: framebuffer-${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+            arch: x64
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+            arch: arm64
+
+    steps:
+      - name: Checkout AiLang
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
+      - name: Install Linux build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libssl-dev
+
+      - name: Build AiOS framebuffer runtime
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+          AILANG_BUILD_VERSION: local
+          AILANG_BUILD_CHANNEL: ci
+        run: |
+          set -euo pipefail
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=${{ matrix.arch }} \
+          AILANG_LINUX_UI_BACKEND=framebuffer \
+          AILANG_LINUX_OPENSSL_LINK=static \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 \
+          ./scripts/build-ailang-native.sh
+
+      - name: Validate framebuffer runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime=".artifacts/ailang-${{ matrix.rid }}/aivectra-framebuffer"
+          test -x "${runtime}"
+          file_output="$(file "${runtime}")"
+          echo "${file_output}"
+          case "${{ matrix.rid }}" in
+            linux-x64)
+              case "${file_output}" in
+                *ELF*64-bit*x86-64*|*ELF*64-bit*x86_64*) ;;
+                *) echo "expected linux-x64 ELF runtime, got: ${file_output}" >&2; exit 1 ;;
+              esac
+              ;;
+            linux-arm64)
+              case "${file_output}" in
+                *ELF*64-bit*ARM*aarch64*|*ELF*64-bit*aarch64*) ;;
+                *) echo "expected linux-arm64 ELF runtime, got: ${file_output}" >&2; exit 1 ;;
+              esac
+              ;;
+          esac
+
+      - name: Upload framebuffer runtime
+        uses: actions/upload-artifact@v7
+        with:
+          name: aivectra-framebuffer-${{ matrix.rid }}
+          path: .artifacts/ailang-${{ matrix.rid }}/aivectra-framebuffer
+          if-no-files-found: error

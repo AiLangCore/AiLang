@@ -1,0 +1,25 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Import(path="common.aos")
+
+  Export(name=generateCommandRegistry)
+
+  Let(name=generateCommandRegistry) {
+    Fn(params=projectPath) {
+      Block {
+        Let(name=cliPath) { StrConcat { Var(name=projectPath) Lit(value="/src/cli") } }
+
+        // For now, generate a simple registry with known commands
+        Let(name=registryCode) {
+          Lit(value="Program {\n  Import(path=\"Clean/clean.aos\")\n  Import(path=\"Init/init.aos\")\n\n  Export(name=commandRegistry)\n\n  Let(name=commandRegistry) {\n    Fn(params=cmd) {\n      Block {\n        If {\n          Eq { Var(name=cmd) Lit(value=\"clean\") }\n          Block { Return { Var(name=runClean) } }\n          Block {\n            If {\n              Eq { Var(name=cmd) Lit(value=\"init\") }\n              Block { Return { Var(name=runInit) } }\n              Block { Return { Lit(value=0) } }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n")
+        }
+
+        Let(name=outputPath) { StrConcat { Var(name=cliPath) Lit(value="/commands.g.aos") } }
+
+        Call(target=writeTextFile) { Var(name=outputPath) Var(name=registryCode) }
+
+        Return { Lit(value=0) }
+      }
+    }
+  }
+}

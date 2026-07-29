@@ -1,41 +1,153 @@
-Program#std_str_p1 {
-  Let#std_str_l1(name=concat) {
-    Fn#std_str_f1(params=a,b) {
-      Block#std_str_b1 {
-        Return#std_str_r1 { StrConcat#std_str_s1 { Var#std_str_v1(name=a) Var#std_str_v2(name=b) } }
+Program {
+  Let(name=concat) {
+    Fn(params=a,b) {
+      Block {
+        Return { StrConcat { Var(name=a) Var(name=b) } }
       }
     }
   }
 
-  Let#std_str_l2(name=substring) {
-    Fn#std_str_f2(params=text,start,length) {
-      Block#std_str_b2 {
-        Return#std_str_r2 {
-          Call#std_str_c1(target=sys.str_substring) {
-            Var#std_str_v3(name=text)
-            Var#std_str_v4(name=start)
-            Var#std_str_v5(name=length)
+  Let(name=substring) {
+    Fn(params=text,start,length) {
+      Block {
+        Return { StringSlice { Var(name=text) Var(name=start) Var(name=length) } }
+      }
+    }
+  }
+
+  Let(name=remove) {
+    Fn(params=text,start,length) {
+      Block {
+        Return { StringRemove { Var(name=text) Var(name=start) Var(name=length) } }
+      }
+    }
+  }
+
+  Let(name=find) {
+    Fn(params=text,pattern,start) {
+      Block {
+        Return { StringFind { Var(name=text) Var(name=pattern) Var(name=start) } }
+      }
+    }
+  }
+
+  Let(name=fromCodePoint) {
+    Fn(params=codePoint) {
+      Block {
+        Return { StringFromCodePoint { Var(name=codePoint) } }
+      }
+    }
+  }
+
+  Let(name=decodeUnicodeHex4) {
+    Fn(params=hex4) {
+      Block {
+        Return { StringDecodeUnicodeHex4 { Var(name=hex4) } }
+      }
+    }
+  }
+
+  Let(name=decodeUnicodeSurrogatePairHex4) {
+    Fn(params=highHex4,lowHex4) {
+      Block {
+        Return {
+          StringDecodeUnicodeSurrogatePairHex4 { Var(name=highHex4) Var(name=lowHex4) }
+        }
+      }
+    }
+  }
+
+  Let(name=replaceAll) {
+    Fn(params=text,needle,replacement) {
+      Block {
+        Return {
+          Call(target=replaceAllKnown) {
+            Var(name=text)
+            Var(name=needle)
+            StringUtf8ByteCount { Var(name=needle) }
+            Var(name=replacement)
           }
         }
       }
     }
   }
 
-  Let#std_str_l3(name=remove) {
-    Fn#std_str_f3(params=text,start,length) {
-      Block#std_str_b3 {
-        Return#std_str_r3 {
-          Call#std_str_c2(target=sys.str_remove) {
-            Var#std_str_v6(name=text)
-            Var#std_str_v7(name=start)
-            Var#std_str_v8(name=length)
+  Let(name=replaceAllKnown) {
+    Fn(params=text,needle,needleLength,replacement) {
+      Block {
+        If {
+          Eq { Var(name=needleLength) Lit(value=0) }
+          Block { Return { Var(name=text) } }
+          Block {
+            Let(name=at) {
+              StringFind { Var(name=text) Var(name=needle) Lit(value=0) }
+            }
+            If {
+              Eq { Var(name=at) Lit(value=-1) }
+              Block { Return { Var(name=text) } }
+              Block {
+                Let(name=prefix) {
+                  StringSlice { Var(name=text) Lit(value=0) Var(name=at) }
+                }
+                Let(name=suffixStart) { Add { Var(name=at) Var(name=needleLength) } }
+                Let(name=suffix) {
+                  StringSlice { Var(name=text) Var(name=suffixStart) Lit(value=2147483647) }
+                }
+                Return {
+                  StrConcat {
+                    Var(name=prefix)
+                    StrConcat {
+                      Var(name=replacement)
+                      Call(target=replaceAllKnown) {
+                        Var(name=suffix)
+                        Var(name=needle)
+                        Var(name=needleLength)
+                        Var(name=replacement)
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     }
   }
 
-  Export#std_str_e1(name=concat)
-  Export#std_str_e2(name=substring)
-  Export#std_str_e3(name=remove)
+  Let(name=utf8ByteCount) {
+    Fn(params=text) {
+      Block {
+        Return { StringUtf8ByteCount { Var(name=text) } }
+      }
+    }
+  }
+
+  Let(name=length) {
+    Fn(params=text) {
+      Block {
+        Return { StringScalarLength { Var(name=text) } }
+      }
+    }
+  }
+
+  Let(name=str.len) {
+    Fn(params=text) {
+      Block {
+        Return { StringScalarLength { Var(name=text) } }
+      }
+    }
+  }
+
+  Export(name=concat)
+  Export(name=substring)
+  Export(name=remove)
+  Export(name=find)
+  Export(name=fromCodePoint)
+  Export(name=decodeUnicodeHex4)
+  Export(name=decodeUnicodeSurrogatePairHex4)
+  Export(name=replaceAll)
+  Export(name=utf8ByteCount)
+  Export(name=length)
+  Export(name=str.len)
 }

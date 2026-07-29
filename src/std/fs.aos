@@ -1,0 +1,93 @@
+Program {
+  Let(name=fileRead) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.file.read) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=fileWrite) {
+    Fn(params=path,data) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Var(name=data)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=fileExists) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.file.exists) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=fileDelete) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.file.delete) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=dirCreate) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.dir.create) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=dirList) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.dir.list) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=dirDelete) {
+    Fn(params=path,recursive) {
+      Block {
+        Return {
+          Call(target=sys.fs.dir.delete) {
+            Var(name=path)
+            Var(name=recursive)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=pathExists) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.path.exists) { Var(name=path) } }
+      }
+    }
+  }
+
+  Let(name=pathStat) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=sys.fs.path.stat) { Var(name=path) } }
+      }
+    }
+  }
+
+  Export(name=fileRead)
+  Export(name=fileWrite)
+  Export(name=fileExists)
+  Export(name=fileDelete)
+  Export(name=dirCreate)
+  Export(name=dirList)
+  Export(name=dirDelete)
+  Export(name=pathExists)
+  Export(name=pathStat)
+}

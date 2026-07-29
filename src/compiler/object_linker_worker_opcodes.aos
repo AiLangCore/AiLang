@@ -1,0 +1,42 @@
+Program {
+  Export(name=objectLinker.workerNativeOpcode)
+  Export(name=objectLinker.workerNativeOperand)
+
+  Let(name=objectLinker.workerNativeOpcode) {
+    Fn(params=op) {
+      Block {
+        If { Eq { Var(name=op) Lit(value="WORKER_REF") } Block { Return { Lit(value=88) } } Block {
+          If { Eq { Var(name=op) Lit(value="WORKER_RUN") } Block { Return { Lit(value=89) } } Block {
+            If { Eq { Var(name=op) Lit(value="TASK_CANCEL") } Block { Return { Lit(value=90) } } Block {
+              If { Eq { Var(name=op) Lit(value="WORKER_RUN_ALL") } Block { Return { Lit(value=91) } } Block {
+                If { Eq { Var(name=op) Lit(value="WORKER_TASK_AT") } Block { Return { Lit(value=92) } } Block {
+                  If { Eq { Var(name=op) Lit(value="AWAIT") } Block { Return { Lit(value=25) } } Block {
+                    Return { Lit(value=-1) }
+                  } }
+                } }
+              } }
+            } }
+          } }
+        } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerNativeOperand) {
+    Fn(params=op,instruction) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="WORKER_REF") }
+          Block { Return { AttrValueInt { Var(name=instruction) Lit(value=1) } } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="WORKER_RUN_ALL") }
+              Block { Return { AttrValueInt { Var(name=instruction) Lit(value=1) } } }
+              Block { Return { Lit(value=0) } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

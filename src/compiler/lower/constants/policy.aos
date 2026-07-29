@@ -1,0 +1,162 @@
+Program {
+  Let(name=lower.emitObjectConstants) {
+    Fn(params=records,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=tail) { Call(target=lower.emitObjectConstants) { Var(name=records) Add { Var(name=index) Lit(value=1) } } }
+            Let(name=constant) { Call(target=lower.emitRecordConstants) { Var(name=record) } }
+            Return { StrConcat { Var(name=constant) Var(name=tail) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitRecordConstants) {
+    Fn(params=record) {
+      Block { Return { Call(target=lower.emitBodyConstants) { ChildAt { Var(name=record) Lit(value=4) } } } }
+    }
+  }
+
+  Let(name=lower.emitBodyConstants) {
+    Fn(params=body) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=body) } Lit(value=1) }
+          Block { Return { Call(target=lower.emitReturnConstants) { Var(name=body) } } }
+          Block {
+            If {
+              Lt { Lit(value=1) ChildCount { Var(name=body) } }
+              Block {
+                Let(name=first) { ChildAt { Var(name=body) Lit(value=0) } }
+                If {
+                  Eq { NodeKind { Var(name=first) } Lit(value="Let") }
+                  Block { Return { Call(target=lower.emitLocalThenReturnConstants) { Var(name=body) } } }
+                  Block { Return { Call(target=lower.emitStdoutThenReturnConstants) { Var(name=body) } } }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitReturnConstants) {
+    Fn(params=body) {
+      Block {
+        Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
+        If {
+          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
+              Block { Return { Call(target=lower.emitExpressionIntConstant) { ChildAt { Var(name=returnNode) Lit(value=0) } } } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.stdoutStringLiteral) {
+    Fn(params=callNode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=callNode) } Lit(value=1) }
+          Block {
+            Let(name=value) { ChildAt { Var(name=callNode) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+              Block {
+                If {
+                  Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="string") }
+                  Block { Return { Var(name=value) } }
+                  Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires a string literal.") Lit(value="call") } } }
+                }
+              }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires a string literal.") Lit(value="call") } } }
+            }
+          }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER001") Lit(value="stdout requires exactly one argument.") Lit(value="call") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStdoutThenReturnConstants) {
+    Fn(params=body) {
+      Block {
+        Let(name=callNode) { ChildAt { Var(name=body) Lit(value=0) } }
+        Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=1) } }
+        If {
+          Eq { NodeKind { Var(name=callNode) } Lit(value="Call") }
+          Block {
+            If {
+              Eq { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="target") Lit(value=0) } Lit(value="sys.stdout.writeLine") }
+              Block {
+                Let(name=message) { Call(target=lower.stdoutStringLiteral) { Var(name=callNode) } }
+                If {
+                  Eq { NodeKind { Var(name=message) } Lit(value="Err") }
+                  Block { Return { Lit(value="") } }
+                  Block {
+                    Let(name=returnBody) { AppendChild { MakeBlock { Lit(value="return-body") } Var(name=returnNode) } }
+                    Let(name=returnConstants) { Call(target=lower.emitReturnConstants) { Var(name=returnBody) } }
+                    Return { StrConcat { Lit(value="Const(kind=\"string\" value=\"sys.stdout.writeLine\") Const(kind=\"string\" value=\"") StrConcat { StrEscape { AttrValueString { Var(name=message) Lit(value=0) } } StrConcat { Lit(value="\") ") Var(name=returnConstants) } } } }
+                  }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitSingleReturnIntConstant) {
+    Fn(params=body) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=body) } Lit(value=1) }
+          Block {
+            Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=returnNode) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=returnNode) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+                      Block {
+                        If {
+                          Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="int") }
+                          Block { Return { StrConcat { Lit(value="Const(kind=\"int\" value=") StrConcat { ToString { AttrValueInt { Var(name=value) Lit(value=0) } } Lit(value=") ") } } } }
+                          Block { Return { Lit(value="") } }
+                        }
+                      }
+                      Block { Return { Lit(value="") } }
+                    }
+                  }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

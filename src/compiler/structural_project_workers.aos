@@ -1,0 +1,105 @@
+Program {
+  Import(path="workers/declarations.aos")
+  Export(name=structuralProject.validateProjectWorkers)
+
+  Let(name=structuralProject.validateProjectWorkers) {
+    Fn(params=programs,modulePaths,functionRecords) {
+      Block {
+        Let(name=exports) {
+          Call(target=structuralProject.collectWorkerExports) {
+            Var(name=programs) Var(name=modulePaths) Lit(value=0)
+            MakeBlock { Lit(value="worker-export-symbols") }
+          }
+        }
+        Return {
+          Call(target=structuralProject.validateWorkerModules) {
+            Var(name=programs) Var(name=modulePaths) Var(name=functionRecords)
+            Var(name=exports) Lit(value=0)
+            MakeBlock { Lit(value="worker-records") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.collectWorkerExports) {
+    Fn(params=programs,modulePaths,index,exports) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=programs) } }
+          Block { Return { Var(name=exports) } }
+          Block {
+            Let(name=moduleExports) {
+              Call(target=workerDeclarations.collectExportedFunctionSymbols) {
+                ChildAt { Var(name=programs) Var(name=index) }
+                AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) }
+              }
+            }
+            Return {
+              Call(target=structuralProject.collectWorkerExports) {
+                Var(name=programs) Var(name=modulePaths) Add { Var(name=index) Lit(value=1) }
+                Call(target=structuralProject.appendNodes) {
+                  Var(name=exports) Var(name=moduleExports) Lit(value=0)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.validateWorkerModules) {
+    Fn(params=programs,modulePaths,functionRecords,exports,index,workers) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=programs) } }
+          Block { Return { Var(name=workers) } }
+          Block {
+            Let(name=moduleWorkers) {
+              Call(target=workerDeclarations.validateProgram) {
+                ChildAt { Var(name=programs) Var(name=index) }
+                AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) }
+                Var(name=functionRecords) Var(name=exports)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=moduleWorkers) } Lit(value="Err") }
+              Block { Return { Var(name=moduleWorkers) } }
+              Block {
+                Return {
+                  Call(target=structuralProject.validateWorkerModules) {
+                    Var(name=programs) Var(name=modulePaths) Var(name=functionRecords)
+                    Var(name=exports) Add { Var(name=index) Lit(value=1) }
+                    Call(target=structuralProject.appendNodes) {
+                      Var(name=workers) Var(name=moduleWorkers) Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.appendNodes) {
+    Fn(params=destination,source,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=source) } }
+          Block { Return { Var(name=destination) } }
+          Block {
+            Return {
+              Call(target=structuralProject.appendNodes) {
+                AppendChild { Var(name=destination) ChildAt { Var(name=source) Var(name=index) } }
+                Var(name=source) Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

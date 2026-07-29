@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+AIVM_C_REPO_DIR="$(cd "${AIVM_C_SOURCE_DIR}/.." && pwd)"
 BUILD_SUFFIX="native"
-BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
-AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_SOURCE_DIR}/tests}"
-BASELINE_FILE="${AIVM_C_TESTS_DIR}/perf_baseline.env"
+BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_REPO_DIR}/tests}"
+BASELINE_FILE="${AIVM_C_TESTS_DIR}/stress/perf_baseline.env"
 RUNS="${1:-20}"
 
 if ! [[ "${RUNS}" =~ ^[0-9]+$ ]] || [[ "${RUNS}" -lt 1 ]]; then

@@ -35,7 +35,7 @@ Program#p1 {
           Block#b3 {
             Return#r2 {
               Add#a1 {
-                Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value="abcdefgh") }
+                Call#c1(target=sys.str.utf8ByteCount) { Lit#s1(value="abcdefgh") }
                 Call#c2(target=hot) { Add#a2 { Var#v2(name=n) Lit#i2(value=-1) } }
               }
             }
@@ -55,13 +55,13 @@ bench_ref() {
   local ref_name="$1"
   local worktree="$2"
   local report_file="$3"
-  local binary_path="${worktree}/tools/airun"
+  local binary_path="${worktree}/tools/ailang"
   local build_log
   build_log="$(mktemp -t abi-build-${ref_name//\//_}-XXXXXX.log)"
 
   if ! (
     cd "${worktree}"
-    ./scripts/build-airun.sh >"${build_log}" 2>&1
+    ./build.sh >"${build_log}" 2>&1
   ); then
     echo "build failed for ref ${ref_name}" >&2
     tail -n 80 "${build_log}" >&2

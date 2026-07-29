@@ -23,9 +23,44 @@ This file is normative for `aic run` evaluation behavior.
 - `Var(name)`: return bound value.
 - `Lit`: return literal value.
 - `If`: evaluate condition; must be bool literal; evaluate selected branch only.
-- `Eq`: evaluate both sides, then compare by primitive type and value.
+- `Match`: evaluate the subject exactly once. Evaluate `Case` arms in source
+  order using the same primitive equality semantics as `Eq`; evaluate only the
+  first selected arm's `Block`. A final `Default` is selected when no `Case`
+  matches. Without a matching arm or `Default`, evaluation returns `MATCH001`.
+  `Match` subjects and `Case` labels are primitive literals (`string`, `int`,
+  or `bool`) in the initial language surface. Repeated labels are deterministic:
+  the first matching source-order arm wins.
+- `Loop`: repeatedly evaluate body until exited with `Break`.
+- `Break`: valid only inside `Loop`; exits nearest loop.
+- `Continue`: valid only inside `Loop`; skips to next nearest-loop iteration.
+- `Eq`: evaluate both sides, then compare by primitive type and value. Integral
+  and fractional `number` payloads compare through numeric value, so `2` and
+  `2.0` are equal.
+- Public equality is `std.core.equals(a,b)`. Stdlib code and packages should use
+  `equals` instead of exposing module-local equality aliases.
+- RC-1 built-in equality handlers cover `std.Number`, `std.String`,
+  `std.Bool`, and `std.Null` through the primitive `Eq` substrate.
+- Future type-specific equality must be declared in AiLang as deterministic
+  `Equality(leftType,rightType,handler)` declarations. Handlers are pure,
+  return `std.Bool`, and are collected/validated deterministically; the host
+  must not register semantic equality handlers.
+- Fully qualified type identity is required for equality dispatch, for example
+  `std.Number`, `std.String`, `std.Bool`, `std.Null`, and package/user types
+  such as `user.Money`.
+- Values with different fully qualified types compare false unless an explicit
+  validated equality declaration allows the pair.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
-- `Add`: evaluate both sides, both must be int literals.
+- `Add`, `Sub`, `Mul`, `Div`, `Mod`, `Pow`: evaluate both sides; both must be
+  numeric values in the `number` family. Integral inputs may produce integral
+  results when exact, while operations such as `Div(7,2)` produce fractional
+  values. Division and modulo by zero fail deterministically.
+- `Lt`: evaluate both sides; both must be numeric values in the `number` family;
+  returns `true` when the first value is numerically less than the second.
+- The canonical stdlib surface for language-facing numeric operations is
+  `src/std/number.aos`.
+- `bytes` values are first-class runtime values and participate in equality by length+byte-content.
+- `null` is a first-class runtime value distinct from `void`.
+- `null` equality is value-stable and can back generic coalesce-style stdlib helpers.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
@@ -33,11 +68,17 @@ This file is normative for `aic run` evaluation behavior.
 - `Await`: evaluate child expression; child must resolve to `Task`; block until completion and return resolved value or propagate resolved `Err`.
 - `Par`: evaluate each child in isolated branch state from the same lexical snapshot, then join all branches before continuing.
 - `Import(path)`: resolve path relative to current module file; parse via frontend; validate with `validate.aos`; evaluate imported module in isolated environment; merge only names explicitly listed by `Export`.
+- `Import(package,path)`: resolve `package` through the project lockfile and local package cache, then resolve `path` relative to that package root. Evaluation and export merge semantics are the same as relative imports.
 - `Export(name)`: mark an existing binding as exported from the current module evaluation scope.
 
-## Module Rules
+## Module And Package Rules
 
-- Import resolution is strictly relative (absolute paths are rejected).
+- Relative import resolution is strictly relative (absolute paths are rejected).
+- Package import resolution is strictly lockfile-based. Evaluation must not
+  perform package registry or git network access.
+- A package import is valid only when the named package appears in
+  `project.aiproj`, is pinned in `ailang.lock.toml`, and is present in the
+  local package cache.
 - Circular imports fail deterministically with runtime `Err`.
 - Missing import files fail deterministically with runtime `Err`.
 
@@ -45,21 +86,21 @@ This file is normative for `aic run` evaluation behavior.
 
 - VM-level UI syscalls are intentionally minimal and composable primitives.
 - Current required VM UI syscall set is:
-- `sys.ui_createWindow`
-- `sys.ui_beginFrame`
-- `sys.ui_drawRect`
-- `sys.ui_drawText`
-- `sys.ui_drawLine`
-- `sys.ui_drawEllipse`
-- `sys.ui_drawPath`
-- `sys.ui_drawPolyline`
-- `sys.ui_drawPolygon`
-- `sys.ui_endFrame`
-- `sys.ui_pollEvent`
-- `sys.ui_waitFrame`
-- `sys.ui_present`
-- `sys.ui_closeWindow`
-- `sys.ui_getWindowSize`
+- `sys.ui.createWindow`
+- `sys.ui.beginFrame`
+- `sys.ui.drawRect`
+- `sys.ui.drawText`
+- `sys.ui.drawLine`
+- `sys.ui.drawEllipse`
+- `sys.ui.drawPath`
+- `sys.ui.drawPolyline`
+- `sys.ui.drawPolygon`
+- `sys.ui.endFrame`
+- `sys.ui.pollEvent`
+- `sys.ui.waitFrame`
+- `sys.ui.present`
+- `sys.ui.closeWindow`
+- `sys.ui.getWindowSize`
 - High-level style/composition effects (for example text-on-path layout, paint bundles, blur/shadow filters, and group transform helpers) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
 
 ## Async Determinism Rules
@@ -79,57 +120,120 @@ This file is normative for `aic run` evaluation behavior.
 - Host/runtime may use internal worker threads for effectful operations (network, file, process, heavy compute), but workers must not mutate VM state directly.
 - Worker completion is observed only through explicit syscall polling/result reads in evaluator steps.
 - UI rendering and input consumption are owner-thread responsibilities:
-- event step (`sys.ui_pollEvent`)
+- event step (`sys.ui.pollEvent`)
 - deterministic state transition/recompute
-- present (`sys.ui_present`)
-- pacing (`sys.ui_waitFrame` when available)
+- present (`sys.ui.present`)
+- pacing (`sys.ui.waitFrame` when available)
 - Worker scheduling order/timing may vary; observable program behavior for identical input/event logs must remain deterministic.
 
 ## Non-Blocking Async Syscall Contract
 
 - Effectful async syscalls follow explicit `start -> poll -> result/cancel` phases.
 - `*Start` syscalls must return quickly with an operation handle and must not wait for completion.
-- `sys.net_asyncPoll(handle)` must be non-blocking and returns:
+- `sys.net.async.poll(handle)` must be non-blocking and returns:
 - `0` pending
 - `1` completed-success
 - `-1` completed-failure
 - `-2` canceled
 - `-3` unknown-handle
-- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultString(handle)`, and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
-- `sys.net_asyncCancel(handle)` is best-effort and deterministic:
+- `sys.net.async.resultInt(handle)`, `sys.net.async.resultBytes(handle)` (bytes payload), and `sys.net.async.error(handle)` are non-blocking reads of terminal payload state.
+- `sys.net.async.cancel(handle)` is best-effort and deterministic:
 - returns `false` for unknown/non-pending handles
 - returns `true` only when cancellation transitions a pending op to canceled
+- `sys.host.openDefault(target)` is a host launch action and must return promptly with success/failure without blocking evaluator progress on external app/browser lifetime.
 - Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
 
-## Worker Execution Contract (Phase 1)
+## Worker Execution Contract
 
-- Worker APIs are host-executed effectful operations with owner-thread-visible completion:
-- `sys.worker_start(taskName, payload) -> workerHandle`
-- `sys.worker_poll(workerHandle) -> status`
-- `sys.worker_result(workerHandle) -> string`
-- `sys.worker_error(workerHandle) -> string`
-- `sys.worker_cancel(workerHandle) -> bool`
-- Worker task execution may overlap on host threads.
-- Completion becomes language-visible only when owner thread performs polling in evaluator steps.
-- For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
-- Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
+- `WorkerRef(name=<worker-name>)` has no runtime name-resolution step. The
+  builder replaces its canonical worker relocation with a validated catalog
+  index, and `WORKER_REF` mechanically creates the opaque capability for that
+  already-resolved entry.
+- The owner VM owns a bounded, work-conserving mechanical scheduler. AiLang
+  declares logical work and dependencies; AiVM chooses physical concurrency,
+  pending dispatch, isolation mechanism, slot reuse, buffering, and cleanup.
+- `std.worker.run` admits one logical invocation. `std.worker.runAll` atomically
+  admits an ordered logical workload which may be larger than the bounded
+  materialized pending queue.
+- `WORKER_RUN_ALL` retains one immutable logical workload but materializes no
+  more than the deterministic owner Task bound. Pending tasks may exceed active
+  worker slots, and physical workers remain work-conserving within that window.
+  First `Await` consumption releases one materialization credit and admits the
+  next canonical logical index. Background completion alone does not change
+  owner-visible admission or materialization credit.
+- Canonical forward `taskAt`/`Await` observation is guaranteed to progress
+  across windows. Requesting an index beyond the current materialized window
+  produces a stable resource-bound failure in this stage; arbitrary
+  out-of-window observation requires the follow-up virtual-Task contract.
+- `std.worker.batch.append` deterministically appends one length-prefixed bytes
+  payload to the canonical batch envelope. AiVM validates only this mechanical
+  framing and never interprets an individual payload.
+- Admission depends only on owner-visible accounting established before
+  execution. Background completion must not change whether a later owner
+  submission succeeds. Rejection is an immediate stable `Err` and allocates no
+  failed Task or retained scheduler state.
+- After workload admission, AiVM lazily materializes bounded runnable work.
+  Completion may refill physical execution slots without polling or `Await`.
+- Each invocation receives fresh mutable VM state. A validated immutable worker
+  program may be shared, but heaps, globals, stacks, frames, handles, Tasks, and
+  syscall state are isolated.
+- A Task terminal result is observed only through owner evaluation. First
+  `Await` consumes it and releases its admission/result accounting exactly
+  once. A stale alias observes `TASK_CONSUMED`, never a reused task slot.
+- `then` dependencies become runnable when their prerequisite succeeds; owner
+  observation is not required. A prerequisite failure mechanically blocks only
+  its dependents unless owner code cancels the remaining workload.
+- `whenAll` materializes results in declared input order. Completion timing is
+  not semantic ordering.
+- `whenAny` explicitly observes readiness and is therefore an operational API.
+  It is invalid in canonical compiler, validation, linking, diagnostic, or
+  persistence contexts.
+- The scheduler applies bounded result/intermediate storage and backpressure.
+  When a buffer is saturated it pauses producers and favors runnable consumers;
+  it never creates unbounded overflow state.
+- Effective worker capabilities are the intersection of worker-required,
+  owner-granted, and runtime-profile capabilities.
+- Deterministic instruction, allocation, and byte budgets may produce semantic
+  failure. Wall-clock watchdogs are operational aborts only and prevent final
+  artifact commit.
+- Owner shutdown cancels or drains remaining work and releases all workload,
+  Task, result, worker-VM, and capability resources.
+
+## Process Execution Contract (Phase 1)
+
+- Process APIs are host-executed effectful operations with owner-thread-visible completion:
+- `sys.process.spawn(command, argsNode, cwd, envNode) -> processHandle`
+  - `command` is the executable path/name.
+  - `argsNode` uses the same node shape returned by `sys.process.args`: a block/list of string-bearing child nodes, one child per argv entry after `command`.
+  - Native runtime launches `command` with `argv = [command] + argsNode`.
+  - If a caller is already holding `start(args)`, it may pass that node directly as `argsNode`.
+  - If a caller rebuilds argv manually, it must start from an empty block/list; do not seed a placeholder child such as `"args"`, because every child becomes a real forwarded argv entry.
+- `sys.process_poll(processHandle) -> status`
+- `sys.process_wait(processHandle) -> status`
+- `sys.process.stdout.read(processHandle) -> bytes`
+- `sys.process.stderr.read(processHandle) -> bytes`
+- `sys.process_kill(processHandle) -> bool`
+- Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
+- Native baseline may complete work synchronously during `sys.process.spawn`; libraries should still consume state through `poll/wait/result` calls.
+- Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
 
 ## Debug Instrumentation Contract
 
 - Debug syscalls are explicit effect syscalls, not implicit runtime side effects.
 - Canonical debug syscall surface:
-- `sys.debug_emit(channel, payload)`
-- `sys.debug_mode()`
-- `sys.debug_captureFrameBegin(frameId, width, height)`
-- `sys.debug_captureFrameEnd(frameId)`
-- `sys.debug_captureDraw(op, args)`
-- `sys.debug_captureInput(eventPayload)`
-- `sys.debug_captureState(key, valuePayload)`
-- `sys.debug_replayLoad(path)`
-- `sys.debug_replayNext(handle)`
-- `sys.debug_assert(cond, code, message)`
-- `sys.debug_artifactWrite(path, text)`
-- `sys.debug_traceAsync(opId, phase, detail)`
+- `sys.debug.emit(channel, payload)`
+- `sys.debug.mode()`
+- `sys.debug.captureFrameBegin(frameId, width, height)`
+- `sys.debug.captureFrameEnd(frameId)`
+- `sys.debug.captureDraw(op, args)`
+- `sys.debug.captureInput(eventPayload)`
+- `sys.debug.captureState(key, valuePayload)`
+- `sys.debug.replayLoad(path)`
+- `sys.debug.replayNext(handle)`
+- `sys.debug.assert(cond, code, message)`
+- `sys.debug.artifactWrite(path, text)`
+- `sys.debug.traceAsync(opId, phase, detail)`
+- `sys.debug.taskReclaimStats()`
 - Host may store/write debug artifacts, but debug-visible state transitions remain deterministic for identical syscall sequences.
 - Replay consumption is pull-based (`debug_replayNext`) so evaluator order controls determinism.
 
@@ -203,7 +307,7 @@ This file is normative for `aic run` evaluation behavior.
 - For non-`none` events, evaluator performs one deterministic state transition and one full declarative tree recompute before presenting the frame.
 - Recompute order is deterministic and matches canonical child order.
 - Idle behavior (`type=none`) performs no implicit state mutation.
-- For UI-driven loops, `sys.ui_waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time_sleepMs`, when host support is available.
+- For UI-driven loops, `sys.ui.waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time.sleepMs`, when host support is available.
 - Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
 
 ## Host Normalization vs Library Semantics
@@ -223,13 +327,73 @@ This file is normative for `aic run` evaluation behavior.
 
 ## Raster Image Primitive
 
-- `sys.ui_drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
+- `sys.ui.drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
 - `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
 - Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
 - Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
+- `sys.image.decodeToRgbaBase64(bytes, mimeType)` is a host decode primitive.
+- Host owns compressed image decoding mechanics; libraries own fetch, cache, and render policy.
+- Unsupported targets or undecodable payloads must fail explicitly through the syscall boundary.
+- `sys.time.nowUnixMs()` returns Unix epoch milliseconds.
+- `sys.time.timeZoneId()` returns the current local timezone identifier when the host can provide one, otherwise a stable best-effort label.
+- `sys.time.timeZoneOffsetMinutesAt(epochMs)` returns the local UTC offset in minutes for the supplied Unix epoch milliseconds.
 
 ## Result Emission
 
 - `aic run` emits canonical AOS:
 - `Ok#...` for successful value completion.
 - `Err#...` for runtime error completion.
+
+## Bytes Runtime Rules
+
+- Syscall-returned bytes and string payloads are materialized into VM-owned arenas before becoming observable runtime values.
+- `TO_STRING(bytes)` yields lowercase hex with `0x` prefix (`0x` for empty bytes).
+- `BytesAt(data,index)` returns `-1` when `index` is out of range.
+- `BytesSlice(data,start,length)` clamps start/length and never throws for range overflow.
+- `BytesFromBase64(text)` uses strict base64 validation; invalid input is runtime error.
+- `BytesToBase64(data)` returns base64 text.
+- `BytesFromUtf8String(text)` returns the raw UTF-8 byte sequence for the input string.
+- `BytesToUtf8String(data)` returns `""` when the payload is not valid UTF-8.
+
+## VM Memory + Node GC Contract
+
+- VM memory arenas are deterministic and bounded:
+- `string_arena` hard cap failure emits `AIVM011` detail `AIVMM001: string arena capacity exceeded.`
+- `bytes_arena` hard cap failure emits `AIVM011` detail `AIVMM002: bytes arena capacity exceeded.`
+- Node arena hard cap failure emits `AIVM011` detail `AIVMM005: node arena capacity exceeded.`
+- Node GC compaction is deterministic and may run proactively before hard-cap:
+- policy interval `node_gc_interval_allocations = 64`
+- pressure threshold `node_gc_pressure_threshold_nodes = 384`
+- pressure threshold `node_gc_pressure_threshold_attrs = 1536`
+- pressure threshold `node_gc_pressure_threshold_children = 3072`
+- proactive compaction runs only when both interval and threshold conditions are met.
+- Hard-cap node creation path must attempt compaction before emitting `AIVMM005`.
+- Node compaction semantics:
+- reachable node handles are preserved via deterministic handle remapping.
+- unreachable nodes are reclaimed.
+- all VM references to node handles (`stack`, `locals`, completed tasks, par values, process argv root) are remapped in one deterministic transition.
+- Reset semantics:
+- `aivm_reset_state` clears arena usage and high-water counters deterministically.
+- `node_allocations_since_gc` resets to `0` after state reset and after a compaction attempt.
+- `node_gc_attempts` counts every deterministic compaction attempt (proactive and hard-cap path).
+- Memory telemetry counters are saturating (`size_t` max) and must never wrap.
+- Native debug bundle memory telemetry is contractually present in:
+- `config.toml` (policy constants)
+- `state_snapshots.toml` (live counters)
+- `diagnostics.toml` memory table (summary counters)
+- Native debug bundle root attribution is contractually present in:
+- `state_snapshots.toml` flat `node_root_*` counters for each root class
+- `diagnostics.toml` `node_roots` table for each root class
+- Telemetry includes per-arena pressure counters:
+- `node_gc_attempts`
+- `string_arena_pressure_count`
+- `bytes_arena_pressure_count`
+- `node_arena_pressure_count`
+- Root attribution classes include:
+- `stack`
+- `locals`
+- `completed_tasks`
+- `par_values`
+- `process_argv`
+- `ui_window_size`
+- `ui_empty_event`

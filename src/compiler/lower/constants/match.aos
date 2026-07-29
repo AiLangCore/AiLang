@@ -1,0 +1,77 @@
+Program {
+  Import(path="literals.aos")
+
+  Let(name=lower.emitMatchConstants) {
+    Fn(params=matchNode,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
+            Let(name=tail) { Call(target=lower.emitMatchConstants) { Var(name=matchNode) Add { Var(name=index) Lit(value=1) } } }
+            If {
+              Eq { NodeKind { Var(name=arm) } Lit(value="Case") }
+              Block {
+                Let(name=label) { ChildAt { Var(name=arm) Lit(value=0) } }
+                Let(name=body) { ChildAt { Var(name=arm) Lit(value=1) } }
+                If {
+                  Eq { ChildCount { Var(name=body) } Lit(value=1) }
+                  Block { Return { StrConcat { Call(target=lower.emitLiteralConstant) { Var(name=label) } StrConcat { Call(target=lower.emitExpressionIntConstantCore) { ChildAt { Var(name=body) Lit(value=0) } } Var(name=tail) } } } }
+                  Block { Return { Var(name=tail) } }
+                }
+              }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=arm) } Lit(value="Default") }
+                  Block {
+                    Let(name=body) { ChildAt { Var(name=arm) Lit(value=0) } }
+                    If {
+                      Eq { ChildCount { Var(name=body) } Lit(value=1) }
+                      Block { Return { StrConcat { Call(target=lower.emitExpressionIntConstantCore) { ChildAt { Var(name=body) Lit(value=0) } } Var(name=tail) } } }
+                      Block { Return { Var(name=tail) } }
+                    }
+                  }
+                  Block { Return { Var(name=tail) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitIntLiteralConstant) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=value) Lit(value=0) } Lit(value="int") }
+              Block { Return { StrConcat { Lit(value="Const(kind=\"int\" value=") StrConcat { ToString { AttrValueInt { Var(name=value) Lit(value=0) } } Lit(value=") ") } } } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLiteralConstant) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+          Block {
+            Let(name=target) { Call(target=lower.literalConstantTextTarget) { Var(name=value) } }
+            Return { StrConcat { Lit(value="Const(kind=\"literal\" value=\"") StrConcat { Var(name=target) Lit(value="\") ") } } }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

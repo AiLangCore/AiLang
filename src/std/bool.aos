@@ -1,0 +1,66 @@
+Program {
+  Let(name=not) {
+    Fn(params=value) {
+      Block {
+        If {
+          Var(name=value)
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=and) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Var(name=a)
+          Block {
+            If {
+              Var(name=b)
+              Block { Return { Lit(value=true) } }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=or) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Var(name=a)
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Var(name=b)
+              Block { Return { Lit(value=true) } }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=xor) {
+    Fn(params=a,b) {
+      Block {
+        If {
+          Var(name=a)
+          Block { Return { Call(target=not) { Var(name=b) } } }
+          Block { Return { Var(name=b) } }
+        }
+      }
+    }
+  }
+
+  Export(name=not)
+  Export(name=and)
+  Export(name=or)
+  Export(name=xor)
+}

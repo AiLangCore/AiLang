@@ -1,0 +1,17 @@
+Program {
+  Import(path="structural_project_incremental.aos")
+  Export(name=structuralProject.writeProjectObjectFilesSelected)
+
+  Let(name=structuralProject.writeProjectObjectFilesSelected) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,entryFile) {
+      Block {
+        Return {
+          Call(target=structuralProject.writeProjectObjectFilesIncremental) {
+            Var(name=modulePaths) Var(name=projectDir)
+            Var(name=lockText) Var(name=objDir)
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,260 @@
+Program {
+  Let(name=lower.emitReturnExpressionAtCore) {
+    Fn(params=expr,instructionIndex) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=expr) } Lit(value="Lit") }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=expr) Lit(value=0) } Lit(value="int") }
+              Block {
+                Return {
+                  StrConcat {
+                    Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                    StrConcat {
+                      ToString { Var(name=instructionIndex) }
+                      StrConcat {
+                        Lit(value=" target=\"int:")
+                        StrConcat {
+                          ToString { AttrValueInt { Var(name=expr) Lit(value=0) } }
+                          Lit(value="\") Inst(op=\"RETURN\") ")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"return-non-int-literal\") ") } }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=expr) } Lit(value="Call") }
+              Block {
+                Let(name=target) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } }
+                If {
+                  Eq { ChildCount { Var(name=expr) } Lit(value=0) }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Lit(value="Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+                        StrConcat {
+                          ToString { Var(name=instructionIndex) }
+                          StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { ChildCount { Var(name=expr) } Lit(value=1) }
+                      Block {
+                        Let(name=argument) { ChildAt { Var(name=expr) Lit(value=0) } }
+                        If {
+                          Eq { AttrValueKind { Var(name=argument) Lit(value=0) } Lit(value="int") }
+                          Block {
+                            Return {
+                              StrConcat {
+                                Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                                StrConcat {
+                                  ToString { Var(name=instructionIndex) }
+                                  StrConcat {
+                                    Lit(value=" target=\"int:")
+                                    StrConcat {
+                                      ToString { AttrValueInt { Var(name=argument) Lit(value=0) } }
+                                      StrConcat {
+                                        Lit(value="\") Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+                                        StrConcat { ToString { Add { Var(name=instructionIndex) Lit(value=1) } } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+                        }
+                      }
+                      Block {
+                        If {
+                          Eq { ChildCount { Var(name=expr) } Lit(value=2) }
+                          Block { Return { Call(target=lower.emitTwoLiteralCall) { Var(name=expr) Var(name=instructionIndex) } } }
+                          Block { Return { Lit(value="Unsupported(reason=\"call-arguments\") ") } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { NodeKind { Var(name=expr) } Lit(value="Add") }
+                  Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="ADD_INT") } } }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=expr) } Lit(value="Sub") }
+                      Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="SUB_NUM") } } }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=expr) } Lit(value="Mul") }
+                          Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="MUL_NUM") } } }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=expr) } Lit(value="Div") }
+                              Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="DIV_NUM") } } }
+                              Block {
+                                If {
+                                  Eq { NodeKind { Var(name=expr) } Lit(value="Mod") }
+                                  Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="MOD_NUM") } } }
+                                  Block {
+                                    If {
+                                      Eq { NodeKind { Var(name=expr) } Lit(value="Eq") }
+                                      Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="EQ_INT") } } }
+                                      Block {
+                                        If {
+                                          Eq { NodeKind { Var(name=expr) } Lit(value="Lt") }
+                                          Block { Return { Call(target=lower.emitTwoLiteralAdd) { Var(name=expr) Var(name=instructionIndex) Lit(value="LT_NUM") } } }
+                                          Block { Return { Lit(value="Unsupported(reason=\"return-expression\") ") } }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitLiteralReturnAt) {
+    Fn(params=value,instructionIndex) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+            StrConcat {
+              ToString { Var(name=instructionIndex) }
+              StrConcat { Lit(value=" target=\"") StrConcat { Call(target=lower.literalConstantTextTarget) { Var(name=value) } Lit(value="\") Inst(op=\"RETURN\") ") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitTwoLiteralAdd) {
+    Fn(params=expr,instructionIndex,op) {
+      Block {
+        Let(name=left) { ChildAt { Var(name=expr) Lit(value=0) } }
+        Let(name=right) { ChildAt { Var(name=expr) Lit(value=1) } }
+        If {
+          Eq { ChildCount { Var(name=expr) } Lit(value=2) }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=left) Lit(value=0) } Lit(value="int") }
+              Block {
+                If {
+                  Eq { AttrValueKind { Var(name=right) Lit(value=0) } Lit(value="int") }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                        StrConcat {
+                          ToString { Var(name=instructionIndex) }
+                          StrConcat {
+                            Lit(value=" target=\"int:")
+                            StrConcat {
+                              ToString { AttrValueInt { Var(name=left) Lit(value=0) } }
+                              StrConcat {
+                                Lit(value="\") Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                                StrConcat {
+                                  ToString { Add { Var(name=instructionIndex) Lit(value=1) } }
+                                  StrConcat {
+                                    Lit(value=" target=\"int:")
+                                    StrConcat {
+                                      ToString { AttrValueInt { Var(name=right) Lit(value=0) } }
+                                      StrConcat { Lit(value="\") Inst(op=\"") StrConcat { Var(name=op) Lit(value="\" a=0) Inst(op=\"RETURN\") ") } }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Lit(value="Unsupported(reason=\"add-operand\") ") } }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"add-operand\") ") } }
+            }
+          }
+          Block { Return { Lit(value="Unsupported(reason=\"add-arity\") ") } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitTwoLiteralCall) {
+    Fn(params=expr,instructionIndex) {
+      Block {
+        Let(name=first) { ChildAt { Var(name=expr) Lit(value=0) } }
+        Let(name=second) { ChildAt { Var(name=expr) Lit(value=1) } }
+        If {
+          Eq { AttrValueKind { Var(name=first) Lit(value=0) } Lit(value="int") }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=second) Lit(value=0) } Lit(value="int") }
+              Block {
+                Let(name=target) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } }
+                Return {
+                  StrConcat {
+                    Lit(value="Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                    StrConcat {
+                      ToString { Var(name=instructionIndex) }
+                      StrConcat {
+                        Lit(value=" target=\"int:")
+                        StrConcat {
+                          ToString { AttrValueInt { Var(name=first) Lit(value=0) } }
+                          StrConcat {
+                            Lit(value="\") Inst(op=\"CONST\" a=0) Reloc(kind=\"const\" instruction=")
+                            StrConcat {
+                              ToString { Add { Var(name=instructionIndex) Lit(value=1) } }
+                              StrConcat {
+                                Lit(value=" target=\"int:")
+                                StrConcat {
+                                  ToString { AttrValueInt { Var(name=second) Lit(value=0) } }
+                                  StrConcat {
+                                    Lit(value="\") Inst(op=\"CALL\" a=0) Reloc(kind=\"call\" instruction=")
+                                    StrConcat { ToString { Add { Var(name=instructionIndex) Lit(value=2) } } StrConcat { Lit(value=" targetName=\"") StrConcat { StrEscape { Var(name=target) } Lit(value="\") Inst(op=\"RETURN\") ") } } }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+            }
+          }
+          Block { Return { Lit(value="Unsupported(reason=\"call-argument\") ") } }
+        }
+      }
+    }
+  }
+}

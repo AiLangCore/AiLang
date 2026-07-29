@@ -1,0 +1,61 @@
+Program {
+  Import(sdk="ailang" path="std/core.aos")
+
+  Let(name=processResult) {
+    Fn(params=exitCode,stdoutText,stderrText) {
+      Block {
+        Return {
+          Map {
+            Field(key="kind") { Lit(value="ProcessResult") }
+            Field(key="exitCode") { Var(name=exitCode) }
+            Field(key="stdout") { Var(name=stdoutText) }
+            Field(key="stderr") { Var(name=stderrText) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=processResultExitCode) {
+    Fn(params=result) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=result)
+            Lit(value="exitCode")
+            Lit(value=-1)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=processResultStdoutText) {
+    Fn(params=result) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=result)
+            Lit(value="stdout")
+            Lit(value="")
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=processResultStderrText) {
+    Fn(params=result) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=result)
+            Lit(value="stderr")
+            Lit(value="")
+          }
+        }
+      }
+    }
+  }
+
+}

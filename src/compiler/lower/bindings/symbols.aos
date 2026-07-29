@@ -1,0 +1,80 @@
+Program {
+  Export(name=lower.collectFunctionRecords)
+
+  Let(name=lower.collectFunctionRecords) {
+    Fn(params=program,modulePath) {
+      Block {
+        Return {
+          Call(target=lower.collectAt) {
+            Var(name=program)
+            Var(name=modulePath)
+            Lit(value=0)
+            MakeBlock { Lit(value="functions") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.collectAt) {
+    Fn(params=program,modulePath,index,records) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Let") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=child) } Lit(value=1) }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=child) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Fn") }
+                      Block {
+                        Let(name=name) { Call(target=lower.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) } }
+                        Let(name=params) { Call(target=lower.getAttr) { Var(name=value) Lit(value="params") Lit(value=0) } }
+                        Let(name=body) { ChildAt { Var(name=value) Lit(value=0) } }
+                        Let(name=recordBase) { MakeBlock { Lit(value="function") } }
+                        Let(name=recordWithModule) { AppendChild { Var(name=recordBase) MakeLitString { Lit(value="modulePath") Var(name=modulePath) } } }
+                        Let(name=recordWithName) { AppendChild { Var(name=recordWithModule) MakeLitString { Lit(value="name") Var(name=name) } } }
+                        Let(name=recordWithSymbol) { AppendChild { Var(name=recordWithName) MakeLitString { Lit(value="symbol") StrConcat { Var(name=modulePath) StrConcat { Lit(value="::") Var(name=name) } } } } }
+                        Let(name=recordWithParams) { AppendChild { Var(name=recordWithSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
+                        Let(name=record) { AppendChild { Var(name=recordWithParams) Var(name=body) } }
+                        Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) AppendChild { Var(name=records) Var(name=record) } } }
+                      }
+                      Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
+                    }
+                  }
+                  Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
+                }
+              }
+              Block { Return { Call(target=lower.collectAt) { Var(name=program) Var(name=modulePath) Var(name=nextIndex) Var(name=records) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=lower.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1920 @@
+Program {
+
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="../compiler/parser.aos")
+  Import(path="../compiler/linker.aos")
+  Import(path="../compiler/bundle.aos")
+  Import(path="../compiler/structural_project_link.aos")
+  Import(path="manifest.aos")
+  Import(path="target_packages.aos")
+  Import(path="application.aos")
+  Export(name=main)
+
+  Let(name=main) {
+    Fn(params=args) {
+      Block {
+        Return { Call(target=run) { Call(target=ailangCliApplication) { Lit(value=0) } Var(name=args) } }
+      }
+    }
+  }
+
+  Let(name=readArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readOption) {
+    Fn(params=args,index,name,defaultValue) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=defaultValue) } }
+          Block {
+            If {
+              Eq { Call(target=readArg) { Var(name=args) Var(name=index) } Var(name=name) }
+              Block { Return { Call(target=readArg) { Var(name=args) Add { Var(name=index) Lit(value=1) } } } }
+              Block { Return { Call(target=readOption) { Var(name=args) Add { Var(name=index) Lit(value=1) } Var(name=name) Var(name=defaultValue) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=writeTextFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=readOptionalLockText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block { Return { Call(target=readTextFile) { Var(name=path) } } }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=runHelp) {
+    Fn(params=args) {
+      Block {
+        Let(name=topic) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=topic) Lit(value="") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang <command> [options]") }
+            Call(target=sys.stdout.writeLine) { Lit(value="Commands: init, template, agent, build, run, publish, clean, package, project, version, help") }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Call(target=runHelpTopic) { Var(name=topic) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=runVersion) {
+    Fn(params=_) {
+      Block {
+        Let(name=sdkVersion) { Call(target=sys.process.env.get) { Lit(value="AILANG_SDK_VERSION") } }
+        If {
+          Eq { Var(name=sdkVersion) Lit(value="") }
+          Block { Call(target=sys.stdout.writeLine) { Lit(value="ailang 0.0.1-dev") } }
+          Block { Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="ailang ") Var(name=sdkVersion) } } }
+        }
+        Return { Lit(value=0) }
+      }
+    }
+  }
+
+  Let(name=runHelpTopic) {
+    Fn(params=topic) {
+      Block {
+        If {
+          Eq { Var(name=topic) Lit(value="init") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang init <project-dir> [--template <name>] [--agent <name>|--agents <list>] [--force]") }
+            Return { Lit(value=0) }
+          }
+          Block {
+            If {
+              Eq { Var(name=topic) Lit(value="template") }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang template <list|show|path> [name]") }
+                Return { Lit(value=0) }
+              }
+              Block {
+                If {
+                  Eq { Var(name=topic) Lit(value="agent") }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang agent list") }
+                    Return { Lit(value=0) }
+                  }
+                  Block {
+                    If {
+                      Eq { Var(name=topic) Lit(value="build") }
+                      Block {
+                        Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang build <project-dir> [--out <dir>]") }
+                        Return { Lit(value=0) }
+                      }
+                      Block {
+                        If {
+                          Eq { Var(name=topic) Lit(value="run") }
+                          Block {
+                            Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang run <project-dir|source.aos|program.aibc1> [args...]") }
+                            Return { Lit(value=0) }
+                          }
+                          Block {
+                            If {
+                              Eq { Var(name=topic) Lit(value="publish") }
+                              Block {
+                                Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang publish <project-dir> [--target <rid>] [--out <dir>]") }
+                                Return { Lit(value=0) }
+                              }
+                              Block {
+                                If {
+                                  Eq { Var(name=topic) Lit(value="clean") }
+                                  Block {
+                                    Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang clean <project-dir>") }
+                                    Return { Lit(value=0) }
+                                  }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=topic) Lit(value="project") }
+                                      Block {
+                                        Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang project version <project-dir>") }
+                                        Return { Lit(value=0) }
+                                      }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=topic) Lit(value="package") }
+                                          Block {
+                                            Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang package <restore|list|add|remove> [project-dir]") }
+                                            Return { Lit(value=0) }
+                                          }
+                                          Block { Return { Call(target=unknownCommand) { Var(name=topic) } } }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runBuild) {
+    Fn(params=args) {
+      Block {
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Call(target=missingPath) { Lit(value="build") } } }
+          Block {
+            Let(name=outDir) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--out") Lit(value="") } }
+            Return { Call(target=buildProject) { Var(name=path) Var(name=outDir) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=buildProject) {
+    Fn(params=path,outDir) {
+      Block {
+        Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
+        Let(name=resolvedOutDir) { Call(target=resolveBuildOutDir) { Var(name=path) Var(name=outDir) } }
+        Let(name=outFile) { StrConcat { Var(name=resolvedOutDir) Lit(value="/app.aibc1") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+          Block {
+            Let(name=manifestText) { Call(target=readTextFile) { Var(name=manifestPath) } }
+            Let(name=projectName) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="name") Lit(value=6) } }
+            Let(name=entryFile) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="entryFile") Lit(value=11) } }
+            Let(name=entryExport) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="entryExport") Lit(value=13) } }
+            If {
+              Eq { Var(name=entryFile) Lit(value="") }
+              Block { Return { Call(target=buildError) { Lit(value="AILANG008") Lit(value="Project entryFile must be non-empty.") Lit(value="project") } } }
+              Block {
+                If {
+                  Eq { Var(name=entryExport) Lit(value="") }
+                  Block { Return { Call(target=buildError) { Lit(value="AILANG009") Lit(value="Project entryExport must be non-empty.") Lit(value="project") } } }
+                  Block {
+                      Let(name=entryPath) { StrConcat { Var(name=path) StrConcat { Lit(value="/") Var(name=entryFile) } } }
+                      If {
+                        Call(target=sys.fs.path.exists) { Var(name=entryPath) }
+                        Block {
+                          Let(name=entryText) { Call(target=readTextFile) { Var(name=entryPath) } }
+                          Let(name=undeclaredPackageImport) {
+                            Call(target=findUndeclaredPackageImport) {
+                              Var(name=entryText)
+                              Var(name=manifestText)
+                              Lit(value=0)
+                            }
+                          }
+                          If {
+                            Eq { Var(name=undeclaredPackageImport) Lit(value="") }
+                            Block {
+                              Let(name=graphCode) {
+                                Call(target=writeBuildGraphArtifacts) {
+                                  Var(name=path)
+                                  Var(name=projectName)
+                                  Var(name=entryFile)
+                                  Var(name=entryExport)
+                                  Var(name=entryText)
+                                }
+                              }
+                              If {
+                                Eq { NodeKind { Var(name=graphCode) } Lit(value="Err") }
+                                Block { Return { Call(target=buildErrorFromCompilerErr) { Var(name=graphCode) } } }
+                                Block {
+                                  Let(name=bytecodeInput) {
+                                    StrConcat {
+                                      Var(name=path)
+                                      Lit(value="/bin/app.aibc1")
+                                    }
+                                  }
+                                  Call(target=sys.fs.dir.create) { Var(name=resolvedOutDir) }
+                                  If {
+                                    Eq { Var(name=bytecodeInput) Var(name=outFile) }
+                                    Block { Lit(value=0) }
+                                    Block {
+                                      Call(target=copyFileBytes) {
+                                        Var(name=bytecodeInput)
+                                        Var(name=outFile)
+                                      }
+                                    }
+                                  }
+                                  Call(target=sys.stdout.writeLine) {
+                                    StrConcat {
+                                      Lit(value="Ok#ok1(type=string value=\"")
+                                      StrConcat { Var(name=outFile) Lit(value="\")") }
+                                    }
+                                  }
+                                  Return { Lit(value=0) }
+                                }
+                              }
+                            }
+                            Block { Return { Call(target=buildError) { Lit(value="RUN024") Lit(value="Package import is not declared in project manifest.") Var(name=undeclaredPackageImport) } } }
+                          }
+                        }
+                        Block { Return { Call(target=buildError) { Lit(value="AILANG010") Lit(value="Project entryFile was not found.") Lit(value="entryFile") } } }
+                      }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
+        }
+      }
+    }
+  }
+
+    Let(name=findUndeclaredPackageImport) {
+      Fn(params=sourceText,manifestText,start) {
+        Block {
+          Let(name=importPos) { Call(target=find) { Var(name=sourceText) Lit(value="Import#") Var(name=start) } }
+          If {
+            Eq { Var(name=importPos) Lit(value=-1) }
+            Block { Return { Lit(value="") } }
+            Block {
+              Let(name=importText) { Call(target=substring) { Var(name=sourceText) Var(name=importPos) Lit(value=2147483647) } }
+              Let(name=packageName) { Call(target=getManifestAttr) { Var(name=importText) Lit(value="package") Lit(value=9) } }
+              If {
+                Eq { Var(name=packageName) Lit(value="") }
+                Block {
+                  Return {
+                    Call(target=findUndeclaredPackageImport) {
+                      Var(name=sourceText)
+                      Var(name=manifestText)
+                      Add { Var(name=importPos) Lit(value=7) }
+                    }
+                  }
+                }
+                Block {
+                  If {
+                    Call(target=manifestHasInclude) {
+                      Var(name=manifestText)
+                      Var(name=packageName)
+                    }
+                    Block {
+                      Return {
+                        Call(target=findUndeclaredPackageImport) {
+                          Var(name=sourceText)
+                          Var(name=manifestText)
+                          Add { Var(name=importPos) Lit(value=7) }
+                        }
+                      }
+                    }
+                    Block { Return { Var(name=packageName) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Let(name=manifestHasInclude) {
+      Fn(params=manifestText,packageName) {
+        Block {
+          Let(name=includePos) { Call(target=find) { Var(name=manifestText) Lit(value="Include#") Lit(value=0) } }
+          If {
+            Eq { Var(name=includePos) Lit(value=-1) }
+            Block { Return { Lit(value=false) } }
+            Block {
+              Let(name=includeText) { Call(target=substring) { Var(name=manifestText) Var(name=includePos) Lit(value=2147483647) } }
+              Let(name=nameNeedle) { StrConcat { Lit(value="name=\"") StrConcat { Var(name=packageName) Lit(value="\"") } } }
+              If {
+                Eq { Call(target=find) { Var(name=includeText) Var(name=nameNeedle) Lit(value=0) } Lit(value=-1) }
+                Block { Return { Lit(value=false) } }
+                Block { Return { Lit(value=true) } }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Let(name=writeBuildGraphArtifacts) {
+      Fn(params=projectDir,projectName,entryFile,entryExport,entryText) {
+        Block {
+          Let(name=objDir) {
+            StrConcat {
+              Var(name=projectDir)
+              Lit(value="/obj")
+            }
+          }
+          Let(name=linkReportPath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/link-report.aos")
+            }
+          }
+          Let(name=linkedBundlePath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/linked-bundle.aos")
+            }
+          }
+          Let(name=bytecodeObjectPath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/app.bytecode.aos")
+            }
+          }
+          Let(name=objectPath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/app.aibco")
+            }
+          }
+          Let(name=binDir) {
+            StrConcat {
+              Var(name=projectDir)
+              Lit(value="/bin")
+            }
+          }
+          Let(name=linkedProgramPath) {
+            StrConcat {
+              Var(name=binDir)
+              Lit(value="/app.aibc1")
+            }
+          }
+          Let(name=bytecodeReportPath) {
+            StrConcat {
+              Var(name=objDir)
+              Lit(value="/bytecode-emitter-report.aos")
+            }
+          }
+          Let(name=lockfilePath) {
+            StrConcat {
+              Var(name=projectDir)
+              Lit(value="/ailang.lock.toml")
+            }
+          }
+          Let(name=lockText) {
+            Call(target=readOptionalLockText) {
+              Var(name=lockfilePath)
+            }
+          }
+          Let(name=entryProgram) {
+            Call(target=parse.parseDocument) {
+              Var(name=entryText)
+            }
+          }
+          If {
+            Eq {
+              NodeKind { Var(name=entryProgram) }
+              Lit(value="Err")
+            }
+            Block {
+              Return {
+                MakeErr {
+                  Lit(value="cli")
+                  Lit(value="AILANG013")
+                  Lit(value="Project entryFile could not be parsed.")
+                  Lit(value="entryFile")
+                }
+              }
+            }
+            Block {
+              Let(name=modulePaths) {
+                Call(target=linker.collectProjectModulePathsWithLock) {
+                  Var(name=projectDir)
+                  Var(name=entryProgram)
+                  Var(name=entryFile)
+                  Var(name=lockText)
+                }
+              }
+              If {
+                Eq {
+                  NodeKind { Var(name=modulePaths) }
+                  Lit(value="Err")
+                }
+                Block {
+                  Return {
+                    MakeErr {
+                      Lit(value="cli")
+                      Lit(value="AILANG021")
+                      Lit(value="Project import graph could not be linked.")
+                      Lit(value="linker")
+                    }
+                  }
+                }
+                Block {
+                  Call(target=sys.fs.dir.create) { Var(name=objDir) }
+                  Call(target=sys.fs.dir.create) { Var(name=binDir) }
+                  Call(target=writeTextFile) {
+                    Var(name=linkReportPath)
+                    Call(target=linker.buildLinkReportText) {
+                      Var(name=modulePaths)
+                    }
+                  }
+                  Call(target=writeTextFile) {
+                    Var(name=linkedBundlePath)
+                    Call(target=bundle.buildLinkedBundleText) {
+                      Var(name=projectName)
+                      Var(name=entryExport)
+                      Var(name=modulePaths)
+                    }
+                  }
+                  Let(name=linkedStatus) {
+                    Call(target=structuralProject.writeProjectAibc1FromObjectFiles) {
+                      Var(name=modulePaths)
+                      Var(name=projectDir)
+                      Var(name=lockText)
+                      Var(name=objDir)
+                      Var(name=linkedProgramPath)
+                      Var(name=entryFile)
+                      Var(name=entryExport)
+                    }
+                  }
+                  If {
+                    Eq { NodeKind { Var(name=linkedStatus) } Lit(value="Err") }
+                    Block { Return { Var(name=linkedStatus) } }
+                    Block {
+                      Call(target=writeTextFile) {
+                        Var(name=bytecodeReportPath)
+                        Lit(value="BytecodeEmitterReport#bytecode_report(status=\"ok\" emitter=\"structural-project-linker\" object=\"obj/app.aibco\" output=\"bin/app.aibc1\")")
+                      }
+                      Return { MakeBlock { Lit(value="build-graph-ok") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Let(name=runBootstrapBuild) {
+      Fn(params=path,outDir,outFile) {
+      Block {
+        Let(name=compilerPath) { Call(target=resolveBootstrapCompiler) { Var(name=path) } }
+        Let(name=spawnArgs) { Call(target=makeBuildSpawnArgs) { Var(name=path) Var(name=outDir) } }
+        Let(name=env) { MakeBlock { Lit(value="env") } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
+        If {
+          Eq { Var(name=code) Lit(value=0) }
+          Block {
+            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="Ok#ok1(type=string value=\"") StrConcat { Var(name=outFile) Lit(value="\")") } } }
+            Return { Lit(value=0) }
+          }
+          Block {
+            If {
+              Eq { Var(name=stderrText) Lit(value="") }
+              Block { Lit(value=0) }
+              Block { Call(target=sys.stdout.writeLine) { Var(name=stderrText) } }
+            }
+            If {
+              Eq { Var(name=stdoutText) Lit(value="") }
+              Block { Lit(value=0) }
+              Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
+            }
+            Return { Call(target=buildError) { Lit(value="AILANG014") Lit(value="Bootstrap compiler build failed.") Lit(value="build") } }
+          }
+        }
+      }
+    }
+    }
+
+  Let(name=selectBootstrapBuildInput) {
+    Fn(params=projectDir) {
+      Block {
+        Let(name=objDir) {
+          StrConcat {
+            Var(name=projectDir)
+            Lit(value="/obj")
+          }
+        }
+        Let(name=bytecodeObjectPath) {
+          StrConcat {
+            Var(name=objDir)
+            Lit(value="/app.bytecode.aos")
+          }
+        }
+        Let(name=bytecodeBinaryPath) {
+          StrConcat {
+            StrConcat {
+              Var(name=projectDir)
+              Lit(value="/bin")
+            }
+            Lit(value="/app.aibc1")
+          }
+        }
+        Let(name=bytecodeReportPath) {
+          StrConcat {
+            Var(name=objDir)
+            Lit(value="/bytecode-emitter-report.aos")
+          }
+        }
+        Let(name=buildInputReportPath) {
+          StrConcat {
+            Var(name=objDir)
+            Lit(value="/build-input-report.aos")
+          }
+        }
+        If {
+          Call(target=sys.fs.path.exists) {
+            Var(name=bytecodeReportPath)
+          }
+          Block {
+            If {
+              Call(target=sys.fs.path.exists) {
+                Var(name=bytecodeObjectPath)
+              }
+              Block {
+                Let(name=reportText) {
+                  Call(target=readTextFile) {
+                    Var(name=bytecodeReportPath)
+                  }
+                }
+                If {
+                  Eq {
+                    Call(target=find) {
+                      Var(name=reportText)
+                      Lit(value="status=\"ok\"")
+                      Lit(value=0)
+                    }
+                    Lit(value=-1)
+                  }
+                  Block {
+                    Call(target=writeTextFile) {
+                      Var(name=buildInputReportPath)
+                      Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-emitter-not-ok\")")
+                    }
+                    Return { Var(name=projectDir) }
+                  }
+                  Block {
+                    If {
+                      Eq {
+                        Call(target=find) {
+                          Var(name=reportText)
+                          Lit(value="output=\"app.aibc1\"")
+                          Lit(value=0)
+                        }
+                        Lit(value=-1)
+                      }
+                      Block {
+                        Call(target=writeTextFile) {
+                          Var(name=buildInputReportPath)
+                          Lit(value="BuildInputReport#build_input(status=\"bytecode\" input=\"obj/app.bytecode.aos\")")
+                        }
+                        Return { Var(name=bytecodeObjectPath) }
+                      }
+                      Block {
+                        If {
+                          Call(target=sys.fs.path.exists) {
+                            Var(name=bytecodeBinaryPath)
+                          }
+                          Block {
+                            Call(target=writeTextFile) {
+                              Var(name=buildInputReportPath)
+                              Lit(value="BuildInputReport#build_input(status=\"bytecode\" input=\"bin/app.aibc1\")")
+                            }
+                            Return { Var(name=bytecodeBinaryPath) }
+                          }
+                          Block {
+                            Call(target=writeTextFile) {
+                              Var(name=buildInputReportPath)
+                              Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-binary-missing\")")
+                            }
+                            Return { Var(name=projectDir) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Call(target=sys.fs.path.exists) {
+                    Var(name=bytecodeBinaryPath)
+                  }
+                  Block {
+                    Call(target=writeTextFile) {
+                      Var(name=buildInputReportPath)
+                      Lit(value="BuildInputReport#build_input(status=\"object\" input=\"obj/app.aibco\")")
+                    }
+                    Return { Var(name=bytecodeBinaryPath) }
+                  }
+                  Block {
+                    Call(target=writeTextFile) {
+                      Var(name=buildInputReportPath)
+                      Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"object-binary-missing\")")
+                    }
+                    Return { Var(name=projectDir) }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Call(target=writeTextFile) {
+              Var(name=buildInputReportPath)
+              Lit(value="BuildInputReport#build_input(status=\"source\" reason=\"bytecode-report-missing\")")
+            }
+            Return { Var(name=projectDir) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveBootstrapCompiler) {
+    Fn(params=projectPath) {
+      Block {
+        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AILANG_BOOTSTRAP_COMPILER") } }
+        If {
+          Eq { Var(name=fromEnv) Lit(value="") }
+          Block {
+            Let(name=selectedToolchain) { Call(target=resolveSelectedToolchain) { Var(name=projectPath) } }
+            Let(name=installRoot) { Call(target=resolveInstallRoot) { Lit(value=0) } }
+            If {
+              Eq { Var(name=selectedToolchain) Lit(value="") }
+              Block {
+                Let(name=currentPath) { StrConcat { Var(name=installRoot) Lit(value="/current/bin/ailang") } }
+                If {
+                  Call(target=sys.fs.path.exists) { Lit(value="./tools/ailang") }
+                  Block { Return { Lit(value="./tools/ailang") } }
+                  Block {
+                    If {
+                      Call(target=sys.fs.path.exists) { Var(name=currentPath) }
+                      Block { Return { Var(name=currentPath) } }
+                      Block { Return { Lit(value="ailang") } }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return { Call(target=resolveSelectedToolchainCompiler) { Var(name=installRoot) Var(name=selectedToolchain) } }
+              }
+            }
+          }
+          Block { Return { Var(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveInstallRoot) {
+    Fn(params=_) {
+      Block {
+        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AILANG_INSTALL_ROOT") } }
+        If {
+          Eq { Var(name=fromEnv) Lit(value="") }
+          Block {
+            Let(name=home) { Call(target=sys.process.env.get) { Lit(value="HOME") } }
+            If {
+              Eq { Var(name=home) Lit(value="") }
+              Block { Return { Lit(value=".ailang") } }
+              Block { Return { StrConcat { Var(name=home) Lit(value="/.ailang") } } }
+            }
+          }
+          Block { Return { Var(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveSelectedToolchain) {
+    Fn(params=projectPath) {
+      Block {
+        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AILANG_TOOLCHAIN") } }
+        If {
+          Eq { Var(name=fromEnv) Lit(value="") }
+          Block {
+            Let(name=toolchainFile) { StrConcat { Var(name=projectPath) Lit(value="/ailang-toolchain.toml") } }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=toolchainFile) }
+              Block {
+                Return {
+                  Call(target=getTomlVersion) {
+                    Call(target=readTextFile) { Var(name=toolchainFile) }
+                  }
+                }
+              }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Var(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveSelectedToolchainCompiler) {
+    Fn(params=installRoot,selectedToolchain) {
+      Block {
+        If {
+          Eq { Var(name=selectedToolchain) Lit(value="local") }
+          Block { Return { StrConcat { Var(name=installRoot) Lit(value="/local/bin/ailang") } } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=installRoot)
+                StrConcat {
+                  Lit(value="/toolchains/")
+                  StrConcat { Var(name=selectedToolchain) Lit(value="/bin/ailang") }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=getTomlVersion) {
+    Fn(params=text) {
+      Block {
+        Let(name=value) { Call(target=getValueAfterNeedle) { Var(name=text) Lit(value="version = \"") Lit(value=11) } }
+        If {
+          Eq { Var(name=value) Lit(value="") }
+          Block { Return { Call(target=getValueAfterNeedle) { Var(name=text) Lit(value="version=\"") Lit(value=9) } } }
+          Block { Return { Var(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let(name=getValueAfterNeedle) {
+    Fn(params=text,needle,needleLength) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=found) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\"") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makeBuildSpawnArgs) {
+    Fn(params=path,outDir) {
+      Block {
+        Return {
+          AppendChild {
+            AppendChild {
+              AppendChild {
+                AppendChild {
+                  MakeBlock { Lit(value="args") }
+                  MakeLitString { Lit(value="arg0") Lit(value="build") }
+                }
+                MakeLitString { Lit(value="arg1") Var(name=path) }
+              }
+              MakeLitString { Lit(value="arg2") Lit(value="--out") }
+            }
+            MakeLitString { Lit(value="arg3") Var(name=outDir) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveBuildOutDir) {
+    Fn(params=path,outDir) {
+      Block {
+        If {
+          Eq { Var(name=outDir) Lit(value="") }
+          Block { Return { StrConcat { Var(name=path) Lit(value="/bin") } } }
+          Block { Return { Var(name=outDir) } }
+        }
+      }
+    }
+  }
+
+  Let(name=buildError) {
+    Fn(params=code,message,nodeId) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=")
+            StrConcat {
+              Var(name=code)
+              StrConcat {
+                Lit(value=" message=\"")
+                StrConcat {
+                  Var(name=message)
+                  StrConcat {
+                    Lit(value="\" nodeId=\"")
+                    StrConcat { Var(name=nodeId) Lit(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=buildErrorFromCompilerErr) {
+    Fn(params=err) {
+      Block {
+        Return {
+          Call(target=buildError) {
+            AttrValueString { Var(name=err) Lit(value=0) }
+            AttrValueString { Var(name=err) Lit(value=1) }
+            AttrValueString { Var(name=err) Lit(value=2) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runRun) {
+    Fn(params=args) {
+      Block {
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Call(target=missingPath) { Lit(value="run") } } }
+          Block { Return { Call(target=runProgram) { Var(name=path) Var(name=args) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=runProgram) {
+    Fn(params=path,args) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            If {
+              Call(target=sys.fs.path.exists) {
+                StrConcat { Var(name=path) Lit(value="/project.aiproj") }
+              }
+              Block { Return { Call(target=runProjectDirectory) { Var(name=path) Var(name=args) } } }
+              Block { Return { Call(target=runBootstrapRun) { Var(name=path) Var(name=args) } } }
+            }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG011") Lit(value="Run path was not found.") Lit(value="run") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=runProjectDirectory) {
+    Fn(params=path,args) {
+      Block {
+        Let(name=outDir) { StrConcat { Var(name=path) Lit(value="/obj/run") } }
+        Let(name=outFile) { StrConcat { Var(name=outDir) Lit(value="/app.aibc1") } }
+        Let(name=buildCode) { Call(target=buildProject) { Var(name=path) Var(name=outDir) } }
+        If {
+          Eq { Var(name=buildCode) Lit(value=0) }
+          Block { Return { Call(target=runBootstrapRun) { Var(name=outFile) Var(name=args) } } }
+          Block { Return { Var(name=buildCode) } }
+        }
+      }
+    }
+  }
+
+  Let(name=runBootstrapRun) {
+    Fn(params=path,args) {
+      Block {
+        Let(name=compilerPath) { Call(target=resolveBootstrapCompilerForRun) { Var(name=path) } }
+        Let(name=spawnArgs) { Call(target=makeRunSpawnArgs) { Var(name=path) Var(name=args) } }
+        Let(name=env) { MakeBlock { Lit(value="env") } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
+        If {
+          Eq { Var(name=stdoutText) Lit(value="") }
+          Block { Lit(value=0) }
+          Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
+        }
+        If {
+          Eq { Var(name=stderrText) Lit(value="") }
+          Block { Lit(value=0) }
+          Block { Call(target=sys.stdout.writeLine) { Var(name=stderrText) } }
+        }
+        Return { Var(name=code) }
+      }
+    }
+  }
+
+  Let(name=resolveBootstrapCompilerForRun) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=isBytecodePath) { Var(name=path) }
+          Block { Return { Call(target=resolveAivmExecutable) { Lit(value=0) } } }
+          Block { Return { Call(target=resolveBootstrapCompiler) { Var(name=path) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveAivmExecutable) {
+    Fn(params=_) {
+      Block {
+        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AIVM") } }
+        If {
+          Eq { Var(name=fromEnv) Lit(value="") }
+          Block { Return { Lit(value="aivm") } }
+          Block { Return { Var(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let(name=makeRunSpawnArgs) {
+    Fn(params=path,args) {
+      Block {
+        If {
+          Call(target=isBytecodePath) { Var(name=path) }
+          Block {
+            Return {
+              Call(target=appendRunAppArgs) {
+                AppendChild {
+                  MakeBlock { Lit(value="args") }
+                  MakeLitString { Lit(value="arg0") Var(name=path) }
+                }
+                Var(name=args)
+                Lit(value=2)
+                Lit(value=1)
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=appendRunAppArgs) {
+                AppendChild {
+                  AppendChild {
+                    MakeBlock { Lit(value="args") }
+                    MakeLitString { Lit(value="arg0") Lit(value="run") }
+                  }
+                  MakeLitString { Lit(value="arg1") Var(name=path) }
+                }
+                Var(name=args)
+                Lit(value=2)
+                Lit(value=2)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=appendRunAppArgs) {
+    Fn(params=spawnArgs,args,readIndex,writeIndex) {
+      Block {
+        If {
+          Eq { Var(name=readIndex) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=spawnArgs) } }
+          Block {
+            Return {
+              Call(target=appendRunAppArgs) {
+                AppendChild {
+                  Var(name=spawnArgs)
+                  MakeLitString {
+                    StrConcat { Lit(value="arg") ToString { Var(name=writeIndex) } }
+                    Call(target=readArg) { Var(name=args) Var(name=readIndex) }
+                  }
+                }
+                Var(name=args)
+                Add { Var(name=readIndex) Lit(value=1) }
+                Add { Var(name=writeIndex) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isBytecodePath) {
+    Fn(params=path) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=path) Lit(value=".aibc1") Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=runPublish) {
+    Fn(params=args) {
+      Block {
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Call(target=missingPath) { Lit(value="publish") } } }
+          Block {
+            Let(name=target) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--target") Lit(value="") } }
+            Let(name=outDir) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--out") Lit(value="") } }
+            Let(name=mode) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--mode") Lit(value="framework-dependent") } }
+            Let(name=kind) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--kind") Lit(value="posix") } }
+            Return { Call(target=publishProject) { Var(name=path) Var(name=target) Var(name=outDir) Var(name=mode) Var(name=kind) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=publishProject) {
+    Fn(params=path,target,outDir,mode,kind) {
+      Block {
+        Let(name=manifestPath) { StrConcat { Var(name=path) Lit(value="/project.aiproj") } }
+        Let(name=resolvedOutDir) { Call(target=resolvePublishOutDir) { Var(name=path) Var(name=outDir) } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+          Block {
+            Let(name=manifestText) { Call(target=readTextFile) { Var(name=manifestPath) } }
+            Let(name=projectName) { Call(target=safePublishName) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="name") Lit(value=6) } } }
+            Let(name=projectVersion) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="version") Lit(value=9) } }
+            Let(name=entryFile) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="entryFile") Lit(value=11) } }
+            Let(name=entryExport) { Call(target=getManifestAttr) { Var(name=manifestText) Lit(value="entryExport") Lit(value=13) } }
+            If {
+              Eq { Var(name=entryFile) Lit(value="") }
+              Block { Return { Call(target=buildError) { Lit(value="AILANG008") Lit(value="Project entryFile must be non-empty.") Lit(value="project") } } }
+              Block {
+                If {
+                  Eq { Var(name=entryExport) Lit(value="") }
+                  Block { Return { Call(target=buildError) { Lit(value="AILANG009") Lit(value="Project entryExport must be non-empty.") Lit(value="project") } } }
+                  Block {
+                    Let(name=entryPath) { StrConcat { Var(name=path) StrConcat { Lit(value="/") Var(name=entryFile) } } }
+                    If {
+                      Call(target=sys.fs.path.exists) { Var(name=entryPath) }
+                      Block { Return { Call(target=publishAppLayout) { Var(name=path) Var(name=target) Var(name=resolvedOutDir) Var(name=mode) Var(name=kind) Var(name=projectName) Var(name=projectVersion) Var(name=entryFile) Var(name=entryExport) } } }
+                      Block { Return { Call(target=buildError) { Lit(value="AILANG010") Lit(value="Project entryFile was not found.") Lit(value="entryFile") } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="project.aiproj not found.") Lit(value="project") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=publishAppLayout) {
+    Fn(params=path,target,outDir,mode,kind,projectName,projectVersion,entryFile,entryExport) {
+      Block {
+        If {
+          Call(target=isSupportedPublishKind) { Var(name=kind) }
+          Block {
+            If {
+              Call(target=isFrameworkDependentMode) { Var(name=mode) }
+              Block { Return { Call(target=publishPosixFrameworkDependent) { Var(name=path) Var(name=target) Var(name=outDir) Var(name=mode) Var(name=projectName) Var(name=projectVersion) Var(name=entryFile) Var(name=entryExport) } } }
+              Block {
+                If {
+                  Eq { Var(name=mode) Lit(value="self-contained") }
+                  Block { Return { Call(target=publishPosixSelfContained) { Var(name=path) Var(name=target) Var(name=outDir) Var(name=mode) Var(name=projectName) Var(name=projectVersion) Var(name=entryFile) Var(name=entryExport) } } }
+                  Block { Return { Call(target=buildError) { Lit(value="AILANG016") Lit(value="Unsupported publish mode.") Lit(value="publish") } } }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG018") Lit(value="Unsupported publish kind.") Lit(value="publish") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=isSupportedPublishKind) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="posix") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Eq { Var(name=kind) Lit(value="target-preferred") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=isFrameworkDependentMode) {
+    Fn(params=mode) {
+      Block {
+        If {
+          Eq { Var(name=mode) Lit(value="framework-dependent") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Eq { Var(name=mode) Lit(value="not-self-contained") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=publishPosixFrameworkDependent) {
+    Fn(params=path,target,outDir,mode,projectName,projectVersion,entryFile,entryExport) {
+      Block {
+        Return {
+          Call(target=publishPosixLayout) {
+            Var(name=path)
+            Var(name=target)
+            Var(name=outDir)
+            Lit(value="framework-dependent")
+            Var(name=projectName)
+            Var(name=projectVersion)
+            Var(name=entryFile)
+            Var(name=entryExport)
+            Lit(value="")
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=publishPosixSelfContained) {
+    Fn(params=path,target,outDir,mode,projectName,projectVersion,entryFile,entryExport) {
+      Block {
+        If {
+          Eq { Var(name=target) Lit(value="") }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG017") Lit(value="Self-contained publish requires --target.") Lit(value="publish") } } }
+          Block {
+            If {
+              Call(target=isKnownPublishTargetForProject) { Var(name=target) Var(name=path) Lit(value="dir") }
+              Block {
+                Let(name=aivmPath) { Call(target=resolveBundledAivmPath) { Var(name=target) } }
+                If {
+                  Eq { Var(name=aivmPath) Lit(value="") }
+                  Block { Return { Call(target=buildError) { Lit(value="AILANG019") Lit(value="Bundled aivm was not found for self-contained publish target.") Lit(value="publish") } } }
+                  Block {
+                    Return {
+                      Call(target=publishPosixLayout) {
+                        Var(name=path)
+                        Var(name=target)
+                        Var(name=outDir)
+                        Lit(value="self-contained")
+                        Var(name=projectName)
+                        Var(name=projectVersion)
+                        Var(name=entryFile)
+                        Var(name=entryExport)
+                        Var(name=aivmPath)
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=buildError) { Lit(value="AILANG020") Lit(value="Unsupported publish target.") Lit(value="publish") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=publishPosixLayout) {
+    Fn(params=path,target,outDir,mode,projectName,projectVersion,entryFile,entryExport,aivmPath) {
+      Block {
+        Let(name=buildDir) { StrConcat { Var(name=outDir) Lit(value="/.publish-build") } }
+        Let(name=buildFile) { StrConcat { Var(name=buildDir) Lit(value="/app.aibc1") } }
+        Let(name=binDir) { StrConcat { Var(name=outDir) Lit(value="/bin") } }
+        Let(name=libRoot) { StrConcat { Var(name=outDir) Lit(value="/lib") } }
+        Let(name=ailangDir) { StrConcat { Var(name=outDir) Lit(value="/lib/ailang") } }
+        Let(name=projectLibDir) { StrConcat { Var(name=ailangDir) StrConcat { Lit(value="/") Var(name=projectName) } } }
+        Let(name=runtimeDir) { StrConcat { Var(name=projectLibDir) Lit(value="/runtime") } }
+        Let(name=payloadPath) { StrConcat { Var(name=projectLibDir) Lit(value="/app.aibe") } }
+        Let(name=publishManifestPath) { StrConcat { Var(name=projectLibDir) Lit(value="/ailang.publish.toml") } }
+        Let(name=launcherPath) { StrConcat { Var(name=binDir) StrConcat { Lit(value="/") Var(name=projectName) } } }
+        Let(name=cmdLauncherPath) { StrConcat { Var(name=launcherPath) Lit(value=".cmd") } }
+        Let(name=runtimePath) { StrConcat { Var(name=runtimeDir) Lit(value="/aivm") } }
+        Let(name=runtimeExePath) { StrConcat { Var(name=runtimeDir) Lit(value="/aivm.exe") } }
+        Call(target=sys.fs.dir.create) { Var(name=outDir) }
+        Call(target=sys.fs.dir.create) { Var(name=buildDir) }
+        Let(name=buildCode) { Call(target=buildProject) { Var(name=path) Var(name=buildDir) } }
+        If {
+          Eq { Var(name=buildCode) Lit(value=0) }
+          Block {
+            Call(target=sys.fs.dir.create) { Var(name=binDir) }
+            Call(target=sys.fs.dir.create) { Var(name=libRoot) }
+            Call(target=sys.fs.dir.create) { Var(name=ailangDir) }
+            Call(target=sys.fs.dir.create) { Var(name=projectLibDir) }
+            Call(target=copyFileBytes) { Var(name=buildFile) Var(name=payloadPath) }
+            If {
+              Eq { Var(name=aivmPath) Lit(value="") }
+              Block { Lit(value=0) }
+              Block {
+                Call(target=sys.fs.dir.create) { Var(name=runtimeDir) }
+                Call(target=copyFileBytes) { Var(name=aivmPath) Var(name=runtimePath) }
+                If {
+                  Call(target=isWindowsPublishTarget) { Var(name=target) }
+                  Block { Call(target=copyFileBytes) { Var(name=aivmPath) Var(name=runtimeExePath) } }
+                  Block { Lit(value=0) }
+                }
+              }
+            }
+            Call(target=writeTextFile) { Var(name=launcherPath) Call(target=renderPosixLauncher) { Var(name=projectName) Var(name=mode) } }
+            Call(target=writeTextFile) { Var(name=cmdLauncherPath) Call(target=renderCmdLauncher) { Var(name=projectName) Var(name=mode) } }
+            Call(target=writeTextFile) { Var(name=publishManifestPath) Call(target=renderPublishManifest) { Var(name=projectName) Var(name=projectVersion) Var(name=entryFile) Var(name=entryExport) Var(name=mode) Var(name=target) Lit(value="posix") } }
+            Call(target=chmodExecutable) { Var(name=launcherPath) }
+            If {
+              Eq { Var(name=aivmPath) Lit(value="") }
+              Block { Lit(value=0) }
+              Block {
+                Call(target=chmodExecutable) { Var(name=runtimePath) }
+                If {
+                  Call(target=isWindowsPublishTarget) { Var(name=target) }
+                  Block { Call(target=chmodExecutable) { Var(name=runtimeExePath) } }
+                  Block { Lit(value=0) }
+                }
+              }
+            }
+            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="Ok#ok1(type=string value=\"") StrConcat { Var(name=outDir) Lit(value="\")") } } }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Var(name=buildCode) } }
+        }
+      }
+    }
+  }
+
+  Let(name=safePublishName) {
+    Fn(params=name) {
+      Block {
+        If {
+          Eq { Var(name=name) Lit(value="") }
+          Block { Return { Lit(value="app") } }
+          Block {
+            Let(name=slash) { Call(target=find) { Var(name=name) Lit(value="/") Lit(value=0) } }
+            If {
+              Eq { Var(name=slash) Lit(value=-1) }
+              Block { Return { Var(name=name) } }
+              Block { Return { Lit(value="app") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=copyFileBytes) {
+    Fn(params=fromPath,toPath) {
+      Block {
+        Let(name=readHandle) { Call(target=sys.fs.file.openRead) { Var(name=fromPath) } }
+        If {
+          Eq { Var(name=readHandle) Lit(value=-1) }
+          Block { Return { Lit(value=1) } }
+          Block {
+            Let(name=writeHandle) { Call(target=sys.fs.file.openWrite) { Var(name=toPath) } }
+            If {
+              Eq { Var(name=writeHandle) Lit(value=-1) }
+              Block {
+                Call(target=sys.fs.file.close) { Var(name=readHandle) }
+                Return { Lit(value=1) }
+              }
+              Block {
+                Return {
+                  Call(target=copyFileBytesLoop) {
+                    Var(name=readHandle)
+                    Var(name=writeHandle)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=copyFileBytesLoop) {
+    Fn(params=readHandle,writeHandle) {
+      Block {
+        Let(name=chunk) {
+          Call(target=sys.fs.file.readChunk) {
+            Var(name=readHandle)
+            Lit(value=32768)
+          }
+        }
+        If {
+          Eq {
+            Call(target=bytes.length) { Var(name=chunk) }
+            Lit(value=0)
+          }
+          Block {
+            Call(target=sys.fs.file.close) { Var(name=readHandle) }
+            Call(target=sys.fs.file.close) { Var(name=writeHandle) }
+            Return { Lit(value=0) }
+          }
+          Block {
+            Let(name=written) {
+              Call(target=sys.fs.file.writeChunk) {
+                Var(name=writeHandle)
+                Var(name=chunk)
+              }
+            }
+            If {
+              Eq {
+                Var(name=written)
+                Lit(value=-1)
+              }
+              Block {
+                Call(target=sys.fs.file.close) { Var(name=readHandle) }
+                Call(target=sys.fs.file.close) { Var(name=writeHandle) }
+                Return { Lit(value=1) }
+              }
+              Block {
+                Return {
+                  Call(target=copyFileBytesLoop) {
+                    Var(name=readHandle)
+                    Var(name=writeHandle)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=chmodExecutable) {
+    Fn(params=path) {
+      Block {
+        Let(name=args) {
+          AppendChild {
+            AppendChild {
+              MakeBlock { Lit(value="args") }
+              MakeLitString { Lit(value="arg0") Lit(value="+x") }
+            }
+            MakeLitString { Lit(value="arg1") Var(name=path) }
+          }
+        }
+        Let(name=env) { MakeBlock { Lit(value="env") } }
+        Let(name=handle) { Call(target=spawn) { Lit(value="chmod") Var(name=args) Lit(value="") Var(name=env) } }
+        Return { Call(target=wait) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=isKnownPublishTarget) {
+    Fn(params=target) {
+      Block {
+        If {
+          Eq { Var(name=target) Lit(value="host") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=target) Lit(value="osx-arm64") }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq { Var(name=target) Lit(value="osx-x64") }
+                  Block { Return { Lit(value=true) } }
+                  Block {
+                    If {
+                      Eq { Var(name=target) Lit(value="linux-x64") }
+                      Block { Return { Lit(value=true) } }
+                      Block {
+                        If {
+                          Eq { Var(name=target) Lit(value="linux-arm64") }
+                          Block { Return { Lit(value=true) } }
+                          Block {
+                            If {
+                              Eq { Var(name=target) Lit(value="win-x64") }
+                              Block { Return { Lit(value=true) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=target) Lit(value="win-arm64") }
+                                  Block { Return { Lit(value=true) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=target) Lit(value="wasm-browser") }
+                                      Block { Return { Lit(value=true) } }
+                                      Block { Return { Eq { Var(name=target) Lit(value="wasm-wasi") } } }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isKnownPublishTargetForProject) {
+    Fn(params=target,projectPath,artifactType) {
+      Block {
+        If {
+          Call(target=isKnownPublishTarget) { Var(name=target) }
+          Block { Return { Lit(value=true) } }
+          Block {
+            Return {
+              Call(target=targetSupportsArtifactType) {
+                Var(name=target)
+                Var(name=artifactType)
+                Var(name=projectPath)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isWindowsPublishTarget) {
+    Fn(params=target) {
+      Block {
+        If {
+          Eq { Var(name=target) Lit(value="win-x64") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Eq { Var(name=target) Lit(value="win-arm64") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveBundledAivmPath) {
+    Fn(params=target) {
+      Block {
+        Let(name=stagedPath) { Call(target=resolveStagedAivmPath) { Var(name=target) } }
+        If {
+          Eq { Var(name=stagedPath) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=target) Lit(value="host") }
+              Block { Return { Call(target=resolveHostAivmPath) { Lit(value=0) } } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Var(name=stagedPath) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveHostAivmPath) {
+    Fn(params=_) {
+      Block {
+        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AIVM") } }
+        If {
+          Eq { Var(name=fromEnv) Lit(value="") }
+          Block {
+            If {
+              Call(target=sys.fs.path.exists) { Lit(value="../AiVM/.tmp/aivm-c-build-native/aivm") }
+              Block { Return { Lit(value="../AiVM/.tmp/aivm-c-build-native/aivm") } }
+              Block {
+                If {
+                  Call(target=sys.fs.path.exists) { Lit(value="./tools/aivm") }
+                  Block { Return { Lit(value="./tools/aivm") } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+            }
+          }
+          Block { Return { Var(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveStagedAivmPath) {
+    Fn(params=target) {
+      Block {
+        Let(name=root) { Call(target=resolveSdkRuntimeRoot) { Lit(value=0) } }
+        If {
+          Eq { Var(name=root) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=path) {
+              StrConcat {
+                Var(name=root)
+                StrConcat {
+                  Lit(value="/")
+                  StrConcat { Var(name=target) Lit(value="/aivm") }
+                }
+              }
+            }
+            Let(name=exePath) { StrConcat { Var(name=path) Lit(value=".exe") } }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=path) }
+              Block { Return { Var(name=path) } }
+              Block {
+                If {
+                  Call(target=sys.fs.path.exists) { Var(name=exePath) }
+                  Block { Return { Var(name=exePath) } }
+                  Block { Return { Lit(value="") } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveSdkRuntimeRoot) {
+    Fn(params=_) {
+      Block {
+        Let(name=overrideRoot) { Call(target=sys.process.env.get) { Lit(value="AILANG_RUNTIME_ROOT") } }
+        If {
+          Eq { Var(name=overrideRoot) Lit(value="") }
+          Block {
+            Let(name=installRoot) { Call(target=resolveInstallRoot) { Lit(value=0) } }
+            Let(name=toolchain) { Call(target=resolveSelectedToolchain) { Lit(value=".") } }
+            Let(name=sdkRoot) { Call(target=resolveSdkRootForToolchain) { Var(name=installRoot) Var(name=toolchain) } }
+            Return { StrConcat { Var(name=sdkRoot) Lit(value="/runtimes") } }
+          }
+          Block { Return { Var(name=overrideRoot) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolveSdkRootForToolchain) {
+    Fn(params=installRoot,toolchain) {
+      Block {
+        If {
+          Eq { Var(name=toolchain) Lit(value="") }
+          Block { Return { StrConcat { Var(name=installRoot) Lit(value="/current") } } }
+          Block {
+            If {
+              Eq { Var(name=toolchain) Lit(value="local") }
+              Block { Return { StrConcat { Var(name=installRoot) Lit(value="/local") } } }
+              Block {
+                Return {
+                  StrConcat {
+                    Var(name=installRoot)
+                    StrConcat { Lit(value="/toolchains/") Var(name=toolchain) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=renderPosixLauncher) {
+    Fn(params=projectName,mode) {
+      Block {
+        If {
+          Eq { Var(name=mode) Lit(value="self-contained") }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="#!/usr/bin/env sh\nset -eu\nAPP_ROOT=\"$(CDPATH= cd -- \"$(dirname -- \"$0\")/..\" && pwd)\"\nexec \"$APP_ROOT/lib/ailang/")
+                StrConcat {
+                  Var(name=projectName)
+                  StrConcat {
+                    Lit(value="/runtime/aivm\" \"$APP_ROOT/lib/ailang/")
+                    StrConcat { Var(name=projectName) Lit(value="/app.aibe\" \"$@\"\n") }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="#!/usr/bin/env sh\nset -eu\nAPP_ROOT=\"$(CDPATH= cd -- \"$(dirname -- \"$0\")/..\" && pwd)\"\nexec aivm \"$APP_ROOT/lib/ailang/")
+                StrConcat { Var(name=projectName) Lit(value="/app.aibe\" \"$@\"\n") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=renderCmdLauncher) {
+    Fn(params=projectName,mode) {
+      Block {
+        If {
+          Eq { Var(name=mode) Lit(value="self-contained") }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="@echo off\r\nset APP_ROOT=%~dp0..\r\n\"%APP_ROOT%\\lib\\ailang\\")
+                StrConcat {
+                  Var(name=projectName)
+                  StrConcat {
+                    Lit(value="\\runtime\\aivm.exe\" \"%APP_ROOT%\\lib\\ailang\\")
+                    StrConcat { Var(name=projectName) Lit(value="\\app.aibe\" %*\r\n") }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="@echo off\r\nset APP_ROOT=%~dp0..\r\naivm \"%APP_ROOT%\\lib\\ailang\\")
+                StrConcat { Var(name=projectName) Lit(value="\\app.aibe\" %*\r\n") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=renderPublishManifest) {
+    Fn(params=projectName,projectVersion,entryFile,entryExport,mode,target,kind) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="format = \"ailang-publish-v0\"\n")
+            StrConcat {
+              Lit(value="kind = \"")
+              StrConcat {
+                Var(name=kind)
+                StrConcat {
+                  Lit(value="\"\nmode = \"")
+                  StrConcat {
+                    Var(name=mode)
+                    StrConcat {
+                      Lit(value="\"\ntarget = \"")
+                      StrConcat {
+                        Var(name=target)
+                        StrConcat {
+                          Lit(value="\"\nproject = \"")
+                          StrConcat {
+                            Var(name=projectName)
+                            StrConcat {
+                              Lit(value="\"\nversion = \"")
+                              StrConcat {
+                                Var(name=projectVersion)
+                                StrConcat {
+                                  Lit(value="\"\nentryFile = \"")
+                                  StrConcat {
+                                    Var(name=entryFile)
+                                    StrConcat {
+                                      Lit(value="\"\nentryExport = \"")
+                                      StrConcat { Var(name=entryExport) Lit(value="\"\npayload = \"app.aibe\"\n") }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runBootstrapPublish) {
+    Fn(params=path,target,outDir) {
+      Block {
+        Let(name=compilerPath) { Call(target=resolveBootstrapCompiler) { Var(name=path) } }
+        Let(name=spawnArgs) { Call(target=makePublishSpawnArgs) { Var(name=path) Var(name=target) Var(name=outDir) } }
+        Let(name=env) { MakeBlock { Lit(value="env") } }
+        Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
+        Let(name=code) { Call(target=wait) { Var(name=handle) } }
+        Let(name=stdoutText) { Call(target=bytes.toUtf8String) { Call(target=stdoutRead) { Var(name=handle) } } }
+        Let(name=stderrText) { Call(target=bytes.toUtf8String) { Call(target=stderrRead) { Var(name=handle) } } }
+        If {
+          Eq { Var(name=code) Lit(value=0) }
+          Block {
+            Call(target=sys.stdout.writeLine) { StrConcat { Lit(value="Ok#ok1(type=string value=\"") StrConcat { Var(name=outDir) Lit(value="\")") } } }
+            Return { Lit(value=0) }
+          }
+          Block {
+            If {
+              Eq { Var(name=stderrText) Lit(value="") }
+              Block { Lit(value=0) }
+              Block { Call(target=sys.stdout.writeLine) { Var(name=stderrText) } }
+            }
+            If {
+              Eq { Var(name=stdoutText) Lit(value="") }
+              Block { Lit(value=0) }
+              Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
+            }
+            Return { Call(target=buildError) { Lit(value="AILANG015") Lit(value="Bootstrap compiler publish failed.") Lit(value="publish") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makePublishSpawnArgs) {
+    Fn(params=path,target,outDir) {
+      Block {
+        If {
+          Eq { Var(name=target) Lit(value="") }
+          Block {
+            Return {
+              AppendChild {
+                AppendChild {
+                  AppendChild {
+                    AppendChild {
+                      MakeBlock { Lit(value="args") }
+                      MakeLitString { Lit(value="arg0") Lit(value="publish") }
+                    }
+                    MakeLitString { Lit(value="arg1") Var(name=path) }
+                  }
+                  MakeLitString { Lit(value="arg2") Lit(value="--out") }
+                }
+                MakeLitString { Lit(value="arg3") Var(name=outDir) }
+              }
+            }
+          }
+          Block {
+            Return {
+              AppendChild {
+                AppendChild {
+                  AppendChild {
+                    AppendChild {
+                      AppendChild {
+                        AppendChild {
+                          MakeBlock { Lit(value="args") }
+                          MakeLitString { Lit(value="arg0") Lit(value="publish") }
+                        }
+                        MakeLitString { Lit(value="arg1") Var(name=path) }
+                      }
+                      MakeLitString { Lit(value="arg2") Lit(value="--target") }
+                    }
+                    MakeLitString { Lit(value="arg3") Var(name=target) }
+                  }
+                  MakeLitString { Lit(value="arg4") Lit(value="--out") }
+                }
+                MakeLitString { Lit(value="arg5") Var(name=outDir) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolvePublishOutDir) {
+    Fn(params=path,outDir) {
+      Block {
+        If {
+          Eq { Var(name=outDir) Lit(value="") }
+          Block { Return { StrConcat { Var(name=path) Lit(value="/dist") } } }
+          Block { Return { Var(name=outDir) } }
+        }
+      }
+    }
+  }
+
+  Let(name=missingPath) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG001 message=\"Missing path.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=notImplemented) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG900 message=\"Command is declared but not implemented in AiLang CLI yet.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=unknownCommand) {
+    Fn(params=command) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG002 message=\"Unknown command.\" nodeId=\"")
+            StrConcat { Var(name=command) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+}

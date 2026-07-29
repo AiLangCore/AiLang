@@ -1,0 +1,127 @@
+Program {
+  Let(name=lower.emitStructuralPlans) {
+    Fn(params=records,index,plans) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Var(name=plans) } }
+          Block {
+            Let(name=plan) { Call(target=lower.emitStructuralRecordPlan) { ChildAt { Var(name=records) Var(name=index) } } }
+            If {
+              Eq { NodeKind { Var(name=plan) } Lit(value="Err") }
+              Block { Return { Var(name=plan) } }
+              Block { Return { Call(target=lower.emitStructuralPlans) { Var(name=records) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=plans) Var(name=plan) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralPlansWithSymbols) {
+    Fn(params=records,index,plans) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Var(name=plans) } }
+          Block {
+            Let(name=plan) { Call(target=lower.emitStructuralRecordPlanWithSymbols) { ChildAt { Var(name=records) Var(name=index) } Var(name=records) } }
+            If {
+              Eq { NodeKind { Var(name=plan) } Lit(value="Err") }
+              Block { Return { Var(name=plan) } }
+              Block { Return { Call(target=lower.emitStructuralPlansWithSymbols) { Var(name=records) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=plans) Var(name=plan) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralRecordPlanWithSymbols) {
+    Fn(params=record,records) {
+      Block {
+        Let(name=body) { ChildAt { Var(name=record) Lit(value=4) } }
+        If {
+          Lt { Lit(value=2) ChildCount { Var(name=body) } }
+          Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
+          Block {
+        If {
+          Eq { ChildCount { Var(name=body) } Lit(value=2) }
+          Block {
+            Let(name=first) { ChildAt { Var(name=body) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=first) } Lit(value="Call") }
+              Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
+              Block {
+                Let(name=second) { ChildAt { Var(name=body) Lit(value=1) } }
+                If {
+                  Eq { NodeKind { Var(name=first) } Lit(value="Let") }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=second) } Lit(value="Return") }
+                      Block {
+                        Let(name=value) { ChildAt { Var(name=second) Lit(value=0) } }
+                        If {
+                          Eq { NodeKind { Var(name=value) } Lit(value="Match") }
+                          Block { Return { Call(target=lower.emitStructuralLocalMatchRecordPlan) { Var(name=record) } } }
+                          Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
+                        }
+                      }
+                      Block { Return { Call(target=lower.emitStructuralNativeSequenceRecordPlan) { Var(name=record) Var(name=records) } } }
+                    }
+                  }
+                  Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=body) } Lit(value=1) }
+              Block {
+                Let(name=returnNode) { ChildAt { Var(name=body) Lit(value=0) } }
+                If {
+                  Eq { NodeKind { Var(name=returnNode) } Lit(value="If") }
+                  Block {
+                    Let(name=nativePlan) { Call(target=lower.emitStructuralNativeIfRecordPlan) { Var(name=record) Var(name=records) } }
+                    Return { Var(name=nativePlan) }
+                  }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+                  Block {
+                    Let(name=value) { ChildAt { Var(name=returnNode) Lit(value=0) } }
+                    If {
+                      Eq { NodeKind { Var(name=value) } Lit(value="Call") }
+                      Block {
+                        Let(name=nativePlan) { Call(target=lower.emitStructuralNativeReturnRecordPlan) { Var(name=record) Var(name=records) } }
+                        If {
+                          Eq { NodeKind { Var(name=nativePlan) } Lit(value="Err") }
+                          Block { Return { Call(target=lower.emitStructuralCallRecordPlanWithSymbols) { Var(name=record) Var(name=records) } } }
+                          Block { Return { Var(name=nativePlan) } }
+                        }
+                      }
+                      Block {
+                        If {
+                          Call(target=lower.isStructuralNativeExpression) { Var(name=value) }
+                          Block { Return { Call(target=lower.emitStructuralNativeReturnRecordPlan) { Var(name=record) Var(name=records) } } }
+                          Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+                        }
+                      }
+                    }
+                  }
+                  Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+            }
+          }
+        }
+          }
+        }
+      }
+    }
+  }
+}

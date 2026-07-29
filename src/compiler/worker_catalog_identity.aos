@@ -1,0 +1,115 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=workerCatalog.identity)
+
+  Let(name=workerCatalog.identity) {
+    Fn(params=functionTarget,capabilityMask,transportAbi,bytecodeVersion,artifact) {
+      Block {
+        Let(name=prefix) {
+          Call(target=workerCatalog.identityPrefix) {
+            Var(name=functionTarget) Var(name=capabilityMask)
+            Var(name=transportAbi) Var(name=bytecodeVersion)
+          }
+        }
+        Let(name=input) { Call(target=bytes.concat) { Var(name=prefix) Var(name=artifact) } }
+        Return {
+          Call(target=workerCatalog.identityLanes) {
+            Var(name=input) Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.identityPrefix) {
+    Fn(params=functionTarget,capabilityMask,transportAbi,bytecodeVersion) {
+      Block {
+        Return {
+          Call(target=bytes.concat) {
+            Call(target=bytes.concat) {
+              Call(target=bytes.u32le) { Var(name=functionTarget) }
+              Call(target=bytes.u32le) { Var(name=capabilityMask) }
+            }
+            Call(target=bytes.concat) {
+              Call(target=bytes.u32le) { Var(name=transportAbi) }
+              Call(target=bytes.u32le) { Var(name=bytecodeVersion) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.identityLanes) {
+    Fn(params=input,lane) {
+      Block {
+        If {
+          Eq { Var(name=lane) Lit(value=8) }
+          Block { Return { Call(target=bytes.fromUtf8String) { Lit(value="") } } }
+          Block {
+            Let(name=seed) { Call(target=workerCatalog.laneSeed) { Var(name=lane) } }
+            Let(name=state) {
+              Call(target=workerCatalog.hashBytes) {
+                Var(name=input) Var(name=lane) Lit(value=0) Var(name=seed)
+              }
+            }
+            Return {
+              Call(target=bytes.concat) {
+                Call(target=bytes.u32le) { Var(name=state) }
+                Call(target=workerCatalog.identityLanes) {
+                  Var(name=input) Add { Var(name=lane) Lit(value=1) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.hashBytes) {
+    Fn(params=input,lane,index,state) {
+      Block {
+        If {
+          Eq { Var(name=index) Call(target=bytes.length) { Var(name=input) } }
+          Block { Return { Var(name=state) } }
+          Block {
+            Let(name=next) {
+              Mod {
+                Add {
+                  Mul { Var(name=state) Lit(value=16777619) }
+                  Add {
+                    Call(target=bytes.at) { Var(name=input) Var(name=index) }
+                    Var(name=lane)
+                  }
+                }
+                Lit(value=4294967296)
+              }
+            }
+            Return {
+              Call(target=workerCatalog.hashBytes) {
+                Var(name=input) Var(name=lane) Add { Var(name=index) Lit(value=1) }
+                Var(name=next)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.laneSeed) {
+    Fn(params=lane) {
+      Block {
+        If { Eq { Var(name=lane) Lit(value=0) } Block { Return { Lit(value=2166136261) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=1) } Block { Return { Lit(value=2246822519) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=2) } Block { Return { Lit(value=3266489917) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=3) } Block { Return { Lit(value=668265263) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=4) } Block { Return { Lit(value=374761393) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=5) } Block { Return { Lit(value=1274126177) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=lane) Lit(value=6) } Block { Return { Lit(value=42595009) } } Block { Lit(value=0) } }
+        Return { Lit(value=2048419325) }
+      }
+    }
+  }
+}

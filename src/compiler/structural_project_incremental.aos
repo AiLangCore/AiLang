@@ -1,0 +1,235 @@
+Program {
+  Import(path="structural_project.aos")
+  Import(path="structural_object.aos")
+  Import(path="structural_object_chunks.aos")
+  Import(path="structural_project_records.aos")
+  Import(path="structural_project_symbols.aos")
+  Import(path="structural_project_module_object.aos")
+  Import(path="workers/declarations.aos")
+  Import(path="structural_object_workers.aos")
+  Export(name=structuralProject.writeProjectObjectFilesIncremental)
+  Export(name=structuralProject.writeProjectObjectPartition)
+  Export(name=structuralProject.writePreparedProjectObjectPartition)
+  Export(name=structuralProject.writePreparedProjectObjectAt)
+
+  Let(name=structuralProject.writeProjectObjectFilesIncremental) {
+    Fn(params=modulePaths,projectDir,lockText,objDir) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Let(name=records) {
+          Call(target=structuralProject.collectProjectSymbolChunks) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Lit(value=0)
+            MakeBlock { Lit(value="record-chunks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=validated) { Call(target=structuralObject.validateProjectFunctionRecordChunks) { Var(name=records) } }
+            If {
+              Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
+              Block { Return { Var(name=validated) } }
+              Block {
+                Return {
+                  Call(target=structuralProject.writeModuleObjectsIncremental) {
+                    Var(name=modulePaths)
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                    Var(name=validated)
+                    Lit(value=0)
+                    MakeBlock { Lit(value="objects") }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeProjectObjectPartition) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,workerIndex,workerCount) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Let(name=records) {
+          Call(target=structuralProject.collectProjectSymbolChunks) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Lit(value=0)
+            MakeBlock { Lit(value="record-chunks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=validated) {
+              Call(target=structuralObject.validateProjectFunctionRecordChunks) {
+                Var(name=records)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=validated) } Lit(value="Err") }
+              Block { Return { Var(name=validated) } }
+              Block {
+                Return {
+                  Call(target=structuralProject.writeModuleObjectPartition) {
+                    Var(name=modulePaths)
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                    Var(name=validated)
+                    Var(name=workerIndex)
+                    Var(name=workerCount)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writePreparedProjectObjectPartition) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,workerIndex,workerCount) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Return {
+          Call(target=structuralProject.writeModuleObjectPartition) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Var(name=objDir)
+            Var(name=records)
+            Var(name=workerIndex)
+            Var(name=workerCount)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writePreparedProjectObjectAt) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,moduleIndex) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=objDir) }
+        Return {
+          Call(target=structuralProject.writeModuleObjectPartition) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Var(name=objDir)
+            Var(name=records)
+            Var(name=moduleIndex)
+            ChildCount { Var(name=modulePaths) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeModuleObjectPartition) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,index,workerCount) {
+      Block {
+        If {
+          Lt { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block {
+            Let(name=objectWithWorkers) {
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=records) Var(name=index)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=objectWithWorkers) } Lit(value="Err") }
+              Block { Return { Var(name=objectWithWorkers) } }
+              Block {
+                Let(name=persisted) {
+                  Call(target=structuralProject.writeObjectFileAt) {
+                    Call(target=format.format) { Var(name=objectWithWorkers) }
+                    Var(name=objDir)
+                    Var(name=index)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
+                  Block { Return { Var(name=persisted) } }
+                  Block {
+                    Return {
+                      Call(target=structuralProject.writeModuleObjectPartition) {
+                        Var(name=modulePaths)
+                        Var(name=projectDir)
+                        Var(name=lockText)
+                        Var(name=objDir)
+                        Var(name=records)
+                        Add { Var(name=index) Var(name=workerCount) }
+                        Var(name=workerCount)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { MakeBlock { Lit(value="worker-complete") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeModuleObjectsIncremental) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,records,index,objects) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=objectWithWorkers) {
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                Var(name=modulePaths) Var(name=projectDir)
+                Var(name=lockText) Var(name=records) Var(name=index)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=objectWithWorkers) } Lit(value="Err") }
+              Block { Return { Var(name=objectWithWorkers) } }
+              Block {
+                Let(name=persisted) {
+                  Call(target=structuralProject.writeObjectFileAt) {
+                    Call(target=format.format) { Var(name=objectWithWorkers) }
+                    Var(name=objDir) Var(name=index)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=persisted) } Lit(value="Err") }
+                  Block { Return { Var(name=persisted) } }
+                  Block {
+                    Let(name=nextObjects) {
+                      AppendChild { Var(name=objects) Var(name=objectWithWorkers) }
+                    }
+                    Return {
+                      Call(target=structuralProject.writeModuleObjectsIncremental) {
+                        Var(name=modulePaths) Var(name=projectDir)
+                        Var(name=lockText) Var(name=objDir) Var(name=records)
+                        Add { Var(name=index) Lit(value=1) } Var(name=nextObjects)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

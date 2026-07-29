@@ -1,0 +1,113 @@
+Program {
+  Export(name=lower.resolveStructuralCallSymbol)
+  Export(name=lower.hasStructuralCallTarget)
+
+  Let(name=lower.resolveStructuralCallSymbol) {
+    Fn(params=records,name,index) {
+      Block {
+        If {
+          Eq { ValueKind { Var(name=records) } Lit(value="pair") }
+          Block {
+            Let(name=record) {
+              Call(target=lower.indexedCallRecord) {
+                Var(name=records) Var(name=name)
+              }
+            }
+            If {
+              Eq { ChildCount { Var(name=record) } Lit(value=0) }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="lower") Lit(value="LOWER026")
+                    Lit(value="Structural call target is unknown.") Var(name=name)
+                  }
+                }
+              }
+              Block {
+                Return {
+                  MakeLitString {
+                    Lit(value="symbol")
+                    AttrValueString {
+                      ChildAt { Var(name=record) Lit(value=2) } Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeId { Var(name=records) } Lit(value="record-chunks") }
+              Block { Return { Call(target=lower.resolveStructuralCallSymbolInChunks) { Var(name=records) Var(name=name) Var(name=index) } } }
+              Block { Return { Call(target=lower.resolveStructuralCallSymbolInRecords) { Var(name=records) Var(name=name) Var(name=index) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.resolveStructuralCallSymbolInChunks) {
+    Fn(params=chunks,name,chunkIndex) {
+      Block {
+        If {
+          Eq { Var(name=chunkIndex) ChildCount { Var(name=chunks) } }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=name) } } }
+          Block {
+            Let(name=found) { Call(target=lower.findStructuralCallSymbolInRecords) { ChildAt { Var(name=chunks) Var(name=chunkIndex) } Var(name=name) Lit(value=0) } }
+            If {
+              Eq { Var(name=found) Lit(value="") }
+              Block { Return { Call(target=lower.resolveStructuralCallSymbolInChunks) { Var(name=chunks) Var(name=name) Add { Var(name=chunkIndex) Lit(value=1) } } } }
+              Block { Return { MakeLitString { Lit(value="symbol") Var(name=found) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.resolveStructuralCallSymbolInRecords) {
+    Fn(params=records,name,index) {
+      Block {
+        Let(name=found) { Call(target=lower.findStructuralCallSymbolInRecords) { Var(name=records) Var(name=name) Var(name=index) } }
+        If {
+          Eq { Var(name=found) Lit(value="") }
+          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER026") Lit(value="Structural call target is unknown.") Var(name=name) } } }
+          Block { Return { MakeLitString { Lit(value="symbol") Var(name=found) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.findStructuralCallSymbolInRecords) {
+    Fn(params=records,name,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            If {
+              Eq { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } Var(name=name) }
+              Block { Return { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } } }
+              Block { Return { Call(target=lower.findStructuralCallSymbolInRecords) { Var(name=records) Var(name=name) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.hasStructuralCallTarget) {
+    Fn(params=records,name,index) {
+      Block {
+        Let(name=resolved) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=name) Var(name=index) } }
+        If {
+          Eq { NodeKind { Var(name=resolved) } Lit(value="Err") }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+}

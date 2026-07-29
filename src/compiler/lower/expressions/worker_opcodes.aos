@@ -1,0 +1,118 @@
+Program {
+  Let(name=lower.emitStructuralWorkerRefRecordPlan) {
+    Fn(params=record,expression) {
+      Block {
+        Let(name=name) { AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) } }
+        Let(name=symbol) { AttrValueString { ChildAt { Var(name=record) Lit(value=2) } Lit(value=0) } }
+        Let(name=params) { AttrValueString { ChildAt { Var(name=record) Lit(value=3) } Lit(value=0) } }
+        Let(name=function) {
+          Call(target=blockBuilder.beginFunction) {
+            Var(name=name) Var(name=symbol) Var(name=params) Lit(value="")
+          }
+        }
+        Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withParams) {
+          Call(target=lower.appendStructuralParameterStores) {
+            Var(name=context)
+            Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) }
+          }
+        }
+        Let(name=withWorkerRef) {
+          Call(target=lower.appendStructuralWorkerRef) {
+            Var(name=withParams) Var(name=expression)
+          }
+        }
+        Let(name=terminated) {
+          Call(target=blockBuilder.terminateReturn) { Var(name=withWorkerRef) }
+        }
+        Return {
+          Call(target=blockLinker.flatten) {
+            Call(target=blockBuilder.appendBlock) {
+              Var(name=function)
+              Call(target=blockBuilder.seal) { Var(name=terminated) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralWorkerRef) {
+    Fn(params=context,expression) {
+      Block {
+        Let(name=workerName) {
+          Call(target=lower.getAttr) {
+            Var(name=expression) Lit(value="name") Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=workerName) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="lower") Lit(value="LOWERW001")
+                Lit(value="WorkerRef requires a declared worker name.")
+                NodeId { Var(name=expression) }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=blockBuilder.emit) {
+                Var(name=context) Lit(value="WORKER_REF") Var(name=workerName)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeWorkerUnaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="TaskCancel") }
+          Block { Return { Lit(value="TASK_CANCEL") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="Await") }
+              Block { Return { Lit(value="AWAIT") } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeWorkerBinaryOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="WorkerRun") }
+          Block { Return { Lit(value="WORKER_RUN") } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="WorkerTaskAt") }
+              Block { Return { Lit(value="WORKER_TASK_AT") } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeWorkerVariadicOpcode) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="WorkerRunAll") }
+          Block { Return { Lit(value="WORKER_RUN_ALL") } }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

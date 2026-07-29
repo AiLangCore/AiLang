@@ -1,0 +1,28 @@
+Program {
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="../format.aos")
+  Import(path="module_object.aos")
+  Export(name=main)
+
+  Let(name=main) {
+    Fn(params=args) {
+      Block {
+        Let(name=result) { Call(target=moduleObjectWorkerRun) { Var(name=args) } }
+        If {
+          Eq { NodeKind { Var(name=result) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) {
+              Call(target=format.format) { Var(name=result) }
+            }
+            Call(target=exit) { Lit(value=1) }
+            Return { Lit(value=1) }
+          }
+          Block {
+            Call(target=exit) { Lit(value=0) }
+            Return { Lit(value=0) }
+          }
+        }
+      }
+    }
+  }
+}

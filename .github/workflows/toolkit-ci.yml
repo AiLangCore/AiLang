@@ -7,58 +7,128 @@ on:
       - develop
       - develope
       - "codex/**"
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  wasm-runtime-artifact:
+    name: wasm-runtime-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: latest
+
+      - name: Build wasm runtime artifact
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          ./build.sh wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs
+
+      - name: Upload wasm runtime files
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
+
   build-toolkit:
     name: build-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs:
+      - wasm-runtime-artifact
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
+            runtime: aivm-runtime
           - os: macos-14
             frontend: aos_frontend
-            airun: airun
+            airun: ailang
+            runtime: aivm-runtime
           - os: windows-latest
             frontend: aos_frontend.exe
-            airun: airun.exe
+            airun: ailang.exe
+            runtime: aivm-runtime.exe
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Build airun runtime (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./scripts/build-airun.sh
-          test -x ./tools/airun
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
+      - name: Download wasm runtime files
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
 
       - name: Setup MSVC tools
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
 
-      - name: Build airun runtime (Windows)
+      - name: Stage AiLang tools (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
+          test -x ./tools/ailang
+
+      - name: Stage AiLang tools (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
         run: |
-          ./scripts/build-airun.ps1
-          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
+          ./build.ps1 legacy
+          if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
-      - name: Build frontend parser (non-Windows)
+      - name: Stage frontend parser (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Build frontend parser (Windows)
+      - name: Stage frontend parser (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -71,13 +141,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp ./tools/airun "./dist/${{ matrix.airun }}"
+          cp ./tools/ailang "./dist/${{ matrix.airun }}"
+          cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
+          if [ -x ./.artifacts/ailang-linux-x64/aivectra-framebuffer ]; then
+            cp ./.artifacts/ailang-linux-x64/aivectra-framebuffer ./dist/aivectra-framebuffer
+          fi
 
       - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
+          Copy-Item .\tools\ailang.exe .\dist\${{ matrix.airun }}
+          Copy-Item .\tools\aivm-runtime.exe .\dist\${{ matrix.runtime }}
 
       - name: Stage compiler assets (non-Windows)
         if: runner.os != 'Windows'
@@ -86,6 +161,11 @@ jobs:
           set -euo pipefail
           mkdir -p ./dist/compiler
           cp ./src/compiler/*.aos ./dist/compiler/
+          mkdir -p ./dist/.artifacts/aivm-wasm32
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm ./dist/.artifacts/aivm-wasm32/
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm ./dist/.artifacts/aivm-wasm32/
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs ./dist/.artifacts/aivm-wasm32/
+          ./scripts/stage-sdk-docs.sh ./dist
 
       - name: Stage compiler assets (Windows)
         if: runner.os == 'Windows'
@@ -93,9 +173,99 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
+          New-Item -ItemType Directory -Force .\dist\.artifacts\aivm-wasm32 | Out-Null
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm .\dist\.artifacts\aivm-wasm32\
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm .\dist\.artifacts\aivm-wasm32\
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs .\dist\.artifacts\aivm-wasm32\
+          .\scripts\stage-sdk-docs.ps1 .\dist
+
+      - name: Deterministic golden corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/test-canonical-formatting.sh
+          ./scripts/test-golden-determinism.sh
 
       - name: Upload toolkit artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: toolkit-${{ matrix.os }}
+          path: ./dist
+
+  build-linux-arm64-toolkit:
+    name: build-linux-arm64
+    runs-on: ubuntu-latest
+    needs:
+      - wasm-runtime-artifact
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
+      - name: Download wasm runtime files
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
+
+      - name: Setup Linux ARM64 cross toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ] && ! grep -q '^Architectures:' /etc/apt/sources.list.d/ubuntu.sources; then
+            sudo sed -i '/^Signed-By:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+          sudo dpkg --add-architecture arm64
+          . /etc/os-release
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources >/dev/null
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports
+          Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-backports ${VERSION_CODENAME}-security
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            libc6-dev-arm64-cross \
+            libssl-dev:arm64 \
+            zlib1g-dev:arm64
+
+      - name: Stage AiLang Linux ARM64 tools
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=arm64 \
+          AILANG_LINUX_UI_BACKEND=framebuffer \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./scripts/build-ailang-native.sh
+          test -x ./.artifacts/ailang-linux-arm64/aivm-runtime
+          test -x ./.artifacts/ailang-linux-arm64/aivectra-framebuffer
+
+      - name: Stage Linux ARM64 runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist
+          cp ./.artifacts/ailang-linux-arm64/aivm-runtime ./dist/aivm-runtime
+          cp ./.artifacts/ailang-linux-arm64/aivectra-framebuffer ./dist/aivectra-framebuffer
+          file ./dist/aivm-runtime ./dist/aivectra-framebuffer
+          if strings ./dist/aivm-runtime ./dist/aivectra-framebuffer | grep -Fq 'connect_tls_failed:tls_unsupported'; then
+            echo "Linux ARM64 runtime artifact was built without native TLS support." >&2
+            exit 1
+          fi
+
+      - name: Upload Linux ARM64 toolkit artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: toolkit-linux-arm64
           path: ./dist

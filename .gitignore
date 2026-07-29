@@ -18,6 +18,9 @@ artifacts/
 .tmp-aot/
 tools/airun
 tools/airun-host
+tools/ailang
+tools/aivm-runtime
+tools/aivm-runtime.exe
 
 ############################################
 # Test results
@@ -66,9 +69,12 @@ out/
 # Temporary / scratch
 ############################################
 .tmp/
+.tmp/qemu-lab/
 .temp/
 .cache/
 *.local.*
+config.local.toml
+scripts/qemu-lab.env
 
 ############################################
 # AI / tooling scratch (optional but recommended)
@@ -77,3 +83,7 @@ out/
 .ai/
 .llm/
 .prompts/
+
+# AiLang project generated outputs
+**/.toolchain/
+**/app.aibc1

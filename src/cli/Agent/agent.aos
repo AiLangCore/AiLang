@@ -1,0 +1,25 @@
+Program {
+  Import(path="../common.aos")
+  Export(name=runAgent)
+
+  Let(name=runAgent) {
+    Fn(params=args) {
+      Block {
+        Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=subcmd) Lit(value="list") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="codex") }
+            Call(target=sys.stdout.writeLine) { Lit(value="claude") }
+            Call(target=sys.stdout.writeLine) { Lit(value="cursor") }
+            Call(target=sys.stdout.writeLine) { Lit(value="gemini") }
+            Call(target=sys.stdout.writeLine) { Lit(value="copilot") }
+            Call(target=sys.stdout.writeLine) { Lit(value="windsurf") }
+            Return { Lit(value=0) }
+          }
+          Block { Return { Call(target=unknownCommand) { Lit(value="agent") } } }
+        }
+      }
+    }
+  }
+}

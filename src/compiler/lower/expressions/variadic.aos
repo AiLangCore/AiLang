@@ -1,0 +1,44 @@
+Program {
+  Let(name=lower.structuralNativeVariadicOpcodeForExpression) {
+    Fn(params=expr) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=expr) } }
+        Return { Call(target=lower.structuralNativeVariadicOpcode) { Var(name=kind) } }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeVariadicExpression) {
+    Fn(params=context,expr,params,records) {
+      Block {
+        Let(name=withArguments) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withArguments) }
+          Block { Return { Var(name=withArguments) } }
+          Block {
+            Let(name=kind) { NodeKind { Var(name=expr) } }
+            Let(name=opcode) { Call(target=lower.structuralNativeVariadicOpcode) { Var(name=kind) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=opcode) }
+              Block { Return { Var(name=opcode) } }
+              Block {
+                If {
+                  Eq { Var(name=opcode) Lit(value="WORKER_RUN_ALL") }
+                  Block {
+                    Return {
+                      Call(target=blockBuilder.emit) {
+                        Var(name=withArguments) Var(name=opcode)
+                        ToString { Sub { ChildCount { Var(name=expr) } Lit(value=1) } }
+                      }
+                    }
+                  }
+                  Block { Return { Call(target=blockBuilder.emit) { Var(name=withArguments) Var(name=opcode) Lit(value="") } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

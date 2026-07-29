@@ -1,0 +1,56 @@
+schema = "ailang.commands.v1"
+
+[dispatcher]
+publicCommand = "ailang"
+privateRoot = "libexec/ailang/commands"
+protocol = "ailang-command-v1"
+
+[commands.init]
+path = "libexec/ailang/commands/init"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.template]
+path = "libexec/ailang/commands/template"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.agent]
+path = "libexec/ailang/commands/agent"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.build]
+path = "libexec/ailang/commands/build"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.run]
+path = "libexec/ailang/commands/run"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.publish]
+path = "libexec/ailang/commands/publish"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.package]
+path = "libexec/ailang/commands/package"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.test]
+path = "libexec/ailang/commands/test"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.clean]
+path = "libexec/ailang/commands/clean"
+kind = "sdk"
+protocol = "ailang-command-v1"
+
+[commands.doctor]
+path = "libexec/ailang/commands/doctor"
+kind = "sdk"
+protocol = "ailang-command-v1"

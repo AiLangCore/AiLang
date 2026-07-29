@@ -1,0 +1,89 @@
+Program {
+  Import(path="symbols.aos")
+
+  Let(name=lower.visibleSlot) {
+    Fn(params=body,params,baseSlot,lastIndex,name) {
+      Block {
+        Let(name=parameterSlot) { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Lit(value=0) Lit(value=0) } }
+        If {
+          Eq { Var(name=parameterSlot) Lit(value=-1) }
+          Block { Return { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Lit(value=0) Var(name=lastIndex) } } }
+          Block { Return { Var(name=parameterSlot) } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.localSlot) {
+    Fn(params=body,name,baseSlot,index,lastIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=lastIndex) }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            Let(name=localNode) { ChildAt { Var(name=body) Var(name=index) } }
+            If {
+              Eq { Call(target=lower.getAttr) { Var(name=localNode) Lit(value="name") Lit(value=0) } Var(name=name) }
+              Block { Return { Add { Var(name=baseSlot) Var(name=index) } }
+              }
+              Block { Return { Call(target=lower.localSlot) { Var(name=body) Var(name=name) Var(name=baseSlot) Add { Var(name=index) Lit(value=1) } Var(name=lastIndex) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.parameterCount) {
+    Fn(params=params,index) {
+      Block {
+        If {
+          Eq { Var(name=params) Lit(value="") }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { Var(name=params) Lit(value="_") }
+              Block { Return { Lit(value=1) } }
+              Block {
+                If {
+                  Eq { StringFind { Var(name=params) Lit(value=",") Var(name=index) } Lit(value=-1) }
+                  Block { Return { Lit(value=1) } }
+                  Block {
+                    Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=index) } }
+                    Return { Add { Lit(value=1) Call(target=lower.parameterCount) { Var(name=params) Add { Var(name=comma) Lit(value=1) } } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.parameterSlot) {
+    Fn(params=params,name,start,slot) {
+      Block {
+        Let(name=comma) { StringFind { Var(name=params) Lit(value=",") Var(name=start) } }
+        Let(name=length) { StringScalarLength { Var(name=params) } }
+        If {
+          Eq { Var(name=comma) Lit(value=-1) }
+          Block {
+            If {
+              Eq { StringSlice { Var(name=params) Var(name=start) Var(name=length) } Var(name=name) }
+              Block { Return { Var(name=slot) } }
+              Block { Return { Lit(value=-1) } }
+            }
+          }
+          Block {
+            If {
+              Eq { StringSlice { Var(name=params) Var(name=start) Sub { Var(name=comma) Var(name=start) } } Var(name=name) }
+              Block { Return { Var(name=slot) } }
+              Block { Return { Call(target=lower.parameterSlot) { Var(name=params) Var(name=name) Add { Var(name=comma) Lit(value=1) } Add { Var(name=slot) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

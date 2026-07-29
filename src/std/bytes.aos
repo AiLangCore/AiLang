@@ -1,0 +1,107 @@
+Program {
+  Let(name=bytes.length) {
+    Fn(params=data) {
+      Block {
+        Return { BytesLength { Var(name=data) } }
+      }
+    }
+  }
+
+  Let(name=bytes.at) {
+    Fn(params=data,index) {
+      Block {
+        Return {
+          BytesAt { Var(name=data) Var(name=index) }
+        }
+      }
+    }
+  }
+
+  Let(name=bytes.slice) {
+    Fn(params=data,start,length) {
+      Block {
+        Return {
+          BytesSlice { Var(name=data) Var(name=start) Var(name=length) }
+        }
+      }
+    }
+  }
+
+  Let(name=bytes.concat) {
+    Fn(params=left,right) {
+      Block {
+        Return {
+          BytesConcat { Var(name=left) Var(name=right) }
+        }
+      }
+    }
+  }
+
+  Let(name=bytes.fromBase64) {
+    Fn(params=text) {
+      Block {
+        Return { BytesFromBase64 { Var(name=text) } }
+      }
+    }
+  }
+
+  Let(name=bytes.toBase64) {
+    Fn(params=data) {
+      Block {
+        Return { BytesToBase64 { Var(name=data) } }
+      }
+    }
+  }
+
+  Let(name=bytes.toUtf8String) {
+    Fn(params=data) {
+      Block {
+        Return { BytesToUtf8String { Var(name=data) } }
+      }
+    }
+  }
+
+  Let(name=bytes.fromUtf8String) {
+    Fn(params=text) {
+      Block {
+        Return { BytesFromUtf8String { Var(name=text) } }
+      }
+    }
+  }
+
+  Let(name=bytes.fromByte) {
+    Fn(params=value) {
+      Block {
+        Return { BytesFromByte { Var(name=value) } }
+      }
+    }
+  }
+
+  Let(name=bytes.u32le) {
+    Fn(params=value) {
+      Block {
+        Return { BytesU32LE { Var(name=value) } }
+      }
+    }
+  }
+
+  Let(name=bytes.i64le) {
+    Fn(params=value) {
+      Block {
+        Return { BytesI64LE { Var(name=value) } }
+      }
+    }
+  }
+
+  Export(name=bytes.length)
+  Export(name=bytes.at)
+  Export(name=bytes.slice)
+  Export(name=bytes.concat)
+  Export(name=bytes.fromBase64)
+  Export(name=bytes.toBase64)
+  Export(name=bytes.toUtf8String)
+  Export(name=bytes.fromUtf8String)
+  Export(name=bytes.fromByte)
+  Export(name=bytes.u32le)
+  Export(name=bytes.i64le)
+}

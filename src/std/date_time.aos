@@ -1,0 +1,219 @@
+Program {
+  Import(path="./number.aos")
+  Import(path="./math.aos")
+  Import(path="./str.aos")
+  Import(path="./time.aos")
+
+  Export(name=localDayIndexFromUnixMs)
+  Export(name=currentLocalDayIndex)
+  Export(name=weekdayIndexFromDayIndex)
+  Export(name=weekdayName)
+  Export(name=dayIndexFromYmd)
+  Export(name=dayIndexFromIsoDate)
+  Export(name=relativeDayLabelFromBaseDayIndex)
+  Export(name=relativeDayLabelFromIsoDate)
+
+  Let(name=dateDigitValue) {
+    Fn(params=char) {
+      Block {
+        If { Eq { Var(name=char) Lit(value="0") } Block { Return { Lit(value=0) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="1") } Block { Return { Lit(value=1) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="2") } Block { Return { Lit(value=2) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="3") } Block { Return { Lit(value=3) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="4") } Block { Return { Lit(value=4) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="5") } Block { Return { Lit(value=5) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="6") } Block { Return { Lit(value=6) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="7") } Block { Return { Lit(value=7) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="8") } Block { Return { Lit(value=8) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=char) Lit(value="9") } Block { Return { Lit(value=9) } } Block { Lit(value=0) } }
+        Return { Lit(value=0) }
+      }
+    }
+  }
+
+  Let(name=dateParse2) {
+    Fn(params=text,start) {
+      Block {
+        Return {
+          Add {
+            Call(target=mul) {
+              Call(target=dateDigitValue) { Call(target=substring) { Var(name=text) Var(name=start) Lit(value=1) } }
+              Lit(value=10)
+            }
+            Call(target=dateDigitValue) { Call(target=substring) { Var(name=text) Add { Var(name=start) Lit(value=1) } Lit(value=1) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=dateParse4) {
+    Fn(params=text,start) {
+      Block {
+        Return {
+          Add {
+            Call(target=mul) { Call(target=dateParse2) { Var(name=text) Var(name=start) } Lit(value=100) }
+            Call(target=dateParse2) { Var(name=text) Add { Var(name=start) Lit(value=2) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=localDayIndexFromUnixMs) {
+    Fn(params=unixMs,offsetMinutes) {
+      Block {
+        Return {
+          Call(target=divFloor) {
+            Add {
+              Var(name=unixMs)
+              Call(target=mul) { Var(name=offsetMinutes) Lit(value=60000) }
+            }
+            Lit(value=86400000)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=currentLocalDayIndex) {
+    Fn(params=_) {
+      Block {
+        Let(name=unixMs) { Call(target=nowUnixMs) { Lit(value=0) } }
+        Return {
+          Call(target=localDayIndexFromUnixMs) {
+            Var(name=unixMs)
+            Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=weekdayIndexFromDayIndex) {
+    Fn(params=dayIndex) {
+      Block {
+        Return { Call(target=mod) { Add { Var(name=dayIndex) Lit(value=4) } Lit(value=7) } }
+      }
+    }
+  }
+
+  Let(name=weekdayName) {
+    Fn(params=weekdayIndex) {
+      Block {
+        If { Eq { Var(name=weekdayIndex) Lit(value=0) } Block { Return { Lit(value="Sunday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=1) } Block { Return { Lit(value="Monday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=2) } Block { Return { Lit(value="Tuesday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=3) } Block { Return { Lit(value="Wednesday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=4) } Block { Return { Lit(value="Thursday") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=weekdayIndex) Lit(value=5) } Block { Return { Lit(value="Friday") } } Block { Lit(value=0) } }
+        Return { Lit(value="Saturday") }
+      }
+    }
+  }
+
+  Let(name=dayIndexFromYmd) {
+    Fn(params=year,month,day) {
+      Block {
+        Let(name=adjustedYear) {
+          If {
+            Call(target=lte) { Var(name=month) Lit(value=2) }
+            Block { Add { Var(name=year) Lit(value=-1) } }
+            Block { Var(name=year) }
+          }
+        }
+        Let(name=era) { Call(target=divFloor) { Var(name=adjustedYear) Lit(value=400) Lit(value=0) } }
+        Let(name=yearOfEra) { Call(target=sub) { Var(name=adjustedYear) Call(target=mul) { Var(name=era) Lit(value=400) } } }
+        Let(name=monthPrime) {
+          If {
+            Call(target=gt) { Var(name=month) Lit(value=2) }
+            Block { Add { Var(name=month) Lit(value=-3) } }
+            Block { Add { Var(name=month) Lit(value=9) } }
+          }
+        }
+        Let(name=dayOfYear) {
+          Add {
+            Call(target=divFloor) {
+              Add { Call(target=mul) { Lit(value=153) Var(name=monthPrime) } Lit(value=2) }
+              Lit(value=5)
+              Lit(value=0)
+            }
+            Add { Var(name=day) Lit(value=-1) }
+          }
+        }
+        Let(name=dayOfEra) {
+          Add {
+            Call(target=mul) { Var(name=yearOfEra) Lit(value=365) }
+            Add {
+              Call(target=divFloor) { Var(name=yearOfEra) Lit(value=4) Lit(value=0) }
+              Add {
+                Call(target=mul) { Call(target=divFloor) { Var(name=yearOfEra) Lit(value=100) Lit(value=0) } Lit(value=-1) }
+                Var(name=dayOfYear)
+              }
+            }
+          }
+        }
+        Return {
+          Add {
+            Add { Call(target=mul) { Var(name=era) Lit(value=146097) } Var(name=dayOfEra) }
+            Lit(value=-719468)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=dayIndexFromIsoDate) {
+    Fn(params=isoDate) {
+      Block {
+        Let(name=dateText) {
+          If {
+            Eq { Call(target=substring) { Var(name=isoDate) Lit(value=0) Lit(value=1) } Lit(value="\"") }
+            Block { Call(target=substring) { Var(name=isoDate) Lit(value=1) Lit(value=10) } }
+            Block { Var(name=isoDate) }
+          }
+        }
+        Return {
+          Call(target=dayIndexFromYmd) {
+            Call(target=dateParse4) { Var(name=dateText) Lit(value=0) }
+            Call(target=dateParse2) { Var(name=dateText) Lit(value=5) }
+            Call(target=dateParse2) { Var(name=dateText) Lit(value=8) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=relativeDayLabelFromBaseDayIndex) {
+    Fn(params=baseDayIndex,dayOffset) {
+      Block {
+        If { Eq { Var(name=dayOffset) Lit(value=0) } Block { Return { Lit(value="Today") } } Block { Lit(value=0) } }
+        If { Eq { Var(name=dayOffset) Lit(value=1) } Block { Return { Lit(value="Tomorrow") } } Block { Lit(value=0) } }
+        Return {
+          Call(target=weekdayName) {
+            Call(target=weekdayIndexFromDayIndex) {
+              Add { Var(name=baseDayIndex) Var(name=dayOffset) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=relativeDayLabelFromIsoDate) {
+    Fn(params=baseIsoDate,isoDate) {
+      Block {
+        Return {
+          Call(target=relativeDayLabelFromBaseDayIndex) {
+            Call(target=dayIndexFromIsoDate) { Var(name=baseIsoDate) }
+            Call(target=sub) {
+              Call(target=dayIndexFromIsoDate) { Var(name=isoDate) }
+              Call(target=dayIndexFromIsoDate) { Var(name=baseIsoDate) }
+            }
+          }
+        }
+      }
+    }
+  }
+}

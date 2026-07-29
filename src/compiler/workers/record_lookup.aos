@@ -1,0 +1,50 @@
+Program {
+  Let(name=workerDeclarations.findFunction) {
+    Fn(params=records,modulePath,target) {
+      Block {
+        Return {
+          Call(target=workerDeclarations.findFunctionInRecords) {
+            Var(name=records) Var(name=modulePath) Var(name=target) Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.findFunctionInRecords) {
+    Fn(params=records,modulePath,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=records) } }
+          Block { Return { MakeBlock { Lit(value="missing-function") } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=recordModulePath) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=0) } Lit(value=0) }
+            }
+            Let(name=recordName) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) }
+            }
+            If {
+              Eq { Var(name=recordModulePath) Var(name=modulePath) }
+              Block {
+                If {
+                  Eq { Var(name=recordName) Var(name=target) }
+                  Block { Return { Var(name=record) } }
+                  Block { Lit(value=0) }
+                }
+              }
+              Block { Lit(value=0) }
+            }
+            Return {
+              Call(target=workerDeclarations.findFunctionInRecords) {
+                Var(name=records) Var(name=modulePath) Var(name=target)
+                Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

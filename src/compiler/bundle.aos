@@ -1,0 +1,185 @@
+Program {
+  Export(name=bundle.buildSingleModuleBundleText)
+  Export(name=bundle.buildTwoModuleBundleText)
+  Export(name=bundle.buildPublishProgramText)
+  Export(name=bundle.buildLinkedBundleText)
+
+  Let(name=bundle.buildSingleModuleBundleText) {
+    Fn(params=projectName,entryFile,entryExport) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bundle#b1(entryExport=\"")
+            StrConcat {
+              StrEscape { Var(name=entryExport) }
+              StrConcat {
+                Lit(value="\" entryFile=\"")
+                StrConcat {
+                  StrEscape { Var(name=entryFile) }
+                  StrConcat {
+                    Lit(value="\" name=\"")
+                    StrConcat {
+                      StrEscape { Var(name=projectName) }
+                      StrConcat {
+                        Lit(value="\") { Module#m0(path=\"")
+                        StrConcat {
+                          StrEscape { Var(name=entryFile) }
+                          Lit(value="\") }")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bundle.buildTwoModuleBundleText) {
+    Fn(params=projectName,entryFile,entryExport,firstImport) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bundle#b1(entryExport=\"")
+            StrConcat {
+              StrEscape { Var(name=entryExport) }
+              StrConcat {
+                Lit(value="\" entryFile=\"")
+                StrConcat {
+                  StrEscape { Var(name=entryFile) }
+                  StrConcat {
+                    Lit(value="\" name=\"")
+                    StrConcat {
+                      StrEscape { Var(name=projectName) }
+                      StrConcat {
+                        Lit(value="\") { Module#m0(path=\"")
+                        StrConcat {
+                          StrEscape { Var(name=entryFile) }
+                          StrConcat {
+                            Lit(value="\") Module#m1(path=\"")
+                            StrConcat {
+                              StrEscape { Var(name=firstImport) }
+                              Lit(value="\") }")
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bundle.buildPublishProgramText) {
+    Fn(params=bundleText,projectName) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Program#pubp1 { Call#pubc1(target=compiler.publish) { ")
+            StrConcat {
+              Var(name=bundleText)
+              StrConcat {
+                Lit(value=" Lit#pubv1(value=\"")
+                StrConcat {
+                  StrEscape { Var(name=projectName) }
+                  Lit(value="\") } }")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bundle.buildLinkedBundleText) {
+    Fn(params=projectName,entryExport,modulePaths) {
+      Block {
+        Let(name=entryFile) {
+          AttrValueString {
+            ChildAt { Var(name=modulePaths) Lit(value=0) }
+            Lit(value=0)
+          }
+        }
+        Return {
+          StrConcat {
+            Lit(value="Bundle#b1(entryExport=\"")
+            StrConcat {
+              StrEscape { Var(name=entryExport) }
+              StrConcat {
+                Lit(value="\" entryFile=\"")
+                StrConcat {
+                  StrEscape { Var(name=entryFile) }
+                  StrConcat {
+                    Lit(value="\" name=\"")
+                    StrConcat {
+                      StrEscape { Var(name=projectName) }
+                      StrConcat {
+                        Lit(value="\") { ")
+                        StrConcat {
+                          Call(target=bundle.buildModuleEntries) {
+                            Var(name=modulePaths)
+                            Lit(value=0)
+                          }
+                          Lit(value=" }")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bundle.buildModuleEntries) {
+    Fn(params=modulePaths,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=path) {
+              AttrValueString {
+                ChildAt { Var(name=modulePaths) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+            Return {
+              StrConcat {
+                Lit(value="Module#m")
+                StrConcat {
+                  ToString { Var(name=index) }
+                  StrConcat {
+                    Lit(value="(path=\"")
+                    StrConcat {
+                      StrEscape { Var(name=path) }
+                      StrConcat {
+                        Lit(value="\") ")
+                        Call(target=bundle.buildModuleEntries) {
+                          Var(name=modulePaths)
+                          Add { Var(name=index) Lit(value=1) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

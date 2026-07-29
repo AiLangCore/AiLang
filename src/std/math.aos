@@ -1,11 +1,61 @@
-Program#std_math_p1 {
-  Let#std_math_l1(name=add) {
-    Fn#std_math_f1(params=a,b) {
-      Block#std_math_b1 {
-        Return#std_math_r1 { Add#std_math_a1 { Var#std_math_v1(name=a) Var#std_math_v2(name=b) } }
+Program {
+  Import(path="./number.aos")
+
+  Let(name=halfFloor) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Lit(value=2) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=halfFloor) {
+                Call(target=sub) { Var(name=value) Lit(value=2) }
+                Call(target=inc) { Var(name=acc) }
+              }
+            }
+          }
+        }
       }
     }
   }
 
-  Export#std_math_e1(name=add)
+  Let(name=divFloor) {
+    Fn(params=value,step,acc) {
+      Block {
+        If {
+          Call(target=lt) { Var(name=value) Var(name=step) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=divFloor) {
+                Call(target=sub) { Var(name=value) Var(name=step) }
+                Var(name=step)
+                Call(target=inc) { Var(name=acc) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=subAbs) {
+    Fn(params=a,b) {
+      Block {
+        Return {
+          Call(target=abs) {
+            Call(target=sub) {
+              Var(name=a)
+              Var(name=b)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Export(name=halfFloor)
+  Export(name=divFloor)
+  Export(name=subAbs)
 }

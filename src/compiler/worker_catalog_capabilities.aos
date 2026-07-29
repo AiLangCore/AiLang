@@ -1,0 +1,85 @@
+Program {
+  Export(name=workerCatalog.capabilityMask)
+
+  Let(name=workerCatalog.capabilityMask) {
+    Fn(params=entry) {
+      Block {
+        Return {
+          Add {
+            Add {
+              Add {
+                Add {
+                  Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.fs.") Lit(value=1) }
+                  Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.process.") Lit(value=2) }
+                }
+                Add {
+                  Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.net.") Lit(value=4) }
+                  Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.env.") Lit(value=8) }
+                }
+              }
+              Add {
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.clock.") Lit(value=16) }
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.random.") Lit(value=32) }
+              }
+            }
+            Add {
+              Add {
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.ui.") Lit(value=64) }
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.debug.") Lit(value=128) }
+              }
+              Add {
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.remote.") Lit(value=256) }
+                Call(target=workerCatalog.capabilityBit) { Var(name=entry) Lit(value="sys.std") Lit(value=512) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.capabilityBit) {
+    Fn(params=entry,prefix,bit) {
+      Block {
+        If {
+          Call(target=workerCatalog.hasRequiredPrefix) {
+            Var(name=entry) Var(name=prefix) Lit(value=0)
+          }
+          Block { Return { Var(name=bit) } }
+          Block { Return { Lit(value=0) } }
+        }
+      }
+    }
+  }
+
+  Let(name=workerCatalog.hasRequiredPrefix) {
+    Fn(params=entry,prefix,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=entry) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=entry) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="RequiredSyscall") }
+              Block {
+                Let(name=target) { AttrValueString { Var(name=child) Lit(value=0) } }
+                If {
+                  Eq { StringFind { Var(name=target) Var(name=prefix) Lit(value=0) } Lit(value=0) }
+                  Block { Return { Lit(value=true) } }
+                  Block { Lit(value=0) }
+                }
+              }
+              Block { Lit(value=0) }
+            }
+            Return {
+              Call(target=workerCatalog.hasRequiredPrefix) {
+                Var(name=entry) Var(name=prefix) Add { Var(name=index) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

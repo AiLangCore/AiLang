@@ -1,0 +1,131 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+
+  Let(name=restoreLocalPackageLockEntry) {
+    Fn(params=projectDir,registryDir,packageName,requestedVersion,packagePath) {
+      Block {
+        Let(name=packageDir) {
+          StrConcat {
+            Var(name=projectDir)
+            StrConcat { Lit(value="/") Var(name=packagePath) }
+          }
+        }
+        Let(name=descriptorPath) {
+          StrConcat { Var(name=packageDir) Lit(value="/package.toml") }
+        }
+        Let(name=descriptorText) {
+          Call(target=packageReadOptionalText) { Var(name=descriptorPath) }
+        }
+        If {
+          Eq { Var(name=descriptorText) Lit(value="") }
+          Block {
+            Return {
+              Call(target=packageRestoreError) {
+                Var(name=packageName)
+                Lit(value="missing local package descriptor")
+              }
+            }
+          }
+          Block { Lit(value=0) }
+        }
+        Let(name=descriptorName) {
+          Call(target=packageGetTomlStringFixed) {
+            Var(name=descriptorText)
+            Lit(value="name")
+            Lit(value=8)
+            Lit(value=6)
+          }
+        }
+        Let(name=descriptorVersion) {
+          Call(target=packageGetTomlStringFixed) {
+            Var(name=descriptorText)
+            Lit(value="version")
+            Lit(value=11)
+            Lit(value=9)
+          }
+        }
+        If {
+          Eq { Var(name=descriptorName) Var(name=packageName) }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              Call(target=packageRestoreError) {
+                Var(name=packageName)
+                Lit(value="local package name mismatch")
+              }
+            }
+          }
+        }
+        If {
+          Eq { Var(name=descriptorVersion) Var(name=requestedVersion) }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              Call(target=packageRestoreError) {
+                Var(name=packageName)
+                Lit(value="local package version mismatch")
+              }
+            }
+          }
+        }
+        Let(name=namespaces) {
+          Call(target=packageLibraryNamespaces) {
+            Var(name=descriptorText)
+            Lit(value=0)
+          }
+        }
+        Let(name=targetEntries) {
+          Call(target=restorePackageTargetEntries) {
+            Var(name=packageName)
+            Var(name=descriptorText)
+            Lit(value=0)
+          }
+        }
+        Let(name=dependencyEntries) {
+          Call(target=restorePackageDependencies) {
+            Var(name=projectDir)
+            Var(name=registryDir)
+            Var(name=descriptorText)
+            StrConcat {
+              Lit(value="|")
+              StrConcat { Var(name=packageName) Lit(value="|") }
+            }
+          }
+        }
+        Return {
+          StrConcat {
+            Lit(value="[[package]]\nname = \"")
+            StrConcat {
+              Var(name=packageName)
+              StrConcat {
+                Lit(value="\"\nversion = \"")
+                StrConcat {
+                  Var(name=requestedVersion)
+                  StrConcat {
+                    Lit(value="\"\npath = \"")
+                    StrConcat {
+                      Var(name=packagePath)
+                      StrConcat {
+                        Lit(value="\"\npackageRoot = \".\"\nnamespaces = [")
+                        StrConcat {
+                          Var(name=namespaces)
+                          StrConcat {
+                            Lit(value="]\n\n")
+                            StrConcat {
+                              Var(name=targetEntries)
+                              Var(name=dependencyEntries)
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

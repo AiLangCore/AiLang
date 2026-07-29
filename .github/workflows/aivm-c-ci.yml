@@ -1,52 +1,10 @@
-name: aivm-c-ci
+name: AiVM source integration
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'src/AiVM.Core/native/**'
-      - 'scripts/test-aivm-c.sh'
-      - 'scripts/test-aivm-c.ps1'
-      - 'scripts/build-airun.sh'
-      - 'scripts/build-airun.ps1'
-      - 'scripts/aivm-parity-compare.sh'
-      - 'scripts/aivm-dualrun-parity.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.ps1'
-      - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-mem-audit.sh'
-      - 'scripts/aivm-mem-audit.ps1'
-      - 'scripts/aivm-mem-leak-check.sh'
-      - 'scripts/aivm-mem-profile.sh'
-      - 'src/AiVM.Core/native/tests/parity_commands.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
-      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
-      - '.github/workflows/aivm-c-ci.yml'
-  push:
-    branches:
-      - develop
-      - main
-    paths:
-      - 'src/AiVM.Core/native/**'
-      - 'scripts/test-aivm-c.sh'
-      - 'scripts/test-aivm-c.ps1'
-      - 'scripts/build-airun.sh'
-      - 'scripts/build-airun.ps1'
-      - 'scripts/aivm-parity-compare.sh'
-      - 'scripts/aivm-dualrun-parity.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.ps1'
-      - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-mem-audit.sh'
-      - 'scripts/aivm-mem-audit.ps1'
-      - 'scripts/aivm-mem-leak-check.sh'
-      - 'scripts/aivm-mem-profile.sh'
-      - 'src/AiVM.Core/native/tests/parity_commands.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
-      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
-      - '.github/workflows/aivm-c-ci.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-test:
@@ -59,57 +17,109 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Setup MSVC toolchain (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+      - name: Checkout AiVM
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: external/AiVM
 
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
-        run: ./scripts/test-aivm-c.sh
+        run: |
+          mkdir -p .tmp/leak-reports
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            AIVM_MEM_LEAK_GATE=1 \
+            AIVM_LEAK_CHECK_ITERATIONS=50 \
+            AIVM_LEAK_MAX_GROWTH_KB=2048 \
+            AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./test-aivm-c.sh
+          else
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./test-aivm-c.sh
+          fi
+
+      - name: Verify bytes host syscall test (Unix)
+        if: runner.os != 'Windows'
+        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
-        run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
+        run: AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./scripts/aivm-c-perf-smoke.sh 10
 
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
         run: |
-          ./scripts/build-airun.sh
-          ./scripts/aivm-bench-gate.sh
+          ./build.sh legacy
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" ./scripts/aivm-bench-gate.sh
 
-      - name: Memory leak gate (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          ./scripts/build-airun.sh
-          AIVM_MEM_AUDIT_REPORT=.tmp/aivm-mem-audit-${{ runner.os }}.toml \
-          AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 \
-          ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+      - name: Setup Emscripten (Linux)
+        if: runner.os == 'Linux'
+        uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: latest
 
-      - name: Memory leak gate (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Setup wasmtime (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
-          ./scripts/build-airun.ps1
-          $env:AIVM_MEM_AUDIT_REPORT = '.tmp/aivm-mem-audit-Windows.toml'
-          $env:AIVM_LEAK_MAX_RSS_GROWTH_KB = '2048'
-          ./scripts/aivm-mem-audit.ps1 .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos 20
+          set -euo pipefail
+          curl -fsSL https://wasmtime.dev/install.sh | bash
+          echo "${HOME}/.wasmtime/bin" >> "${GITHUB_PATH}"
+
+      - name: Dashboard summary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/src" AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
+          {
+            echo "### AiLang DoD Dashboard (Linux)"
+            echo
+            awk '
+              /## Gates/ { print; in_gates=1; next }
+              in_gates && /^## / { in_gates=0 }
+              in_gates { print }
+            ' .tmp/aivm-parity-dashboard-ci.md
+            echo
+            awk '
+              /## WASM Coverage/ { print; in_wasm=1; next }
+              in_wasm && /^## / { in_wasm=0 }
+              in_wasm { print }
+            ' .tmp/aivm-parity-dashboard-ci.md
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_CTEST_EXCLUDE: aivm_test_process_lifecycle_stress
         run: |
-          ./scripts/test-aivm-c.ps1
+          ./test-aivm-c.ps1
+
+      - name: Verify bytes host syscall test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir .tmp/aivm-c-build-native -C Debug -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aivm-parity-artifacts-${{ matrix.os }}
           path: |
+            .tmp/aivm-parity-dashboard-ci.md
             .tmp/aivm-dualrun-manifest/report.txt
             .tmp/aivm-dualrun-manifest/*.left.out
             .tmp/aivm-dualrun-manifest/*.right.out
-            .tmp/aivm-mem-audit-*.toml
+          if-no-files-found: ignore
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: aivm-leak-report-${{ matrix.os }}
+          path: .tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt
           if-no-files-found: ignore

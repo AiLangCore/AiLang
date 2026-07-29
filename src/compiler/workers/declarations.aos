@@ -1,0 +1,416 @@
+Program {
+  Import(path="record_lookup.aos")
+  Export(name=workerDeclarations.collectExportedFunctionSymbols)
+  Export(name=workerDeclarations.validateProgram)
+
+  Let(name=workerDeclarations.collectExportedFunctionSymbols) {
+    Fn(params=program,modulePath) {
+      Block {
+        Return {
+          Call(target=workerDeclarations.collectExportsAt) {
+            Var(name=program) Var(name=modulePath) Lit(value=0)
+            MakeBlock { Lit(value="worker-export-symbols") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.collectExportsAt) {
+    Fn(params=program,modulePath,index,symbols) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=symbols) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Export") }
+              Block {
+                Let(name=name) {
+                  Call(target=workerDeclarations.attr) {
+                    Var(name=child) Lit(value="name") Lit(value=0)
+                  }
+                }
+                Return {
+                  Call(target=workerDeclarations.collectExportsAt) {
+                    Var(name=program) Var(name=modulePath)
+                    Add { Var(name=index) Lit(value=1) }
+                    AppendChild {
+                      Var(name=symbols)
+                      MakeLitString {
+                        Lit(value="symbol")
+                        StrConcat {
+                          Var(name=modulePath)
+                          StrConcat { Lit(value="::") Var(name=name) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=workerDeclarations.collectExportsAt) {
+                    Var(name=program) Var(name=modulePath)
+                    Add { Var(name=index) Lit(value=1) } Var(name=symbols)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.validateProgram) {
+    Fn(params=program,modulePath,functionRecords,exportSymbols) {
+      Block {
+        Return {
+          Call(target=workerDeclarations.validateAt) {
+            Var(name=program) Var(name=modulePath) Var(name=functionRecords)
+            Var(name=exportSymbols) Lit(value=0)
+            MakeBlock { Lit(value="worker-records") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.validateAt) {
+    Fn(params=program,modulePath,functionRecords,exportSymbols,index,records) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Worker") }
+              Block {
+                Let(name=record) {
+                  Call(target=workerDeclarations.validateOne) {
+                    Var(name=child) Var(name=modulePath)
+                    Var(name=functionRecords) Var(name=exportSymbols)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=record) } Lit(value="Err") }
+                  Block { Return { Var(name=record) } }
+                  Block {
+                    Return {
+                      Call(target=workerDeclarations.validateAt) {
+                        Var(name=program) Var(name=modulePath)
+                        Var(name=functionRecords) Var(name=exportSymbols)
+                        Add { Var(name=index) Lit(value=1) }
+                        AppendChild { Var(name=records) Var(name=record) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=workerDeclarations.validateAt) {
+                    Var(name=program) Var(name=modulePath)
+                    Var(name=functionRecords) Var(name=exportSymbols)
+                    Add { Var(name=index) Lit(value=1) } Var(name=records)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.validateOne) {
+    Fn(params=worker,modulePath,functionRecords,exportSymbols) {
+      Block {
+        Let(name=name) {
+          Call(target=workerDeclarations.attr) {
+            Var(name=worker) Lit(value="name") Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=name) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER001")
+                Lit(value="Worker declaration requires name.") NodeId { Var(name=worker) }
+              }
+            }
+          }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { ChildCount { Var(name=worker) } Lit(value=1) }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER002")
+                Lit(value="Worker declaration requires exactly one Function child.")
+                NodeId { Var(name=worker) }
+              }
+            }
+          }
+        }
+        Let(name=function) { ChildAt { Var(name=worker) Lit(value=0) } }
+        If {
+          Eq { NodeKind { Var(name=function) } Lit(value="Function") }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER003")
+                Lit(value="Worker child must be Function.") NodeId { Var(name=function) }
+              }
+            }
+          }
+        }
+        Let(name=target) {
+          Call(target=workerDeclarations.attr) {
+            Var(name=function) Lit(value="target") Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=target) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER004")
+                Lit(value="Worker Function requires target.") NodeId { Var(name=function) }
+              }
+            }
+          }
+          Block { Lit(value=0) }
+        }
+        Let(name=targetRecord) {
+          Call(target=workerDeclarations.findFunction) {
+            Var(name=functionRecords) Var(name=modulePath) Var(name=target)
+          }
+        }
+        If {
+          Eq { ChildCount { Var(name=targetRecord) } Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER005")
+                Lit(value="Worker target function does not exist.") Var(name=target)
+              }
+            }
+          }
+          Block { Lit(value=0) }
+        }
+        Let(name=symbol) {
+          AttrValueString { ChildAt { Var(name=targetRecord) Lit(value=2) } Lit(value=0) }
+        }
+        If {
+          Call(target=workerDeclarations.containsSymbol) {
+            Var(name=exportSymbols) Var(name=symbol) Lit(value=0)
+          }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER006")
+                Lit(value="Worker target function must be exported.") Var(name=symbol)
+              }
+            }
+          }
+        }
+        Let(name=params) {
+          AttrValueString { ChildAt { Var(name=targetRecord) Lit(value=3) } Lit(value=0) }
+        }
+        If {
+          Call(target=workerDeclarations.hasOneParameter) { Var(name=params) }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="worker") Lit(value="WORKER007")
+                Lit(value="Worker target must have exactly one bytes-transport parameter.")
+                Var(name=symbol)
+              }
+            }
+          }
+        }
+        Let(name=capabilities) {
+          Call(target=workerDeclarations.collectSyscalls) {
+            ChildAt { Var(name=targetRecord) Lit(value=4) } Lit(value=0)
+            MakeBlock { Lit(value="required-syscalls") }
+          }
+        }
+        Let(name=base) { MakeBlock { Lit(value="worker-record") } }
+        Let(name=withName) {
+          AppendChild { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } }
+        }
+        Let(name=withModule) {
+          AppendChild {
+            Var(name=withName) MakeLitString { Lit(value="modulePath") Var(name=modulePath) }
+          }
+        }
+        Let(name=withTarget) {
+          AppendChild {
+            Var(name=withModule) MakeLitString { Lit(value="target") Var(name=target) }
+          }
+        }
+        Let(name=withSymbol) {
+          AppendChild {
+            Var(name=withTarget) MakeLitString { Lit(value="symbol") Var(name=symbol) }
+          }
+        }
+        Return { AppendChild { Var(name=withSymbol) Var(name=capabilities) } }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.containsSymbol) {
+    Fn(params=symbols,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=symbols) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString { ChildAt { Var(name=symbols) Var(name=index) } Lit(value=0) }
+                Var(name=symbol)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=workerDeclarations.containsSymbol) {
+                    Var(name=symbols) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.hasOneParameter) {
+    Fn(params=params) {
+      Block {
+        If {
+          Eq { Var(name=params) Lit(value="") }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Return {
+              Eq { StringFind { Var(name=params) Lit(value=",") Lit(value=0) } Lit(value=-1) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.collectSyscalls) {
+    Fn(params=node,index,targets) {
+      Block {
+        Let(name=withSelf) {
+          If {
+            Eq { NodeKind { Var(name=node) } Lit(value="Call") }
+            Block {
+              Let(name=target) {
+                Call(target=workerDeclarations.attr) {
+                  Var(name=node) Lit(value="target") Lit(value=0)
+                }
+              }
+              If {
+                Eq { StringFind { Var(name=target) Lit(value="sys.") Lit(value=0) } Lit(value=0) }
+                Block {
+                  If {
+                    Call(target=workerDeclarations.containsTarget) {
+                      Var(name=targets) Var(name=target) Lit(value=0)
+                    }
+                    Block { Var(name=targets) }
+                    Block {
+                      AppendChild {
+                        Var(name=targets) MakeLitString { Lit(value="target") Var(name=target) }
+                      }
+                    }
+                  }
+                }
+                Block { Var(name=targets) }
+              }
+            }
+            Block { Var(name=targets) }
+          }
+        }
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Var(name=withSelf) } }
+          Block {
+            Return {
+              Call(target=workerDeclarations.collectSyscalls) {
+                Var(name=node) Add { Var(name=index) Lit(value=1) }
+                Call(target=workerDeclarations.collectSyscalls) {
+                  ChildAt { Var(name=node) Var(name=index) } Lit(value=0) Var(name=withSelf)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.containsTarget) {
+    Fn(params=targets,target,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=targets) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString { ChildAt { Var(name=targets) Var(name=index) } Lit(value=0) }
+                Var(name=target)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=workerDeclarations.containsTarget) {
+                    Var(name=targets) Var(name=target) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=workerDeclarations.attr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=workerDeclarations.attr) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

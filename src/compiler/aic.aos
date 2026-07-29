@@ -1,34 +1,48 @@
-Program#aic_p1 {
-  Let#aic_l1(name=main) {
-    Fn#aic_f1(params=args) {
-      Block#aic_b1 {
-        Let#aic_l2(name=cmd) { Call#aic_c1(target=readCmd) { Var#aic_v1(name=args) } }
-        If#aic_if1 {
-          Eq#aic_e1 { Var#aic_v2(name=cmd) Lit#aic_i1(value="fmt") }
-          Block#aic_b2 { Return#aic_r1 { Call#aic_c2(target=runFmt) { Var#aic_v2f(name=args) } } }
-          Block#aic_b3 {
-            If#aic_if2 {
-              Eq#aic_e2 { Var#aic_v3(name=cmd) Lit#aic_i3(value="check") }
-              Block#aic_b4 { Return#aic_r2 { Call#aic_c3(target=runCheck) { Var#aic_v3200(name=args) } } }
-              Block#aic_b5 {
-                If#aic_if3 {
-                  Eq#aic_e3 { Var#aic_v4(name=cmd) Lit#aic_i5(value="run") }
-                  Block#aic_b6 { Return#aic_r3 { Call#aic_c4(target=runRun) { Lit#aic_i6(value=0) } } }
-                  Block#aic_b7 {
-                    If#aic_if4 {
-                      Eq#aic_e4 { Var#aic_v5(name=cmd) Lit#aic_i7(value="publish") }
-                      Block#aic_b8 { Return#aic_r4 { Call#aic_c5(target=runPublish) { Var#aic_v6(name=args) } } }
-                      Block#aic_b9 {
-                        If#aic_if5 {
-                          Eq#aic_e5 { Var#aic_v7(name=cmd) Lit#aic_i8(value="test") }
-                          Block#aic_b1t0 { Return#aic_r5 { Call#aic_c6(target=runTest) { Var#aic_v8(name=args) } } }
-                          Block#aic_b1t1 {
-                            If#aic_if6 {
-                              Eq#aic_e6 { Var#aic_v9(name=cmd) Lit#aic_i1t1(value="new") }
-                              Block#aic_b1t2 { Return#aic_r7 { Call#aic_c8(target=runNew) { Var#aic_v1t2(name=args) } } }
-                              Block#aic_b1t3 {
-                                Call#aic_c9(target=io.write) { Lit#aic_i9(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
-                                Return#aic_r8 { Lit#aic_i1t0(value=1) }
+Program {
+  Import(path="parser.aos")
+  Import(path="format.aos")
+  Import(path="validate.aos")
+  Import(path="resolve.aos")
+  Import(path="project.aos")
+  Import(path="template.aos")
+  Import(path="bundle.aos")
+  Import(path="linker.aos")
+  Import(path="bootstrap_io.aos")
+  Import(path="value.aos")
+  Import(path="eval.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=main)
+
+  Let(name=main) {
+    Fn(params=args) {
+      Block {
+        Let(name=cmd) { Call(target=readCmd) { Var(name=args) } }
+        If {
+          Eq { Var(name=cmd) Lit(value="fmt") }
+          Block { Return { Call(target=runFmt) { Var(name=args) } } }
+          Block {
+            If {
+              Eq { Var(name=cmd) Lit(value="check") }
+              Block { Return { Call(target=runCheck) { Var(name=args) } } }
+              Block {
+                If {
+                  Eq { Var(name=cmd) Lit(value="run") }
+                  Block { Return { Call(target=runRun) { Lit(value=0) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=cmd) Lit(value="publish") }
+                      Block { Return { Call(target=runPublish) { Var(name=args) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=cmd) Lit(value="test") }
+                          Block { Return { Call(target=runTest) { Var(name=args) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=cmd) Lit(value="init") }
+                              Block { Return { Call(target=runNew) { Var(name=args) } } }
+                              Block {
+                                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
+                                Return { Lit(value=1) }
                               }
                             }
                           }
@@ -45,17 +59,17 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l10(name=readCmd) {
-    Fn#aic_f10(params=args) {
-      Block#aic_b10 {
-        If#aic_if10 {
-          Eq#aic_e10 { ChildCount#aic_cc10 { Var#aic_v10(name=args) } Lit#aic_i10(value=0) }
-          Block#aic_b11 { Return#aic_r10 { Lit#aic_i11(value="") } }
-          Block#aic_b12 {
-            Return#aic_r11 {
-              AttrValueString#aic_avs10 {
-                ChildAt#aic_ca10 { Var#aic_v11(name=args) Lit#aic_i12(value=0) }
-                Lit#aic_i13(value=0)
+  Let(name=readCmd) {
+    Fn(params=args) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=args) } Lit(value=0) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Lit(value=0) }
+                Lit(value=0)
               }
             }
           }
@@ -64,17 +78,17 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l11(name=readArg) {
-    Fn#aic_f11(params=args,index) {
-      Block#aic_b13 {
-        If#aic_if11 {
-          Eq#aic_e11 { Var#aic_v12(name=index) ChildCount#aic_cc11 { Var#aic_v13(name=args) } }
-          Block#aic_b14 { Return#aic_r12 { Lit#aic_i14(value="") } }
-          Block#aic_b15 {
-            Return#aic_r13 {
-              AttrValueString#aic_avs11 {
-                ChildAt#aic_ca11 { Var#aic_v14(name=args) Var#aic_v15(name=index) }
-                Lit#aic_i15(value=0)
+  Let(name=readArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
               }
             }
           }
@@ -83,1026 +97,99 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l11b(name=isProjectManifest) {
-    Fn#aic_f11b(params=parsed) {
-      Block#aic_b11b {
-        If#aic_if11b {
-          Eq#aic_e11b { NodeKind#aic_nk11b { Var#aic_v11b(name=parsed) } Lit#aic_i11b(value="Program") }
-          Block#aic_b11c {
-            If#aic_if11c {
-              Eq#aic_e11c { ChildCount#aic_cc11b { Var#aic_v11c(name=parsed) } Lit#aic_i11c(value=1) }
-              Block#aic_b11d {
-                Return#aic_r11b {
-                  Eq#aic_e11d {
-                    NodeKind#aic_nk11c { ChildAt#aic_ca11b { Var#aic_v11d(name=parsed) Lit#aic_i11d(value=0) } }
-                    Lit#aic_i11e(value="Project")
-                  }
-                }
+  Let(name=runTest) {
+    Fn(params=args) {
+      Block {
+        Let(name=dir) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=dir) Lit(value="") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC002 message=\"Missing test directory.\" nodeId=argv)") }
+            Return { Lit(value=1) }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AIC003 message=\"Self-hosted test command is not implemented yet.\" nodeId=test)") }
+            Return { Lit(value=1) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runNew) {
+    Fn(params=args) {
+      Block {
+        Let(name=name) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=name) Lit(value="") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN001 message=\"Missing project name.\" nodeId=argv)") }
+            Return { Lit(value=1) }
+          }
+          Block {
+            If {
+              Call(target=bootstrapIo.pathExists) { Var(name=name) }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
+                Return { Lit(value=1) }
               }
-              Block#aic_b11e { Return#aic_r11c { Lit#aic_i11f(value=false) } }
-            }
-          }
-          Block#aic_b11f { Return#aic_r11d { Lit#aic_i11g(value=false) } }
-        }
-      }
-    }
-  }
-
-  Let#aic_l12(name=runTest) {
-    Fn#aic_f12(params=args) {
-      Block#aic_b16 {
-        Let#aic_l13(name=dir) { Call#aic_c12(target=readArg) { Var#aic_v16(name=args) Lit#aic_i16(value=1) } }
-        If#aic_if12 {
-          Eq#aic_e12 { Var#aic_v17(name=dir) Lit#aic_i17(value="") }
-          Block#aic_b17 {
-            Call#aic_c13(target=io.write) { Lit#aic_i18(value="Err#err0(code=AIC002 message=\"Missing test directory.\" nodeId=argv)") }
-            Return#aic_r14 { Lit#aic_i19(value=1) }
-          }
-          Block#aic_b18 { Return#aic_r15 { Call#aic_c14(target=compiler.test) { Var#aic_v18(name=dir) } } }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln1(name=runNew) {
-    Fn#aic_fn1(params=args) {
-      Block#aic_bn1 {
-        Let#aic_ln2(name=name) { Call#aic_cn1(target=readArg) { Var#aic_vn1(name=args) Lit#aic_in1(value=1) } }
-        If#aic_ifn1 {
-          Eq#aic_en1 { Var#aic_vn2(name=name) Lit#aic_in2(value="") }
-          Block#aic_bn2 {
-            Call#aic_cn2(target=io.write) { Lit#aic_in3(value="Err#err0(code=AICN001 message=\"Missing project name.\" nodeId=argv)") }
-            Return#aic_rn1 { Lit#aic_in4(value=1) }
-          }
-          Block#aic_bn3 {
-            If#aic_ifn2 {
-              Call#aic_cn3(target=runIoPathExists) { Var#aic_vn3(name=name) }
-              Block#aic_bn4 {
-                Call#aic_cn4(target=io.write) { Lit#aic_in5(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
-                Return#aic_rn2 { Lit#aic_in6(value=1) }
-              }
-              Block#aic_bn5 {
-                Let#aic_ln2t(name=template) { Call#aic_cn1t(target=readArg) { Var#aic_vn1t(name=args) Lit#aic_in1t(value=2) } }
-                Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=resolveTemplateName) { Var#aic_vn1t2(name=template) } }
-                If#aic_ifn3 {
-                  Call#aic_cn4t(target=isSupportedTemplate) { Var#aic_vn4t(name=resolvedTemplate) }
-                  Block#aic_bn5a {
-                    Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
-                    Let#aic_ln3a(name=assetsDir) { StrConcat#aic_sn1a { Var#aic_vn4a(name=name) Lit#aic_in7a(value="/Assets") } }
-                    Let#aic_ln3b(name=assetsImagesDir) { StrConcat#aic_sn1b { Var#aic_vn4b(name=name) Lit#aic_in7b(value="/Assets/images") } }
-                    Let#aic_ln3c(name=assetsFontsDir) { StrConcat#aic_sn1c { Var#aic_vn4c(name=name) Lit#aic_in7c(value="/Assets/fonts") } }
-                    Let#aic_ln3d(name=assetsLocaleDir) { StrConcat#aic_sn1d { Var#aic_vn4d(name=name) Lit#aic_in7d(value="/Assets/locale") } }
-                    Let#aic_ln3e(name=assetsLocaleEnPath) { StrConcat#aic_sn1e { Var#aic_vn4e(name=name) Lit#aic_in7e(value="/Assets/locale/en.toml") } }
-                    Let#aic_ln4(name=projectPath) { StrConcat#aic_sn2 { Var#aic_vn5(name=name) Lit#aic_in8(value="/project.aiproj") } }
-                    Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
-                    Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
-                    Let#aic_ln6a(name=gitignorePath) { StrConcat#aic_sn4a { Var#aic_vn7a(name=name) Lit#aic_in10a(value="/.gitignore") } }
-                    Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
-                    Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
-                    Call#aic_cn6a(target=runIoMakeDir) { Var#aic_vn9a(name=assetsDir) }
-                    Call#aic_cn6b(target=runIoMakeDir) { Var#aic_vn9b(name=assetsImagesDir) }
-                    Call#aic_cn6c(target=runIoMakeDir) { Var#aic_vn9c(name=assetsFontsDir) }
-                    Call#aic_cn6d(target=runIoMakeDir) { Var#aic_vn9d(name=assetsLocaleDir) }
-                    Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
-                    Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildTemplateApp) { Var#aic_vn11t(name=resolvedTemplate) } }
-                    Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Var#aic_vn11t2(name=resolvedTemplate) } }
-                    Call#aic_cn11a(target=runIoWriteFile) { Var#aic_vn13a(name=gitignorePath) Call#aic_cn12a(target=buildGitIgnore) { Lit#aic_in10b(value=0) } }
-                    Call#aic_cn11b(target=runIoWriteFile) { Var#aic_vn13b(name=assetsLocaleEnPath) Call#aic_cn12b(target=buildLocaleSeedData) { Lit#aic_in10c(value=0) } }
-                    Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
-                    Return#aic_rn3 { Lit#aic_in14(value=0) }
-                  }
-                  Block#aic_bn5b {
-                    Call#aic_cn13t(target=io.write) { Lit#aic_int13(value="Err#err0(code=AICN003 message=\"Unknown template.\" nodeId=template)") }
-                    Return#aic_rn3t { Lit#aic_int14(value=1) }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln20(name=runIoPathExists) {
-    Fn#aic_fn20(params=path) {
-      Block#aic_bn20 {
-        Let#aic_ln21(name=programText) {
-          StrConcat#aic_sn20 {
-            Lit#aic_in20(value="Program#n1 { Call#n2(target=io.pathExists) { Lit#n3(value=\"")
-            StrConcat#aic_sn21 {
-              StrEscape#aic_se20 { Var#aic_vn20(name=path) }
-              Lit#aic_in21(value="\") } }")
-            }
-          }
-        }
-        Let#aic_ln22(name=parsed) { Call#aic_cn20(target=compiler.parse) { Var#aic_vn21(name=programText) } }
-        If#aic_ifn20 {
-          Eq#aic_en20 { NodeKind#aic_nkn20 { Var#aic_vn22(name=parsed) } Lit#aic_in22(value="Err") }
-          Block#aic_bn21 { Return#aic_rn20 { Lit#aic_in23(value=false) } }
-          Block#aic_bn22 {
-            Let#aic_ln23(name=result) { Call#aic_cn21(target=compiler.run) { Var#aic_vn23(name=parsed) } }
-            If#aic_ifn21 {
-              Eq#aic_en21 { NodeKind#aic_nkn21 { Var#aic_vn24(name=result) } Lit#aic_in24(value="Lit") }
-              Block#aic_bn23 {
-                Return#aic_rn21 { AttrValueBool#aic_avbn20 { Var#aic_vn25(name=result) Lit#aic_in25(value=0) } }
-              }
-              Block#aic_bn24 { Return#aic_rn22 { Lit#aic_in26(value=false) } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln30(name=runIoMakeDir) {
-    Fn#aic_fn30(params=path) {
-      Block#aic_bn30 {
-        Let#aic_ln31(name=programText) {
-          StrConcat#aic_sn30 {
-            Lit#aic_in30(value="Program#n4 { Call#n5(target=io.makeDir) { Lit#n6(value=\"")
-            StrConcat#aic_sn31 {
-              StrEscape#aic_se30 { Var#aic_vn30(name=path) }
-              Lit#aic_in31(value="\") } }")
-            }
-          }
-        }
-        Let#aic_ln32(name=parsed) { Call#aic_cn30(target=compiler.parse) { Var#aic_vn31(name=programText) } }
-        If#aic_ifn30 {
-          Eq#aic_en30 { NodeKind#aic_nkn30 { Var#aic_vn32(name=parsed) } Lit#aic_in32(value="Err") }
-          Block#aic_bn31 { Return#aic_rn30 { Lit#aic_in33(value=1) } }
-          Block#aic_bn32 {
-            Call#aic_cn31(target=compiler.run) { Var#aic_vn33(name=parsed) }
-            Return#aic_rn31 { Lit#aic_in34(value=0) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln40(name=runIoWriteFile) {
-    Fn#aic_fn40(params=path,text) {
-      Block#aic_bn40 {
-        Let#aic_ln41(name=programText) {
-          StrConcat#aic_sn40 {
-            Lit#aic_in40(value="Program#n7 { Call#n8(target=io.writeFile) { Lit#n9(value=\"")
-            StrConcat#aic_sn41 {
-              StrEscape#aic_se40 { Var#aic_vn40(name=path) }
-              StrConcat#aic_sn42 {
-                Lit#aic_in41(value="\") Lit#n10(value=\"")
-                StrConcat#aic_sn43 {
-                  StrEscape#aic_se41 { Var#aic_vn41(name=text) }
-                  Lit#aic_in42(value="\") } }")
-                }
-              }
-            }
-          }
-        }
-        Let#aic_ln42(name=parsed) { Call#aic_cn40(target=compiler.parse) { Var#aic_vn42(name=programText) } }
-        If#aic_ifn40 {
-          Eq#aic_en40 { NodeKind#aic_nkn40 { Var#aic_vn43(name=parsed) } Lit#aic_in43(value="Err") }
-          Block#aic_bn41 { Return#aic_rn40 { Lit#aic_in44(value=1) } }
-          Block#aic_bn42 {
-            Call#aic_cn41(target=compiler.run) { Var#aic_vn44(name=parsed) }
-            Return#aic_rn41 { Lit#aic_in45(value=0) }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln50(name=buildProjectManifest) {
-    Fn#aic_fn50(params=name) {
-      Block#aic_bn50 {
-        Return#aic_rn50 {
-          StrConcat#aic_sn50 {
-            Lit#aic_in50(value="Program#p1 {\nProject#proj1(\nname=\"")
-            StrConcat#aic_sn51 {
-              StrEscape#aic_se50 { Var#aic_vn50(name=name) }
-              Lit#aic_in51(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln55(name=buildGitIgnore) {
-    Fn#aic_fn55(params=_) {
-      Block#aic_bn55 {
-        Return#aic_rn55 { Lit#aic_in55(value=".toolchain/\n") }
-      }
-    }
-  }
-
-  Let#aic_ln56(name=buildLocaleSeedData) {
-    Fn#aic_fn56(params=_) {
-      Block#aic_bn56 {
-        Return#aic_rn56 { Lit#aic_in56(value="app.title = \"AiLang App\"\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60(name=buildAppTemplate) {
-    Fn#aic_fn60(params=_) {
-      Block#aic_bn60 {
-        Return#aic_rn60 { Lit#aic_in60(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60h(name=buildHttpTemplate) {
-    Fn#aic_fn60h(params=_) {
-      Block#aic_bn60h {
-        Return#aic_rn60h { Lit#aic_in60h(value="Program#p1 {\nExport#e1(name=\"init\")\nExport#e2(name=\"update\")\nLet#l1(name=\"init\") {\nFn#f1(params=\"args\") {\nBlock#b1 { Return#r1 { Lit#s1(value=\"state\") } }\n}\n}\nLet#l2(name=\"update\") {\nFn#f2(params=\"state,event\") {\nBlock#b2 {\nReturn#r2 {\nBlock#b3 {\nVar#v1(name=state)\nCommand#c1(type=\"Emit\" payload=\"ok\")\n}\n}\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60g(name=buildGuiTemplate) {
-    Fn#aic_fn60g(params=_) {
-      Block#aic_bn60g {
-        Return#aic_rn60g { Lit#aic_in60g(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"GUI template placeholder\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60l(name=buildLibTemplate) {
-    Fn#aic_fn60l(params=_) {
-      Block#aic_bn60l {
-        Return#aic_rn60l { Lit#aic_in60l(value="Program#p1 {\nExport#e1(name=\"hello\")\nExport#e2(name=\"start\")\nLet#l1(name=\"hello\") {\nFn#f1(params=\"name\") {\nBlock#b1 {\nReturn#r1 {\nStrConcat#s1 {\nLit#s2(value=\"hello \")\nVar#v1(name=name)\n}\n}\n}\n}\n}\nLet#l2(name=\"start\") {\nFn#f2(params=\"args\") {\nBlock#b2 {\nCall#print1(target=io.print) {\nCall#c1(target=hello) { Lit#s3(value=\"library\") }\n}\nReturn#r2 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
-      }
-    }
-  }
-
-  Let#aic_ln60x(name=buildTemplateApp) {
-    Fn#aic_fn60x(params=template) {
-      Block#aic_bn60x {
-        If#aic_if60x1 {
-          Eq#aic_e60x1 { Var#aic_v60x1(name=template) Lit#aic_i60x1(value="cli") }
-          Block#aic_b60x1 { Return#aic_r60x1 { Call#aic_c60x1(target=buildAppTemplate) { Lit#aic_i60x2(value=0) } } }
-          Block#aic_b60x2 {
-            If#aic_if60x2 {
-              Eq#aic_e60x2 { Var#aic_v60x2(name=template) Lit#aic_i60x3(value="http") }
-              Block#aic_b60x3 { Return#aic_r60x2 { Call#aic_c60x2(target=buildHttpTemplate) { Lit#aic_i60x4(value=0) } } }
-              Block#aic_b60x4 {
-                If#aic_if60x3 {
-                  Eq#aic_e60x3 { Var#aic_v60x3(name=template) Lit#aic_i60x5(value="gui") }
-                  Block#aic_b60x5 { Return#aic_r60x3 { Call#aic_c60x3(target=buildGuiTemplate) { Lit#aic_i60x6(value=0) } } }
-                  Block#aic_b60x6 { Return#aic_r60x4 { Call#aic_c60x4(target=buildLibTemplate) { Lit#aic_i60x7(value=0) } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln60y(name=resolveTemplateName) {
-    Fn#aic_fn60y(params=template) {
-      Block#aic_bn60y {
-        If#aic_if60y1 {
-          Eq#aic_e60y1 { Var#aic_v60y1(name=template) Lit#aic_i60y1(value="") }
-          Block#aic_b60y1 { Return#aic_r60y1 { Lit#aic_i60y2(value="cli") } }
-          Block#aic_b60y2 { Return#aic_r60y2 { Var#aic_v60y2(name=template) } }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln60z(name=isSupportedTemplate) {
-    Fn#aic_fn60z(params=template) {
-      Block#aic_bn60z {
-        If#aic_if60z1 {
-          Eq#aic_e60z1 { Var#aic_v60z1(name=template) Lit#aic_i60z1(value="cli") }
-          Block#aic_b60z1 { Return#aic_r60z1 { Lit#aic_i60z2(value=true) } }
-          Block#aic_b60z2 {
-            If#aic_if60z2 {
-              Eq#aic_e60z2 { Var#aic_v60z2(name=template) Lit#aic_i60z3(value="http") }
-              Block#aic_b60z3 { Return#aic_r60z2 { Lit#aic_i60z4(value=true) } }
-              Block#aic_b60z4 {
-                If#aic_if60z3 {
-                  Eq#aic_e60z3 { Var#aic_v60z3(name=template) Lit#aic_i60z5(value="gui") }
-                  Block#aic_b60z5 { Return#aic_r60z3 { Lit#aic_i60z6(value=true) } }
-                  Block#aic_b60z6 {
-                    If#aic_if60z4 {
-                      Eq#aic_e60z4 { Var#aic_v60z4(name=template) Lit#aic_i60z7(value="lib") }
-                      Block#aic_b60z7 { Return#aic_r60z4 { Lit#aic_i60z8(value=true) } }
-                      Block#aic_b60z8 { Return#aic_r60z5 { Lit#aic_i60z9(value=false) } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_ln70(name=buildAgentsDoc) {
-    Fn#aic_fn70(params=_) {
-      Block#aic_bn70 {
-        Return#aic_rn70 { Lit#aic_in70(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tProject layout: src/app.aos for code, Assets/locale/*.toml for data.\n\t•\tNo JSON.\n") }
-      }
-    }
-  }
-
-  Let#aic_lp1(name=runPublish) {
-    Fn#aic_fp1(params=args) {
-      Block#aic_bp1 {
-        Let#aic_lp2(name=dir) { Call#aic_cp1(target=readArg) { Var#aic_vp1(name=args) Lit#aic_ip1(value=1) } }
-        If#aic_ifp1 {
-          Eq#aic_ep1 { Var#aic_vp2(name=dir) Lit#aic_ip2(value="") }
-          Block#aic_bp2 {
-            Call#aic_cp2(target=io.write) { Lit#aic_ip3(value="Err#err0(code=AICP001 message=\"Missing publish directory.\" nodeId=argv)") }
-            Return#aic_rp1 { Lit#aic_ip4(value=1) }
-          }
-          Block#aic_bp3 {
-            Let#aic_lp3(name=manifestPath) { StrConcat#aic_sp1 { Var#aic_vp3(name=dir) Lit#aic_ip5(value="/project.aiproj") } }
-            If#aic_ifp2 {
-              Call#aic_cp3(target=io.fileExists) { Var#aic_vp4(name=manifestPath) }
-              Block#aic_bp4 {
-                Let#aic_lp4(name=parsed) { Call#aic_cp4(target=compiler.parse) { Call#aic_cp5(target=io.readFile) { Var#aic_vp5(name=manifestPath) } } }
-                If#aic_ifp3 {
-                  Eq#aic_ep2 { NodeKind#aic_nkp1 { Var#aic_vp6(name=parsed) } Lit#aic_ip6(value="Err") }
-                  Block#aic_bp5 {
-                    Call#aic_cp6(target=io.write) { Call#aic_cp7(target=compiler.format) { Var#aic_vp7(name=parsed) } }
-                    Return#aic_rp2 { Lit#aic_ip7(value=1) }
-                  }
-                  Block#aic_bp6 {
-                    Let#aic_lp5(name=diags) { Call#aic_cp8(target=compiler.validateHost) { Var#aic_vp8(name=parsed) } }
-                    If#aic_ifp4 {
-                      Eq#aic_ep3 { ChildCount#aic_ccp1 { Var#aic_vp9(name=diags) } Lit#aic_ip8(value=0) }
-                      Block#aic_bp7 {
-                        Let#aic_lp6(name=projectNode) { ChildAt#aic_cap2 { Var#aic_vp11(name=parsed) Lit#aic_ip15(value=0) } }
-                        Let#aic_lp7(name=projectName) { Call#aic_cp13(target=getAttr) { Var#aic_vp12(name=projectNode) Lit#aic_ip16(value="name") Lit#aic_ip17(value=0) } }
-                        Let#aic_lp8(name=entryFile) { Call#aic_cp14(target=getAttr) { Var#aic_vp13(name=projectNode) Lit#aic_ip18(value="entryFile") Lit#aic_ip19(value=0) } }
-                        Let#aic_lp9(name=entryExport) { Call#aic_cp15(target=getAttr) { Var#aic_vp14(name=projectNode) Lit#aic_ip20(value="entryExport") Lit#aic_ip21(value=0) } }
-                        Let#aic_lp10(name=entryPath) { StrConcat#aic_sp2 { Var#aic_vp15(name=dir) StrConcat#aic_sp3 { Lit#aic_ip22(value="/") Var#aic_vp16(name=entryFile) } } }
-                        Let#aic_lp11(name=entryParsed) { Call#aic_cp19(target=compiler.parse) { Call#aic_cp20(target=io.readFile) { Var#aic_vp20(name=entryPath) } } }
-                        If#aic_ifp5 {
-                          Eq#aic_ep4 { NodeKind#aic_nkp2 { Var#aic_vp21(name=entryParsed) } Lit#aic_ip25(value="Err") }
-                          Block#aic_bp10 {
-                            Call#aic_cp21(target=io.write) { Call#aic_cp22(target=compiler.format) { Var#aic_vp22(name=entryParsed) } }
-                            Return#aic_rp3 { Lit#aic_ip24(value=1) }
+              Block {
+                Let(name=template) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
+                Let(name=resolvedTemplate) { Call(target=template.resolveName) { Var(name=template) } }
+                If {
+                  Call(target=template.isSupported) { Var(name=resolvedTemplate) }
+                  Block {
+                    Let(name=srcDir) { StrConcat { Var(name=name) Lit(value="/src") } }
+                    Let(name=assetsDir) { StrConcat { Var(name=name) Lit(value="/Assets") } }
+                    Let(name=assetsImagesDir) { StrConcat { Var(name=name) Lit(value="/Assets/images") } }
+                    Let(name=assetsFontsDir) { StrConcat { Var(name=name) Lit(value="/Assets/fonts") } }
+                    Let(name=assetsLocaleDir) { StrConcat { Var(name=name) Lit(value="/Assets/locale") } }
+                    Let(name=assetsLocaleEnPath) { StrConcat { Var(name=name) Lit(value="/Assets/locale/en.toml") } }
+                    Let(name=projectPath) { StrConcat { Var(name=name) Lit(value="/project.aiproj") } }
+                    Let(name=appPath) { StrConcat { Var(name=name) Lit(value="/src/app.aos") } }
+                    Let(name=agentsPath) { StrConcat { Var(name=name) Lit(value="/AGENTS.md") } }
+                    Let(name=gitignorePath) { StrConcat { Var(name=name) Lit(value="/.gitignore") } }
+                    Call(target=bootstrapIo.makeDir) { Var(name=name) }
+                    Call(target=bootstrapIo.makeDir) { Var(name=srcDir) }
+                    Call(target=bootstrapIo.makeDir) { Var(name=assetsDir) }
+                    Call(target=bootstrapIo.makeDir) { Var(name=assetsImagesDir) }
+                    Call(target=bootstrapIo.makeDir) { Var(name=assetsFontsDir) }
+                    Call(target=bootstrapIo.makeDir) { Var(name=assetsLocaleDir) }
+                    Call(target=bootstrapIo.writeFile) { Var(name=projectPath) Call(target=project.buildDefaultManifest) { Var(name=name) } }
+                    If {
+                      Eq { Var(name=resolvedTemplate) Lit(value="cli") }
+                      Block {
+                        Call(target=bootstrapIo.writeFile) { Var(name=appPath) Call(target=template.buildCliApp) { Lit(value=0) } }
+                      }
+                      Block {
+                        If {
+                          Eq { Var(name=resolvedTemplate) Lit(value="http") }
+                          Block {
+                            Call(target=bootstrapIo.writeFile) { Var(name=appPath) Call(target=template.buildHttpApp) { Lit(value=0) } }
                           }
-                          Block#aic_bp11 {
-                            Let#aic_lp12(name=firstImport) { Call#aic_cp23(target=findFirstImportPath) { Var#aic_vp23(name=entryParsed) Lit#aic_ip27(value=0) } }
-                            Let#aic_lp121(name=cycleNodeId) { Call#aic_cp36(target=detectSimpleCycleNodeId) { Var#aic_vp60(name=dir) Var#aic_vp61(name=firstImport) Var#aic_vp62(name=entryFile) } }
-                            If#aic_ifp6 {
-                              Eq#aic_ep5 { Var#aic_vp63(name=cycleNodeId) Lit#aic_ip57(value="") }
-                              Block#aic_bp12 {
-                                Let#aic_lp14(name=bundleText) {
-                                  If#aic_ifp7 {
-                                    Eq#aic_ep6 { Var#aic_vp24(name=firstImport) Lit#aic_ip28(value="") }
-                                    Block#aic_bp14 {
-                                      StrConcat#aic_sp4 {
-                                        Lit#aic_ip29(value="Bundle#b1(entryExport=\"")
-                                        StrConcat#aic_sp5 {
-                                          StrEscape#aic_se1 { Var#aic_vp25(name=entryExport) }
-                                          StrConcat#aic_sp6 {
-                                            Lit#aic_ip30(value="\" entryFile=\"")
-                                            StrConcat#aic_sp7 {
-                                              StrEscape#aic_se2 { Var#aic_vp26(name=entryFile) }
-                                              StrConcat#aic_sp8 {
-                                                Lit#aic_ip31(value="\" name=\"")
-                                                StrConcat#aic_sp9 {
-                                                  StrEscape#aic_se3 { Var#aic_vp27(name=projectName) }
-                                                  StrConcat#aic_sp10 {
-                                                    Lit#aic_ip32(value="\") { Module#m0(path=\"")
-                                                    StrConcat#aic_sp11 {
-                                                      StrEscape#aic_se4 { Var#aic_vp28(name=entryFile) }
-                                                      Lit#aic_ip33(value="\") }")
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    Block#aic_bp15 {
-                                      StrConcat#aic_sp12 {
-                                        Lit#aic_ip34(value="Bundle#b1(entryExport=\"")
-                                        StrConcat#aic_sp13 {
-                                          StrEscape#aic_se5 { Var#aic_vp29(name=entryExport) }
-                                          StrConcat#aic_sp14 {
-                                            Lit#aic_ip35(value="\" entryFile=\"")
-                                            StrConcat#aic_sp15 {
-                                              StrEscape#aic_se6 { Var#aic_vp30(name=entryFile) }
-                                              StrConcat#aic_sp16 {
-                                                Lit#aic_ip36(value="\" name=\"")
-                                                StrConcat#aic_sp17 {
-                                                  StrEscape#aic_se7 { Var#aic_vp31(name=projectName) }
-                                                  StrConcat#aic_sp18 {
-                                                    Lit#aic_ip37(value="\") { Module#m0(path=\"")
-                                                    StrConcat#aic_sp19 {
-                                                      StrEscape#aic_se8 { Var#aic_vp32(name=entryFile) }
-                                                      StrConcat#aic_sp20 {
-                                                        Lit#aic_ip38(value="\") Module#m1(path=\"")
-                                                        StrConcat#aic_sp21 {
-                                                          StrEscape#aic_se9 { Var#aic_vp33(name=firstImport) }
-                                                          Lit#aic_ip39(value="\") }")
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                                Let#aic_lp15(name=publishProgramText) {
-                                  StrConcat#aic_sp24 {
-                                    Lit#aic_ip48(value="Program#pubp1 { Call#pubc1(target=compiler.publish) { ")
-                                    StrConcat#aic_sp25 {
-                                      Var#aic_vp46(name=bundleText)
-                                      StrConcat#aic_sp26 {
-                                        Lit#aic_ip49(value=" Lit#pubv1(value=\"")
-                                        StrConcat#aic_sp27 {
-                                          StrEscape#aic_se11 { Var#aic_vp47(name=projectName) }
-                                          Lit#aic_ip50(value="\") } }")
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                                Let#aic_lp16(name=publishProgram) { Call#aic_cp29(target=compiler.parse) { Var#aic_vp48(name=publishProgramText) } }
-                                If#aic_ifp10 {
-                                  Eq#aic_ep9 { NodeKind#aic_nkp5 { Var#aic_vp49(name=publishProgram) } Lit#aic_ip51(value="Err") }
-                                  Block#aic_bp26 {
-                                    Call#aic_cp30(target=io.write) { Call#aic_cp31(target=compiler.format) { Var#aic_vp50(name=publishProgram) } }
-                                    Return#aic_rp5 { Lit#aic_ip52(value=1) }
-                                  }
-                                  Block#aic_bp27 {
-                                    Let#aic_lp17(name=publishResult) { Call#aic_cp32(target=compiler.run) { Var#aic_vp51(name=publishProgram) } }
-                                    If#aic_ifp11 {
-                                      Eq#aic_ep10 { NodeKind#aic_nkp6 { Var#aic_vp52(name=publishResult) } Lit#aic_ip53(value="Err") }
-                                      Block#aic_bp28 {
-                                        Call#aic_cp33(target=io.write) { Call#aic_cp34(target=compiler.format) { Var#aic_vp53(name=publishResult) } }
-                                        Return#aic_rp6 { Lit#aic_ip54(value=1) }
-                                      }
-                                      Block#aic_bp29 {
-                                        Call#aic_cp35(target=io.write) { Lit#aic_ip55(value="Ok#ok1(type=string value=\"publish-complete\")") }
-                                        Return#aic_rp7 { Lit#aic_ip56(value=0) }
-                                      }
-                                    }
-                                  }
-                                }
+                          Block {
+                            If {
+                              Eq { Var(name=resolvedTemplate) Lit(value="gui") }
+                              Block {
+                                Call(target=bootstrapIo.writeFile) { Var(name=appPath) Call(target=template.buildGuiApp) { Lit(value=0) } }
                               }
-                              Block#aic_bp13 {
-                                Call#aic_cp37(target=io.write) {
-                                  Call#aic_cp38(target=compiler.format) {
-                                    MakeErr#aic_mep1 {
-                                      Lit#aic_ip58(value="runtime_err")
-                                      Lit#aic_ip59(value="RUN023")
-                                      Lit#aic_ip60(value="Circular import detected.")
-                                      Var#aic_vp64(name=cycleNodeId)
-                                    }
-                                  }
-                                }
-                                Return#aic_rp4 { Lit#aic_ip61(value=1) }
-                              }
-                            }
-                          }
-                        }
-                      }
-                      Block#aic_bp8 {
-                        Call#aic_cp10(target=io.write) { Call#aic_cp11(target=compiler.format) { ChildAt#aic_cap1 { Var#aic_vp10(name=diags) Lit#aic_ip11(value=0) } } }
-                        Return#aic_rp8 { Lit#aic_ip12(value=1) }
-                      }
-                    }
-                  }
-                }
-              }
-              Block#aic_bp9 {
-                Call#aic_cp12(target=io.write) { Lit#aic_ip13(value="Err#err0(code=AICP002 message=\"project.aiproj not found.\" nodeId=project)") }
-                Return#aic_rp9 { Lit#aic_ip14(value=1) }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp20(name=detectSimpleCycleNodeId) {
-    Fn#aic_fp20(params=dir,firstImport,entryFile) {
-      Block#aic_bp300 {
-        If#aic_ifp300 {
-          Eq#aic_ep300 { Var#aic_vp300(name=firstImport) Lit#aic_ip300(value="") }
-          Block#aic_bp301 { Return#aic_rp300 { Lit#aic_ip301(value="") } }
-          Block#aic_bp302 {
-            Let#aic_lp301(name=depPath) { StrConcat#aic_sp300 { Var#aic_vp301(name=dir) StrConcat#aic_sp301 { Lit#aic_ip302(value="/") Var#aic_vp302(name=firstImport) } } }
-            Let#aic_lp302(name=depParsed) { Call#aic_cp300(target=compiler.parse) { Call#aic_cp301(target=io.readFile) { Var#aic_vp303(name=depPath) } } }
-            If#aic_ifp301 {
-              Eq#aic_ep301 { NodeKind#aic_nkp300 { Var#aic_vp304(name=depParsed) } Lit#aic_ip303(value="Err") }
-              Block#aic_bp303 { Return#aic_rp301 { Lit#aic_ip304(value="") } }
-              Block#aic_bp304 { Return#aic_rp302 { Call#aic_cp302(target=findImportNodeIdByPath) { Var#aic_vp305(name=depParsed) Var#aic_vp306(name=entryFile) Lit#aic_ip305(value=0) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp22b(name=findImportNodeIdByPath) {
-    Fn#aic_fp22b(params=program,path,index) {
-      Block#aic_bp305 {
-        If#aic_ifp302 {
-          Eq#aic_ep302 { Var#aic_vp307(name=index) ChildCount#aic_ccp300 { Var#aic_vp308(name=program) } }
-          Block#aic_bp306 { Return#aic_rp303 { Lit#aic_ip306(value="") } }
-          Block#aic_bp307 {
-            Let#aic_lp303(name=child) { ChildAt#aic_cap300 { Var#aic_vp309(name=program) Var#aic_vp310(name=index) } }
-            If#aic_ifp303 {
-              Eq#aic_ep303 { NodeKind#aic_nkp301 { Var#aic_vp311(name=child) } Lit#aic_ip307(value="Import") }
-              Block#aic_bp308 {
-                If#aic_ifp304 {
-                  Eq#aic_ep304 { Call#aic_cp303(target=getAttr) { Var#aic_vp312(name=child) Lit#aic_ip308(value="path") Lit#aic_ip309(value=0) } Var#aic_vp313(name=path) }
-                  Block#aic_bp309 { Return#aic_rp304 { NodeId#aic_nidp300 { Var#aic_vp314(name=child) } } }
-                  Block#aic_bp310 { Return#aic_rp305 { Call#aic_cp304(target=findImportNodeIdByPath) { Var#aic_vp315(name=program) Var#aic_vp316(name=path) Add#aic_ap300 { Var#aic_vp317(name=index) Lit#aic_ip310(value=1) } } } }
-                }
-              }
-              Block#aic_bp311 { Return#aic_rp306 { Call#aic_cp305(target=findImportNodeIdByPath) { Var#aic_vp318(name=program) Var#aic_vp319(name=path) Add#aic_ap301 { Var#aic_vp320(name=index) Lit#aic_ip311(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_lp23(name=findFirstImportPath) {
-    Fn#aic_fp23(params=program,index) {
-      Block#aic_bp21 {
-        If#aic_ifp8 {
-          Eq#aic_ep7 { Var#aic_vp38(name=index) ChildCount#aic_ccp2 { Var#aic_vp39(name=program) } }
-          Block#aic_bp22 { Return#aic_rp21 { Lit#aic_ip43(value="") } }
-          Block#aic_bp23 {
-            Let#aic_lp24(name=child) { ChildAt#aic_cap3 { Var#aic_vp40(name=program) Var#aic_vp41(name=index) } }
-            If#aic_ifp9 {
-              Eq#aic_ep8 { NodeKind#aic_nkp4 { Var#aic_vp42(name=child) } Lit#aic_ip44(value="Import") }
-              Block#aic_bp24 { Return#aic_rp10 { Call#aic_cp27(target=getAttr) { Var#aic_vp43(name=child) Lit#aic_ip45(value="path") Lit#aic_ip46(value=0) } } }
-              Block#aic_bp25 { Return#aic_rp11 { Call#aic_cp28(target=findFirstImportPath) { Var#aic_vp44(name=program) Add#aic_ap1 { Var#aic_vp45(name=index) Lit#aic_ip47(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l20(name=readAndParse) {
-    Fn#aic_f20(params=_) {
-      Block#aic_b20 {
-        Return#aic_r20 {
-          Call#aic_c20(target=compiler.parse) {
-            Call#aic_c21(target=io.readAllStdin)
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l30(name=runFmt) {
-    Fn#aic_f30(params=args) {
-      Block#aic_b30 {
-        Let#aic_l31(name=parsed) { Call#aic_c30(target=readAndParse) { Lit#aic_i30(value=0) } }
-        Let#aic_l31b(name=mode) { Call#aic_c30b(target=readArg) { Var#aic_v30b(name=args) Lit#aic_i30b(value=1) } }
-        If#aic_if30 {
-          Eq#aic_e30 { Var#aic_v30c(name=mode) Lit#aic_i30c(value="--ids") }
-          Block#aic_b30b { Call#aic_c31(target=io.write) { Call#aic_c32(target=compiler.formatIds) { Var#aic_v30(name=parsed) } } }
-          Block#aic_b30c { Call#aic_c31b(target=io.write) { Call#aic_c32b(target=compiler.format) { Var#aic_v30d(name=parsed) } } }
-        }
-        Return#aic_r30
-      }
-    }
-  }
-
-  Let#aic_l40(name=runCheck) {
-    Fn#aic_f40(params=args) {
-      Block#aic_b40 {
-        Let#aic_l41(name=parsed) { Call#aic_c40(target=readAndParse) { Lit#aic_i40(value=0) } }
-        Let#aic_l410(name=mode) { Call#aic_c401(target=readArg) { Var#aic_v401(name=args) Lit#aic_i401(value=1) } }
-        If#aic_if40 {
-          Eq#aic_e40 { NodeKind#aic_nk40 { Var#aic_v40(name=parsed) } Lit#aic_i41(value="Err") }
-          Block#aic_b41 {
-            Call#aic_c41(target=io.write) { Call#aic_c42(target=compiler.format) { Var#aic_v41(name=parsed) } }
-            Return#aic_r40
-          }
-          Block#aic_b42 {
-            Let#aic_l42(name=diags) {
-              If#aic_if401 {
-                If#aic_if402 {
-                  Call#aic_c404(target=isProjectManifest) { Var#aic_v404(name=parsed) }
-                  Block#aic_b404 { Lit#aic_i404(value=true) }
-                  Block#aic_b405 { Eq#aic_e401 { Var#aic_v402(name=mode) Lit#aic_i402(value="host") } }
-                }
-                Block#aic_b402 { Call#aic_c402(target=compiler.validateHost) { Var#aic_v403(name=parsed) } }
-                Block#aic_b403 { Call#aic_c43(target=compiler.validate) { Var#aic_v42(name=parsed) } }
-              }
-            }
-            If#aic_if41 {
-              Eq#aic_e41 { ChildCount#aic_cc41 { Var#aic_v43(name=diags) } Lit#aic_i42(value=0) }
-              Block#aic_b43 {
-                Call#aic_c44(target=io.write) { Lit#aic_i43(value="Ok#ok0(type=void)") }
-                Return#aic_r41
-              }
-              Block#aic_b44 {
-                Call#aic_c45(target=io.write) {
-                  Call#aic_c46(target=compiler.format) {
-                    ChildAt#aic_ca41 { Var#aic_v44(name=diags) Lit#aic_i44(value=0) }
-                  }
-                }
-                Return#aic_r42
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l50(name=runRun) {
-    Fn#aic_f50(params=_) {
-      Block#aic_b50 {
-        Let#aic_l51(name=parsed) { Call#aic_c50(target=readAndParse) { Lit#aic_i50(value=0) } }
-        If#aic_if50 {
-          Eq#aic_e50 { NodeKind#aic_nk50 { Var#aic_v50(name=parsed) } Lit#aic_i51(value="Err") }
-          Block#aic_b51 {
-            Call#aic_c51(target=io.write) { Call#aic_c52(target=compiler.format) { Var#aic_v51(name=parsed) } }
-            Return#aic_r50
-          }
-          Block#aic_b52 {
-            Let#aic_l52(name=diags) { Call#aic_c53(target=compiler.validate) { Var#aic_v52(name=parsed) } }
-            If#aic_if51 {
-              Eq#aic_e51 { ChildCount#aic_cc51 { Var#aic_v53(name=diags) } Lit#aic_i52(value=0) }
-              Block#aic_b53 {
-                Let#aic_l53(name=value) { Call#aic_c54(target=compiler.run) { Var#aic_v54(name=parsed) } }
-                If#aic_if52 {
-                  Eq#aic_e52 { NodeKind#aic_nk51 { Var#aic_v55(name=value) } Lit#aic_i54(value="Lit") }
-                  Block#aic_b54 {
-                    Call#aic_c58(target=emitOkFromValue) { Var#aic_v57(name=value) }
-                    Return#aic_r51
-                  }
-                  Block#aic_b55 {
-                    If#aic_if520 {
-                      Eq#aic_e520 { NodeId#aic_nid520 { Var#aic_v520(name=value) } Lit#aic_i520(value="void") }
-                      Block#aic_b520 {
-                        Call#aic_c521(target=emitOkFromValue) { Var#aic_v521(name=value) }
-                        Return#aic_r520
-                      }
-                      Block#aic_b521 {
-                        Call#aic_c56(target=io.write) { Call#aic_c57(target=compiler.format) { Var#aic_v56(name=value) } }
-                        Return#aic_r521
-                      }
-                    }
-                    Return#aic_r52
-                  }
-                }
-              }
-              Block#aic_b56 {
-                Call#aic_c59(target=io.write) {
-                  Call#aic_c60(target=compiler.format) {
-                    ChildAt#aic_ca52 { Var#aic_v59(name=diags) Lit#aic_i55(value=0) }
-                  }
-                }
-                Return#aic_r53
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l60(name=makeVoid) {
-    Fn#aic_f60(params=_) {
-      Block#aic_b60 { Return#aic_r60 { MakeBlock#aic_mb60 { Lit#aic_i60(value="void") } } }
-    }
-  }
-
-  Let#aic_l61(name=makeState) {
-    Fn#aic_f61(params=value,env) {
-      Block#aic_b61 {
-        Return#aic_r61 {
-          AppendChild#aic_ap61 {
-            AppendChild#aic_ap62 {
-              MakeBlock#aic_mb61 { Lit#aic_i61(value="state") }
-              Var#aic_v61(name=value)
-            }
-            Var#aic_v62(name=env)
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l62(name=stateValue) {
-    Fn#aic_f62(params=state) {
-      Block#aic_b62 { Return#aic_r62 { ChildAt#aic_ca62 { Var#aic_v63(name=state) Lit#aic_i62(value=0) } } }
-    }
-  }
-
-  Let#aic_l63(name=stateEnv) {
-    Fn#aic_f63(params=state) {
-      Block#aic_b63 { Return#aic_r63 { ChildAt#aic_ca63 { Var#aic_v64(name=state) Lit#aic_i63(value=1) } } }
-    }
-  }
-
-  Let#aic_l64(name=getAttr) {
-    Fn#aic_f64(params=node,key,index) {
-      Block#aic_b64 {
-        If#aic_if64 {
-          Eq#aic_e64 { Var#aic_v65(name=index) AttrCount#aic_ac64 { Var#aic_v66(name=node) } }
-          Block#aic_b65 { Return#aic_r64 { Lit#aic_i64(value="") } }
-          Block#aic_b66 {
-            If#aic_if65 {
-              Eq#aic_e65 { AttrKey#aic_ak64 { Var#aic_v67(name=node) Var#aic_v68(name=index) } Var#aic_v69(name=key) }
-              Block#aic_b67 { Return#aic_r65 { AttrValueString#aic_avs64 { Var#aic_v70(name=node) Var#aic_v71(name=index) } } }
-              Block#aic_b68 { Return#aic_r66 { Call#aic_c61(target=getAttr) { Var#aic_v72(name=node) Var#aic_v73(name=key) Add#aic_a64 { Var#aic_v74(name=index) Lit#aic_i65(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l65(name=addBinding) {
-    Fn#aic_f65(params=env,name,value) {
-      Block#aic_b69 {
-        Let#aic_l66(name=i) { ChildCount#aic_cc65 { Var#aic_v75(name=env) } }
-        Let#aic_l67(name=bindId) { StrConcat#aic_sc65 { Lit#aic_i66(value="b") ToString#aic_ts65 { Var#aic_v76(name=i) } } }
-        Let#aic_l68(name=keyId) { StrConcat#aic_sc66 { Lit#aic_i67(value="k") ToString#aic_ts66 { Var#aic_v77(name=i) } } }
-        Let#aic_l69(name=binding) {
-          AppendChild#aic_ap65 {
-            AppendChild#aic_ap66 {
-              MakeBlock#aic_mb65 { Var#aic_v78(name=bindId) }
-              MakeLitString#aic_mls65 { Var#aic_v79(name=keyId) Var#aic_v80(name=name) }
-            }
-            Var#aic_v81(name=value)
-          }
-        }
-        Return#aic_r67 { AppendChild#aic_ap67 { Var#aic_v82(name=env) Var#aic_v83(name=binding) } }
-      }
-    }
-  }
-
-  Let#aic_l70(name=lookupEnv) {
-    Fn#aic_f70(params=env,name,index) {
-      Block#aic_b70 {
-        If#aic_if70 {
-          Eq#aic_e70 { Var#aic_v84(name=index) ChildCount#aic_cc70 { Var#aic_v85(name=env) } }
-          Block#aic_b71 {
-            Return#aic_r70 {
-              MakeErr#aic_me70 {
-                Lit#aic_i68(value="err_lookup")
-                Lit#aic_i69(value="RUN001")
-                StrConcat#aic_sc70 { Lit#aic_i70(value="Unknown variable '") StrConcat#aic_sc71 { Var#aic_v86(name=name) Lit#aic_i71(value="'.") } }
-                Var#aic_v87(name=name)
-              }
-            }
-          }
-          Block#aic_b72 {
-            Let#aic_l71(name=b) { ChildAt#aic_ca70 { Var#aic_v88(name=env) Var#aic_v89(name=index) } }
-            If#aic_if71 {
-              Eq#aic_e71 {
-                AttrValueString#aic_avs70 { ChildAt#aic_ca71 { Var#aic_v90(name=b) Lit#aic_i72(value=0) } Lit#aic_i73(value=0) }
-                Var#aic_v91(name=name)
-              }
-              Block#aic_b73 { Return#aic_r71 { ChildAt#aic_ca72 { Var#aic_v92(name=b) Lit#aic_i74(value=1) } } }
-              Block#aic_b74 { Return#aic_r72 { Call#aic_c62(target=lookupEnv) { Var#aic_v93(name=env) Var#aic_v94(name=name) Add#aic_a70 { Var#aic_v95(name=index) Lit#aic_i75(value=1) } } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l80(name=makeClosure) {
-    Fn#aic_f80(params=fnNode,env) {
-      Block#aic_b80 {
-        Let#aic_l81(name=i) { ChildCount#aic_cc80 { Var#aic_v96(name=env) } }
-        Let#aic_l82(name=id) { StrConcat#aic_sc80 { Lit#aic_i76(value="cl") ToString#aic_ts80 { Var#aic_v97(name=i) } } }
-        Return#aic_r80 {
-          AppendChild#aic_ap80 {
-            AppendChild#aic_ap81 {
-              MakeBlock#aic_mb80 { Var#aic_v98(name=id) }
-              Var#aic_v99(name=fnNode)
-            }
-            Var#aic_v100(name=env)
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l90(name=valueToString) {
-    Fn#aic_f90(params=value) {
-      Block#aic_b90 {
-        If#aic_if90 {
-          Eq#aic_e90 { NodeKind#aic_nk90 { Var#aic_v101(name=value) } Lit#aic_i77(value="Lit") }
-          Block#aic_b91 {
-            Let#aic_l91(name=k) { AttrValueKind#aic_avk90 { Var#aic_v102(name=value) Lit#aic_i78(value=0) } }
-            If#aic_if91 {
-              Eq#aic_e91 { Var#aic_v103(name=k) Lit#aic_i79(value="string") }
-              Block#aic_b92 { Return#aic_r90 { AttrValueString#aic_avs90 { Var#aic_v104(name=value) Lit#aic_i80(value=0) } } }
-              Block#aic_b93 {
-                If#aic_if92 {
-                  Eq#aic_e92 { Var#aic_v105(name=k) Lit#aic_i81(value="int") }
-                  Block#aic_b94 { Return#aic_r91 { ToString#aic_ts90 { AttrValueInt#aic_avi90 { Var#aic_v106(name=value) Lit#aic_i82(value=0) } } } }
-                  Block#aic_b95 {
-                    If#aic_if93 {
-                      AttrValueBool#aic_avb90 { Var#aic_v107(name=value) Lit#aic_i83(value=0) }
-                      Block#aic_b96 { Return#aic_r92 { Lit#aic_i84(value="true") } }
-                      Block#aic_b97 { Return#aic_r93 { Lit#aic_i85(value="false") } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          Block#aic_b98 {
-            If#aic_if94 {
-              Eq#aic_e93 { NodeKind#aic_nk91 { Var#aic_v108(name=value) } Lit#aic_i86(value="Err") }
-              Block#aic_b99 { Return#aic_r94 { Call#aic_c63(target=compiler.format) { Var#aic_v109(name=value) } } }
-              Block#aic_b100 { Return#aic_r95 { Lit#aic_i87(value="value") } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l91__2(name=makeStringLit) {
-    Fn#aic_f91(params=env,text) {
-      Block#aic_b901 {
-        Let#aic_l901(name=i) { ChildCount#aic_cc901 { Var#aic_v901(name=env) } }
-        Let#aic_l902(name=id) { StrConcat#aic_sc901 { Lit#aic_i901(value="s") ToString#aic_ts901 { Var#aic_v902(name=i) } } }
-        Return#aic_r901 { MakeLitString#aic_mls901 { Var#aic_v903(name=id) Var#aic_v904(name=text) } }
-      }
-    }
-  }
-
-  Let#aic_l92(name=makeBoolLit) {
-    Fn#aic_f92(params=b) {
-      Block#aic_b902 {
-        Let#aic_l903(name=p) {
-          If#aic_if902 {
-            Var#aic_v905(name=b)
-            Block#aic_b903 { Call#aic_c902(target=compiler.parse) { Lit#aic_i902(value="Program#bp1 { Lit#bv1(value=true) }") } }
-            Block#aic_b904 { Call#aic_c903(target=compiler.parse) { Lit#aic_i903(value="Program#bp0 { Lit#bv0(value=false) }") } }
-          }
-        }
-        Return#aic_r902 { ChildAt#aic_ca902 { Var#aic_v906(name=p) Lit#aic_i904(value=0) } }
-      }
-    }
-  }
-
-  Let#aic_l93(name=makeIntLit) {
-    Fn#aic_f93(params=n) {
-      Block#aic_b905 {
-        Let#aic_l904(name=src) {
-          StrConcat#aic_sc902 {
-            Lit#aic_i905(value="Program#ip { Lit#iv(value=")
-            StrConcat#aic_sc903 { ToString#aic_ts902 { Var#aic_v907(name=n) } Lit#aic_i906(value=") }") }
-          }
-        }
-        Let#aic_l905(name=p) { Call#aic_c904(target=compiler.parse) { Var#aic_v908(name=src) } }
-        Return#aic_r903 { ChildAt#aic_ca903 { Var#aic_v909(name=p) Lit#aic_i907(value=0) } }
-      }
-    }
-  }
-
-  Let#aic_l100(name=emitOkFromValue) {
-    Fn#aic_f100(params=value) {
-      Block#aic_b101 {
-        If#aic_if100 {
-          Eq#aic_e100 { NodeKind#aic_nk100 { Var#aic_v110(name=value) } Lit#aic_i88(value="Lit") }
-          Block#aic_b102 {
-            Let#aic_l101(name=k) { AttrValueKind#aic_avk100 { Var#aic_v111(name=value) Lit#aic_i89(value=0) } }
-            If#aic_if101 {
-              Eq#aic_e101 { Var#aic_v112(name=k) Lit#aic_i90(value="string") }
-              Block#aic_b103 {
-                Call#aic_c64(target=io.write) {
-                  StrConcat#aic_sc100 {
-                    Lit#aic_i91(value="Ok#ok0(type=string value=\"")
-                    StrConcat#aic_sc101 {
-                      StrEscape#aic_se100 { AttrValueString#aic_avs100 { Var#aic_v113(name=value) Lit#aic_i92(value=0) } }
-                      Lit#aic_i93(value="\")")
-                    }
-                  }
-                }
-                Return#aic_r100
-              }
-              Block#aic_b104 {
-                If#aic_if102 {
-                  Eq#aic_e102 { Var#aic_v114(name=k) Lit#aic_i94(value="int") }
-                  Block#aic_b105 {
-                    Call#aic_c65(target=io.write) {
-                      StrConcat#aic_sc102 {
-                        Lit#aic_i95(value="Ok#ok0(type=int value=")
-                        StrConcat#aic_sc103 {
-                          ToString#aic_ts100 { AttrValueInt#aic_avi100 { Var#aic_v115(name=value) Lit#aic_i96(value=0) } }
-                          Lit#aic_i97(value=")")
-                        }
-                      }
-                    }
-                    Return#aic_r101
-                  }
-                  Block#aic_b106 {
-                    If#aic_if103 {
-                      AttrValueBool#aic_avb100 { Var#aic_v116(name=value) Lit#aic_i98(value=0) }
-                      Block#aic_b107 { Call#aic_c66(target=io.write) { Lit#aic_i99(value="Ok#ok0(type=bool value=true)") } }
-                      Block#aic_b108 { Call#aic_c67(target=io.write) { Lit#aic_i100(value="Ok#ok0(type=bool value=false)") } }
-                    }
-                    Return#aic_r102
-                  }
-                }
-              }
-            }
-          }
-          Block#aic_b109 {
-            If#aic_if104 {
-              Eq#aic_e103 { NodeId#aic_nid100 { Var#aic_v117(name=value) } Lit#aic_i101(value="void") }
-              Block#aic_b110 { Call#aic_c68(target=io.write) { Lit#aic_i102(value="Ok#ok0(type=void)") } }
-              Block#aic_b111 { Call#aic_c69(target=io.write) { Lit#aic_i103(value="Err#err0(code=AIC005 message=\"Unsupported runtime value.\" nodeId=run)") } }
-            }
-            Return#aic_r103
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l110(name=evalNode) {
-    Fn#aic_f110(params=node,env) {
-      Block#aic_b112 {
-        Let#aic_l111(name=kind) { NodeKind#aic_nk110 { Var#aic_v118(name=node) } }
-        If#aic_if110 {
-          Eq#aic_e110 { Var#aic_v119(name=kind) Lit#aic_i104(value="Program") }
-          Block#aic_b113 { Return#aic_r110 { Call#aic_c70(target=evalSeq) { Var#aic_v120(name=node) Var#aic_v121(name=env) Lit#aic_i105(value=0) Call#aic_c71(target=makeVoid) { Lit#aic_i106(value=0) } } } }
-          Block#aic_b114 {
-            If#aic_if111 {
-              Eq#aic_e111 { Var#aic_v122(name=kind) Lit#aic_i107(value="Block") }
-              Block#aic_b115 { Return#aic_r111 { Call#aic_c72(target=evalSeq) { Var#aic_v123(name=node) Var#aic_v124(name=env) Lit#aic_i108(value=0) Call#aic_c73(target=makeVoid) { Lit#aic_i109(value=0) } } } }
-              Block#aic_b116 {
-                If#aic_if112 {
-                  Eq#aic_e112 { Var#aic_v125(name=kind) Lit#aic_i110(value="Let") }
-                  Block#aic_b117 { Return#aic_r112 { Call#aic_c74(target=evalLet) { Var#aic_v126(name=node) Var#aic_v127(name=env) } } }
-                  Block#aic_b118 {
-                    If#aic_if113 {
-                      Eq#aic_e113 { Var#aic_v128(name=kind) Lit#aic_i111(value="Var") }
-                      Block#aic_b119 { Return#aic_r113 { Call#aic_c75(target=evalVar) { Var#aic_v129(name=node) Var#aic_v130(name=env) } } }
-                      Block#aic_b120 {
-                        If#aic_if114 {
-                          Eq#aic_e114 { Var#aic_v131(name=kind) Lit#aic_i112(value="Lit") }
-                          Block#aic_b121 { Return#aic_r114 { Call#aic_c76(target=makeState) { Var#aic_v132(name=node) Var#aic_v133(name=env) } } }
-                          Block#aic_b122 {
-                            If#aic_if115 {
-                              Eq#aic_e115 { Var#aic_v134(name=kind) Lit#aic_i113(value="Call") }
-                              Block#aic_b123 { Return#aic_r115 { Call#aic_c77(target=evalCall) { Var#aic_v135(name=node) Var#aic_v136(name=env) } } }
-                              Block#aic_b124 {
-                                If#aic_if116 {
-                                  Eq#aic_e116 { Var#aic_v137(name=kind) Lit#aic_i114(value="Fn") }
-                                  Block#aic_b125 { Return#aic_r116 { Call#aic_c78(target=makeState) { Call#aic_c79(target=makeClosure) { Var#aic_v138(name=node) Var#aic_v139(name=env) } Var#aic_v140(name=env) } } }
-                                  Block#aic_b126 {
-                                    If#aic_if117 {
-                                      Eq#aic_e117 { Var#aic_v141(name=kind) Lit#aic_i115(value="If") }
-                                      Block#aic_b1270 { Return#aic_r117 { Call#aic_c80(target=evalIfExpr) { Var#aic_v142(name=node) Var#aic_v143(name=env) } } }
-                                      Block#aic_b1271 {
-                                        If#aic_if118 {
-                                          Eq#aic_e118 { Var#aic_v144(name=kind) Lit#aic_i116(value="Eq") }
-                                          Block#aic_b1272 { Return#aic_r118 { Call#aic_c81(target=evalEqExpr) { Var#aic_v145(name=node) Var#aic_v146(name=env) } } }
-                                          Block#aic_b1273 {
-                                            If#aic_if119 {
-                                              Eq#aic_e119 { Var#aic_v147(name=kind) Lit#aic_i117(value="StrConcat") }
-                                              Block#aic_b1274 { Return#aic_r119 { Call#aic_c82(target=evalStrConcatExpr) { Var#aic_v148(name=node) Var#aic_v149(name=env) } } }
-                                              Block#aic_b1275 {
-                                                If#aic_if1200 {
-                                                  Eq#aic_e1200 { Var#aic_v150(name=kind) Lit#aic_i118(value="Add") }
-                                                  Block#aic_b1276 { Return#aic_r120 { Call#aic_c83(target=evalAddExpr) { Var#aic_v151(name=node) Var#aic_v152(name=env) } } }
-                                                  Block#aic_b1277 { Return#aic_r121 { Call#aic_c84(target=makeState) { MakeErr#aic_me110 { Lit#aic_i119(value="err_eval") Lit#aic_i120(value="RUN010") Lit#aic_i121(value="Unsupported node kind.") NodeId#aic_nid110 { Var#aic_v153(name=node) } } Var#aic_v154(name=env) } } }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
+                              Block {
+                                Call(target=bootstrapIo.writeFile) { Var(name=appPath) Call(target=template.buildLibApp) { Lit(value=0) } }
                               }
                             }
                           }
                         }
                       }
                     }
+                    Call(target=bootstrapIo.writeFile) { Var(name=agentsPath) Call(target=template.buildAgentsDoc) { Var(name=resolvedTemplate) } }
+                    Call(target=bootstrapIo.writeFile) { Var(name=gitignorePath) Call(target=template.buildGitIgnore) { Lit(value=0) } }
+                    Call(target=bootstrapIo.writeFile) { Var(name=assetsLocaleEnPath) Call(target=template.buildLocaleSeedData) { Lit(value=0) } }
+                    Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"project-created\")") }
+                    Return { Lit(value=0) }
+                  }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICN003 message=\"Unknown template.\" nodeId=template)") }
+                    Return { Lit(value=1) }
                   }
                 }
               }
@@ -1113,359 +200,150 @@ Program#aic_p1 {
     }
   }
 
-  Let#aic_l120(name=evalSeq) {
-    Fn#aic_f120(params=node,env,index,last) {
-      Block#aic_b127 {
-        If#aic_if120 {
-          Eq#aic_e120 { Var#aic_v143__2(name=index) ChildCount#aic_cc120 { Var#aic_v144__2(name=node) } }
-          Block#aic_b128 { Return#aic_r118__2 { Call#aic_c81__2(target=makeState) { Var#aic_v145__2(name=last) Var#aic_v146__2(name=env) } } }
-          Block#aic_b129 {
-            Let#aic_l121(name=st) { Call#aic_c82__2(target=evalNode) { ChildAt#aic_ca120 { Var#aic_v147__2(name=node) Var#aic_v148__2(name=index) } Var#aic_v149__2(name=env) } }
-            Let#aic_l122(name=v) { Call#aic_c83__2(target=stateValue) { Var#aic_v150__2(name=st) } }
-            Let#aic_l123(name=e2) { Call#aic_c84__2(target=stateEnv) { Var#aic_v151__2(name=st) } }
-            If#aic_if121 {
-              Eq#aic_e121 { NodeKind#aic_nk120 { Var#aic_v152__2(name=v) } Lit#aic_i118__2(value="Err") }
-              Block#aic_b130 { Return#aic_r119__2 { Call#aic_c85(target=makeState) { Var#aic_v153__2(name=v) Var#aic_v154__2(name=e2) } } }
-              Block#aic_b131 { Return#aic_r120__2 { Call#aic_c86(target=evalSeq) { Var#aic_v155(name=node) Var#aic_v156(name=e2) Add#aic_a120 { Var#aic_v157(name=index) Lit#aic_i119__2(value=1) } Var#aic_v158(name=v) } } }
-            }
+  Let(name=runPublish) {
+    Fn(params=args) {
+      Block {
+        Let(name=dir) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=dir) Lit(value="") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICP001 message=\"Missing publish directory.\" nodeId=argv)") }
+            Return { Lit(value=1) }
           }
-        }
-      }
-    }
-  }
-
-  Let#aic_l130(name=evalLet) {
-    Fn#aic_f130(params=node,env) {
-      Block#aic_b132 {
-        Let#aic_l131(name=name) { Call#aic_c87(target=getAttr) { Var#aic_v159(name=node) Lit#aic_i120__2(value="name") Lit#aic_i121__2(value=0) } }
-        Let#aic_l132(name=expr) { ChildAt#aic_ca130 { Var#aic_v160(name=node) Lit#aic_i122(value=0) } }
-        Let#aic_l133(name=isFn) { Eq#aic_e130 { NodeKind#aic_nk130 { Var#aic_v161(name=expr) } Lit#aic_i123(value="Fn") } }
-        Let#aic_l134(name=st) {
-          If#aic_if130 {
-            Var#aic_v162(name=isFn)
-            Block#aic_b133 { Call#aic_c88(target=makeState) { Call#aic_c89(target=makeClosure) { Var#aic_v163(name=expr) Var#aic_v164(name=env) } Var#aic_v165(name=env) } }
-            Block#aic_b134 { Call#aic_c90(target=evalNode) { Var#aic_v166(name=expr) Var#aic_v167(name=env) } }
-          }
-        }
-        Let#aic_l135(name=v) { Call#aic_c91(target=stateValue) { Var#aic_v168(name=st) } }
-        Let#aic_l136(name=e2) { Call#aic_c92(target=stateEnv) { Var#aic_v169(name=st) } }
-        If#aic_if131 {
-          Eq#aic_e131 { NodeKind#aic_nk131 { Var#aic_v170(name=v) } Lit#aic_i124(value="Err") }
-          Block#aic_b135 { Return#aic_r121__2 { Call#aic_c93(target=makeState) { Var#aic_v171(name=v) Var#aic_v172(name=e2) } } }
-          Block#aic_b136 { Return#aic_r122 { Call#aic_c94(target=makeState) { Call#aic_c95(target=makeVoid) { Lit#aic_i125(value=0) } Call#aic_c96(target=addBinding) { Var#aic_v173(name=e2) Var#aic_v174(name=name) Var#aic_v175(name=v) } } } }
-        }
-      }
-    }
-  }
-
-  Let#aic_l140(name=evalVar) {
-    Fn#aic_f140(params=node,env) {
-      Block#aic_b137 {
-        Let#aic_l141(name=name) { Call#aic_c97(target=getAttr) { Var#aic_v176(name=node) Lit#aic_i126(value="name") Lit#aic_i127(value=0) } }
-        Let#aic_l142(name=v) { Call#aic_c98(target=lookupEnv) { Var#aic_v177(name=env) Var#aic_v178(name=name) Lit#aic_i128(value=0) } }
-        Return#aic_r123 { Call#aic_c99(target=makeState) { Var#aic_v179(name=v) Var#aic_v180(name=env) } }
-      }
-    }
-  }
-
-  Let#aic_l145(name=evalIfExpr) {
-    Fn#aic_f145(params=node,env) {
-      Block#aic_b1450 {
-        Let#aic_l1451(name=condSt) { Call#aic_c1450(target=evalNode) { ChildAt#aic_ca1450 { Var#aic_v1450(name=node) Lit#aic_i1450(value=0) } Var#aic_v1451(name=env) } }
-        Let#aic_l1452(name=condVal) { Call#aic_c1451(target=stateValue) { Var#aic_v1452(name=condSt) } }
-        Let#aic_l1453(name=e2) { Call#aic_c1452(target=stateEnv) { Var#aic_v1453(name=condSt) } }
-        If#aic_if1450 {
-          Eq#aic_e1450 { NodeKind#aic_nk1450 { Var#aic_v1454(name=condVal) } Lit#aic_i1451(value="Err") }
-          Block#aic_b1451 { Return#aic_r1450 { Call#aic_c1453(target=makeState) { Var#aic_v1455(name=condVal) Var#aic_v1456(name=e2) } } }
-          Block#aic_b1452 {
-            If#aic_if1451 {
-              Eq#aic_e1451 { AttrValueKind#aic_avk1450 { Var#aic_v1457(name=condVal) Lit#aic_i1452(value=0) } Lit#aic_i1453(value="bool") }
-              Block#aic_b1453 {
-                If#aic_if1452 {
-                  AttrValueBool#aic_avb1450 { Var#aic_v1458(name=condVal) Lit#aic_i1454(value=0) }
-                  Block#aic_b1454 { Return#aic_r1451 { Call#aic_c1454(target=evalNode) { ChildAt#aic_ca1451 { Var#aic_v1459(name=node) Lit#aic_i1455(value=1) } Var#aic_v1460(name=e2) } } }
-                  Block#aic_b1455 {
-                    If#aic_if1453 {
-                      Eq#aic_e1452 { ChildCount#aic_cc1450 { Var#aic_v1461(name=node) } Lit#aic_i1456(value=3) }
-                      Block#aic_b1456 { Return#aic_r1452 { Call#aic_c1455(target=evalNode) { ChildAt#aic_ca1452 { Var#aic_v1462(name=node) Lit#aic_i1457(value=2) } Var#aic_v1463(name=e2) } } }
-                      Block#aic_b1457 { Return#aic_r1453 { Call#aic_c1456(target=makeState) { Call#aic_c1457(target=makeVoid) { Lit#aic_i1458(value=0) } Var#aic_v1464(name=e2) } } }
-                    }
+          Block {
+            Let(name=manifestPath) { StrConcat { Var(name=dir) Lit(value="/project.aiproj") } }
+            If {
+              Call(target=sys.fs.file.exists) { Var(name=manifestPath) }
+              Block {
+                Let(name=parsed) { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=manifestPath) } } } }
+                If {
+                  Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
+                    Return { Lit(value=1) }
                   }
-                }
-              }
-              Block#aic_b1458 { Return#aic_r1454 { Call#aic_c1458(target=makeState) { MakeErr#aic_me1450 { Lit#aic_i1459(value="err_if") Lit#aic_i1460(value="RUN011") Lit#aic_i1461(value="If condition must be bool.") NodeId#aic_nid1450 { Var#aic_v1465(name=node) } } Var#aic_v1466(name=e2) } } }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l146(name=evalEqExpr) {
-    Fn#aic_f146(params=node,env) {
-      Block#aic_b1460 {
-        Let#aic_l1461(name=lSt) { Call#aic_c1460(target=evalNode) { ChildAt#aic_ca1460 { Var#aic_v1467(name=node) Lit#aic_i1462(value=0) } Var#aic_v1468(name=env) } }
-        Let#aic_l1462(name=lVal) { Call#aic_c1461(target=stateValue) { Var#aic_v1469(name=lSt) } }
-        Let#aic_l1463(name=e2) { Call#aic_c1462(target=stateEnv) { Var#aic_v1470(name=lSt) } }
-        If#aic_if1460 {
-          Eq#aic_e1460 { NodeKind#aic_nk1460 { Var#aic_v1471(name=lVal) } Lit#aic_i1463(value="Err") }
-          Block#aic_b1461 { Return#aic_r1460 { Call#aic_c1463(target=makeState) { Var#aic_v1472(name=lVal) Var#aic_v1473(name=e2) } } }
-          Block#aic_b1462 {
-            Let#aic_l1464(name=rSt) { Call#aic_c1464(target=evalNode) { ChildAt#aic_ca1461 { Var#aic_v1474(name=node) Lit#aic_i1464(value=1) } Var#aic_v1475(name=e2) } }
-            Let#aic_l1465(name=rVal) { Call#aic_c1465(target=stateValue) { Var#aic_v1476(name=rSt) } }
-            Let#aic_l1466(name=e3) { Call#aic_c1466(target=stateEnv) { Var#aic_v1477(name=rSt) } }
-            If#aic_if1461 {
-              Eq#aic_e1461 { NodeKind#aic_nk1461 { Var#aic_v1478(name=rVal) } Lit#aic_i1465(value="Err") }
-              Block#aic_b1463 { Return#aic_r1461 { Call#aic_c1467(target=makeState) { Var#aic_v1479(name=rVal) Var#aic_v1480(name=e3) } } }
-              Block#aic_b1464 {
-                Let#aic_l1467(name=lk) { AttrValueKind#aic_avk1460 { Var#aic_v1481(name=lVal) Lit#aic_i1466(value=0) } }
-                Let#aic_l1468(name=rk) { AttrValueKind#aic_avk1461 { Var#aic_v1482(name=rVal) Lit#aic_i1467(value=0) } }
-                Let#aic_l1469(name=eqv) {
-                  If#aic_if1462 {
-                    Eq#aic_e1462 { Var#aic_v1483(name=lk) Var#aic_v1484(name=rk) }
-                    Block#aic_b1465 {
-                      If#aic_if1463 {
-                        Eq#aic_e1463 { Var#aic_v1485(name=lk) Lit#aic_i1468(value="string") }
-                        Block#aic_b1466 { Eq#aic_e1464 { AttrValueString#aic_avs1460 { Var#aic_v1486(name=lVal) Lit#aic_i1469(value=0) } AttrValueString#aic_avs1461 { Var#aic_v1487(name=rVal) Lit#aic_i1470(value=0) } } }
-                        Block#aic_b1467 {
-                          If#aic_if1464 {
-                            Eq#aic_e1465 { Var#aic_v1488(name=lk) Lit#aic_i1471(value="int") }
-                            Block#aic_b1468 { Eq#aic_e1466 { AttrValueInt#aic_avi1460 { Var#aic_v1489(name=lVal) Lit#aic_i1472(value=0) } AttrValueInt#aic_avi1461 { Var#aic_v1490(name=rVal) Lit#aic_i1473(value=0) } } }
-                            Block#aic_b1469 { Eq#aic_e1467 { AttrValueBool#aic_avb1460 { Var#aic_v1491(name=lVal) Lit#aic_i1474(value=0) } AttrValueBool#aic_avb1461 { Var#aic_v1492(name=rVal) Lit#aic_i1475(value=0) } } }
+                  Block {
+                    Let(name=diags) { Call(target=validate) { Var(name=parsed) } }
+                    If {
+                      Eq { ChildCount { Var(name=diags) } Lit(value=0) }
+                      Block {
+                        Let(name=projectNode) { ChildAt { Var(name=parsed) Lit(value=0) } }
+                        Let(name=projectName) { Call(target=getAttr) { Var(name=projectNode) Lit(value="name") Lit(value=0) } }
+                        Let(name=entryFile) { Call(target=getAttr) { Var(name=projectNode) Lit(value="entryFile") Lit(value=0) } }
+                        Let(name=entryExport) { Call(target=getAttr) { Var(name=projectNode) Lit(value="entryExport") Lit(value=0) } }
+                        Let(name=entryPath) { StrConcat { Var(name=dir) StrConcat { Lit(value="/") Var(name=entryFile) } } }
+                        Let(name=entryParsed) { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=entryPath) } } } }
+                        If {
+                          Eq { NodeKind { Var(name=entryParsed) } Lit(value="Err") }
+                          Block {
+                            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=entryParsed) } }
+                            Return { Lit(value=1) }
                           }
-                        }
-                      }
-                    }
-                    Block#aic_b1470 { Lit#aic_i1476(value=false) }
-                  }
-                }
-                Return#aic_r1462 { Call#aic_c1468(target=makeState) { Call#aic_c1469(target=makeBoolLit) { Var#aic_v1493(name=eqv) } Var#aic_v1494(name=e3) } }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l147(name=evalStrConcatExpr) {
-    Fn#aic_f147(params=node,env) {
-      Block#aic_b1471 {
-        Let#aic_l1471(name=lSt) { Call#aic_c1470(target=evalNode) { ChildAt#aic_ca1470 { Var#aic_v1495(name=node) Lit#aic_i1477(value=0) } Var#aic_v1496(name=env) } }
-        Let#aic_l1472(name=lVal) { Call#aic_c1471(target=stateValue) { Var#aic_v1497(name=lSt) } }
-        Let#aic_l1473(name=e2) { Call#aic_c1472(target=stateEnv) { Var#aic_v1498(name=lSt) } }
-        If#aic_if1470 {
-          Eq#aic_e1470 { NodeKind#aic_nk1470 { Var#aic_v1499(name=lVal) } Lit#aic_i1478(value="Err") }
-          Block#aic_b1472 { Return#aic_r1470 { Call#aic_c1473(target=makeState) { Var#aic_v1500(name=lVal) Var#aic_v1501(name=e2) } } }
-          Block#aic_b1473 {
-            Let#aic_l1474(name=rSt) { Call#aic_c1474(target=evalNode) { ChildAt#aic_ca1471 { Var#aic_v1502(name=node) Lit#aic_i1479(value=1) } Var#aic_v1503(name=e2) } }
-            Let#aic_l1475(name=rVal) { Call#aic_c1475(target=stateValue) { Var#aic_v1504(name=rSt) } }
-            Let#aic_l1476(name=e3) { Call#aic_c1476(target=stateEnv) { Var#aic_v1505(name=rSt) } }
-            If#aic_if1471 {
-              Eq#aic_e1471 { NodeKind#aic_nk1471 { Var#aic_v1506(name=rVal) } Lit#aic_i1480(value="Err") }
-              Block#aic_b1474 { Return#aic_r1471 { Call#aic_c1477(target=makeState) { Var#aic_v1507(name=rVal) Var#aic_v1508(name=e3) } } }
-              Block#aic_b1475 {
-                Let#aic_l1477(name=s) { StrConcat#aic_sc1470 { Call#aic_c1478(target=valueToString) { Var#aic_v1509(name=lVal) } Call#aic_c1479(target=valueToString) { Var#aic_v1510(name=rVal) } } }
-                Return#aic_r1472 { Call#aic_c1480(target=makeState) { Call#aic_c1481(target=makeStringLit) { Var#aic_v1511(name=e3) Var#aic_v1512(name=s) } Var#aic_v1513(name=e3) } }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l148(name=evalAddExpr) {
-    Fn#aic_f148(params=node,env) {
-      Block#aic_b1480 {
-        Let#aic_l1481(name=lSt) { Call#aic_c1482(target=evalNode) { ChildAt#aic_ca1480 { Var#aic_v1514(name=node) Lit#aic_i1481(value=0) } Var#aic_v1515(name=env) } }
-        Let#aic_l1482(name=lVal) { Call#aic_c1483(target=stateValue) { Var#aic_v1516(name=lSt) } }
-        Let#aic_l1483(name=e2) { Call#aic_c1484(target=stateEnv) { Var#aic_v1517(name=lSt) } }
-        If#aic_if1480 {
-          Eq#aic_e1480 { NodeKind#aic_nk1480 { Var#aic_v1518(name=lVal) } Lit#aic_i1482(value="Err") }
-          Block#aic_b1481 { Return#aic_r1480 { Call#aic_c1485(target=makeState) { Var#aic_v1519(name=lVal) Var#aic_v1520(name=e2) } } }
-          Block#aic_b1482 {
-            Let#aic_l1484(name=rSt) { Call#aic_c1486(target=evalNode) { ChildAt#aic_ca1481 { Var#aic_v1521(name=node) Lit#aic_i1483(value=1) } Var#aic_v1522(name=e2) } }
-            Let#aic_l1485(name=rVal) { Call#aic_c1487(target=stateValue) { Var#aic_v1523(name=rSt) } }
-            Let#aic_l1486(name=e3) { Call#aic_c1488(target=stateEnv) { Var#aic_v1524(name=rSt) } }
-            If#aic_if1481 {
-              Eq#aic_e1481 { NodeKind#aic_nk1481 { Var#aic_v1525(name=rVal) } Lit#aic_i1484(value="Err") }
-              Block#aic_b1483 { Return#aic_r1481 { Call#aic_c1489(target=makeState) { Var#aic_v1526(name=rVal) Var#aic_v1527(name=e3) } } }
-              Block#aic_b1484 {
-                If#aic_if1482 {
-                  Eq#aic_e1482 { AttrValueKind#aic_avk1480 { Var#aic_v1528(name=lVal) Lit#aic_i1485(value=0) } Lit#aic_i1486(value="int") }
-                  Block#aic_b1485 {
-                    If#aic_if1483 {
-                      Eq#aic_e1483 { AttrValueKind#aic_avk1481 { Var#aic_v1529(name=rVal) Lit#aic_i1487(value=0) } Lit#aic_i1488(value="int") }
-                      Block#aic_b1486 {
-                        Let#aic_l1487(name=n) { Add#aic_a1480 { AttrValueInt#aic_avi1480 { Var#aic_v1530(name=lVal) Lit#aic_i1489(value=0) } AttrValueInt#aic_avi1481 { Var#aic_v1531(name=rVal) Lit#aic_i1490(value=0) } } }
-                        Return#aic_r1482 { Call#aic_c1490(target=makeState) { Call#aic_c1491(target=makeIntLit) { Var#aic_v1532(name=n) } Var#aic_v1533(name=e3) } }
-                      }
-                      Block#aic_b1487 { Return#aic_r1483 { Call#aic_c1492(target=makeState) { MakeErr#aic_me1480 { Lit#aic_i1491(value="err_add") Lit#aic_i1492(value="RUN012") Lit#aic_i1493(value="Add expects int operands.") NodeId#aic_nid1480 { Var#aic_v1534(name=node) } } Var#aic_v1535(name=e3) } } }
-                    }
-                  }
-                  Block#aic_b1488 { Return#aic_r1484 { Call#aic_c1493(target=makeState) { MakeErr#aic_me1481 { Lit#aic_i1494(value="err_add2") Lit#aic_i1495(value="RUN012") Lit#aic_i1496(value="Add expects int operands.") NodeId#aic_nid1481 { Var#aic_v1536(name=node) } } Var#aic_v1537(name=e3) } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l150(name=evalCall) {
-    Fn#aic_f150(params=node,env) {
-      Block#aic_b138 {
-        Let#aic_l151(name=target) { Call#aic_c100(target=getAttr) { Var#aic_v181(name=node) Lit#aic_i129(value="target") Lit#aic_i130(value=0) } }
-        Let#aic_l152(name=argCount) { ChildCount#aic_cc150 { Var#aic_v182(name=node) } }
-        Let#aic_l153(name=argSt) {
-          If#aic_if150 {
-            Eq#aic_e150 { Var#aic_v183(name=argCount) Lit#aic_i131(value=0) }
-            Block#aic_b139 { Call#aic_c101(target=makeState) { Call#aic_c102(target=makeVoid) { Lit#aic_i132(value=0) } Var#aic_v184(name=env) } }
-            Block#aic_b140 { Call#aic_c103(target=evalNode) { ChildAt#aic_ca150 { Var#aic_v185(name=node) Lit#aic_i133(value=0) } Var#aic_v186(name=env) } }
-          }
-        }
-        Let#aic_l154(name=argVal) { Call#aic_c104(target=stateValue) { Var#aic_v187(name=argSt) } }
-        Let#aic_l155(name=e2) { Call#aic_c105(target=stateEnv) { Var#aic_v188(name=argSt) } }
-        If#aic_if151 {
-          Eq#aic_e151 { NodeKind#aic_nk150 { Var#aic_v189(name=argVal) } Lit#aic_i134(value="Err") }
-          Block#aic_b141 { Return#aic_r124 { Call#aic_c106(target=makeState) { Var#aic_v190(name=argVal) Var#aic_v191(name=e2) } } }
-          Block#aic_b142 {
-            If#aic_if152 {
-              Eq#aic_e152 { Var#aic_v192(name=target) Lit#aic_i135(value="io.print") }
-              Block#aic_b143 {
-                Call#aic_c107(target=io.print) { Call#aic_c108(target=valueToString) { Var#aic_v193(name=argVal) } }
-                Return#aic_r125 { Call#aic_c109(target=makeState) { Call#aic_c110(target=makeVoid) { Lit#aic_i136(value=0) } Var#aic_v194(name=e2) } }
-              }
-              Block#aic_b144 {
-                If#aic_if153 {
-                  Eq#aic_e153 { Var#aic_v195(name=target) Lit#aic_i137(value="io.write") }
-                  Block#aic_b145 {
-                    Call#aic_c111(target=io.write) { Call#aic_c112(target=valueToString) { Var#aic_v196(name=argVal) } }
-                    Return#aic_r126 { Call#aic_c113(target=makeState) { Call#aic_c114(target=makeVoid) { Lit#aic_i138(value=0) } Var#aic_v197(name=e2) } }
-                  }
-                  Block#aic_b146 {
-                    If#aic_if154 {
-                      Eq#aic_e154 { Var#aic_v198(name=target) Lit#aic_i139(value="io.readLine") }
-                      Block#aic_b147 {
-                        Let#aic_l156(name=line) { Call#aic_c115(target=io.readLine) }
-                        Let#aic_l157(name=lit) { Call#aic_c116(target=makeStringLit) { Var#aic_v199(name=e2) Var#aic_v200(name=line) } }
-                        Return#aic_r127 { Call#aic_c117(target=makeState) { Var#aic_v201(name=lit) Var#aic_v202(name=e2) } }
-                      }
-                      Block#aic_b148 {
-                        If#aic_if155 {
-                          Eq#aic_e155 { Var#aic_v203(name=target) Lit#aic_i140(value="io.readAllStdin") }
-                          Block#aic_b149 {
-                            Let#aic_l158(name=text) { Call#aic_c118(target=io.readAllStdin) }
-                            Let#aic_l159(name=lit) { Call#aic_c119(target=makeStringLit) { Var#aic_v204(name=e2) Var#aic_v205(name=text) } }
-                            Return#aic_r128 { Call#aic_c120(target=makeState) { Var#aic_v206(name=lit) Var#aic_v207(name=e2) } }
-                          }
-                          Block#aic_b150 {
-                            If#aic_if156 {
-                              Eq#aic_e156 { Var#aic_v208(name=target) Lit#aic_i141(value="io.readFile") }
-                              Block#aic_b151 {
-                                Let#aic_l160(name=text) { Call#aic_c121(target=io.readFile) { Call#aic_c122(target=valueToString) { Var#aic_v209(name=argVal) } } }
-                                Let#aic_l161(name=lit) { Call#aic_c123(target=makeStringLit) { Var#aic_v210(name=e2) Var#aic_v211(name=text) } }
-                                Return#aic_r129 { Call#aic_c124(target=makeState) { Var#aic_v212(name=lit) Var#aic_v213(name=e2) } }
+                          Block {
+                            Let(name=undeclaredPackageImportNodeId) {
+                              Call(target=resolve.findFirstUndeclaredPackageImport) {
+                                Var(name=entryParsed)
+                                Var(name=projectNode)
+                                Lit(value=0)
                               }
-                              Block#aic_b152 {
-                                If#aic_if157 {
-                                  Eq#aic_e157 { Var#aic_v214(name=target) Lit#aic_i142(value="io.fileExists") }
-                                  Block#aic_b153 {
-                                    Let#aic_l162(name=ok) { Call#aic_c125(target=io.fileExists) { Call#aic_c126(target=valueToString) { Var#aic_v215(name=argVal) } } }
-                                    Let#aic_l163(name=lit) { Call#aic_c127(target=makeBoolLit) { Var#aic_v216(name=ok) } }
-                                    Return#aic_r130 { Call#aic_c128(target=makeState) { Var#aic_v217(name=lit) Var#aic_v218(name=e2) } }
+                            }
+                            If {
+                              Eq { Var(name=undeclaredPackageImportNodeId) Lit(value="") }
+                              Block {
+                                Let(name=modulePaths) {
+                                  Call(target=linker.collectProjectModulePaths) {
+                                    Var(name=dir)
+                                    Var(name=entryParsed)
+                                    Var(name=entryFile)
                                   }
-                                  Block#aic_b154 {
-                                    If#aic_if158 {
-                                      Eq#aic_e158 { Var#aic_v219(name=target) Lit#aic_i143(value="compiler.parse") }
-                                      Block#aic_b155 { Return#aic_r131 { Call#aic_c129(target=makeState) { Call#aic_c130(target=compiler.parse) { Call#aic_c131(target=valueToString) { Var#aic_v220(name=argVal) } } Var#aic_v221(name=e2) } } }
-                                      Block#aic_b156 {
-                                        If#aic_if159 {
-                                          Eq#aic_e159 { Var#aic_v222(name=target) Lit#aic_i144(value="compiler.format") }
-                                          Block#aic_b157 {
-                                            Let#aic_l164(name=text) { Call#aic_c132(target=compiler.format) { Var#aic_v223(name=argVal) } }
-                                            Let#aic_l165(name=lit) { Call#aic_c133(target=makeStringLit) { Var#aic_v224(name=e2) Var#aic_v225(name=text) } }
-                                            Return#aic_r132 { Call#aic_c134(target=makeState) { Var#aic_v226(name=lit) Var#aic_v227(name=e2) } }
-                                          }
-                                          Block#aic_b158 {
-                                            If#aic_if160 {
-                                              Eq#aic_e160 { Var#aic_v228(name=target) Lit#aic_i145(value="compiler.validate") }
-                                              Block#aic_b159 { Return#aic_r133 { Call#aic_c135(target=makeState) { Call#aic_c136(target=compiler.validate) { Var#aic_v229(name=argVal) } Var#aic_v230(name=e2) } } }
-                                              Block#aic_b160 {
-                                                If#aic_if161 {
-                                                  Eq#aic_e161 { Var#aic_v231(name=target) Lit#aic_i146(value="compiler.test") }
-                                                  Block#aic_b161 {
-                                                    Let#aic_l166(name=n) { Call#aic_c137(target=compiler.test) { Call#aic_c138(target=valueToString) { Var#aic_v232(name=argVal) } } }
-                                                    Let#aic_l167(name=lit) { Call#aic_c139(target=makeIntLit) { Var#aic_v233(name=n) } }
-                                                    Return#aic_r134 { Call#aic_c140(target=makeState) { Var#aic_v234(name=lit) Var#aic_v235(name=e2) } }
-                                                  }
-                                                  Block#aic_b162 { Return#aic_r135 { Call#aic_c141(target=evalUserCall) { Var#aic_v236(name=node) Var#aic_v237(name=env) Var#aic_v238(name=target) } } }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
+                                }
+                                If {
+                                  Eq { NodeKind { Var(name=modulePaths) } Lit(value="Err") }
+                                  Block {
+                                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=modulePaths) } }
+                                    Return { Lit(value=1) }
+                                  }
+                                  Block {
+                                Let(name=linkReportDir) {
+                                  StrConcat {
+                                    Var(name=dir)
+                                    Lit(value="/obj")
+                                  }
+                                }
+                                Let(name=linkReportPath) {
+                                  StrConcat {
+                                    Var(name=linkReportDir)
+                                    Lit(value="/link-report.aos")
+                                  }
+                                }
+                                Call(target=bootstrapIo.makeDir) { Var(name=linkReportDir) }
+                                Call(target=bootstrapIo.writeFile) {
+                                  Var(name=linkReportPath)
+                                  Call(target=linker.buildLinkReportText) {
+                                    Var(name=modulePaths)
+                                  }
+                                }
+                                Let(name=bundleText) {
+                                  Call(target=bundle.buildLinkedBundleText) {
+                                    Var(name=projectName)
+                                    Var(name=entryExport)
+                                    Var(name=modulePaths)
+                                  }
+                                }
+                                Let(name=publishProgramText) { Call(target=bundle.buildPublishProgramText) { Var(name=bundleText) Var(name=projectName) } }
+                                Let(name=publishProgram) { Call(target=parse.parseDocument) { Var(name=publishProgramText) } }
+                                If {
+                                  Eq { NodeKind { Var(name=publishProgram) } Lit(value="Err") }
+                                  Block {
+                                    Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=publishProgram) } }
+                                    Return { Lit(value=1) }
+                                  }
+                                  Block {
+                                    Let(name=publishResult) { Call(target=eval.runProgram) { Var(name=publishProgram) } }
+                                    If {
+                                      Eq { NodeKind { Var(name=publishResult) } Lit(value="Err") }
+                                      Block {
+                                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=publishResult) } }
+                                        Return { Lit(value=1) }
+                                      }
+                                      Block {
+                                        Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"publish-complete\")") }
+                                        Return { Lit(value=0) }
                                       }
                                     }
                                   }
                                 }
+                                  }
+                                }
+                              }
+                              Block {
+                                Call(target=sys.stdout.writeLine) {
+                                  Call(target=format.format) {
+                                    MakeErr {
+                                      Lit(value="runtime_err")
+                                      Lit(value="RUN024")
+                                      Lit(value="Package import is not declared in project manifest.")
+                                      Var(name=undeclaredPackageImportNodeId)
+                                    }
+                                  }
+                                }
+                                Return { Lit(value=1) }
                               }
                             }
                           }
                         }
                       }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#aic_l160__2(name=evalUserCall) {
-    Fn#aic_f160(params=node,env,target) {
-      Block#aic_b145__2 {
-        Let#aic_l161__2(name=argSt) {
-          If#aic_if160__2 {
-            Eq#aic_e160__2 { ChildCount#aic_cc160 { Var#aic_v201__2(name=node) } Lit#aic_i137__2(value=0) }
-            Block#aic_b146__2 { Call#aic_c112__2(target=makeState) { Call#aic_c113__2(target=makeVoid) { Lit#aic_i138__2(value=0) } Var#aic_v202__2(name=env) } }
-            Block#aic_b147__2 { Call#aic_c114__2(target=evalNode) { ChildAt#aic_ca160 { Var#aic_v203__2(name=node) Lit#aic_i139__2(value=0) } Var#aic_v204__2(name=env) } }
-          }
-        }
-        Let#aic_l162__2(name=argVal) { Call#aic_c115__2(target=stateValue) { Var#aic_v205__2(name=argSt) } }
-        Let#aic_l163__2(name=e2) { Call#aic_c116__2(target=stateEnv) { Var#aic_v206__2(name=argSt) } }
-        If#aic_if161__2 {
-          Eq#aic_e161__2 { NodeKind#aic_nk160 { Var#aic_v207__2(name=argVal) } Lit#aic_i140__2(value="Err") }
-          Block#aic_b148__2 { Return#aic_r128__2 { Call#aic_c117__2(target=makeState) { Var#aic_v208__2(name=argVal) Var#aic_v209__2(name=e2) } } }
-          Block#aic_b149__2 {
-            Let#aic_l164__2(name=fnv) { Call#aic_c118__2(target=lookupEnv) { Var#aic_v210__2(name=e2) Var#aic_v211__2(name=target) Lit#aic_i141__2(value=0) } }
-            If#aic_if162 {
-              Eq#aic_e162 { NodeKind#aic_nk161 { Var#aic_v212__2(name=fnv) } Lit#aic_i142__2(value="Err") }
-              Block#aic_b150__2 { Return#aic_r129__2 { Call#aic_c119__2(target=makeState) { Var#aic_v213__2(name=fnv) Var#aic_v214__2(name=e2) } } }
-              Block#aic_b151__2 {
-                Let#aic_l165__2(name=fnNode) { ChildAt#aic_ca161 { Var#aic_v215__2(name=fnv) Lit#aic_i143__2(value=0) } }
-                Let#aic_l166__2(name=fnEnv) { ChildAt#aic_ca162 { Var#aic_v216__2(name=fnv) Lit#aic_i144__2(value=1) } }
-                If#aic_if163 {
-                  Eq#aic_e163 { NodeKind#aic_nk162 { Var#aic_v217__2(name=fnNode) } Lit#aic_i145__2(value="Fn") }
-                  Block#aic_b152__2 {
-                    Let#aic_l167__2(name=p) { Call#aic_c120__2(target=getAttr) { Var#aic_v218__2(name=fnNode) Lit#aic_i146__2(value="params") Lit#aic_i147(value=0) } }
-                    Let#aic_l168(name=callEnv) {
-                      If#aic_if164 {
-                        Eq#aic_e164 { Var#aic_v219__2(name=p) Lit#aic_i148(value="_") }
-                        Block#aic_b153__2 { Var#aic_v220__2(name=fnEnv) }
-                        Block#aic_b154__2 { Call#aic_c121__2(target=addBinding) { Var#aic_v221__2(name=fnEnv) Var#aic_v222__2(name=p) Var#aic_v223__2(name=argVal) } }
+                      Block {
+                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { ChildAt { Var(name=diags) Lit(value=0) } } }
+                        Return { Lit(value=1) }
                       }
                     }
-                    Let#aic_l169(name=bodySt) { Call#aic_c122__2(target=evalNode) { ChildAt#aic_ca163 { Var#aic_v224__2(name=fnNode) Lit#aic_i149(value=0) } Var#aic_v225__2(name=callEnv) } }
-                    Return#aic_r130__2 { Call#aic_c123__2(target=makeState) { Call#aic_c124__2(target=stateValue) { Var#aic_v226__2(name=bodySt) } Var#aic_v227__2(name=e2) } }
                   }
-                  Block#aic_b155__2 { Return#aic_r131__2 { Call#aic_c125__2(target=makeState) { MakeErr#aic_me160 { Lit#aic_i150(value="err_call") Lit#aic_i151(value="RUN002") Lit#aic_i152(value="Target is not callable.") Var#aic_v228__2(name=target) } Var#aic_v229__2(name=e2) } } }
                 }
+              }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AICP002 message=\"project.aiproj not found.\" nodeId=project)") }
+                Return { Lit(value=1) }
               }
             }
           }
@@ -1474,5 +352,139 @@ Program#aic_p1 {
     }
   }
 
-  Call#aic_c999(target=main) { Var#aic_v999(name=argv) }
+  Let(name=readAndParse) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=parse.parseDocument) {
+            Call(target=sys.console.readAllStdin)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runFmt) {
+    Fn(params=args) {
+      Block {
+        Let(name=parsed) { Call(target=readAndParse) { Lit(value=0) } }
+        Let(name=mode) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { Var(name=mode) Lit(value="--ids") }
+          Block { Call(target=sys.stdout.writeLine) { Call(target=formatWithIds) { Var(name=parsed) } } }
+          Block { Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } } }
+        }
+        Return { Lit(value=0) }
+      }
+    }
+  }
+
+
+  Let(name=runCheck) {
+    Fn(params=args) {
+      Block {
+        Let(name=parsed) { Call(target=readAndParse) { Lit(value=0) } }
+        Let(name=mode) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        If {
+          Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
+            Return { Lit(value=1) }
+          }
+          Block {
+            Let(name=diags) { Call(target=validate) { Var(name=parsed) } }
+            If {
+              Eq { ChildCount { Var(name=diags) } Lit(value=0) }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok0(type=void)") }
+                Return { Lit(value=0) }
+              }
+              Block {
+                Call(target=sys.stdout.writeLine) {
+                  Call(target=format.format) {
+                    ChildAt { Var(name=diags) Lit(value=0) }
+                  }
+                }
+                Return { Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runRun) {
+    Fn(params=_) {
+      Block {
+        Let(name=parsed) { Call(target=readAndParse) { Lit(value=0) } }
+        If {
+          Eq { NodeKind { Var(name=parsed) } Lit(value="Err") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=parsed) } }
+            Return { Lit(value=1) }
+          }
+          Block {
+            Let(name=diags) { Call(target=validate) { Var(name=parsed) } }
+            If {
+              Eq { ChildCount { Var(name=diags) } Lit(value=0) }
+              Block {
+                Let(name=value) { Call(target=eval.runProgram) { Var(name=parsed) } }
+                If {
+                  Eq { NodeKind { Var(name=value) } Lit(value="Lit") }
+                  Block {
+                    Call(target=value.emitOkFromValue) { Var(name=value) }
+                    Return
+                  }
+                  Block {
+                    If {
+                      Eq { NodeId { Var(name=value) } Lit(value="void") }
+                      Block {
+                        Call(target=value.emitOkFromValue) { Var(name=value) }
+                        Return
+                      }
+                      Block {
+                        Call(target=sys.stdout.writeLine) { Call(target=format.format) { Var(name=value) } }
+                        Return
+                      }
+                    }
+                    Return { Lit(value=1) }
+                  }
+                }
+              }
+              Block {
+                Call(target=sys.stdout.writeLine) {
+                  Call(target=format.format) {
+                    ChildAt { Var(name=diags) Lit(value=0) }
+                  }
+                }
+                Return { Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+  Call(target=main) { Var(name=argv) }
 }

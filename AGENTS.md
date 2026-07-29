@@ -3,6 +3,34 @@
 This repository is an AI-native language runtime.
 The AI must treat architectural constraints as hard rules.
 
+## Prime Directive
+
+AiLang exists to let AI agents create, understand, modify, debug, and ship software for any target from high-level intent, with humans acting mainly as prioritizers and approvers.
+
+## Tooling Boundary
+
+- Agents must prefer improving AiLang and AiVectra built-in capabilities, diagnostics, debug surfaces, and automation over forcing progress with inadequate tooling.
+- If a task cannot be completed cleanly with the current toolchain, the correct next step is to extend the toolchain rather than normalize manual or external workarounds.
+- Human verification is exception-only. If agents repeatedly need a human to confirm what the runtime or UI shows, treat that as a tooling gap to be closed.
+- Agent-visible debug artifacts should match user-visible reality under the same build, runtime, input, and target conditions.
+
+## Module Discipline
+
+- Treat each `.aos` file as one semantic module with one top-level `Program`.
+  This is not a one-function-per-file rule. Files over 1,000 lines trigger a
+  semantic-cohesion warning and must be reviewed before adding behavior.
+- Agents must prefer creating focused semantic `.aos` modules over expanding
+  large facade, host, runtime, CLI, or sample files. Do not create or continue
+  "blob" files.
+- Host/runtime changes must remain mechanical and must not introduce language,
+  library, UI, package, parsing, validation, formatting, or application
+  semantics. Deterministic semantic behavior belongs in AiLang `.aos` modules,
+  specs, or packages.
+- Keep entry/facade files thin. When a file owns several concepts, split by
+  semantic ownership before adding more behavior.
+- Native/bootstrap code in this repository is temporary or boundary code only;
+  do not grow it with behavior that can be expressed in AiLang.
+
 ## Non-negotiable constraints
 
 - NO external libraries or NuGet packages.
@@ -17,6 +45,12 @@ The AI must treat architectural constraints as hard rules.
 - No hidden side effects inside the VM; all effects must route through `sys.*`.
 - VM execution must not directly access time, randomness, network, filesystem, or process state.
 - Syscalls are the only permitted escape hatch from deterministic execution.
+- Do not request or add new `sys.*` targets for deterministic language or
+  library behavior such as string replacement, collection operations, template
+  rendering, parsing, validation, compiler policy, or compatibility adapters.
+  Those belong in AiLang or AiLang core libraries.
+- A new syscall is only appropriate when it crosses a host boundary and cannot
+  be implemented deterministically in AiLang.
 
 ## Layer boundaries (enforced)
 
@@ -25,15 +59,13 @@ The AI must treat architectural constraints as hard rules.
   - AST/IR structures
   - validator and deterministic language semantics
   - no direct syscall, network, file, or process operations
-- `src/AiVM.Core` is VM-only:
+- `../AiVM/src` is VM-only:
   - AiBC1 loading/execution
   - deterministic state transition engine
   - syscall dispatch boundary only (`sys.*`)
   - no language-spec ownership changes without `SPEC/` updates
-- `src/AiCLI` is bootloader-only:
-  - CLI arg parsing and mode selection
-  - syscall host binding
-  - delegates execution to core/vm layers
+  - new syscall contracts require `../AiVM/Docs/Syscalls.md` justification and
+    AiVM contract tests
 - `src/AiVectra` is UI-layer placeholder (no active runtime integration yet).
 
 ## What the AI is allowed to do
@@ -52,24 +84,31 @@ The AI must treat architectural constraints as hard rules.
 - Do not introduce hidden side effects.
 - Do not weaken validation or type checking.
 - Do not silently change output formatting.
+- Do not add C VM/runtime/native launcher code to AiLang. VM/runtime/native
+  launcher C belongs in AiVM, and foreign C library access must go through an
+  explicit SDK/syscall/adapter boundary. The temporary `tools/aos_frontend.c`
+  parser bootstrap is allowed until the parser frontend is rewritten in AiLang.
 
 ## Development workflow
 
 - Work in small, reviewable changes.
-- Run `./scripts/test.sh` frequently.
+- Run `./test.sh` frequently.
 - Keep diffs minimal and focused.
 - Prefer editing existing code over rewriting files.
 - When unsure, stop and ask for clarification.
 
 ## Local commands
 
-- Use `./tools/airun` for day-to-day execution.
+- Use `./tools/ailang` for day-to-day execution.
 - VM is default for `run`; use `--vm=ast` only for debugging unsupported bytecode paths.
 - Production runtime builds (`AosDevMode=false`) disable `--vm=ast` and source-mode commands.
-- Use `./scripts/test.sh` for golden test validation.
-- Use `./scripts/build-airun.sh` only when rebuilding `tools/airun` via dotnet publish.
+- Use `./build.sh` or `./build.ps1` as the canonical tooling bootstrap entrypoint.
+- Use `./test.sh` or `./test.ps1` as the canonical verification entrypoint.
+- Treat `scripts/test*.sh` and `scripts/test*.ps1` as internal implementation details behind the canonical verification entrypoint unless the task is specifically about test-harness maintenance.
+- Treat `scripts/build-*.sh` and `scripts/build-*.ps1` as internal implementation details behind the canonical bootstrap entrypoint unless the task is specifically about build-script maintenance.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.
-- Frontend parsing is provided by standalone `tools/aos_frontend`.
+- Frontend parsing currently uses temporary bootstrap tool `tools/aos_frontend`.
+- Native launchers and host adapters are supplied by the selected installed SDK.
 
 ## Definition of done
 
@@ -83,6 +122,15 @@ A change is complete only if:
 
 - `SPEC/IL.md`, `SPEC/EVAL.md`, and `SPEC/VALIDATION.md` are language contracts.
 - Semantic changes must update spec docs and matching goldens in the same change.
+
+## Release Contract Policy
+
+IMPORTANT: Until a major or minor release is officially released, all contracts,
+APIs, schemas, interfaces, and architectural decisions are considered
+negotiable and may change freely. Do not add backward compatibility layers,
+legacy adapters, or dual-path support unless explicitly requested. When changing
+direction, replace the old implementation completely and update the codebase
+consistently to the new contract. Patch releases are for bug fixes only.
 
 ## Documentation policy
 

@@ -1,0 +1,107 @@
+Program {
+  Import(path="process/execute.aos")
+  Import(path="process/result.aos")
+
+  Let(name=args) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.process.args) }
+      }
+    }
+  }
+
+  Let(name=cwd) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.process.cwd) }
+      }
+    }
+  }
+
+  Let(name=envGet) {
+    Fn(params=name) {
+      Block {
+        Return { Call(target=sys.process.env.get) { Var(name=name) } }
+      }
+    }
+  }
+
+  Let(name=spawn) {
+    Fn(params=cmd,args,cwdPath,env) {
+      Block {
+        Return {
+          Call(target=sys.process.spawn) {
+            Var(name=cmd)
+            Var(name=args)
+            Var(name=cwdPath)
+            Var(name=env)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=wait) {
+    Fn(params=handle) {
+      Block {
+        Return { Call(target=sys.process.wait) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=poll) {
+    Fn(params=handle) {
+      Block {
+        Return { Call(target=sys.process.poll) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=kill) {
+    Fn(params=handle) {
+      Block {
+        Return { Call(target=sys.process.kill) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=stdoutRead) {
+    Fn(params=handle) {
+      Block {
+        Return { Call(target=sys.process.stdout.read) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=stderrRead) {
+    Fn(params=handle) {
+      Block {
+        Return { Call(target=sys.process.stderr.read) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=exit) {
+    Fn(params=code) {
+      Block {
+        Return { Call(target=sys.process.exit) { Var(name=code) } }
+      }
+    }
+  }
+
+  Export(name=args)
+  Export(name=cwd)
+  Export(name=envGet)
+  Export(name=spawn)
+  Export(name=wait)
+  Export(name=poll)
+  Export(name=kill)
+  Export(name=stdoutRead)
+  Export(name=stderrRead)
+  Export(name=exit)
+  Export(name=runCaptured)
+  Export(name=processResult)
+  Export(name=processResultExitCode)
+  Export(name=processResultStdoutText)
+  Export(name=processResultStderrText)
+}

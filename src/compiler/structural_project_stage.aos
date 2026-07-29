@@ -1,0 +1,207 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="format.aos")
+  Import(path="parser.aos")
+  Import(path="structural_object_chunks.aos")
+  Import(path="structural_project_symbols.aos")
+  Export(name=structuralProject.prepareParallelStage)
+  Export(name=structuralProject.readParallelStage)
+
+  Let(name=structuralProject.prepareParallelStage) {
+    Fn(params=modulePaths,projectDir,lockText,stageDir) {
+      Block {
+        Call(target=sys.fs.dir.create) { Var(name=stageDir) }
+        Let(name=chunks) {
+          Call(target=structuralProject.collectProjectSymbolChunks) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Lit(value=0)
+            MakeBlock { Lit(value="record-chunks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=chunks) } Lit(value="Err") }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Let(name=records) {
+              Call(target=structuralObject.validateProjectFunctionRecordChunks) {
+                Var(name=chunks)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+              Block { Return { Var(name=records) } }
+              Block {
+                Let(name=pathsWrite) {
+                  Call(target=structuralProject.writeParallelStageDocument) {
+                    StrConcat { Var(name=stageDir) Lit(value="/module-paths.aos") }
+                    Call(target=structuralProject.parallelStageModulePaths) {
+                      Var(name=modulePaths)
+                      Lit(value=0)
+                      MakeBlock { Lit(value="module-paths") }
+                    }
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=pathsWrite) } Lit(value="Err") }
+                  Block { Return { Var(name=pathsWrite) } }
+                  Block {
+                    Let(name=recordsWrite) {
+                      Call(target=structuralProject.writeParallelStageDocument) {
+                        StrConcat { Var(name=stageDir) Lit(value="/function-records.aos") }
+                        Var(name=records)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=recordsWrite) } Lit(value="Err") }
+                      Block { Return { Var(name=recordsWrite) } }
+                      Block { Return { MakeBlock { Lit(value="parallel-stage") } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.parallelStageModulePaths) {
+    Fn(params=modulePaths,index,stagedPaths) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=stagedPaths) } }
+          Block {
+            Return {
+              Call(target=structuralProject.parallelStageModulePaths) {
+                Var(name=modulePaths)
+                Add { Var(name=index) Lit(value=1) }
+                AppendChild {
+                  Var(name=stagedPaths)
+                  MakeLitString {
+                    Lit(value="module")
+                    AttrValueString {
+                      ChildAt { Var(name=modulePaths) Var(name=index) }
+                      Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeParallelStageDocument) {
+    Fn(params=path,document) {
+      Block {
+        Call(target=sys.fs.file.write) {
+          Var(name=path)
+          Call(target=bytes.fromUtf8String) {
+            Call(target=format.format) { Var(name=document) }
+          }
+        }
+        Return { MakeBlock { Lit(value="stage-written") } }
+      }
+    }
+  }
+
+  Let(name=structuralProject.readParallelStage) {
+    Fn(params=stageDir) {
+      Block {
+        Let(name=modulePaths) {
+          Call(target=structuralProject.readParallelStageDocument) {
+            StrConcat { Var(name=stageDir) Lit(value="/module-paths.aos") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=modulePaths) } Lit(value="Err") }
+          Block { Return { Var(name=modulePaths) } }
+          Block {
+            Let(name=records) {
+              Call(target=structuralProject.readParallelStageDocument) {
+                StrConcat { Var(name=stageDir) Lit(value="/function-records.aos") }
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+              Block { Return { Var(name=records) } }
+              Block {
+                Return {
+                  AppendChild {
+                    AppendChild {
+                      MakeBlock { Lit(value="parallel-stage") }
+                      Var(name=modulePaths)
+                    }
+                    Call(target=structuralProject.restoreRecordChunks) {
+                      Var(name=records)
+                      Lit(value=0)
+                      MakeBlock { Lit(value="record-chunks") }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.restoreRecordChunks) {
+    Fn(params=parsed,index,chunks) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=parsed) } }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Return {
+              Call(target=structuralProject.restoreRecordChunks) {
+                Var(name=parsed)
+                Add { Var(name=index) Lit(value=1) }
+                AppendChild {
+                  Var(name=chunks)
+                  ChildAt { Var(name=parsed) Var(name=index) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.readParallelStageDocument) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Return {
+              Call(target=parse.parseDocument) {
+                Call(target=bytes.toUtf8String) {
+                  Call(target=sys.fs.file.read) { Var(name=path) }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_project_stage")
+                Lit(value="PARBUILD005")
+                Lit(value="Parallel build stage document is missing.")
+                Var(name=path)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

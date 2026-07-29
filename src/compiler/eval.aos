@@ -1,0 +1,655 @@
+Program {
+  Import(path="parser.aos")
+  Import(path="format.aos")
+  Import(path="validate.aos")
+  Import(path="value.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=eval.runProgram)
+
+  Let(name=eval.runProgram) {
+    Fn(params=node) {
+      Block {
+        Return {
+          Call(target=stateValue) {
+            Call(target=evalNode) {
+              Var(name=node)
+              MakeBlock { Lit(value="env") }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makeVoid) {
+    Fn(params=_) {
+      Block { Return { MakeBlock { Lit(value="void") } } }
+    }
+  }
+
+  Let(name=makeState) {
+    Fn(params=value,env) {
+      Block {
+        Return {
+          MakePair {
+            Var(name=value)
+            Var(name=env)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=stateValue) {
+    Fn(params=state) {
+      Block { Return { PairFirst { Var(name=state) } } }
+    }
+  }
+
+  Let(name=stateEnv) {
+    Fn(params=state) {
+      Block { Return { PairSecond { Var(name=state) } } }
+    }
+  }
+
+  Let(name=getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=addBinding) {
+    Fn(params=env,name,value) {
+      Block {
+        Let(name=i) { ChildCount { Var(name=env) } }
+        Let(name=bindId) { StrConcat { Lit(value="b") ToString { Var(name=i) } } }
+        Let(name=keyId) { StrConcat { Lit(value="k") ToString { Var(name=i) } } }
+        Let(name=binding) {
+          AppendChild {
+            AppendChild {
+              MakeBlock { Var(name=bindId) }
+              MakeLitString { Var(name=keyId) Var(name=name) }
+            }
+            Var(name=value)
+          }
+        }
+        Return { AppendChild { Var(name=env) Var(name=binding) } }
+      }
+    }
+  }
+
+  Let(name=lookupEnv) {
+    Fn(params=env,name,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=env) } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="err_lookup")
+                Lit(value="RUN001")
+                StrConcat { Lit(value="Unknown variable '") StrConcat { Var(name=name) Lit(value="'.") } }
+                Var(name=name)
+              }
+            }
+          }
+          Block {
+            Let(name=b) { ChildAt { Var(name=env) Var(name=index) } }
+            If {
+              Eq {
+                AttrValueString { ChildAt { Var(name=b) Lit(value=0) } Lit(value=0) }
+                Var(name=name)
+              }
+              Block { Return { ChildAt { Var(name=b) Lit(value=1) } } }
+              Block { Return { Call(target=lookupEnv) { Var(name=env) Var(name=name) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makeClosure) {
+    Fn(params=fnNode,env) {
+      Block {
+        Let(name=i) { ChildCount { Var(name=env) } }
+        Let(name=id) { StrConcat { Lit(value="cl") ToString { Var(name=i) } } }
+        Return {
+          AppendChild {
+            AppendChild {
+              MakeBlock { Var(name=id) }
+              Var(name=fnNode)
+            }
+            Var(name=env)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalNode) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=node) } }
+        If {
+          Eq { Var(name=kind) Lit(value="Program") }
+          Block { Return { Call(target=evalSeq) { Var(name=node) Var(name=env) Lit(value=0) Call(target=makeVoid) { Lit(value=0) } } } }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="Block") }
+              Block { Return { Call(target=evalSeq) { Var(name=node) Var(name=env) Lit(value=0) Call(target=makeVoid) { Lit(value=0) } } } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Let") }
+                  Block { Return { Call(target=evalLet) { Var(name=node) Var(name=env) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="Var") }
+                      Block { Return { Call(target=evalVar) { Var(name=node) Var(name=env) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=kind) Lit(value="Lit") }
+                          Block { Return { Call(target=makeState) { Var(name=node) Var(name=env) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=kind) Lit(value="Call") }
+                              Block { Return { Call(target=evalCall) { Var(name=node) Var(name=env) } } }
+                              Block {
+                                If {
+                                  Eq { Var(name=kind) Lit(value="Fn") }
+                                  Block { Return { Call(target=makeState) { Call(target=makeClosure) { Var(name=node) Var(name=env) } Var(name=env) } } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=kind) Lit(value="If") }
+                                      Block { Return { Call(target=evalIfExpr) { Var(name=node) Var(name=env) } } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=kind) Lit(value="Match") }
+                                          Block { Return { Call(target=evalMatchExpr) { Var(name=node) Var(name=env) } } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=kind) Lit(value="Eq") }
+                                              Block { Return { Call(target=evalEqExpr) { Var(name=node) Var(name=env) } } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=kind) Lit(value="StrConcat") }
+                                                  Block { Return { Call(target=evalStrConcatExpr) { Var(name=node) Var(name=env) } } }
+                                                  Block {
+                                                    If {
+                                                      Eq { Var(name=kind) Lit(value="Add") }
+                                                      Block { Return { Call(target=evalAddExpr) { Var(name=node) Var(name=env) } } }
+                                                      Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_eval") Lit(value="RUN010") Lit(value="Unsupported node kind.") NodeId { Var(name=node) } } Var(name=env) } } }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalSeq) {
+    Fn(params=node,env,index,last) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=node) } }
+          Block { Return { Call(target=makeState) { Var(name=last) Var(name=env) } } }
+          Block {
+            Let(name=st) { Call(target=evalNode) { ChildAt { Var(name=node) Var(name=index) } Var(name=env) } }
+            Let(name=v) { Call(target=stateValue) { Var(name=st) } }
+            Let(name=e2) { Call(target=stateEnv) { Var(name=st) } }
+            If {
+              Eq { NodeKind { Var(name=v) } Lit(value="Err") }
+              Block { Return { Call(target=makeState) { Var(name=v) Var(name=e2) } } }
+              Block { Return { Call(target=evalSeq) { Var(name=node) Var(name=e2) Add { Var(name=index) Lit(value=1) } Var(name=v) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalLet) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=name) { Call(target=getAttr) { Var(name=node) Lit(value="name") Lit(value=0) } }
+        Let(name=expr) { ChildAt { Var(name=node) Lit(value=0) } }
+        Let(name=isFn) { Eq { NodeKind { Var(name=expr) } Lit(value="Fn") } }
+        Let(name=st) {
+          If {
+            Var(name=isFn)
+            Block { Call(target=makeState) { Call(target=makeClosure) { Var(name=expr) Var(name=env) } Var(name=env) } }
+            Block { Call(target=evalNode) { Var(name=expr) Var(name=env) } }
+          }
+        }
+        Let(name=v) { Call(target=stateValue) { Var(name=st) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=st) } }
+        If {
+          Eq { NodeKind { Var(name=v) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=v) Var(name=e2) } } }
+          Block { Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Call(target=addBinding) { Var(name=e2) Var(name=name) Var(name=v) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=evalVar) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=name) { Call(target=getAttr) { Var(name=node) Lit(value="name") Lit(value=0) } }
+        Let(name=v) { Call(target=lookupEnv) { Var(name=env) Var(name=name) Lit(value=0) } }
+        Return { Call(target=makeState) { Var(name=v) Var(name=env) } }
+      }
+    }
+  }
+
+  Let(name=evalIfExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=condSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=condVal) { Call(target=stateValue) { Var(name=condSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=condSt) } }
+        If {
+          Eq { NodeKind { Var(name=condVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=condVal) Var(name=e2) } } }
+          Block {
+            If {
+              Eq { AttrValueKind { Var(name=condVal) Lit(value=0) } Lit(value="bool") }
+              Block {
+                If {
+                  AttrValueBool { Var(name=condVal) Lit(value=0) }
+                  Block { Return { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=1) } Var(name=e2) } } }
+                  Block {
+                    If {
+                      Eq { ChildCount { Var(name=node) } Lit(value=3) }
+                      Block { Return { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=2) } Var(name=e2) } } }
+                      Block { Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=e2) } } }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_if") Lit(value="RUN011") Lit(value="If condition must be bool.") NodeId { Var(name=node) } } Var(name=e2) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=literalValuesEqual) {
+    Fn(params=left,right) {
+      Block {
+        Let(name=leftKind) { AttrValueKind { Var(name=left) Lit(value=0) } }
+        Let(name=rightKind) { AttrValueKind { Var(name=right) Lit(value=0) } }
+        If {
+          Eq { Var(name=leftKind) Var(name=rightKind) }
+          Block {
+            If {
+              Eq { Var(name=leftKind) Lit(value="string") }
+              Block { Return { Eq { AttrValueString { Var(name=left) Lit(value=0) } AttrValueString { Var(name=right) Lit(value=0) } } } }
+              Block {
+                If {
+                  Eq { Var(name=leftKind) Lit(value="int") }
+                  Block { Return { Eq { AttrValueInt { Var(name=left) Lit(value=0) } AttrValueInt { Var(name=right) Lit(value=0) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=leftKind) Lit(value="bool") }
+                      Block { Return { Eq { AttrValueBool { Var(name=left) Lit(value=0) } AttrValueBool { Var(name=right) Lit(value=0) } } } }
+                      Block { Return { Lit(value=false) } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=evalMatchExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=subjectState) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=subject) { Call(target=stateValue) { Var(name=subjectState) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=subjectState) } }
+        If {
+          Eq { NodeKind { Var(name=subject) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=subject) Var(name=e2) } } }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=subject) } Lit(value="Lit") }
+              Block { Return { Call(target=evalMatchArms) { Var(name=node) Var(name=subject) Var(name=e2) Lit(value=1) } } }
+              Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="RUN013") Lit(value="Match subject must be a primitive literal.") NodeId { Var(name=node) } } Var(name=e2) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalMatchArms) {
+    Fn(params=matchNode,subject,env,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=matchNode) } }
+          Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="MATCH001") Lit(value="Match has no matching case or default.") NodeId { Var(name=matchNode) } } Var(name=env) } } }
+          Block {
+            Let(name=arm) { ChildAt { Var(name=matchNode) Var(name=index) } }
+            Let(name=kind) { NodeKind { Var(name=arm) } }
+            If {
+              Eq { Var(name=kind) Lit(value="Case") }
+              Block {
+                Let(name=caseValue) { ChildAt { Var(name=arm) Lit(value=0) } }
+                If {
+                  Call(target=literalValuesEqual) { Var(name=subject) Var(name=caseValue) }
+                  Block { Return { Call(target=evalNode) { ChildAt { Var(name=arm) Lit(value=1) } Var(name=env) } } }
+                  Block { Return { Call(target=evalMatchArms) { Var(name=matchNode) Var(name=subject) Var(name=env) Add { Var(name=index) Lit(value=1) } } } }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Default") }
+                  Block { Return { Call(target=evalNode) { ChildAt { Var(name=arm) Lit(value=0) } Var(name=env) } } }
+                  Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_match") Lit(value="RUN014") Lit(value="Invalid Match arm.") NodeId { Var(name=arm) } } Var(name=env) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalEqExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=lSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=lVal) { Call(target=stateValue) { Var(name=lSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=lSt) } }
+        If {
+          Eq { NodeKind { Var(name=lVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=lVal) Var(name=e2) } } }
+          Block {
+            Let(name=rSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=1) } Var(name=e2) } }
+            Let(name=rVal) { Call(target=stateValue) { Var(name=rSt) } }
+            Let(name=e3) { Call(target=stateEnv) { Var(name=rSt) } }
+            If {
+              Eq { NodeKind { Var(name=rVal) } Lit(value="Err") }
+              Block { Return { Call(target=makeState) { Var(name=rVal) Var(name=e3) } } }
+              Block {
+                Let(name=eqv) { Call(target=literalValuesEqual) { Var(name=lVal) Var(name=rVal) } }
+                Return { Call(target=makeState) { Call(target=value.makeBoolLit) { Var(name=eqv) } Var(name=e3) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalStrConcatExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=lSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=lVal) { Call(target=stateValue) { Var(name=lSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=lSt) } }
+        If {
+          Eq { NodeKind { Var(name=lVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=lVal) Var(name=e2) } } }
+          Block {
+            Let(name=rSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=1) } Var(name=e2) } }
+            Let(name=rVal) { Call(target=stateValue) { Var(name=rSt) } }
+            Let(name=e3) { Call(target=stateEnv) { Var(name=rSt) } }
+            If {
+              Eq { NodeKind { Var(name=rVal) } Lit(value="Err") }
+              Block { Return { Call(target=makeState) { Var(name=rVal) Var(name=e3) } } }
+              Block {
+                Let(name=s) { StrConcat { Call(target=value.toString) { Var(name=lVal) } Call(target=value.toString) { Var(name=rVal) } } }
+                Return { Call(target=makeState) { Call(target=value.makeStringLit) { Var(name=e3) Var(name=s) } Var(name=e3) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalAddExpr) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=lSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+        Let(name=lVal) { Call(target=stateValue) { Var(name=lSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=lSt) } }
+        If {
+          Eq { NodeKind { Var(name=lVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=lVal) Var(name=e2) } } }
+          Block {
+            Let(name=rSt) { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=1) } Var(name=e2) } }
+            Let(name=rVal) { Call(target=stateValue) { Var(name=rSt) } }
+            Let(name=e3) { Call(target=stateEnv) { Var(name=rSt) } }
+            If {
+              Eq { NodeKind { Var(name=rVal) } Lit(value="Err") }
+              Block { Return { Call(target=makeState) { Var(name=rVal) Var(name=e3) } } }
+              Block {
+                If {
+                  Eq { AttrValueKind { Var(name=lVal) Lit(value=0) } Lit(value="int") }
+                  Block {
+                    If {
+                      Eq { AttrValueKind { Var(name=rVal) Lit(value=0) } Lit(value="int") }
+                      Block {
+                        Let(name=n) { Add { AttrValueInt { Var(name=lVal) Lit(value=0) } AttrValueInt { Var(name=rVal) Lit(value=0) } } }
+                        Return { Call(target=makeState) { Call(target=value.makeIntLit) { Var(name=n) } Var(name=e3) } }
+                      }
+                      Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_add") Lit(value="RUN012") Lit(value="Add expects int operands.") NodeId { Var(name=node) } } Var(name=e3) } } }
+                    }
+                  }
+                  Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_add2") Lit(value="RUN012") Lit(value="Add expects int operands.") NodeId { Var(name=node) } } Var(name=e3) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalCall) {
+    Fn(params=node,env) {
+      Block {
+        Let(name=target) { Call(target=getAttr) { Var(name=node) Lit(value="target") Lit(value=0) } }
+        Let(name=argCount) { ChildCount { Var(name=node) } }
+        Let(name=argSt) {
+          If {
+            Eq { Var(name=argCount) Lit(value=0) }
+            Block { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=env) } }
+            Block { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+          }
+        }
+        Let(name=argVal) { Call(target=stateValue) { Var(name=argSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=argSt) } }
+        If {
+          Eq { NodeKind { Var(name=argVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=argVal) Var(name=e2) } } }
+          Block {
+            If {
+              Eq { Var(name=target) Lit(value="io.print") }
+              Block {
+                Call(target=sys.stdout.writeLine) { Call(target=value.toString) { Var(name=argVal) } }
+                Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=e2) } }
+              }
+              Block {
+                If {
+                  Eq { Var(name=target) Lit(value="io.write") }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Call(target=value.toString) { Var(name=argVal) } }
+                    Return { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=e2) } }
+                  }
+                  Block {
+                    If {
+                      Eq { Var(name=target) Lit(value="io.readLine") }
+                      Block {
+                        Let(name=line) { Call(target=sys.console.readLine) }
+                        Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=line) } }
+                        Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
+                      }
+                      Block {
+                        If {
+                          Eq { Var(name=target) Lit(value="io.readAllStdin") }
+                          Block {
+                            Let(name=text) { Call(target=sys.console.readAllStdin) }
+                            Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
+                            Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
+                          }
+                          Block {
+                            If {
+                              Eq { Var(name=target) Lit(value="io.readFile") }
+                              Block {
+                                Let(name=text) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Call(target=value.toString) { Var(name=argVal) } } } }
+                                Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
+                                Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
+                              }
+                              Block {
+                                If {
+                                  Eq { Var(name=target) Lit(value="io.fileExists") }
+                                  Block {
+                                    Let(name=ok) { Call(target=sys.fs.file.exists) { Call(target=value.toString) { Var(name=argVal) } } }
+                                    Let(name=lit) { Call(target=value.makeBoolLit) { Var(name=ok) } }
+                                    Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
+                                  }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=target) Lit(value="compiler.parse") }
+                                      Block { Return { Call(target=makeState) { Call(target=parse.parseDocument) { Call(target=value.toString) { Var(name=argVal) } } Var(name=e2) } } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=target) Lit(value="compiler.format") }
+                                          Block {
+                                            Let(name=text) { Call(target=format.format) { Var(name=argVal) } }
+                                            Let(name=lit) { Call(target=value.makeStringLit) { Var(name=e2) Var(name=text) } }
+                                            Return { Call(target=makeState) { Var(name=lit) Var(name=e2) } }
+                                          }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=target) Lit(value="compiler.validate") }
+                                              Block { Return { Call(target=makeState) { Call(target=validate) { Var(name=argVal) } Var(name=e2) } } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=target) Lit(value="compiler.test") }
+                                                  Block {
+                                                    Return {
+                                                      Call(target=makeState) {
+                                                        MakeErr {
+                                                          Lit(value="runtime_err")
+                                                          Lit(value="AIC003")
+                                                          Lit(value="Self-hosted test command is not implemented yet.")
+                                                          Lit(value="test")
+                                                        }
+                                                        Var(name=e2)
+                                                      }
+                                                    }
+                                                  }
+                                                  Block { Return { Call(target=evalUserCall) { Var(name=node) Var(name=env) Var(name=target) } } }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=evalUserCall) {
+    Fn(params=node,env,target) {
+      Block {
+        Let(name=argSt) {
+          If {
+            Eq { ChildCount { Var(name=node) } Lit(value=0) }
+            Block { Call(target=makeState) { Call(target=makeVoid) { Lit(value=0) } Var(name=env) } }
+            Block { Call(target=evalNode) { ChildAt { Var(name=node) Lit(value=0) } Var(name=env) } }
+          }
+        }
+        Let(name=argVal) { Call(target=stateValue) { Var(name=argSt) } }
+        Let(name=e2) { Call(target=stateEnv) { Var(name=argSt) } }
+        If {
+          Eq { NodeKind { Var(name=argVal) } Lit(value="Err") }
+          Block { Return { Call(target=makeState) { Var(name=argVal) Var(name=e2) } } }
+          Block {
+            Let(name=fnv) { Call(target=lookupEnv) { Var(name=e2) Var(name=target) Lit(value=0) } }
+            If {
+              Eq { NodeKind { Var(name=fnv) } Lit(value="Err") }
+              Block { Return { Call(target=makeState) { Var(name=fnv) Var(name=e2) } } }
+              Block {
+                Let(name=fnNode) { ChildAt { Var(name=fnv) Lit(value=0) } }
+                Let(name=fnEnv) { ChildAt { Var(name=fnv) Lit(value=1) } }
+                If {
+                  Eq { NodeKind { Var(name=fnNode) } Lit(value="Fn") }
+                  Block {
+                    Let(name=p) { Call(target=getAttr) { Var(name=fnNode) Lit(value="params") Lit(value=0) } }
+                    Let(name=callEnv) {
+                      If {
+                        Eq { Var(name=p) Lit(value="_") }
+                        Block { Var(name=fnEnv) }
+                        Block { Call(target=addBinding) { Var(name=fnEnv) Var(name=p) Var(name=argVal) } }
+                      }
+                    }
+                    Let(name=bodySt) { Call(target=evalNode) { ChildAt { Var(name=fnNode) Lit(value=0) } Var(name=callEnv) } }
+                    Return { Call(target=makeState) { Call(target=stateValue) { Var(name=bodySt) } Var(name=e2) } }
+                  }
+                  Block { Return { Call(target=makeState) { MakeErr { Lit(value="err_call") Lit(value="RUN002") Lit(value="Target is not callable.") Var(name=target) } Var(name=e2) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

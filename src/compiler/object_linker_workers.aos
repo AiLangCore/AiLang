@@ -1,0 +1,366 @@
+Program {
+  Export(name=objectLinker.collectWorkerCatalogPlan)
+  Export(name=objectLinker.resolveWorkerRelocation)
+
+  Let(name=objectLinker.collectWorkerCatalogPlan) {
+    Fn(params=objects,functions) {
+      Block {
+        Return {
+          Call(target=objectLinker.collectWorkerObjectsAt) {
+            Var(name=objects) Var(name=functions) Lit(value=0)
+            MakeBlock { Lit(value="worker-catalog-plan") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectWorkerObjectsAt) {
+    Fn(params=objects,functions,objectIndex,catalog) {
+      Block {
+        If {
+          Eq { Var(name=objectIndex) ChildCount { Var(name=objects) } }
+          Block { Return { Var(name=catalog) } }
+          Block {
+            Let(name=next) {
+              Call(target=objectLinker.collectWorkerDeclarationsAt) {
+                ChildAt { Var(name=objects) Var(name=objectIndex) }
+                Var(name=functions) Lit(value=0) Var(name=catalog)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=next) } Lit(value="Err") }
+              Block { Return { Var(name=next) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.collectWorkerObjectsAt) {
+                    Var(name=objects) Var(name=functions)
+                    Add { Var(name=objectIndex) Lit(value=1) } Var(name=next)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.collectWorkerDeclarationsAt) {
+    Fn(params=objectNode,functions,index,catalog) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objectNode) } }
+          Block { Return { Var(name=catalog) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=objectNode) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="WorkerDecl") }
+              Block {
+                Let(name=symbol) {
+                  Call(target=objectLinker.workerAttr) {
+                    Var(name=child) Lit(value="symbol") Lit(value=0)
+                  }
+                }
+                Let(name=targetSymbol) {
+                  Call(target=objectLinker.workerAttr) {
+                    Var(name=child) Lit(value="targetSymbol") Lit(value=0)
+                  }
+                }
+                If {
+                  Eq { Var(name=symbol) Lit(value="") }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="object_linker") Lit(value="LINKW001")
+                        Lit(value="Worker declaration symbol is missing.") NodeId { Var(name=child) }
+                      }
+                    }
+                  }
+                  Block { Lit(value=0) }
+                }
+                If {
+                  Call(target=objectLinker.workerCatalogContains) {
+                    Var(name=catalog) Var(name=symbol) Lit(value=0)
+                  }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="object_linker") Lit(value="LINKW002")
+                        Lit(value="Duplicate canonical worker declaration symbol.") Var(name=symbol)
+                      }
+                    }
+                  }
+                  Block { Lit(value=0) }
+                }
+                If {
+                  Call(target=objectLinker.workerFunctionExists) {
+                    Var(name=functions) Var(name=targetSymbol) Lit(value=0)
+                  }
+                  Block { Lit(value=0) }
+                  Block {
+                    Return {
+                      MakeErr {
+                        Lit(value="object_linker") Lit(value="LINKW003")
+                        Lit(value="Worker target function symbol is unresolved.") Var(name=targetSymbol)
+                      }
+                    }
+                  }
+                }
+                Let(name=entryBase) {
+                  MakeNode {
+                    Lit(value="WorkerCatalogPlanEntry")
+                    StrConcat { Lit(value="worker-plan:") Var(name=symbol) }
+                  }
+                }
+                Let(name=withIndex) {
+                  AppendAttr {
+                    Var(name=entryBase)
+                    MakeLitInt { Lit(value="index") ChildCount { Var(name=catalog) } }
+                  }
+                }
+                Let(name=withSymbol) {
+                  AppendAttr {
+                    Var(name=withIndex) MakeLitString { Lit(value="symbol") Var(name=symbol) }
+                  }
+                }
+                Let(name=withTarget) {
+                  AppendAttr {
+                    Var(name=withSymbol)
+                    MakeLitString { Lit(value="targetSymbol") Var(name=targetSymbol) }
+                  }
+                }
+                Let(name=entry) {
+                  Call(target=objectLinker.copyWorkerChildren) {
+                    Var(name=child) Lit(value=0) Var(name=withTarget)
+                  }
+                }
+                Return {
+                  Call(target=objectLinker.collectWorkerDeclarationsAt) {
+                    Var(name=objectNode) Var(name=functions) Add { Var(name=index) Lit(value=1) }
+                    AppendChild { Var(name=catalog) Var(name=entry) }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=objectLinker.collectWorkerDeclarationsAt) {
+                    Var(name=objectNode) Var(name=functions) Add { Var(name=index) Lit(value=1) }
+                    Var(name=catalog)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.resolveWorkerRelocation) {
+    Fn(params=catalog,relocation) {
+      Block {
+        If {
+          Eq {
+            Call(target=objectLinker.workerAttr) {
+              Var(name=relocation) Lit(value="kind") Lit(value=0)
+            }
+            Lit(value="worker")
+          }
+          Block { Lit(value=0) }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="object_linker") Lit(value="LINKW004")
+                Lit(value="Worker relocation kind is invalid.") NodeId { Var(name=relocation) }
+              }
+            }
+          }
+        }
+        Let(name=symbol) {
+          Call(target=objectLinker.workerAttr) {
+            Var(name=relocation) Lit(value="targetSymbol") Lit(value=0)
+          }
+        }
+        Return {
+          Call(target=objectLinker.workerCatalogIndex) {
+            Var(name=catalog) Var(name=symbol) Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerCatalogIndex) {
+    Fn(params=catalog,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=catalog) } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="object_linker") Lit(value="LINKW005")
+                Lit(value="Worker relocation target is unresolved.") Var(name=symbol)
+              }
+            }
+          }
+          Block {
+            Let(name=entry) { ChildAt { Var(name=catalog) Var(name=index) } }
+            If {
+              Eq {
+                Call(target=objectLinker.workerAttr) {
+                  Var(name=entry) Lit(value="symbol") Lit(value=0)
+                }
+                Var(name=symbol)
+              }
+              Block {
+                Return {
+                  MakeLitInt {
+                    Lit(value="workerIndex")
+                    Call(target=objectLinker.workerAttrInt) {
+                      Var(name=entry) Lit(value="index") Lit(value=0)
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerCatalogIndex) {
+                    Var(name=catalog) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.copyWorkerChildren) {
+    Fn(params=source,index,destination) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=source) } }
+          Block { Return { Var(name=destination) } }
+          Block {
+            Return {
+              Call(target=objectLinker.copyWorkerChildren) {
+                Var(name=source) Add { Var(name=index) Lit(value=1) }
+                AppendChild { Var(name=destination) ChildAt { Var(name=source) Var(name=index) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerCatalogContains) {
+    Fn(params=catalog,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=catalog) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                Call(target=objectLinker.workerAttr) {
+                  ChildAt { Var(name=catalog) Var(name=index) }
+                  Lit(value="symbol") Lit(value=0)
+                }
+                Var(name=symbol)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerCatalogContains) {
+                    Var(name=catalog) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerFunctionExists) {
+    Fn(params=functions,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString {
+                  ChildAt { ChildAt { Var(name=functions) Var(name=index) } Lit(value=2) }
+                  Lit(value=0)
+                }
+                Var(name=symbol)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerFunctionExists) {
+                    Var(name=functions) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerAttr) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerAttrInt) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

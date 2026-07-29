@@ -1,0 +1,56 @@
+Program {
+  Export(name=collections.mapBuilder)
+  Export(name=collections.mapBuilderPutStringInt)
+  Export(name=collections.mapBuilderFinish)
+  Export(name=collections.mapCount)
+  Export(name=collections.mapHasString)
+  Export(name=collections.mapGetStringIntOr)
+
+  Let(name=collections.mapBuilder) {
+    Fn() {
+      Block { Return { MapBuilderNew {} } }
+    }
+  }
+
+  Let(name=collections.mapBuilderPutStringInt) {
+    Fn(params=builder,key,value) {
+      Block {
+        Return {
+          MapBuilderPutStringInt {
+            Var(name=builder) Var(name=key) Var(name=value)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=collections.mapBuilderFinish) {
+    Fn(params=builder) {
+      Block { Return { MapBuilderFinish { Var(name=builder) } } }
+    }
+  }
+
+  Let(name=collections.mapCount) {
+    Fn(params=map) {
+      Block { Return { MapCount { Var(name=map) } } }
+    }
+  }
+
+  Let(name=collections.mapHasString) {
+    Fn(params=map,key) {
+      Block { Return { MapHasString { Var(name=map) Var(name=key) } } }
+    }
+  }
+
+  Let(name=collections.mapGetStringIntOr) {
+    Fn(params=map,key,fallback) {
+      Block {
+        Return {
+          MapGetStringIntOr {
+            Var(name=map) Var(name=key) Var(name=fallback)
+          }
+        }
+      }
+    }
+  }
+}

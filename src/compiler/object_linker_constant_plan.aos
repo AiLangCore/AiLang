@@ -1,0 +1,169 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_string_index.aos")
+  Export(name=objectLinker.buildConstantPlan)
+  Export(name=objectLinker.buildConstantIndex)
+  Export(name=objectLinker.buildConstantOperandPlans)
+  Export(name=objectLinker.constantOperandForInstruction)
+
+  Let(name=objectLinker.constantOperandForInstruction) {
+    Fn(params=op,operands,ordinal) {
+      Block {
+        If {
+          Eq { Var(name=op) Lit(value="CONST") }
+          Block { Return { AttrValueInt { ChildAt { Var(name=operands) Var(name=ordinal) } Lit(value=0) } } }
+          Block { Return { Lit(value=-1) } }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildConstantPlan) {
+    Fn(params=functions) {
+      Block {
+        Let(name=constants) { Call(target=objectLinker.collectConstants) { Var(name=functions) } }
+        Let(name=constantIndex) { Call(target=objectLinker.buildConstantIndex) { Var(name=constants) } }
+        Let(name=plans) {
+          Call(target=objectLinker.buildConstantOperandPlans) {
+            Var(name=functions) Var(name=constantIndex)
+          }
+        }
+        Return { MakePair { Var(name=constants) Var(name=plans) } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildConstantIndex) {
+    Fn(params=constants) {
+      Block {
+        Return {
+          Call(target=objectLinker.buildConstantIndexAt) {
+            Var(name=constants) Lit(value=0) Call(target=objectLinker.stringIndexEmpty) {}
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildConstantIndexAt) {
+    Fn(params=constants,index,constantIndex) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=constants) } }
+          Block {
+            Return {
+              Call(target=objectLinker.stringIndexFinish) {
+                Var(name=constantIndex)
+              }
+            }
+          }
+          Block {
+            Let(name=target) { AttrValueString { ChildAt { Var(name=constants) Var(name=index) } Lit(value=0) } }
+            Return {
+              Call(target=objectLinker.buildConstantIndexAt) {
+                Var(name=constants) Add { Var(name=index) Lit(value=1) }
+                Call(target=objectLinker.stringIndexPut) {
+                  Var(name=constantIndex) Var(name=target) Var(name=index)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildConstantOperandPlans) {
+    Fn(params=functions,constantIndex) {
+      Block {
+        Return {
+          Call(target=objectLinker.buildConstantOperandPlansAt) {
+            Var(name=functions) Var(name=constantIndex) Lit(value=0)
+            MakeNodeBuilder { Lit(value="Block") Lit(value="function-constant-operands") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildConstantOperandPlansAt) {
+    Fn(params=functions,constantIndex,index,plansBuilder) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functions) } }
+          Block { Return { FinishNodeBuilder { Var(name=plansBuilder) } } }
+          Block {
+            Let(name=record) { ChildAt { Var(name=functions) Var(name=index) } }
+            Let(name=functionNode) { ChildAt { Var(name=record) Lit(value=4) } }
+            Let(name=operands) {
+              Call(target=objectLinker.buildFunctionConstantOperandsAt) {
+                Var(name=functionNode) Var(name=constantIndex) Lit(value=0)
+                MakeNodeBuilder { Lit(value="Block") Lit(value="constant-operands") }
+              }
+            }
+            Return {
+              Call(target=objectLinker.buildConstantOperandPlansAt) {
+                Var(name=functions) Var(name=constantIndex) Add { Var(name=index) Lit(value=1) }
+                BuilderAppendChild { Var(name=plansBuilder) Var(name=operands) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.buildFunctionConstantOperandsAt) {
+    Fn(params=functionNode,constantIndex,index,operandsBuilder) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=functionNode) } }
+          Block { Return { FinishNodeBuilder { Var(name=operandsBuilder) } } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=functionNode) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Reloc") }
+              Block {
+                Let(name=kind) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="kind") Lit(value=0) } }
+                If {
+                  Eq { Var(name=kind) Lit(value="const") }
+                  Block {
+                    Let(name=target) { Call(target=objectLinker.getAttr) { Var(name=child) Lit(value="target") Lit(value=0) } }
+                    Let(name=constantOffset) {
+                      Call(target=objectLinker.stringIndexGet) {
+                        Var(name=constantIndex) Var(name=target) Lit(value=-1)
+                      }
+                    }
+                    Return {
+                      Call(target=objectLinker.buildFunctionConstantOperandsAt) {
+                        Var(name=functionNode) Var(name=constantIndex) Var(name=nextIndex)
+                        BuilderAppendChild {
+                          Var(name=operandsBuilder) MakeLitInt { Lit(value="index") Var(name=constantOffset) }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=objectLinker.buildFunctionConstantOperandsAt) {
+                        Var(name=functionNode) Var(name=constantIndex) Var(name=nextIndex) Var(name=operandsBuilder)
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=objectLinker.buildFunctionConstantOperandsAt) {
+                    Var(name=functionNode) Var(name=constantIndex) Var(name=nextIndex) Var(name=operandsBuilder)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

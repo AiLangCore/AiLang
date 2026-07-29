@@ -1,0 +1,1221 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=bytecode.buildEntryReturnIntMainText)
+  Export(name=bytecode.buildEntryReturnIntMainBytes)
+
+  Let(name=bytecode.buildEntryReturnIntMainText) {
+    Fn(params=program,entryExport) {
+      Block {
+        Let(name=entryLet) {
+          Call(target=bytecode.findLetByName) {
+            Var(name=program)
+            Var(name=entryExport)
+            Lit(value=0)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=entryLet) } Lit(value="Err") }
+          Block { Return { Var(name=entryLet) } }
+          Block {
+            Let(name=entryBlock) {
+              Call(target=bytecode.extractEntryBlock) {
+                Var(name=entryLet)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=entryBlock) } Lit(value="Err") }
+              Block { Return { Var(name=entryBlock) } }
+              Block {
+                Return {
+                  Call(target=bytecode.emitSupportedEntryBlockMainText) {
+                    Var(name=entryBlock)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.buildEntryReturnIntMainBytes) {
+    Fn(params=program,entryExport) {
+      Block {
+        Let(name=entryLet) {
+          Call(target=bytecode.findLetByName) {
+            Var(name=program)
+            Var(name=entryExport)
+            Lit(value=0)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=entryLet) } Lit(value="Err") }
+          Block { Return { Var(name=entryLet) } }
+          Block {
+            Let(name=entryBlock) {
+              Call(target=bytecode.extractEntryBlock) {
+                Var(name=entryLet)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=entryBlock) } Lit(value="Err") }
+              Block { Return { Var(name=entryBlock) } }
+              Block {
+                Return {
+                  Call(target=bytecode.emitSupportedEntryBlockMainBytes) {
+                    Var(name=entryBlock)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.findLetByName) {
+    Fn(params=program,name,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry export was not found.") Lit(value="entryExport") } } }
+          Block {
+            Let(name=child) {
+              ChildAt { Var(name=program) Var(name=index) }
+            }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Let") }
+              Block {
+                If {
+                  Eq {
+                    Call(target=bytecode.getAttr) {
+                      Var(name=child)
+                      Lit(value="name")
+                      Lit(value=0)
+                    }
+                    Var(name=name)
+                  }
+                  Block { Return { Var(name=child) } }
+                  Block {
+                    Return {
+                      Call(target=bytecode.findLetByName) {
+                        Var(name=program)
+                        Var(name=name)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=bytecode.findLetByName) {
+                    Var(name=program)
+                    Var(name=name)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.extractEntryBlock) {
+    Fn(params=entryLet) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=entryLet) } Lit(value=1) }
+          Block {
+            Let(name=fnNode) {
+              ChildAt { Var(name=entryLet) Lit(value=0) }
+            }
+            If {
+              Eq { NodeKind { Var(name=fnNode) } Lit(value="Fn") }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=fnNode) } Lit(value=1) }
+                  Block {
+                    Let(name=blockNode) {
+                      ChildAt { Var(name=fnNode) Lit(value=0) }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=blockNode) } Lit(value="Block") }
+                      Block { Return { Var(name=blockNode) } }
+                      Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry function body must be a block.") Lit(value="entry") } } }
+                    }
+                  }
+                  Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry function must contain exactly one body block.") Lit(value="entry") } } }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry binding is not a function.") Lit(value="entry") } } }
+            }
+          }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry binding must contain exactly one function.") Lit(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitSupportedEntryBlockMainText) {
+    Fn(params=blockNode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=blockNode) } Lit(value=1) }
+          Block {
+            Return {
+              Call(target=bytecode.emitReturnOnlyBlockMainText) {
+                Var(name=blockNode)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=blockNode) } Lit(value=2) }
+              Block {
+                Return {
+                  Call(target=bytecode.emitTwoStatementBlockMainText) {
+                    Var(name=blockNode)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=blockNode) } Lit(value=3) }
+                  Block {
+                    Return {
+                      Call(target=bytecode.emitTwoStdoutThenReturnBlockMainText) {
+                        Var(name=blockNode)
+                      }
+                    }
+                  }
+                  Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry block must contain a supported statement shape.") Lit(value="entry") } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitReturnOnlyBlockMainText) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=returnNode) {
+          ChildAt { Var(name=blockNode) Lit(value=0) }
+        }
+        If {
+          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+          Block {
+            Let(name=returnValue) {
+              Call(target=bytecode.extractReturnIntLit) {
+                Var(name=returnNode)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+              Block { Return { Var(name=returnValue) } }
+              Block {
+                Return {
+                  MakeLitString {
+                    Lit(value="bytecode")
+                    Call(target=bytecode.renderReturnIntMainText) {
+                      AttrValueInt {
+                        Var(name=returnValue)
+                        Lit(value=0)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry block is not a single return statement.") Lit(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitTwoStatementBlockMainText) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=firstNode) {
+          ChildAt { Var(name=blockNode) Lit(value=0) }
+        }
+        If {
+          Eq { NodeKind { Var(name=firstNode) } Lit(value="Call") }
+          Block {
+            Return {
+              Call(target=bytecode.emitStdoutThenReturnBlockMainText) {
+                Var(name=blockNode)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=firstNode) } Lit(value="Let") }
+              Block {
+                Return {
+                  Call(target=bytecode.emitCliArgsTemplateMainText) {
+                    Var(name=blockNode)
+                  }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="Two-statement entry block is not a supported shape.") Lit(value="entry") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitStdoutThenReturnBlockMainText) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=callNode) {
+          ChildAt { Var(name=blockNode) Lit(value=0) }
+        }
+        Let(name=messageNode) {
+          Call(target=bytecode.extractStdoutWriteLineStringLit) {
+            Var(name=callNode)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=messageNode) } Lit(value="Err") }
+          Block { Return { Var(name=messageNode) } }
+          Block {
+            Let(name=returnNode) {
+              ChildAt { Var(name=blockNode) Lit(value=1) }
+            }
+            If {
+              Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+              Block {
+                Let(name=returnValue) {
+                  Call(target=bytecode.extractReturnIntLit) {
+                    Var(name=returnNode)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+                  Block { Return { Var(name=returnValue) } }
+                  Block {
+                    Return {
+                      MakeLitString {
+                        Lit(value="bytecode")
+                        Call(target=bytecode.renderStdoutWriteLineThenReturnIntMainText) {
+                          AttrValueString {
+                            Var(name=messageNode)
+                            Lit(value=0)
+                          }
+                          AttrValueInt {
+                            Var(name=returnValue)
+                            Lit(value=0)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="Stdout entry shape must end with an integer return.") Lit(value="entry") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitCliArgsTemplateMainText) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=ifNode) {
+          ChildAt { Var(name=blockNode) Lit(value=1) }
+        }
+        If {
+          Eq { NodeKind { Var(name=ifNode) } Lit(value="If") }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=ifNode) } Lit(value=3) }
+              Block {
+                Let(name=thenBlock) {
+                  ChildAt { Var(name=ifNode) Lit(value=1) }
+                }
+                Let(name=thenCall) {
+                  ChildAt { Var(name=thenBlock) Lit(value=0) }
+                }
+                Let(name=noArgsMessage) {
+                  Call(target=bytecode.extractStdoutWriteLineStringLit) {
+                    Var(name=thenCall)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=noArgsMessage) } Lit(value="Err") }
+                  Block { Return { Var(name=noArgsMessage) } }
+                  Block {
+                    Return {
+                      MakeLitString {
+                        Lit(value="bytecode")
+                        Call(target=bytecode.renderCliArgsTemplateMainText) {
+                          AttrValueString {
+                            Var(name=noArgsMessage)
+                            Lit(value=0)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="cli-args template If must contain condition, then block, and else block.") Lit(value="entry") } } }
+            }
+          }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="cli-args template entry second statement must be If.") Lit(value="entry") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitTwoStdoutThenReturnBlockMainText) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=firstCall) { ChildAt { Var(name=blockNode) Lit(value=0) } }
+        Let(name=secondCall) { ChildAt { Var(name=blockNode) Lit(value=1) } }
+        Let(name=returnNode) { ChildAt { Var(name=blockNode) Lit(value=2) } }
+        Let(name=firstMessage) { Call(target=bytecode.extractStdoutWriteLineStringLit) { Var(name=firstCall) } }
+        If {
+          Eq { NodeKind { Var(name=firstMessage) } Lit(value="Err") }
+          Block { Return { Var(name=firstMessage) } }
+          Block {
+            Let(name=secondMessage) { Call(target=bytecode.extractStdoutWriteLineStringLit) { Var(name=secondCall) } }
+            If {
+              Eq { NodeKind { Var(name=secondMessage) } Lit(value="Err") }
+              Block { Return { Var(name=secondMessage) } }
+              Block {
+                Let(name=returnValue) { Call(target=bytecode.extractReturnIntLit) { Var(name=returnNode) } }
+                If {
+                  Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+                  Block { Return { Var(name=returnValue) } }
+                  Block {
+                    Return {
+                      MakeLitString {
+                        Lit(value="bytecode")
+                        Call(target=bytecode.renderTwoStdoutWriteLineThenReturnIntMainText) {
+                          AttrValueString { Var(name=firstMessage) Lit(value=0) }
+                          AttrValueString { Var(name=secondMessage) Lit(value=0) }
+                          AttrValueInt { Var(name=returnValue) Lit(value=0) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.extractStdoutWriteLineStringLit) {
+    Fn(params=callNode) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=callNode) } Lit(value="Call") }
+          Block {
+            If {
+              Eq {
+                Call(target=bytecode.getAttr) {
+                  Var(name=callNode)
+                  Lit(value="target")
+                  Lit(value=0)
+                }
+                Lit(value="sys.stdout.writeLine")
+              }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=callNode) } Lit(value=1) }
+                  Block {
+                    Let(name=argNode) {
+                      ChildAt { Var(name=callNode) Lit(value=0) }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=argNode) } Lit(value="Lit") }
+                      Block {
+                        If {
+                          Eq { AttrValueKind { Var(name=argNode) Lit(value=0) } Lit(value="string") }
+                          Block { Return { Var(name=argNode) } }
+                          Block { Return { Call(target=bytecode.unsupported) { Lit(value="sys.stdout.writeLine argument is not a string literal.") Lit(value="call") } } }
+                        }
+                      }
+                      Block { Return { Call(target=bytecode.unsupported) { Lit(value="sys.stdout.writeLine argument is not a literal.") Lit(value="call") } } }
+                    }
+                  }
+                  Block { Return { Call(target=bytecode.unsupported) { Lit(value="sys.stdout.writeLine must have exactly one argument.") Lit(value="call") } } }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry call is not sys.stdout.writeLine.") Lit(value="call") } } }
+            }
+          }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="Entry statement is not a call.") Lit(value="call") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.extractReturnIntLit) {
+    Fn(params=returnNode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=returnNode) } Lit(value=0) }
+          Block { Return { Call(target=bytecode.unsupported) { Lit(value="Return is missing an expression.") Lit(value="return") } } }
+          Block {
+            Let(name=expr) {
+              ChildAt { Var(name=returnNode) Lit(value=0) }
+            }
+            If {
+              Eq { NodeKind { Var(name=expr) } Lit(value="Lit") }
+              Block {
+                If {
+                  Eq { AttrValueKind { Var(name=expr) Lit(value=0) } Lit(value="int") }
+                  Block { Return { Var(name=expr) } }
+                  Block { Return { Call(target=bytecode.unsupported) { Lit(value="Return expression is not an integer literal.") Lit(value="return") } } }
+                }
+              }
+              Block { Return { Call(target=bytecode.unsupported) { Lit(value="Return expression is not a literal.") Lit(value="return") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderReturnIntMainText) {
+    Fn(params=value) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=int value=")
+            StrConcat {
+              ToString { Var(name=value) }
+              Lit(value=") Func#f_main(name=main) { Inst#i0(a=0 op=CONST) Inst#i1(op=RETURN) } }")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderStdoutWriteLineThenReturnIntMainText) {
+    Fn(params=message,value) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=string value=\"sys.stdout.writeLine\") Const#k1(kind=string value=\"")
+            StrConcat {
+              StrEscape { Var(name=message) }
+              StrConcat {
+                Lit(value="\") Const#k2(kind=int value=")
+                StrConcat {
+                  ToString { Var(name=value) }
+                  Lit(value=") Func#f_main(name=main) { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=CONST) Inst#i2(a=1 op=CALL_SYS) Inst#i3(op=POP) Inst#i4(a=2 op=CONST) Inst#i5(op=RETURN) } }")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderTwoStdoutWriteLineThenReturnIntMainText) {
+    Fn(params=firstMessage,secondMessage,value) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=string value=\"sys.stdout.writeLine\") Const#k1(kind=string value=\"")
+            StrConcat {
+              StrEscape { Var(name=firstMessage) }
+              StrConcat {
+                Lit(value="\") Const#k2(kind=string value=\"")
+                StrConcat {
+                  StrEscape { Var(name=secondMessage) }
+                  StrConcat {
+                    Lit(value="\") Const#k3(kind=int value=")
+                    StrConcat {
+                      ToString { Var(name=value) }
+                      Lit(value=") Func#f_main(name=main) { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=CONST) Inst#i2(a=1 op=CALL_SYS) Inst#i3(op=POP) Inst#i4(a=0 op=CONST) Inst#i5(a=2 op=CONST) Inst#i6(a=1 op=CALL_SYS) Inst#i7(op=POP) Inst#i8(a=3 op=CONST) Inst#i9(op=RETURN) } }")
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitSupportedEntryBlockMainBytes) {
+    Fn(params=blockNode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=blockNode) } Lit(value=1) }
+          Block {
+            Return {
+              Call(target=bytecode.emitReturnOnlyBlockMainBytes) {
+                Var(name=blockNode)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=blockNode) } Lit(value=2) }
+              Block {
+                Let(name=firstNode) {
+                  ChildAt { Var(name=blockNode) Lit(value=0) }
+                }
+                If {
+                  Eq { NodeKind { Var(name=firstNode) } Lit(value="Call") }
+                  Block {
+                    Return {
+                      Call(target=bytecode.emitStdoutThenReturnBlockMainBytes) {
+                        Var(name=blockNode)
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { NodeKind { Var(name=firstNode) } Lit(value="Let") }
+                      Block {
+                        Return {
+                          Call(target=bytecode.emitCliArgsTemplateMainBytes) {
+                            Var(name=blockNode)
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          Call(target=bytecode.unsupported) {
+                            Lit(value="Binary emitter does not support this two-statement entry shape yet.")
+                            Lit(value="entry")
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { ChildCount { Var(name=blockNode) } Lit(value=3) }
+                  Block {
+                    Return {
+                      Call(target=bytecode.emitTwoStdoutThenReturnBlockMainBytes) {
+                        Var(name=blockNode)
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=bytecode.unsupported) {
+                        Lit(value="Binary emitter does not support this entry block shape yet.")
+                        Lit(value="entry")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitReturnOnlyBlockMainBytes) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=returnNode) {
+          ChildAt { Var(name=blockNode) Lit(value=0) }
+        }
+        If {
+          Eq { NodeKind { Var(name=returnNode) } Lit(value="Return") }
+          Block {
+            Let(name=returnValue) {
+              Call(target=bytecode.extractReturnIntLit) {
+                Var(name=returnNode)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+              Block { Return { Var(name=returnValue) } }
+              Block {
+                Return {
+                  Call(target=bytecode.renderReturnIntMainBytes) {
+                    AttrValueInt {
+                      Var(name=returnValue)
+                      Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=bytecode.unsupported) {
+                Lit(value="Binary entry block is not a single return statement.")
+                Lit(value="entry")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitStdoutThenReturnBlockMainBytes) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=callNode) {
+          ChildAt { Var(name=blockNode) Lit(value=0) }
+        }
+        Let(name=messageNode) {
+          Call(target=bytecode.extractStdoutWriteLineStringLit) {
+            Var(name=callNode)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=messageNode) } Lit(value="Err") }
+          Block { Return { Var(name=messageNode) } }
+          Block {
+            Let(name=returnNode) {
+              ChildAt { Var(name=blockNode) Lit(value=1) }
+            }
+            Let(name=returnValue) {
+              Call(target=bytecode.extractReturnIntLit) {
+                Var(name=returnNode)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+              Block { Return { Var(name=returnValue) } }
+              Block {
+                Return {
+                  Call(target=bytecode.renderStdoutWriteLineThenReturnIntMainBytes) {
+                    AttrValueString {
+                      Var(name=messageNode)
+                      Lit(value=0)
+                    }
+                    AttrValueInt {
+                      Var(name=returnValue)
+                      Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.cat2) {
+    Fn(params=left,right) {
+      Block {
+        Return {
+          Call(target=bytes.concat) {
+            Var(name=left)
+            Var(name=right)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.cat3) {
+    Fn(params=a,b,c) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytecode.cat2) {
+              Var(name=a)
+              Var(name=b)
+            }
+            Var(name=c)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.inst) {
+    Fn(params=op,operand) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytes.u32le) { Var(name=op) }
+            Call(target=bytes.i64le) { Var(name=operand) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.constInt) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytes.fromByte) { Lit(value=1) }
+            Call(target=bytes.i64le) { Var(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.constString) {
+    Fn(params=value) {
+      Block {
+        Let(name=raw) {
+          Call(target=bytes.fromUtf8String) { Var(name=value) }
+        }
+        Return {
+          Call(target=bytecode.cat3) {
+            Call(target=bytes.fromByte) { Lit(value=3) }
+            Call(target=bytes.u32le) {
+              Call(target=bytes.length) { Var(name=raw) }
+            }
+            Var(name=raw)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.aibcHeader) {
+    Fn(params=sectionCount) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytecode.cat3) {
+              Call(target=bytes.fromUtf8String) { Lit(value="AIBC") }
+              Call(target=bytes.u32le) { Lit(value=2) }
+              Call(target=bytes.u32le) { Lit(value=0) }
+            }
+            Call(target=bytes.u32le) { Var(name=sectionCount) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.instructionsSection) {
+    Fn(params=payloadSize,instructionCount,instructionBytes) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytecode.cat3) {
+              Call(target=bytes.u32le) { Lit(value=1) }
+              Call(target=bytes.u32le) { Var(name=payloadSize) }
+              Call(target=bytes.u32le) { Var(name=instructionCount) }
+            }
+            Var(name=instructionBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.constantsSection) {
+    Fn(params=payloadSize,constantCount,constantBytes) {
+      Block {
+        Return {
+          Call(target=bytecode.cat2) {
+            Call(target=bytecode.cat3) {
+              Call(target=bytes.u32le) { Lit(value=2) }
+              Call(target=bytes.u32le) { Var(name=payloadSize) }
+              Call(target=bytes.u32le) { Var(name=constantCount) }
+            }
+            Var(name=constantBytes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderReturnIntMainBytes) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=bytecode.cat3) {
+            Call(target=bytecode.aibcHeader) { Lit(value=2) }
+            Call(target=bytecode.instructionsSection) {
+              Lit(value=28)
+              Lit(value=2)
+              Call(target=bytecode.cat2) {
+                Call(target=bytecode.inst) { Lit(value=15) Lit(value=0) }
+                Call(target=bytecode.inst) { Lit(value=19) Lit(value=0) }
+              }
+            }
+            Call(target=bytecode.constantsSection) {
+              Lit(value=13)
+              Lit(value=1)
+              Call(target=bytecode.constInt) { Var(name=value) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderStdoutWriteLineThenReturnIntMainBytes) {
+    Fn(params=message,value) {
+      Block {
+        Let(name=syscallConst) {
+          Call(target=bytecode.constString) { Lit(value="sys.stdout.writeLine") }
+        }
+        Let(name=messageConst) {
+          Call(target=bytecode.constString) { Var(name=message) }
+        }
+        Let(name=returnConst) {
+          Call(target=bytecode.constInt) { Var(name=value) }
+        }
+        Let(name=constBytes) {
+          Call(target=bytecode.cat3) {
+            Var(name=syscallConst)
+            Var(name=messageConst)
+            Var(name=returnConst)
+          }
+        }
+        Let(name=constPayloadSize) {
+          Add {
+            Lit(value=4)
+            Call(target=bytes.length) { Var(name=constBytes) }
+          }
+        }
+        Return {
+          Call(target=bytecode.cat3) {
+            Call(target=bytecode.aibcHeader) { Lit(value=2) }
+            Call(target=bytecode.instructionsSection) {
+              Lit(value=76)
+              Lit(value=6)
+              Call(target=bytecode.cat3) {
+                Call(target=bytecode.cat3) {
+                  Call(target=bytecode.inst) { Lit(value=15) Lit(value=0) }
+                  Call(target=bytecode.inst) { Lit(value=15) Lit(value=1) }
+                  Call(target=bytecode.inst) { Lit(value=22) Lit(value=1) }
+                }
+                Call(target=bytecode.cat3) {
+                  Call(target=bytecode.inst) { Lit(value=4) Lit(value=0) }
+                  Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) }
+                  Call(target=bytecode.inst) { Lit(value=19) Lit(value=0) }
+                }
+                Call(target=bytes.fromUtf8String) { Lit(value="") }
+              }
+            }
+            Call(target=bytecode.constantsSection) {
+              Var(name=constPayloadSize)
+              Lit(value=3)
+              Var(name=constBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitTwoStdoutThenReturnBlockMainBytes) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=firstCall) { ChildAt { Var(name=blockNode) Lit(value=0) } }
+        Let(name=secondCall) { ChildAt { Var(name=blockNode) Lit(value=1) } }
+        Let(name=returnNode) { ChildAt { Var(name=blockNode) Lit(value=2) } }
+        Let(name=firstMessage) { Call(target=bytecode.extractStdoutWriteLineStringLit) { Var(name=firstCall) } }
+        If {
+          Eq { NodeKind { Var(name=firstMessage) } Lit(value="Err") }
+          Block { Return { Var(name=firstMessage) } }
+          Block {
+            Let(name=secondMessage) { Call(target=bytecode.extractStdoutWriteLineStringLit) { Var(name=secondCall) } }
+            If {
+              Eq { NodeKind { Var(name=secondMessage) } Lit(value="Err") }
+              Block { Return { Var(name=secondMessage) } }
+              Block {
+                Let(name=returnValue) { Call(target=bytecode.extractReturnIntLit) { Var(name=returnNode) } }
+                If {
+                  Eq { NodeKind { Var(name=returnValue) } Lit(value="Err") }
+                  Block { Return { Var(name=returnValue) } }
+                  Block {
+                    Return {
+                      Call(target=bytecode.renderTwoStdoutWriteLineThenReturnIntMainBytes) {
+                        AttrValueString { Var(name=firstMessage) Lit(value=0) }
+                        AttrValueString { Var(name=secondMessage) Lit(value=0) }
+                        AttrValueInt { Var(name=returnValue) Lit(value=0) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderTwoStdoutWriteLineThenReturnIntMainBytes) {
+    Fn(params=firstMessage,secondMessage,value) {
+      Block {
+        Let(name=syscallConst) { Call(target=bytecode.constString) { Lit(value="sys.stdout.writeLine") } }
+        Let(name=firstConst) { Call(target=bytecode.constString) { Var(name=firstMessage) } }
+        Let(name=secondConst) { Call(target=bytecode.constString) { Var(name=secondMessage) } }
+        Let(name=returnConst) { Call(target=bytecode.constInt) { Var(name=value) } }
+        Let(name=constBytes) {
+          Call(target=bytecode.cat2) {
+            Call(target=bytecode.cat2) {
+              Call(target=bytecode.cat2) {
+                Var(name=syscallConst)
+                Var(name=firstConst)
+              }
+              Var(name=secondConst)
+            }
+            Var(name=returnConst)
+          }
+        }
+        Let(name=constPayloadSize) {
+          Add { Lit(value=4) Call(target=bytes.length) { Var(name=constBytes) } }
+        }
+        Return {
+          Call(target=bytecode.cat3) {
+            Call(target=bytecode.aibcHeader) { Lit(value=2) }
+            Call(target=bytecode.instructionsSection) {
+              Lit(value=124)
+              Lit(value=10)
+              Call(target=bytecode.cat2) {
+                Call(target=bytecode.cat2) {
+                  Call(target=bytecode.cat2) {
+                    Call(target=bytecode.cat2) {
+                      Call(target=bytecode.cat2) {
+                        Call(target=bytecode.inst) { Lit(value=15) Lit(value=0) }
+                        Call(target=bytecode.inst) { Lit(value=15) Lit(value=1) }
+                      }
+                      Call(target=bytecode.inst) { Lit(value=22) Lit(value=1) }
+                    }
+                    Call(target=bytecode.inst) { Lit(value=4) Lit(value=0) }
+                  }
+                  Call(target=bytecode.cat2) {
+                    Call(target=bytecode.inst) { Lit(value=15) Lit(value=0) }
+                    Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) }
+                  }
+                }
+                Call(target=bytecode.cat2) {
+                  Call(target=bytecode.cat2) {
+                    Call(target=bytecode.inst) { Lit(value=22) Lit(value=1) }
+                    Call(target=bytecode.inst) { Lit(value=4) Lit(value=0) }
+                  }
+                  Call(target=bytecode.cat2) {
+                    Call(target=bytecode.inst) { Lit(value=15) Lit(value=3) }
+                    Call(target=bytecode.inst) { Lit(value=19) Lit(value=0) }
+                  }
+                }
+              }
+            }
+            Call(target=bytecode.constantsSection) {
+              Var(name=constPayloadSize)
+              Lit(value=4)
+              Var(name=constBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.emitCliArgsTemplateMainBytes) {
+    Fn(params=blockNode) {
+      Block {
+        Let(name=ifNode) {
+          ChildAt { Var(name=blockNode) Lit(value=1) }
+        }
+        If {
+          Eq { NodeKind { Var(name=ifNode) } Lit(value="If") }
+          Block {
+            Let(name=thenBlock) {
+              ChildAt { Var(name=ifNode) Lit(value=1) }
+            }
+            Let(name=thenCall) {
+              ChildAt { Var(name=thenBlock) Lit(value=0) }
+            }
+            Let(name=noArgsMessage) {
+              Call(target=bytecode.extractStdoutWriteLineStringLit) {
+                Var(name=thenCall)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=noArgsMessage) } Lit(value="Err") }
+              Block { Return { Var(name=noArgsMessage) } }
+              Block {
+                Return {
+                  Call(target=bytecode.renderCliArgsTemplateMainBytes) {
+                    AttrValueString {
+                      Var(name=noArgsMessage)
+                      Lit(value=0)
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=bytecode.unsupported) {
+                Lit(value="Binary cli-args template entry second statement must be If.")
+                Lit(value="entry")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderCliArgsTemplateMainBytes) {
+    Fn(params=noArgsMessage) {
+      Block {
+        Let(name=constBytes) {
+          Call(target=bytecode.cat3) {
+            Call(target=bytecode.constString) { Lit(value="sys.process.args") }
+            Call(target=bytecode.constString) { Lit(value="sys.stdout.writeLine") }
+            Call(target=bytecode.cat2) {
+              Call(target=bytecode.constInt) { Lit(value=0) }
+              Call(target=bytecode.constString) { Var(name=noArgsMessage) }
+            }
+          }
+        }
+        Let(name=constPayloadSize) {
+          Add {
+            Lit(value=4)
+            Call(target=bytes.length) { Var(name=constBytes) }
+          }
+        }
+        Let(name=i0) { Call(target=bytecode.inst) { Lit(value=15) Lit(value=0) } }
+        Let(name=i1) { Call(target=bytecode.cat2) { Var(name=i0) Call(target=bytecode.inst) { Lit(value=22) Lit(value=0) } } }
+        Let(name=i2) { Call(target=bytecode.cat2) { Var(name=i1) Call(target=bytecode.inst) { Lit(value=5) Lit(value=0) } } }
+        Let(name=i3) { Call(target=bytecode.cat2) { Var(name=i2) Call(target=bytecode.inst) { Lit(value=6) Lit(value=0) } } }
+        Let(name=i4) { Call(target=bytecode.cat2) { Var(name=i3) Call(target=bytecode.inst) { Lit(value=39) Lit(value=0) } } }
+        Let(name=i5) { Call(target=bytecode.cat2) { Var(name=i4) Call(target=bytecode.inst) { Lit(value=5) Lit(value=1) } } }
+        Let(name=i6) { Call(target=bytecode.cat2) { Var(name=i5) Call(target=bytecode.inst) { Lit(value=6) Lit(value=1) } } }
+        Let(name=i7) { Call(target=bytecode.cat2) { Var(name=i6) Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) } } }
+        Let(name=i8) { Call(target=bytecode.cat2) { Var(name=i7) Call(target=bytecode.inst) { Lit(value=14) Lit(value=0) } } }
+        Let(name=i9) { Call(target=bytecode.cat2) { Var(name=i8) Call(target=bytecode.inst) { Lit(value=9) Lit(value=16) } } }
+        Let(name=i10) { Call(target=bytecode.cat2) { Var(name=i9) Call(target=bytecode.inst) { Lit(value=15) Lit(value=1) } } }
+        Let(name=i11) { Call(target=bytecode.cat2) { Var(name=i10) Call(target=bytecode.inst) { Lit(value=15) Lit(value=3) } } }
+        Let(name=i12) { Call(target=bytecode.cat2) { Var(name=i11) Call(target=bytecode.inst) { Lit(value=22) Lit(value=1) } } }
+        Let(name=i13) { Call(target=bytecode.cat2) { Var(name=i12) Call(target=bytecode.inst) { Lit(value=4) Lit(value=0) } } }
+        Let(name=i14) { Call(target=bytecode.cat2) { Var(name=i13) Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) } } }
+        Let(name=i15) { Call(target=bytecode.cat2) { Var(name=i14) Call(target=bytecode.inst) { Lit(value=19) Lit(value=0) } } }
+        Let(name=i16) { Call(target=bytecode.cat2) { Var(name=i15) Call(target=bytecode.inst) { Lit(value=15) Lit(value=1) } } }
+        Let(name=i17) { Call(target=bytecode.cat2) { Var(name=i16) Call(target=bytecode.inst) { Lit(value=6) Lit(value=0) } } }
+        Let(name=i18) { Call(target=bytecode.cat2) { Var(name=i17) Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) } } }
+        Let(name=i19) { Call(target=bytecode.cat2) { Var(name=i18) Call(target=bytecode.inst) { Lit(value=40) Lit(value=0) } } }
+        Let(name=i20) { Call(target=bytecode.cat2) { Var(name=i19) Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) } } }
+        Let(name=i21) { Call(target=bytecode.cat2) { Var(name=i20) Call(target=bytecode.inst) { Lit(value=36) Lit(value=0) } } }
+        Let(name=i22) { Call(target=bytecode.cat2) { Var(name=i21) Call(target=bytecode.inst) { Lit(value=22) Lit(value=1) } } }
+        Let(name=i23) { Call(target=bytecode.cat2) { Var(name=i22) Call(target=bytecode.inst) { Lit(value=4) Lit(value=0) } } }
+        Let(name=i24) { Call(target=bytecode.cat2) { Var(name=i23) Call(target=bytecode.inst) { Lit(value=15) Lit(value=2) } } }
+        Let(name=i25) { Call(target=bytecode.cat2) { Var(name=i24) Call(target=bytecode.inst) { Lit(value=19) Lit(value=0) } } }
+        Return {
+          Call(target=bytecode.cat3) {
+            Call(target=bytecode.aibcHeader) { Lit(value=2) }
+            Call(target=bytecode.instructionsSection) {
+              Lit(value=316)
+              Lit(value=26)
+              Var(name=i25)
+            }
+            Call(target=bytecode.constantsSection) {
+              Var(name=constPayloadSize)
+              Lit(value=4)
+              Var(name=constBytes)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.renderCliArgsTemplateMainText) {
+    Fn(params=noArgsMessage) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) { Const#k0(kind=string value=\"sys.stdout.writeLine\") Const#k1(kind=int value=0) Const#k2(kind=string value=\"")
+            StrConcat {
+              StrEscape { Var(name=noArgsMessage) }
+              StrConcat {
+                Lit(value="\") Func#f_main(locals=\"argv,count,start\" name=main params=\"argv\") { Inst#i0(a=0 op=LOAD_LOCAL) Inst#i1(op=CHILD_COUNT) Inst#i2(a=1 op=STORE_LOCAL) ")
+                StrConcat {
+                  Lit(value="Inst#i3(a=1 op=LOAD_LOCAL) Inst#i4(a=1 op=CONST) Inst#i5(op=EQ) Inst#i6(a=14 op=JUMP_IF_FALSE) Inst#i7(a=0 op=CONST) ")
+                  StrConcat {
+                    Lit(value="Inst#i8(a=2 op=CONST) Inst#i9(a=1 op=CALL_SYS) Inst#i10(op=POP) Inst#i11(a=1 op=CONST) Inst#i12(a=2 op=STORE_LOCAL) ")
+                    StrConcat {
+                      Lit(value="Inst#i13(op=RETURN) Inst#i14(a=0 op=CONST) Inst#i15(a=0 op=LOAD_LOCAL) Inst#i16(a=1 op=CONST) Inst#i17(op=CHILD_AT) ")
+                      Lit(value="Inst#i18(a=1 op=CONST) Inst#i19(op=ATTR_VALUE_STRING) Inst#i20(a=1 op=CALL_SYS) Inst#i21(op=POP) Inst#i22(a=1 op=CONST) Inst#i23(a=2 op=STORE_LOCAL) Inst#i24(op=RETURN) } }")
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=bytecode.getAttr) {
+                    Var(name=node)
+                    Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=bytecode.unsupported) {
+    Fn(params=message,nodeId) {
+      Block {
+        Return {
+          MakeErr {
+            Lit(value="bytecode_err")
+            Lit(value="BYTECODE001")
+            Var(name=message)
+            Var(name=nodeId)
+          }
+        }
+      }
+    }
+  }
+}

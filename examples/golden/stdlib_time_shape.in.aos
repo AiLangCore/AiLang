@@ -1,0 +1,49 @@
+Program#gtime_p1 {
+  Import#gtime_i1(path="./src/std/time.aos")
+
+  Let#gtime_l1(name=t) {
+    Call#gtime_c1(target=timeFromUnixMs) {
+      Lit#gtime_i1(value=1700000000000)
+      Lit#gtime_s1(value="America/Chicago")
+      Lit#gtime_i2(value=-360)
+    }
+  }
+
+  Call#gtime_c2(target=io.print) {
+    Call#gtime_c3(target=timeUnixMs) { Var#gtime_v1(name=t) }
+  }
+
+  Call#gtime_c4(target=io.print) {
+    Call#gtime_c5(target=timeZone) { Var#gtime_v2(name=t) }
+  }
+
+  Call#gtime_c6(target=io.print) {
+    Call#gtime_c7(target=timeOffsetMinutes) { Var#gtime_v3(name=t) }
+  }
+
+  Let#gtime_l2(name=tUtc) {
+    Call#gtime_c10(target=timeUtc) { Lit#gtime_i3(value=1700000000000) }
+  }
+
+  Call#gtime_c11(target=io.print) {
+    Call#gtime_c12(target=timeZone) { Var#gtime_v5(name=tUtc) }
+  }
+
+  Call#gtime_c13(target=io.print) {
+    ToString#gtime_t1 { Call#gtime_c14(target=timeIsUtc) { Var#gtime_v6(name=tUtc) } }
+  }
+
+
+
+  Let#gtime_l3(name=tLocal) {
+    Call#gtime_c15(target=timeLocal) { Lit#gtime_i4(value=1700000000000) }
+  }
+
+  Call#gtime_c16(target=io.print) {
+    Call#gtime_c17(target=timeUnixMs) { Var#gtime_v7(name=tLocal) }
+  }
+
+  Call#gtime_c18(target=io.print) {
+    ToString#gtime_t2 { Call#gtime_c19(target=timeIsUtc) { Call#gtime_c20(target=nowUtc) { } } }
+  }
+}

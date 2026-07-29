@@ -1,0 +1,15 @@
+Program {
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="template.aos")
+  Export(name=main)
+
+  Let(name=main) {
+    Fn(params=args) {
+      Block {
+        Let(name=exitCode) { Call(target=runTemplate) { Var(name=args) } }
+        Call(target=exit) { Var(name=exitCode) }
+        Return { Var(name=exitCode) }
+      }
+    }
+  }
+}

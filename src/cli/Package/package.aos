@@ -1,0 +1,1377 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="arguments.aos")
+  Import(path="local_restore.aos")
+  Export(name=runPackage)
+
+  Let(name=runPackage) {
+    Fn(params=args) {
+      Block {
+        Let(name=subcmd) { Call(target=packageReadArg) { Var(name=args) Lit(value=1) } }
+        Let(name=path) { Call(target=packageReadArg) { Var(name=args) Lit(value=2) } }
+        Let(name=pathAfterName) { Call(target=packageReadArg) { Var(name=args) Lit(value=3) } }
+        If {
+          Eq { Var(name=subcmd) Lit(value="list") }
+          Block { Return { Call(target=runPackageList) { Var(name=path) } } }
+          Block {
+            If {
+              Eq { Var(name=subcmd) Lit(value="restore") }
+              Block { Return { Call(target=runPackageRestore) { Var(name=path) } } }
+              Block {
+                If {
+                  Eq { Var(name=subcmd) Lit(value="add") }
+                  Block { Return { Call(target=packageRunAdd) { Var(name=path) Var(name=pathAfterName) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=subcmd) Lit(value="remove") }
+                      Block { Return { Call(target=packageRunRemove) { Var(name=path) Var(name=pathAfterName) } } }
+                      Block { Return { Call(target=packageUnknownCommand) { Lit(value="package") } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runPackageList) {
+    Fn(params=path) {
+      Block {
+        Let(name=projectDir) { Call(target=packageDefaultPath) { Var(name=path) } }
+        Let(name=lockPath) { StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=lockPath) }
+          Block {
+            Call(target=sys.stdout.writeLine) { Call(target=packageReadTextFile) { Var(name=lockPath) } }
+            Return { Lit(value=0) }
+          }
+          Block {
+            Return { Call(target=packageBuildError) { Lit(value="PKG002") Lit(value="Package list requires a restored lockfile in the self-hosted CLI.") Lit(value="package") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageSelfHostingGap) {
+    Fn(params=subcmd) {
+      Block {
+        Return {
+          Call(target=packageBuildError) {
+            Lit(value="PKG002")
+            StrConcat { Lit(value="package ") StrConcat { Var(name=subcmd) Lit(value=" is not self-hosted yet.") } }
+            Lit(value="package")
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageRunAdd) {
+    Fn(params=spec,path) {
+      Block {
+        If {
+          Eq { Var(name=spec) Lit(value="") }
+          Block { Return { Call(target=packageBuildError) { Lit(value="PKG001") Lit(value="Missing package name.") Lit(value="package") } } }
+          Block {
+            Let(name=projectDir) { Call(target=packageDefaultPath) { Var(name=path) } }
+            Let(name=manifestPath) { StrConcat { Var(name=projectDir) Lit(value="/project.aiproj") } }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+              Block {
+                Let(name=packageName) { Call(target=packageEditSpecName) { Var(name=spec) } }
+                Let(name=packageVersion) { Call(target=packageEditSpecVersion) { Var(name=spec) } }
+                Let(name=manifestText) { Call(target=packageReadTextFile) { Var(name=manifestPath) } }
+                If {
+                  Call(target=packageEditManifestHasInclude) { Var(name=manifestText) Var(name=packageName) }
+                  Block { Return { Call(target=packageBuildError) { Lit(value="PKG005") Lit(value="Package is already included.") Lit(value="package") } } }
+                  Block {
+                    Let(name=updatedText) { Call(target=packageEditInsertInclude) { Var(name=manifestText) Var(name=packageName) Var(name=packageVersion) } }
+                    If {
+                      Call(target=packageEditIsError) { Var(name=updatedText) }
+                      Block { Return { Call(target=packageBuildError) { Lit(value="PKG006") Lit(value="Package add failed to update project manifest.") Lit(value="package") } } }
+                      Block {
+                        Call(target=packageWriteTextFile) { Var(name=manifestPath) Var(name=updatedText) }
+                        Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"package-added\")") }
+                        Return { Lit(value=0) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=packageBuildError) { Lit(value="PKG003") Lit(value="Package add requires project.aiproj.") Lit(value="package") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageRunRemove) {
+    Fn(params=packageName,path) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block { Return { Call(target=packageBuildError) { Lit(value="PKG001") Lit(value="Missing package name.") Lit(value="package") } } }
+          Block {
+            Let(name=projectDir) { Call(target=packageDefaultPath) { Var(name=path) } }
+            Let(name=manifestPath) { StrConcat { Var(name=projectDir) Lit(value="/project.aiproj") } }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+              Block {
+                Let(name=manifestText) { Call(target=packageReadTextFile) { Var(name=manifestPath) } }
+                Let(name=updatedText) { Call(target=packageEditRemoveInclude) { Var(name=manifestText) Var(name=packageName) } }
+                If {
+                  Call(target=packageEditIsError) { Var(name=updatedText) }
+                  Block { Return { Call(target=packageBuildError) { Lit(value="PKG007") Lit(value="Package include was not found.") Lit(value="package") } } }
+                  Block {
+                    Call(target=packageWriteTextFile) { Var(name=manifestPath) Var(name=updatedText) }
+                    Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"package-removed\")") }
+                    Return { Lit(value=0) }
+                  }
+                }
+              }
+              Block { Return { Call(target=packageBuildError) { Lit(value="PKG003") Lit(value="Package remove requires project.aiproj.") Lit(value="package") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runPackageRestore) {
+    Fn(params=path) {
+      Block {
+        Let(name=projectDir) { Call(target=packageDefaultPath) { Var(name=path) } }
+        Let(name=manifestPath) { StrConcat { Var(name=projectDir) Lit(value="/project.aiproj") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=manifestPath) }
+          Block {
+            Call(target=sys.fs.dir.create) { StrConcat { Var(name=projectDir) Lit(value="/.ailang") } }
+            Call(target=sys.fs.dir.create) { StrConcat { Var(name=projectDir) Lit(value="/.ailang/packages") } }
+            Call(target=sys.fs.dir.create) { StrConcat { Var(name=projectDir) Lit(value="/.ailang/registry") } }
+            Let(name=registryDir) { Call(target=resolvePackageRegistry) { Var(name=projectDir) } }
+            Let(name=manifestText) { Call(target=packageReadTextFile) { Var(name=manifestPath) } }
+            Let(name=entries) { Call(target=restoreIncludeLockEntries) { Var(name=projectDir) Var(name=registryDir) Var(name=manifestText) Lit(value=0) Lit(value="") } }
+            If {
+              Call(target=hasPackageRestoreError) { Var(name=entries) }
+              Block {
+                Return { Call(target=packageBuildError) { Lit(value="PKG004") Lit(value="Package restore failed.") Lit(value="package") } }
+              }
+              Block {
+                Let(name=count) { Call(target=countLockPackages) { Var(name=entries) Lit(value=0) } }
+                Let(name=lockText) {
+                  StrConcat {
+                    Lit(value="schema = \"ailang.lock.v1\"\n\n")
+                    Var(name=entries)
+                  }
+                }
+                Call(target=packageWriteTextFile) { StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") } Var(name=lockText) }
+                Call(target=sys.stdout.writeLine) {
+                  StrConcat {
+                    Lit(value="Ok#ok1(type=int value=")
+                    StrConcat {
+                      ToString { Var(name=count) }
+                      Lit(value=")")
+                    }
+                  }
+                }
+                Return { Lit(value=0) }
+              }
+            }
+          }
+          Block {
+            Return { Call(target=packageBuildError) { Lit(value="PKG003") Lit(value="Package restore requires project.aiproj.") Lit(value="package") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditSpecName) {
+    Fn(params=spec) {
+      Block {
+        Let(name=atPos) { Call(target=find) { Var(name=spec) Lit(value="@") Lit(value=0) } }
+        If {
+          Eq { Var(name=atPos) Lit(value=-1) }
+          Block { Return { Var(name=spec) } }
+          Block { Return { Call(target=substring) { Var(name=spec) Lit(value=0) Var(name=atPos) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditSpecVersion) {
+    Fn(params=spec) {
+      Block {
+        Let(name=atPos) { Call(target=find) { Var(name=spec) Lit(value="@") Lit(value=0) } }
+        If {
+          Eq { Var(name=atPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block { Return { Call(target=substring) { Var(name=spec) Add { Var(name=atPos) Lit(value=1) } Lit(value=2147483647) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditManifestHasInclude) {
+    Fn(params=manifestText,packageName) {
+      Block {
+        Let(name=needle) { StrConcat { Lit(value="Include(name=\"") StrConcat { Var(name=packageName) Lit(value="\"") } } }
+        If {
+          Eq { Call(target=find) { Var(name=manifestText) Var(name=needle) Lit(value=0) } Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditInsertInclude) {
+    Fn(params=manifestText,packageName,packageVersion) {
+      Block {
+        Let(name=marker) { Lit(value="\n  }\n}") }
+        Let(name=insertPos) { Call(target=find) { Var(name=manifestText) Var(name=marker) Lit(value=0) } }
+        If {
+          Eq { Var(name=insertPos) Lit(value=-1) }
+          Block {
+            Let(name=programClose) { Call(target=find) { Var(name=manifestText) Lit(value="\n}") Lit(value=0) } }
+            If {
+              Eq { Var(name=programClose) Lit(value=-1) }
+              Block { Return { Lit(value="PackageEditError#insert") } }
+              Block {
+                Let(name=includeLine) { Call(target=packageEditRenderIncludeLine) { Var(name=packageName) Var(name=packageVersion) } }
+                Return {
+                  StrConcat {
+                    Call(target=substring) { Var(name=manifestText) Lit(value=0) Var(name=programClose) }
+                    StrConcat {
+                      Lit(value=" {")
+                      StrConcat {
+                        Var(name=includeLine)
+                        StrConcat {
+                          Lit(value="\n  }")
+                          Call(target=substring) { Var(name=manifestText) Var(name=programClose) Lit(value=2147483647) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=includeLine) { Call(target=packageEditRenderIncludeLine) { Var(name=packageName) Var(name=packageVersion) } }
+            Return {
+              StrConcat {
+                Call(target=substring) { Var(name=manifestText) Lit(value=0) Var(name=insertPos) }
+                StrConcat {
+                  Var(name=includeLine)
+                  Call(target=substring) { Var(name=manifestText) Var(name=insertPos) Lit(value=2147483647) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditRenderIncludeLine) {
+    Fn(params=packageName,packageVersion) {
+      Block {
+        If {
+          Eq { Var(name=packageVersion) Lit(value="") }
+          Block {
+            Return {
+              StrConcat { Lit(value="\n    Include(name=\"") StrConcat { Var(name=packageName) Lit(value="\")") } }
+            }
+          }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="\n    Include(name=\"")
+                StrConcat {
+                  Var(name=packageName)
+                  StrConcat {
+                    Lit(value="\" version=\"")
+                    StrConcat { Var(name=packageVersion) Lit(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditRemoveInclude) {
+    Fn(params=manifestText,packageName) {
+      Block {
+        Let(name=needle) { StrConcat { Lit(value="\n    Include(name=\"") StrConcat { Var(name=packageName) Lit(value="\"") } } }
+        Let(name=linePos) { Call(target=find) { Var(name=manifestText) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=linePos) Lit(value=-1) }
+          Block { Return { Lit(value="PackageEditError#remove") } }
+          Block {
+            Let(name=lineEnd) { Call(target=find) { Var(name=manifestText) Lit(value="\n") Add { Var(name=linePos) Lit(value=1) } } }
+            If {
+              Eq { Var(name=lineEnd) Lit(value=-1) }
+              Block { Return { Call(target=substring) { Var(name=manifestText) Lit(value=0) Var(name=linePos) } } }
+              Block {
+                Return {
+                  StrConcat {
+                    Call(target=substring) { Var(name=manifestText) Lit(value=0) Var(name=linePos) }
+                    Call(target=substring) { Var(name=manifestText) Var(name=lineEnd) Lit(value=2147483647) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageEditIsError) {
+    Fn(params=text) {
+      Block {
+        If {
+          Eq { Call(target=find) { Var(name=text) Lit(value="PackageEditError#") Lit(value=0) } Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=resolvePackageRegistry) {
+    Fn(params=projectDir) {
+      Block {
+        Let(name=envRegistry) { Call(target=sys.process.env.get) { Lit(value="AILANG_PACKAGE_REGISTRY") } }
+        If {
+          Eq { Var(name=envRegistry) Lit(value="") }
+          Block {
+            Let(name=configRegistry) { Call(target=getConfigPackageRegistry) { Var(name=projectDir) } }
+            If {
+              Eq { Var(name=configRegistry) Lit(value="") }
+              Block {
+                Let(name=workspaceRegistry) { Lit(value="../../../../ailang-packages") }
+                If {
+                  Call(target=sys.fs.path.exists) { Var(name=workspaceRegistry) }
+                  Block { Return { Var(name=workspaceRegistry) } }
+                  Block {
+                    Let(name=localRegistry) { StrConcat { Var(name=projectDir) Lit(value="/.ailang/registry/ailang-packages") } }
+                    If {
+                      Call(target=sys.fs.path.exists) { Var(name=localRegistry) }
+                      Block { Lit(value=0) }
+                      Block {
+                        Call(target=runGitClone) { Lit(value="https://github.com/AiLangCore/ailang-packages.git") Var(name=localRegistry) }
+                      }
+                    }
+                    Return { Var(name=localRegistry) }
+                  }
+                }
+              }
+              Block { Return { Var(name=configRegistry) } }
+            }
+          }
+          Block { Return { Var(name=envRegistry) } }
+        }
+      }
+    }
+  }
+
+  Let(name=getConfigPackageRegistry) {
+    Fn(params=projectDir) {
+      Block {
+        Let(name=configPath) { StrConcat { Var(name=projectDir) Lit(value="/config.local.toml") } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=configPath) }
+          Block {
+            Return { Call(target=packageGetTomlString) { Call(target=packageReadTextFile) { Var(name=configPath) } Lit(value="packageRegistry") } }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=restoreIncludeLockEntries) {
+    Fn(params=projectDir,registryDir,manifestText,startIndex,seen) {
+      Block {
+        Let(name=includePos) { Call(target=find) { Var(name=manifestText) Lit(value="Include") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=includePos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterInclude) { Call(target=substring) { Var(name=manifestText) Var(name=includePos) Lit(value=2147483647) } }
+            Let(name=closePos) { Call(target=find) { Var(name=afterInclude) Lit(value=")") Lit(value=0) } }
+            Let(name=includeText) { Call(target=substring) { Var(name=afterInclude) Lit(value=0) Var(name=closePos) } }
+            Let(name=packageName) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="name") Lit(value=6) } }
+            Let(name=packageVersion) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="version") Lit(value=9) } }
+            Let(name=packagePath) { Call(target=packageGetManifestAttr) { Var(name=includeText) Lit(value="path") Lit(value=6) } }
+            Let(name=nextIndex) { Add { Add { Var(name=includePos) Var(name=closePos) } Lit(value=1) } }
+            If {
+              Call(target=packageSeenContains) { Var(name=seen) Var(name=packageName) }
+              Block { Return { Call(target=packageRestoreError) { Var(name=packageName) Lit(value="duplicate direct include") } } }
+              Block {
+                Return {
+                  StrConcat {
+                    Call(target=restoreManifestPackageLockEntry) {
+                      Var(name=projectDir)
+                      Var(name=registryDir)
+                      Var(name=packageName)
+                      Var(name=packageVersion)
+                      Var(name=packagePath)
+                    }
+                    Call(target=restoreIncludeLockEntries) { Var(name=projectDir) Var(name=registryDir) Var(name=manifestText) Var(name=nextIndex) Call(target=packageSeenAdd) { Var(name=seen) Var(name=packageName) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restoreManifestPackageLockEntry) {
+    Fn(params=projectDir,registryDir,packageName,packageVersion,packagePath) {
+      Block {
+        If {
+          Eq { Var(name=packagePath) Lit(value="") }
+          Block {
+            Return {
+              Call(target=restorePackageLockEntrySeen) {
+                Var(name=projectDir)
+                Var(name=registryDir)
+                Var(name=packageName)
+                Var(name=packageVersion)
+                Lit(value="")
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=restoreLocalPackageLockEntry) {
+                Var(name=projectDir)
+                Var(name=registryDir)
+                Var(name=packageName)
+                Var(name=packageVersion)
+                Var(name=packagePath)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=countIncludes) {
+    Fn(params=manifestText,startIndex) {
+      Block {
+        Let(name=includePos) { Call(target=find) { Var(name=manifestText) Lit(value="Include") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=includePos) Lit(value=-1) }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=afterInclude) { Call(target=substring) { Var(name=manifestText) Var(name=includePos) Lit(value=2147483647) } }
+            Let(name=closePos) { Call(target=find) { Var(name=afterInclude) Lit(value=")") Lit(value=0) } }
+            Return {
+              Add {
+                Lit(value=1)
+                Call(target=countIncludes) {
+                  Var(name=manifestText)
+                  Add { Add { Var(name=includePos) Var(name=closePos) } Lit(value=1) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=hasPackageRestoreError) {
+    Fn(params=entries) {
+      Block {
+        If {
+          Eq { Call(target=find) { Var(name=entries) Lit(value="PackageRestoreError#") Lit(value=0) } Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=countLockPackages) {
+    Fn(params=lockEntries,startIndex) {
+      Block {
+        Let(name=packagePos) { Call(target=find) { Var(name=lockEntries) Lit(value="[[package]]") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=packagePos) Lit(value=-1) }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Return {
+              Add {
+                Lit(value=1)
+                Call(target=countLockPackages) {
+                  Var(name=lockEntries)
+                  Add { Var(name=packagePos) Lit(value=11) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restorePackageLockEntrySeen) {
+    Fn(params=projectDir,registryDir,packageName,requestedVersion,seen) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=recordPath) {
+              StrConcat {
+                Var(name=registryDir)
+                StrConcat {
+                  Lit(value="/packages/")
+                  StrConcat { Var(name=packageName) Lit(value=".toml") }
+                }
+              }
+            }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=recordPath) }
+              Block {
+                Let(name=recordText) { Call(target=packageReadTextFile) { Var(name=recordPath) } }
+                Let(name=defaultVersion) { Call(target=packageGetTomlString) { Var(name=recordText) Lit(value="defaultVersion") } }
+                Let(name=packageVersion) { Call(target=packageSelectRequestedOrDefault) { Var(name=requestedVersion) Var(name=defaultVersion) } }
+                Let(name=repo) { Call(target=packageGetTomlString) { Var(name=recordText) Lit(value="repo") } }
+                Let(name=packageRoot) { Call(target=packageGetTomlString) { Var(name=recordText) Lit(value="packageRoot") } }
+                Let(name=commit) { Call(target=packageGetVersionCommit) { Var(name=recordText) Var(name=packageVersion) } }
+                If {
+                  Eq { Var(name=commit) Lit(value="") }
+                  Block { Return { Call(target=packageRestoreError) { Var(name=packageName) Lit(value="missing commit") } } }
+                  Block {
+                    Let(name=packagePath) { StrConcat { Lit(value=".ailang/packages/") Var(name=packageName) } }
+                    Let(name=packageDir) { StrConcat { Var(name=projectDir) StrConcat { Lit(value="/") Var(name=packagePath) } } }
+                    Let(name=cloneCode) {
+                      If {
+                        Call(target=sys.fs.path.exists) { Var(name=packageDir) }
+                        Block { Lit(value=0) }
+                        Block { Call(target=runGitClone) { Var(name=repo) Var(name=packageDir) } }
+                      }
+                    }
+                    If {
+                      Eq { Var(name=cloneCode) Lit(value=0) }
+                      Block {
+                        Let(name=checkoutCode) { Call(target=runGitCheckout) { Var(name=packageDir) Var(name=commit) } }
+                        If {
+                          Eq { Var(name=checkoutCode) Lit(value=0) }
+                          Block {
+                            Let(name=descriptorPath) { Call(target=packageDescriptorPath) { Var(name=packageDir) Var(name=packageRoot) } }
+                            Let(name=descriptorText) { Call(target=packageReadOptionalText) { Var(name=descriptorPath) } }
+                            Let(name=dependencyEntries) {
+                              Call(target=restorePackageDependencies) {
+                                Var(name=projectDir)
+                                Var(name=registryDir)
+                                Var(name=descriptorText)
+                                Call(target=packageSeenAdd) { Var(name=seen) Var(name=packageName) }
+                              }
+                            }
+                            Let(name=targetEntries) { Call(target=restorePackageTargetEntries) { Var(name=packageName) Var(name=descriptorText) Lit(value=0) } }
+                            Let(name=namespaces) { Call(target=packageLibraryNamespaces) { Var(name=descriptorText) Lit(value=0) } }
+                            Return {
+                              StrConcat {
+                                Lit(value="[[package]]\nname = \"")
+                                StrConcat {
+                                  Var(name=packageName)
+                                  StrConcat {
+                                    Lit(value="\"\nversion = \"")
+                                    StrConcat {
+                                      Var(name=packageVersion)
+                                      StrConcat {
+                                        Lit(value="\"\nrepo = \"")
+                                        StrConcat {
+                                          Var(name=repo)
+                                          StrConcat {
+                                            Lit(value="\"\ncommit = \"")
+                                            StrConcat {
+                                              Var(name=commit)
+                                              StrConcat {
+                                                Lit(value="\"\npath = \"")
+                                                StrConcat {
+                                                  Var(name=packagePath)
+                                                  StrConcat {
+                                                    Lit(value="\"\npackageRoot = \"")
+                                                    StrConcat {
+                                                      Var(name=packageRoot)
+                                                      StrConcat {
+                                                        StrConcat {
+                                                          Lit(value="\"\nnamespaces = [")
+                                                          StrConcat {
+                                                            Var(name=namespaces)
+                                                            Lit(value="]\n\n")
+                                                          }
+                                                        }
+                                                        StrConcat {
+                                                          Var(name=targetEntries)
+                                                          Var(name=dependencyEntries)
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          Block { Return { Call(target=packageRestoreError) { Var(name=packageName) Lit(value="checkout failed") } } }
+                        }
+                      }
+                      Block { Return { Call(target=packageRestoreError) { Var(name=packageName) Lit(value="clone failed") } } }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=packageRestoreError) { Var(name=packageName) Lit(value="missing package record") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageRestoreError) {
+    Fn(params=packageName,reason) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="PackageRestoreError#pkg(name=\"")
+            StrConcat {
+              Var(name=packageName)
+              StrConcat {
+                Lit(value="\" reason=\"")
+                StrConcat { Var(name=reason) Lit(value="\")\n") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageSeenAdd) {
+    Fn(params=seen,packageName) {
+      Block {
+        Return {
+          StrConcat {
+            Var(name=seen)
+            StrConcat {
+              Lit(value="|")
+              StrConcat { Var(name=packageName) Lit(value="|") }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageSeenContains) {
+    Fn(params=seen,packageName) {
+      Block {
+        Let(name=needle) {
+          StrConcat {
+            Lit(value="|")
+            StrConcat { Var(name=packageName) Lit(value="|") }
+          }
+        }
+        If {
+          Eq { Call(target=find) { Var(name=seen) Var(name=needle) Lit(value=0) } Lit(value=-1) }
+          Block { Return { Lit(value=false) } }
+          Block { Return { Lit(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageDescriptorPath) {
+    Fn(params=packageDir,packageRoot) {
+      Block {
+        If {
+          Eq { Var(name=packageRoot) Lit(value=".") }
+          Block { Return { StrConcat { Var(name=packageDir) Lit(value="/package.toml") } } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=packageDir)
+                StrConcat {
+                  Lit(value="/")
+                  StrConcat { Var(name=packageRoot) Lit(value="/package.toml") }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageLibraryNamespaces) {
+    Fn(params=descriptorText,startIndex) {
+      Block {
+        Let(name=libraryPos) { Call(target=find) { Var(name=descriptorText) Lit(value="[libraries.") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=libraryPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=headerClose) { Call(target=find) { Var(name=descriptorText) Lit(value="]") Var(name=libraryPos) } }
+            Let(name=nextStart) { Add { Var(name=headerClose) Lit(value=1) } }
+            Let(name=libraryBlock) { Call(target=packageTomlSectionBlock) { Var(name=descriptorText) Var(name=nextStart) } }
+            Let(name=namespaceValue) { Call(target=packageGetTomlStringFixed) { Var(name=libraryBlock) Lit(value="namespace") Lit(value=13) Lit(value=11) } }
+            Let(name=remaining) { Call(target=packageLibraryNamespaces) { Var(name=descriptorText) Var(name=nextStart) } }
+            If {
+              Eq { Var(name=namespaceValue) Lit(value="") }
+              Block { Return { Var(name=remaining) } }
+              Block {
+                If {
+                  Eq { Var(name=remaining) Lit(value="") }
+                  Block { Return { StrConcat { Lit(value="\"") StrConcat { Var(name=namespaceValue) Lit(value="\"") } } } }
+                  Block { Return { StrConcat { Lit(value="\"") StrConcat { Var(name=namespaceValue) StrConcat { Lit(value="\", ") Var(name=remaining) } } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restorePackageDependencies) {
+    Fn(params=projectDir,registryDir,descriptorText,seen) {
+      Block {
+        Let(name=dependenciesPos) { Call(target=find) { Var(name=descriptorText) Lit(value="[dependencies]") Lit(value=0) } }
+        If {
+          Eq { Var(name=dependenciesPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterDependencies) {
+              Call(target=substring) {
+                Var(name=descriptorText)
+                Add { Var(name=dependenciesPos) Lit(value=14) }
+                Lit(value=2147483647)
+              }
+            }
+            Let(name=nextSection) { Call(target=find) { Var(name=afterDependencies) Lit(value="\n[") Lit(value=0) } }
+            Let(name=dependencyBlock) { Call(target=dependencySectionBlock) { Var(name=afterDependencies) Var(name=nextSection) } }
+            Return { Call(target=restoreDependencyLines) { Var(name=projectDir) Var(name=registryDir) Var(name=dependencyBlock) Lit(value=0) Var(name=seen) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=dependencySectionBlock) {
+    Fn(params=afterDependencies,nextSection) {
+      Block {
+        If {
+          Eq { Var(name=nextSection) Lit(value=-1) }
+          Block { Return { Var(name=afterDependencies) } }
+          Block { Return { Call(target=substring) { Var(name=afterDependencies) Lit(value=0) Var(name=nextSection) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=restoreDependencyLines) {
+    Fn(params=projectDir,registryDir,dependencyBlock,startIndex,seen) {
+      Block {
+        Let(name=lineEnd) { Call(target=find) { Var(name=dependencyBlock) Lit(value="\n") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=lineEnd) Lit(value=-1) }
+          Block {
+            Return {
+              Call(target=restoreDependencyLine) {
+                Var(name=projectDir)
+                Var(name=registryDir)
+                Call(target=substring) { Var(name=dependencyBlock) Var(name=startIndex) Lit(value=2147483647) }
+                Var(name=seen)
+              }
+            }
+          }
+          Block {
+            Let(name=lineText) { Call(target=substring) { Var(name=dependencyBlock) Var(name=startIndex) Var(name=lineEnd) } }
+            Return {
+              StrConcat {
+                Call(target=restoreDependencyLine) { Var(name=projectDir) Var(name=registryDir) Var(name=lineText) Var(name=seen) }
+                Call(target=restoreDependencyLines) {
+                  Var(name=projectDir)
+                  Var(name=registryDir)
+                  Var(name=dependencyBlock)
+                  Add { Var(name=lineEnd) Lit(value=1) }
+                  Var(name=seen)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restoreDependencyLine) {
+    Fn(params=projectDir,registryDir,lineText,seen) {
+      Block {
+        Let(name=eqPos) { Call(target=find) { Var(name=lineText) Lit(value=" = \"") Lit(value=0) } }
+        If {
+          Eq { Var(name=eqPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=dependencyName) { Call(target=substring) { Var(name=lineText) Lit(value=0) Var(name=eqPos) } }
+            Let(name=dependencyVersion) { Call(target=packageGetValueAfterNeedle) { Var(name=lineText) Lit(value=" = \"") Lit(value=4) } }
+            If {
+              Call(target=packageSeenContains) { Var(name=seen) Var(name=dependencyName) }
+              Block { Return { Call(target=packageRestoreError) { Var(name=dependencyName) Lit(value="circular dependency") } } }
+              Block {
+                Return {
+                  Call(target=restorePackageLockEntrySeen) {
+                    Var(name=projectDir)
+                    Var(name=registryDir)
+                    Var(name=dependencyName)
+                    Var(name=dependencyVersion)
+                    Var(name=seen)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=restorePackageTargetEntries) {
+    Fn(params=packageName,descriptorText,startIndex) {
+      Block {
+        Let(name=targetPos) { Call(target=find) { Var(name=descriptorText) Lit(value="[targets.") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=targetPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterHeader) { Add { Var(name=targetPos) Lit(value=9) } }
+            Let(name=closePos) { Call(target=find) { Var(name=descriptorText) Lit(value="]") Var(name=afterHeader) } }
+            If {
+              Eq { Var(name=closePos) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block {
+                Let(name=targetId) { Call(target=substring) { Var(name=descriptorText) Var(name=afterHeader) Sub { Var(name=closePos) Var(name=afterHeader) } } }
+                Let(name=nextStart) { Add { Var(name=closePos) Lit(value=1) } }
+                If {
+                  Eq { Call(target=find) { Var(name=targetId) Lit(value=".") Lit(value=0) } Lit(value=-1) }
+                  Block {
+                    Let(name=targetBlock) { Call(target=packageTomlSectionBlock) { Var(name=descriptorText) Var(name=nextStart) } }
+                    Return {
+                      StrConcat {
+                        Call(target=packageRenderTargetLockEntry) {
+                          Var(name=packageName)
+                          Var(name=targetId)
+                          Var(name=targetBlock)
+                          Call(target=packageTargetToolsBlock) { Var(name=descriptorText) Var(name=targetId) }
+                        }
+                        Call(target=restorePackageTargetEntries) {
+                          Var(name=packageName)
+                          Var(name=descriptorText)
+                          Var(name=nextStart)
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=restorePackageTargetEntries) {
+                        Var(name=packageName)
+                        Var(name=descriptorText)
+                        Var(name=nextStart)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageRenderTargetLockEntry) {
+    Fn(params=packageName,targetId,targetBlock,toolsBlock) {
+      Block {
+        Return {
+          StrConcat {
+            Lit(value="[[target]]\npackage = \"")
+            StrConcat {
+              Var(name=packageName)
+              StrConcat {
+                Lit(value="\"\nid = \"")
+                StrConcat {
+                  Var(name=targetId)
+                  StrConcat {
+                    Lit(value="\"\naliases = ")
+                    StrConcat {
+                      Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=targetBlock) Lit(value="aliases") } Lit(value="[]") }
+                      StrConcat {
+                        Lit(value="\ndefaultRunner = ")
+                        StrConcat {
+                          Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=targetBlock) Lit(value="defaultRunner") } Lit(value="\"\"") }
+                          StrConcat {
+                            Lit(value="\nartifactTypes = ")
+                            StrConcat {
+                              Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=targetBlock) Lit(value="artifactTypes") } Lit(value="[]") }
+                              StrConcat {
+                                Lit(value="\nhostAbi = ")
+                                StrConcat {
+                                  Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=targetBlock) Lit(value="hostAbi") } Lit(value="0") }
+                                  StrConcat {
+                                    Lit(value="\nrunTools = ")
+                                    StrConcat {
+                                      Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=toolsBlock) Lit(value="run") } Lit(value="[]") }
+                                      StrConcat {
+                                        Lit(value="\npublishTools = ")
+                                        StrConcat {
+                                          Call(target=packageRawOrDefault) { Call(target=packageGetTomlRawValue) { Var(name=toolsBlock) Lit(value="publish") } Lit(value="[]") }
+                                          Lit(value="\n\n")
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageTargetToolsBlock) {
+    Fn(params=descriptorText,targetId) {
+      Block {
+        Let(name=header) {
+          StrConcat {
+            Lit(value="[targets.")
+            StrConcat { Var(name=targetId) Lit(value=".tools]") }
+          }
+        }
+        Let(name=toolsPos) { Call(target=find) { Var(name=descriptorText) Var(name=header) Lit(value=0) } }
+        If {
+          Eq { Var(name=toolsPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=toolsClose) { Call(target=find) { Var(name=descriptorText) Lit(value="]") Var(name=toolsPos) } }
+            Return { Call(target=packageTomlSectionBlock) { Var(name=descriptorText) Add { Var(name=toolsClose) Lit(value=1) } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageTomlSectionBlock) {
+    Fn(params=text,sectionBodyStart) {
+      Block {
+        Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=sectionBodyStart) Lit(value=2147483647) } }
+        Let(name=nextSection) { Call(target=find) { Var(name=rest) Lit(value="\n[") Lit(value=0) } }
+        If {
+          Eq { Var(name=nextSection) Lit(value=-1) }
+          Block { Return { Var(name=rest) } }
+          Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=nextSection) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetTomlRawValue) {
+    Fn(params=text,key) {
+      Block {
+        If {
+          Eq { Var(name=key) Lit(value="aliases") }
+          Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="aliases") Lit(value=10) Lit(value=8) } } }
+          Block {
+            If {
+              Eq { Var(name=key) Lit(value="defaultRunner") }
+              Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="defaultRunner") Lit(value=16) Lit(value=14) } } }
+              Block {
+                If {
+                  Eq { Var(name=key) Lit(value="artifactTypes") }
+                  Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="artifactTypes") Lit(value=16) Lit(value=14) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=key) Lit(value="hostAbi") }
+                      Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="hostAbi") Lit(value=10) Lit(value=8) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=key) Lit(value="run") }
+                          Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="run") Lit(value=6) Lit(value=4) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=key) Lit(value="publish") }
+                              Block { Return { Call(target=packageGetTomlRawValueFixed) { Var(name=text) Lit(value="publish") Lit(value=10) Lit(value=8) } } }
+                              Block { Return { Lit(value="") } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetTomlRawValueFixed) {
+    Fn(params=text,key,spacedLength,tightLength) {
+      Block {
+        Let(name=spacedNeedle) { StrConcat { Var(name=key) Lit(value=" = ") } }
+        Let(name=tightNeedle) { StrConcat { Var(name=key) Lit(value="=") } }
+        Let(name=value) { Call(target=packageGetRawValueAfterNeedle) { Var(name=text) Var(name=spacedNeedle) Var(name=spacedLength) } }
+        If {
+          Eq { Var(name=value) Lit(value="") }
+          Block { Return { Call(target=packageGetRawValueAfterNeedle) { Var(name=text) Var(name=tightNeedle) Var(name=tightLength) } } }
+          Block { Return { Var(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetRawValueAfterNeedle) {
+    Fn(params=text,needle,needleLength) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=found) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\n") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Var(name=rest) } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageRawOrDefault) {
+    Fn(params=value,defaultValue) {
+      Block {
+        If {
+          Eq { Var(name=value) Lit(value="") }
+          Block { Return { Var(name=defaultValue) } }
+          Block { Return { Var(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageSelectRequestedOrDefault) {
+    Fn(params=requested,defaultVersion) {
+      Block {
+        If {
+          Eq { Var(name=requested) Lit(value="") }
+          Block { Return { Var(name=defaultVersion) } }
+          Block { Return { Var(name=requested) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetTomlString) {
+    Fn(params=text,key) {
+      Block {
+        If {
+          Eq { Var(name=key) Lit(value="packageRegistry") }
+          Block { Return { Call(target=packageGetTomlStringFixed) { Var(name=text) Lit(value="packageRegistry") Lit(value=19) Lit(value=17) } } }
+          Block {
+            If {
+              Eq { Var(name=key) Lit(value="defaultVersion") }
+              Block { Return { Call(target=packageGetTomlStringFixed) { Var(name=text) Lit(value="defaultVersion") Lit(value=18) Lit(value=16) } } }
+              Block {
+                If {
+                  Eq { Var(name=key) Lit(value="repo") }
+                  Block { Return { Call(target=packageGetTomlStringFixed) { Var(name=text) Lit(value="repo") Lit(value=8) Lit(value=6) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=key) Lit(value="packageRoot") }
+                      Block { Return { Call(target=packageGetTomlStringFixed) { Var(name=text) Lit(value="packageRoot") Lit(value=15) Lit(value=13) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=key) Lit(value="commit") }
+                          Block { Return { Call(target=packageGetTomlStringFixed) { Var(name=text) Lit(value="commit") Lit(value=10) Lit(value=8) } } }
+                          Block { Return { Lit(value="") } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetTomlStringFixed) {
+    Fn(params=text,key,spacedLength,tightLength) {
+      Block {
+        Let(name=spacedNeedle) { StrConcat { Var(name=key) Lit(value=" = \"") } }
+        Let(name=tightNeedle) { StrConcat { Var(name=key) Lit(value="=\"") } }
+        Let(name=value) { Call(target=packageGetValueAfterNeedle) { Var(name=text) Var(name=spacedNeedle) Var(name=spacedLength) } }
+        If {
+          Eq { Var(name=value) Lit(value="") }
+          Block { Return { Call(target=packageGetValueAfterNeedle) { Var(name=text) Var(name=tightNeedle) Var(name=tightLength) } } }
+          Block { Return { Var(name=value) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageGetVersionCommit) {
+    Fn(params=recordText,version) {
+      Block {
+        Let(name=sectionNeedle) {
+          StrConcat {
+            Lit(value="[versions.\"")
+            StrConcat { Var(name=version) Lit(value="\"]") }
+          }
+        }
+        Let(name=sectionPos) { Call(target=find) { Var(name=recordText) Var(name=sectionNeedle) Lit(value=0) } }
+        If {
+          Eq { Var(name=sectionPos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              Call(target=packageGetTomlString) {
+                Call(target=substring) { Var(name=recordText) Var(name=sectionPos) Lit(value=2147483647) }
+                Lit(value="commit")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makeGitCloneArgs) {
+    Fn(params=repo,dest) {
+      Block {
+        Return {
+          AppendChild {
+            AppendChild {
+              AppendChild {
+                MakeBlock { Lit(value="args") }
+                MakeLitString { Lit(value="arg0") Lit(value="clone") }
+              }
+              MakeLitString { Lit(value="arg1") Var(name=repo) }
+            }
+            MakeLitString { Lit(value="arg2") Var(name=dest) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=makeGitCheckoutArgs) {
+    Fn(params=dest,commit) {
+      Block {
+        Return {
+          AppendChild {
+            AppendChild {
+              AppendChild {
+                AppendChild {
+                  AppendChild {
+                    MakeBlock { Lit(value="args") }
+                    MakeLitString { Lit(value="arg0") Lit(value="-C") }
+                  }
+                  MakeLitString { Lit(value="arg1") Var(name=dest) }
+                }
+                MakeLitString { Lit(value="arg2") Lit(value="checkout") }
+              }
+              MakeLitString { Lit(value="arg3") Lit(value="--detach") }
+            }
+            MakeLitString { Lit(value="arg4") Var(name=commit) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runGitClone) {
+    Fn(params=repo,dest) {
+      Block {
+        Let(name=args) { Call(target=makeGitCloneArgs) { Var(name=repo) Var(name=dest) } }
+        Let(name=env) { MakeBlock { Lit(value="env") } }
+        Let(name=handle) { Call(target=spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
+        Return { Call(target=wait) { Var(name=handle) } }
+      }
+    }
+  }
+
+  Let(name=runGitCheckout) {
+    Fn(params=dest,commit) {
+      Block {
+        If {
+          Eq { Var(name=commit) Lit(value="") }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=args) { Call(target=makeGitCheckoutArgs) { Var(name=dest) Var(name=commit) } }
+            Let(name=env) { MakeBlock { Lit(value="env") } }
+            Let(name=handle) { Call(target=spawn) { Lit(value="git") Var(name=args) Lit(value="") Var(name=env) } }
+            Return { Call(target=wait) { Var(name=handle) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageUnknownCommand) {
+    Fn(params=cmd) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG001 message=\"Unknown command: ")
+            StrConcat { Var(name=cmd) Lit(value="\" nodeId=argv)") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=packageWriteTextFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageReadTextFile) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=bytes.toUtf8String) {
+            Call(target=sys.fs.file.read) { Var(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageReadOptionalText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block { Return { Call(target=packageReadTextFile) { Var(name=path) } } }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageBuildError) {
+    Fn(params=code,message,nodeId) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=")
+            StrConcat {
+              Var(name=code)
+              StrConcat {
+                Lit(value=" message=\"")
+                StrConcat {
+                  Var(name=message)
+                  StrConcat {
+                    Lit(value="\" nodeId=\"")
+                    StrConcat { Var(name=nodeId) Lit(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+
+  Let(name=packageGetManifestAttr) {
+    Fn(params=text,key,needleLength) {
+      Block {
+        Let(name=needle) { StrConcat { Var(name=key) Lit(value="=\"") } }
+        Return { Call(target=packageGetValueAfterNeedle) { Var(name=text) Var(name=needle) Var(name=needleLength) } }
+      }
+    }
+  }
+
+  Let(name=packageGetValueAfterNeedle) {
+    Fn(params=text,needle,needleLength) {
+      Block {
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=found) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\"") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

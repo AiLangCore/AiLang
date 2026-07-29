@@ -1,0 +1,74 @@
+Program {
+  Import(path="object_linker_core.aos")
+  Import(path="object_linker_support.aos")
+  Import(path="object_linker_workers.aos")
+  Import(path="object_linker_worker_artifacts.aos")
+  Import(path="object_linker_worker_catalog_emit.aos")
+  Import(path="object_linker_worker_relocations.aos")
+  Export(name=objectLinker.emitAibc1BytesWithWorkers)
+
+  Let(name=objectLinker.emitAibc1BytesWithWorkers) {
+    Fn(params=objects,functions) {
+      Block {
+        Let(name=catalogPlan) {
+          Call(target=objectLinker.collectWorkerCatalogPlan) {
+            Var(name=objects) Var(name=functions)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=catalogPlan) } Lit(value="Err") }
+          Block { Return { Var(name=catalogPlan) } }
+          Block {
+            If {
+              Eq { ChildCount { Var(name=catalogPlan) } Lit(value=0) }
+              Block {
+                Return { Call(target=objectLinker.emitAibc1Bytes) { Var(name=functions) } }
+              }
+              Block {
+                Let(name=artifacts) {
+                  Call(target=objectLinker.buildWorkerArtifacts) {
+                    Var(name=catalogPlan) Var(name=functions)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=artifacts) } Lit(value="Err") }
+                  Block { Return { Var(name=artifacts) } }
+                  Block {
+                    Let(name=resolvedFunctions) {
+                      Call(target=objectLinker.resolveWorkerFunctionRelocations) {
+                        Var(name=functions) Var(name=catalogPlan)
+                      }
+                    }
+                    If {
+                      Eq { NodeKind { Var(name=resolvedFunctions) } Lit(value="Err") }
+                      Block { Return { Var(name=resolvedFunctions) } }
+                      Block { Lit(value=0) }
+                    }
+                    Let(name=section) {
+                      Call(target=objectLinker.emitWorkerCatalogSection) {
+                        Var(name=catalogPlan)
+                        Call(target=objectLinker.assignOffsets) { Var(name=functions) }
+                        Var(name=artifacts)
+                      }
+                    }
+                    If {
+                      Eq { ValueKind { Var(name=section) } Lit(value="node") }
+                      Block { Return { Var(name=section) } }
+                      Block {
+                        Return {
+                          Call(target=objectLinker.emitAibc1BytesWithWorkerSection) {
+                            Var(name=resolvedFunctions) Var(name=section)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

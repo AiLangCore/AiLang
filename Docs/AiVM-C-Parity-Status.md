@@ -1,6 +1,6 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-03 14:28:06 UTC
+Generated: 2026-03-03 21:40:27 UTC
 
 Overall status: **PASS**
 
@@ -22,7 +22,7 @@ Overall status: **PASS**
 | run source | PASS | backed by canonical golden corpus parity |
 | embedded bytecode | PASS | vm=c run bytecode-oriented source completed (exit=0) |
 | embedded bundle | PASS | vm=c run .aibundle succeeded |
-| serve | PASS | serve is intentionally out-of-scope for native runtime surface |
+| serve | PASS | serve is not part of the current native runtime command surface |
 
 ## Behavioral Cases
 
@@ -33,8 +33,8 @@ Overall status: **PASS**
 | PASS | check_missing_name | 2 | 2 |
 | PASS | fmt_basic | 2 | 2 |
 | PASS | http_health_route_refactor | 2 | 2 |
-| PASS | http_parse_basic | 2 | 2 |
-| PASS | http_parse_full | 2 | 2 |
+| PASS | http_parse_basic | 3 | 3 |
+| PASS | http_parse_full | 3 | 3 |
 | PASS | http_route_basic | 2 | 2 |
 | PASS | json_basic | 2 | 2 |
 | PASS | json_key_ordering | 2 | 2 |
@@ -84,7 +84,7 @@ Overall status: **PASS**
 | PASS | stdlib_io | 2 | 2 |
 | PASS | stdlib_math | 2 | 2 |
 | PASS | stdlib_str | 2 | 2 |
-| PASS | trace_basic | 2 | 2 |
+| PASS | trace_basic | 3 | 3 |
 | PASS | trace_with_args | 2 | 2 |
 | PASS | vm_default_is_canonical | 2 | 2 |
 | PASS | vm_echo | 0 | 0 |

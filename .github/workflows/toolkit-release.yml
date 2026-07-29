@@ -2,9 +2,13 @@ name: Toolkit Release
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    tags:
+      - "v*"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AILANG_RELEASE_CLI_SHA256: 0725750a1ca85ab9dcab463b16c5b71498f355016768c4f22d93e1fd94299297
+  AILANG_RELEASE_BUILTINS_SHA256: 1296e3bd522d3ef133ce1cdd63510e65704ed7388008c3a7bfcb7c40f6c8d6d6
 
 permissions:
   contents: write
@@ -19,42 +23,39 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Enforce main branch
+      - name: Enforce release ref
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
-            echo "Releases can only run from main." >&2
-            exit 1
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            exit 0
           fi
+          echo "Releases can only run from v* tags." >&2
+          exit 1
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
 
       - name: Compute version and tag
         id: version
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="0.0.1-alpha.${GITHUB_RUN_NUMBER}"
-          TAG="v${VERSION}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+          else
+            echo "A release workflow must run from a version tag." >&2
+            exit 1
+          fi
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
-
-      - name: Create and push tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.version.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists on origin."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "${TAG}" -m "Release ${TAG}" "${GITHUB_SHA}"
-            git push origin "${TAG}"
-          fi
+        env:
+          GITHUB_REF_TYPE: ${{ github.ref_type }}
 
   build-gate:
     name: build-gate-${{ matrix.os }}
@@ -70,39 +71,75 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
 
       - name: Setup MSVC tools
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
 
-      - name: Build airun (Unix)
+      - name: Stage AiLang tools (Unix)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           set -euo pipefail
-          ./scripts/build-airun.sh
-          test -x ./tools/airun
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
+          test -x ./tools/ailang
 
-      - name: Build airun (Windows)
+      - name: Stage AiLang tools (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
-          ./scripts/build-airun.ps1
-          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
+          ./build.ps1 legacy
 
       - name: Runtime smoke (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          ./tools/airun run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+          ./tools/ailang --version >/dev/null
+
+      - name: Memory leak gate (Unix)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/leak-reports
+          AIVM_LEAK_CHECK_ITERATIONS=50 \
+          AIVM_LEAK_MAX_GROWTH_KB=2048 \
+          AIVM_LEAK_REPORT=.tmp/leak-reports/toolkit-release-${{ matrix.os }}.txt \
+          echo "memory leak gate moved to AiVM"
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: toolkit-release-leak-report-${{ matrix.os }}
+          path: .tmp/leak-reports/toolkit-release-${{ matrix.os }}.txt
+          if-no-files-found: ignore
 
       - name: Runtime smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & .\tools\airun.exe run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          & .\tools\ailang.exe --version | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
 
   package:
@@ -111,6 +148,7 @@ jobs:
     needs:
       - prepare
       - build-gate
+      - package-wasm32
     strategy:
       fail-fast: false
       matrix:
@@ -120,55 +158,86 @@ jobs:
             platform: linux
             arch: x64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-linux-x64
+            artifact_dir: .artifacts/ailang-linux-x64
             frontend: aos_frontend
-            airun: airun
+            tool: ailang
+            runtime: aivm-runtime
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
             arch: arm64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-linux-arm64
+            artifact_dir: .artifacts/ailang-linux-arm64
             frontend: aos_frontend
-            airun: airun
+            tool: ailang
+            runtime: aivm-runtime
           - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-osx-x64
+            artifact_dir: .artifacts/ailang-osx-x64
             frontend: aos_frontend
-            airun: airun
+            tool: ailang
+            runtime: aivm-runtime
           - os: macos-14
             rid: osx-arm64
             platform: osx
             arch: arm64
             archive: tar.gz
-            artifact_dir: .artifacts/airun-osx-arm64
+            artifact_dir: .artifacts/ailang-osx-arm64
             frontend: aos_frontend
-            airun: airun
+            tool: ailang
+            runtime: aivm-runtime
           - os: windows-latest
             rid: windows-x64
             platform: windows
             arch: x64
             archive: zip
-            artifact_dir: .artifacts/airun-windows-x64
+            artifact_dir: .artifacts/ailang-windows-x64
             frontend: aos_frontend.exe
-            airun: airun.exe
+            tool: ailang.exe
+            runtime: aivm-runtime.exe
             msvc_arch: amd64
           - os: windows-latest
             rid: windows-arm64
             platform: windows
             arch: arm64
             archive: zip
-            artifact_dir: .artifacts/airun-windows-arm64
+            artifact_dir: .artifacts/ailang-windows-arm64
             frontend: aos_frontend.exe
-            airun: airun.exe
+            tool: ailang.exe
+            runtime: aivm-runtime.exe
             msvc_arch: amd64_arm64
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
+      - name: Download wasm runtime files
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
+
+      - name: Download bytecode CLI payload
+        uses: actions/download-artifact@v8
+        with:
+          name: ailang-cli-bytecode
+          path: ./dist/libexec/ailang/cli
+
+      - name: Download built-in command payloads
+        uses: actions/download-artifact@v8
+        with:
+          name: ailang-builtin-commands
+          path: ./dist/libexec/ailang/commands
 
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
@@ -181,45 +250,62 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ] && ! grep -q '^Architectures:' /etc/apt/sources.list.d/ubuntu.sources; then
+            sudo sed -i '/^Signed-By:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+          sudo dpkg --add-architecture arm64
+          . /etc/os-release
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/ubuntu-ports-arm64.sources >/dev/null
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports
+          Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-backports ${VERSION_CODENAME}-security
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            libc6-dev-arm64-cross \
+            libssl-dev:arm64 \
+            zlib1g-dev:arm64
 
-      - name: Build airun runtime (Unix)
+      - name: Stage AiLang tools (Unix)
         if: matrix.platform != 'windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
           set -euo pipefail
-          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
-          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
-          ./scripts/build-airun.sh
+          AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
+          AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./scripts/build-ailang-native.sh
 
-      - name: Build airun runtime (Windows)
+      - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
+          AILANG_BUILD_VERSION: ${{ needs.prepare.outputs.version }}
+          AILANG_BUILD_CHANNEL: beta
         run: |
-          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
-          ./scripts/build-airun.ps1
+          $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_PLATFORM = '${{ matrix.platform }}'
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
+          ./scripts/build-ailang-native.ps1
 
-      - name: Build frontend parser (Unix)
+      - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          if [[ "${{ matrix.platform }}" == "linux" && "${{ matrix.arch }}" == "arm64" ]]; then
-            aarch64-linux-gnu-gcc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          elif [[ "${{ matrix.platform }}" == "osx" ]]; then
-            if [[ "${{ matrix.arch }}" == "x64" ]]; then
-              clang -std=c11 -O2 -arch x86_64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            else
-              clang -std=c11 -O2 -arch arm64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            fi
-          else
-            cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          fi
+          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Build frontend parser (Windows)
+      - name: Stage frontend parser (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
@@ -242,18 +328,75 @@ jobs:
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
+      - name: Verify bytecode CLI payload (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Verify bytecode CLI payload (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .\dist\libexec\ailang\cli\app.aibc1)) { throw 'missing bytecode CLI payload' }
+
       - name: Pack release artifact (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
-          PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
+          PACKAGE_DIR="ailang-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
-          cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
-          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.tool }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/"
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
+          if [[ -x "./${{ matrix.artifact_dir }}/aivectra-framebuffer" ]]; then
+            cp "./${{ matrix.artifact_dir }}/aivectra-framebuffer" "${PACKAGE_DIR}/"
+          fi
+          mkdir -p "${PACKAGE_DIR}/bin"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm-runtime"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm"
+          printf '%s\n' \
+            '#!/usr/bin/env sh' \
+            'set -eu' \
+            'SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"' \
+            'export AILANG_SDK_ROOT="$SDK_ROOT"' \
+            'export AILANG_SDK_VERSION="'"${VERSION}"'"' \
+            'export AILANG_COMMAND_ROOT="$SDK_ROOT/libexec/ailang/commands"' \
+            'export AILANG_OBJECT_PIPELINE="${AILANG_OBJECT_PIPELINE:-legacy}"' \
+            'export AILANG_BUILD_JOBS="${AILANG_BUILD_JOBS:-1}"' \
+            'exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"' \
+            > "${PACKAGE_DIR}/bin/ailang"
+          chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm" "${PACKAGE_DIR}/bin/aivm-runtime"
+          if file "${PACKAGE_DIR}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
+            echo "release package violation: bin/ailang must be a non-C shim" >&2
+            exit 1
+          fi
+          mkdir -p "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
+          if [[ -x "./${{ matrix.artifact_dir }}/aivectra-framebuffer" ]]; then
+            cp "./${{ matrix.artifact_dir }}/aivectra-framebuffer" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
+          else
+            cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
+          fi
+          chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivectra"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
+          mkdir -p "${PACKAGE_DIR}/libexec/ailang"
+          cp -R ./dist/libexec/ailang/cli "${PACKAGE_DIR}/libexec/ailang/cli"
+          cp -R ./dist/libexec/ailang/commands "${PACKAGE_DIR}/libexec/ailang/commands"
+          test -f "${PACKAGE_DIR}/libexec/ailang/cli/app.aibc1"
+          test -f "${PACKAGE_DIR}/libexec/ailang/commands/package.aibc1"
+          cp -R ./src/std "${PACKAGE_DIR}/std"
+          cp -R ./templates "${PACKAGE_DIR}/templates"
+          cp ./sdk-runtime.toml "${PACKAGE_DIR}/sdk-runtime.toml"
+          mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          ./scripts/stage-sdk-docs.sh "${PACKAGE_DIR}"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
@@ -262,20 +405,52 @@ jobs:
         shell: pwsh
         run: |
           $version = '${{ needs.prepare.outputs.version }}'
-          $packageDir = "airun-$version-${{ matrix.rid }}"
+          $packageDir = "ailang-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
-          Copy-Item ".\\dist\\${{ matrix.frontend }}" $packageDir
-          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}")) { throw 'missing ailang tool' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}" $packageDir
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
+          New-Item -ItemType Directory -Force "$packageDir\bin" | Out-Null
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm-runtime.exe"
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm.exe"
+          @'
+          @echo off
+          setlocal
+          set "SDK_ROOT=%~dp0.."
+          set "AILANG_SDK_ROOT=%SDK_ROOT%"
+          set "AILANG_COMMAND_ROOT=%SDK_ROOT%\libexec\ailang\commands"
+          if not defined AILANG_OBJECT_PIPELINE set "AILANG_OBJECT_PIPELINE=legacy"
+          if not defined AILANG_BUILD_JOBS set "AILANG_BUILD_JOBS=1"
+          "%SDK_ROOT%\bin\aivm-runtime.exe" run "%SDK_ROOT%\libexec\ailang\cli\app.aibc1" -- %*
+          exit /b %ERRORLEVEL%
+          '@ -replace '(?m)^[ \t]{10}', '' | Set-Content -NoNewline "$packageDir\bin\ailang.cmd"
+          if (Test-Path "$packageDir\bin\ailang.exe") { throw 'release package violation: bin/ailang.exe must not be staged as native command' }
+          $targetRid = '${{ matrix.rid }}' -replace '^windows-', 'win-'
+          New-Item -ItemType Directory -Force "$packageDir\runtimes\$targetRid" | Out-Null
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\runtimes\$targetRid\aivm.exe"
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
+          New-Item -ItemType Directory -Force "$packageDir\libexec\ailang" | Out-Null
+          Copy-Item .\dist\libexec\ailang\cli "$packageDir\libexec\ailang\cli" -Recurse
+          Copy-Item .\dist\libexec\ailang\commands "$packageDir\libexec\ailang\commands" -Recurse
+          if (-not (Test-Path "$packageDir\libexec\ailang\cli\app.aibc1")) { throw 'missing bytecode CLI payload' }
+          if (-not (Test-Path "$packageDir\libexec\ailang\commands\package.aibc1")) { throw 'missing built-in command payloads' }
+          Copy-Item .\src\std "$packageDir\std" -Recurse
+          Copy-Item .\templates $packageDir -Recurse
+          Copy-Item .\sdk-runtime.toml "$packageDir\sdk-runtime.toml"
+          New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm "$packageDir\.artifacts\aivm-wasm32\"
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm "$packageDir\.artifacts\aivm-wasm32\"
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs "$packageDir\.artifacts\aivm-wasm32\"
+          .\scripts\stage-sdk-docs.ps1 $packageDir
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: airun-${{ matrix.rid }}
-          path: airun-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
+          name: ailang-${{ matrix.rid }}
+          path: ailang-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
 
   package-wasm32:
     name: package-wasm32
@@ -286,36 +461,157 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 
       - name: Build wasm runtime artifact
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
-          ./scripts/build-aivm-wasm.sh
+          ./build.sh wasm
+
+      - name: Stage host tools for wasm golden tests
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=x64 \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
+
+      - name: Stage validated self-hosted CLI payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/libexec/ailang/cli
+          gh release download "${{ needs.prepare.outputs.tag }}" \
+            --pattern ailang-cli.aibc1 \
+            --dir ./dist/libexec/ailang/cli
+          mv \
+            ./dist/libexec/ailang/cli/ailang-cli.aibc1 \
+            ./dist/libexec/ailang/cli/app.aibc1
+          printf '%s  %s\n' \
+            "${AILANG_RELEASE_CLI_SHA256}" \
+            ./dist/libexec/ailang/cli/app.aibc1 |
+            sha256sum --check -
+          test -f ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Stage validated self-hosted built-in commands
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download "${{ needs.prepare.outputs.tag }}" \
+            --pattern ailang-builtins.tar.gz \
+            --dir "${RUNNER_TEMP}"
+          printf '%s  %s\n' \
+            "${AILANG_RELEASE_BUILTINS_SHA256}" \
+            "${RUNNER_TEMP}/ailang-builtins.tar.gz" |
+            sha256sum --check -
+          mkdir -p ./dist/libexec/ailang
+          tar -xzf "${RUNNER_TEMP}/ailang-builtins.tar.gz" \
+            -C ./dist/libexec/ailang
+          test -f ./dist/libexec/ailang/commands/package.aibc1
+
+      - name: Upload bytecode CLI payload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ailang-cli-bytecode
+          path: ./dist/libexec/ailang/cli/app.aibc1
+
+      - name: Upload built-in command payloads
+        uses: actions/upload-artifact@v7
+        with:
+          name: ailang-builtin-commands
+          path: ./dist/libexec/ailang/commands
+
+      - name: Setup wasmtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          WASMTIME_VERSION="v29.0.1"
+          WASMTIME_ARCHIVE="wasmtime-${WASMTIME_VERSION}-x86_64-linux.tar.xz"
+          WASMTIME_ROOT="${RUNNER_TEMP}/wasmtime-${WASMTIME_VERSION}"
+          mkdir -p "${WASMTIME_ROOT}"
+          mkdir -p "${HOME}/.local/bin"
+          curl -fsSL \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/${WASMTIME_VERSION}/${WASMTIME_ARCHIVE}" \
+            -o "${WASMTIME_ROOT}/${WASMTIME_ARCHIVE}"
+          tar -xJf "${WASMTIME_ROOT}/${WASMTIME_ARCHIVE}" -C "${WASMTIME_ROOT}"
+          install -m 0755 \
+            "${WASMTIME_ROOT}/wasmtime-${WASMTIME_VERSION}-x86_64-linux/wasmtime" \
+            "${HOME}/.local/bin/wasmtime"
+          wasmtime --version
+
+      - name: Wasm golden smoke
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/test-wasm-golden.sh
+          mkdir -p .tmp
+          ./scripts/test-wasm-golden.sh | tee .tmp/test-wasm-golden.log
+          source_cases="$(grep -Eo 'wasm golden corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
+          bytecode_cases="$(grep -Eo 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
+          malformed_cases="$(grep -Eo 'wasm malformed corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
+          profiles_status="fail"
+          if grep -Eq 'wasm golden profiles: PASS \(cli/spa/fullstack\)' .tmp/test-wasm-golden.log; then
+            profiles_status="pass"
+          fi
+          echo "### WASM Golden Coverage" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| Metric | Value |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "|---|---|" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| source corpus | ${source_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| bytecode-only corpus | ${bytecode_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| malformed corpus | ${malformed_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| profiles (cli/spa/fullstack) | ${profiles_status} |" >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Pack wasm runtime artifact
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare.outputs.version }}"
-          PACKAGE_DIR="airun-${VERSION}-wasm32"
+          PACKAGE_DIR="ailang-${VERSION}-wasm32"
           mkdir -p "${PACKAGE_DIR}"
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs "${PACKAGE_DIR}/"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
-      - name: Upload wasm artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload wasm runtime files
+        uses: actions/upload-artifact@v7
         with:
-          name: airun-wasm32
-          path: airun-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
+
+      - name: Upload wasm artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ailang-wasm32
+          path: ailang-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
 
   release:
     name: github-release
@@ -327,13 +623,109 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./release-assets
           merge-multiple: true
+
+      - name: Enrich per-RID packages with cross-target artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          declare -a ALL_RIDS=(
+            "linux-x64"
+            "linux-arm64"
+            "osx-x64"
+            "osx-arm64"
+            "windows-x64"
+            "windows-arm64"
+          )
+          declare -a UNIX_RIDS=(
+            "linux-x64"
+            "linux-arm64"
+            "osx-x64"
+            "osx-arm64"
+          )
+          declare -a WINDOWS_RIDS=(
+            "windows-x64"
+            "windows-arm64"
+          )
+          target_rid() {
+            case "$1" in
+              windows-x64) echo "win-x64" ;;
+              windows-arm64) echo "win-arm64" ;;
+              *) echo "$1" ;;
+            esac
+          }
+
+          for RID in "${ALL_RIDS[@]}"; do
+            PKG_DIR="ailang-${VERSION}-${RID}"
+            TAR_PATH="./release-assets/${PKG_DIR}.tar.gz"
+            ZIP_PATH="./release-assets/${PKG_DIR}.zip"
+            if [[ -f "${TAR_PATH}" ]]; then
+              tar -xzf "${TAR_PATH}" -C ./release-assets
+            elif [[ -f "${ZIP_PATH}" ]]; then
+              unzip -q "${ZIP_PATH}" -d ./release-assets
+            else
+              echo "missing packaged runtime for ${RID}" >&2
+              exit 1
+            fi
+          done
+
+          WASM_PKG="ailang-${VERSION}-wasm32"
+          tar -xzf "./release-assets/${WASM_PKG}.tar.gz" -C ./release-assets
+
+          for TARGET_RID in "${ALL_RIDS[@]}"; do
+            TARGET_PKG="ailang-${VERSION}-${TARGET_RID}"
+            TARGET_DIR="./release-assets/${TARGET_PKG}"
+            mkdir -p "${TARGET_DIR}/.artifacts"
+
+            for SRC_RID in "${UNIX_RIDS[@]}"; do
+              TARGET_RUNTIME_RID="$(target_rid "${SRC_RID}")"
+              mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
+              chmod +x "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
+              mkdir -p "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm"
+              if [[ -x "./release-assets/ailang-${VERSION}-${SRC_RID}/aivectra-framebuffer" ]]; then
+                cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivectra-framebuffer" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
+              else
+                cp "./release-assets/ailang-${VERSION}-${SRC_RID}/ailang" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
+              fi
+              chmod +x "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivectra"
+            done
+            for SRC_RID in "${WINDOWS_RIDS[@]}"; do
+              TARGET_RUNTIME_RID="$(target_rid "${SRC_RID}")"
+              mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime.exe"
+              mkdir -p "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm.exe"
+            done
+
+            mkdir -p "${TARGET_DIR}/.artifacts/aivm-wasm32"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32.wasm" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.wasm" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.mjs" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
+            mkdir -p "${TARGET_DIR}/runtimes/wasm-wasi" "${TARGET_DIR}/runtimes/wasm-browser"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32.wasm" "${TARGET_DIR}/runtimes/wasm-wasi/aivm.wasm"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.wasm" "${TARGET_DIR}/runtimes/wasm-browser/aivm.wasm"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.mjs" "${TARGET_DIR}/runtimes/wasm-browser/aivm.mjs"
+          done
+
+          for RID in "${UNIX_RIDS[@]}"; do
+            PKG="ailang-${VERSION}-${RID}"
+            rm -f "./release-assets/${PKG}.tar.gz"
+            tar -czf "./release-assets/${PKG}.tar.gz" -C ./release-assets "${PKG}"
+          done
+          for RID in "${WINDOWS_RIDS[@]}"; do
+            PKG="ailang-${VERSION}-${RID}"
+            rm -f "./release-assets/${PKG}.zip"
+            (cd ./release-assets && zip -qr "${PKG}.zip" "${PKG}")
+          done
 
       - name: Generate release notes
         uses: actions/github-script@v7
@@ -357,8 +749,148 @@ jobs:
             require('fs').writeFileSync('RELEASE_NOTES.md', notes, { encoding: 'utf8' });
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          body_path: ./RELEASE_NOTES.md
-          files: ./release-assets/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.prepare.outputs.tag }}"
+          PRERELEASE="false"
+          case "${TAG}" in
+            *-alpha*|*-beta*|*-rc*|*-local*) PRERELEASE="true" ;;
+          esac
+          args=(release create "${TAG}" --verify-tag --latest=false --draft --title "${TAG}" --notes-file ./RELEASE_NOTES.md)
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          mapfile -t release_files < <(find ./release-assets -maxdepth 1 -type f | sort)
+          if [[ "${#release_files[@]}" -eq 0 ]]; then
+            echo "No release asset files found." >&2
+            exit 1
+          fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" \
+              --title "${TAG}" \
+              --notes-file ./RELEASE_NOTES.md
+            gh release upload "${TAG}" "${release_files[@]}" --clobber
+          else
+            args+=("${release_files[@]}")
+            gh "${args[@]}"
+          fi
+          publish_args=(release edit "${TAG}" --draft=false --latest=false)
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            publish_args+=(--prerelease)
+          fi
+          gh "${publish_args[@]}"
+
+  install-smoke-unix:
+    name: install-smoke-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs:
+      - prepare
+      - release
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Exact version install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-exact"
+          curl -fsSL https://ailang.codes/install.sh | sh -s -- --version "${{ needs.prepare.outputs.version }}" --root "${AILANG_INSTALL_ROOT}"
+          export PATH="${AILANG_INSTALL_ROOT}/bin:${PATH}"
+
+          ailang --version
+          aivm --version
+          aivectra help >/dev/null
+          ailang template list projects >/dev/null
+
+          APP_DIR="${RUNNER_TEMP}/SmokeExact"
+          ailang init "${APP_DIR}" --agent codex
+          ailang build "${APP_DIR}"
+          ailang run "${APP_DIR}"
+          ./scripts/test-installed-package-workflow.sh
+          ./scripts/test-installed-weather-workflow.sh
+
+      - name: Beta channel install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-channel"
+          curl -fsSL https://ailang.codes/install.sh | sh -s -- --channel beta --root "${AILANG_INSTALL_ROOT}"
+          export PATH="${AILANG_INSTALL_ROOT}/bin:${PATH}"
+
+          ailang --version
+          aivm --version
+          aivectra help >/dev/null
+
+          APP_DIR="${RUNNER_TEMP}/SmokeChannel"
+          ailang init "${APP_DIR}" --agent codex
+          ailang build "${APP_DIR}"
+          ailang run "${APP_DIR}"
+          ./scripts/test-installed-package-workflow.sh
+          ./scripts/test-installed-weather-workflow.sh
+
+  install-smoke-windows:
+    name: install-smoke-windows
+    runs-on: windows-latest
+    needs:
+      - prepare
+      - release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Exact version install smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
+          Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
+
+          $installRoot = Join-Path $env:RUNNER_TEMP 'ailang-exact'
+          & $installer -Version '${{ needs.prepare.outputs.version }}' -InstallRoot $installRoot
+          $env:PATH = "$installRoot\bin;$env:PATH"
+
+          ailang --version
+          aivm --version
+          aivectra help | Out-Null
+          ailang template list projects | Out-Null
+
+          $appDir = Join-Path $env:RUNNER_TEMP 'SmokeExact'
+          ailang init $appDir --agent codex
+          ailang build $appDir
+          ailang run $appDir
+          .\scripts\test-installed-package-workflow.ps1
+
+      - name: Beta channel install smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
+          Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
+
+          $installRoot = Join-Path $env:RUNNER_TEMP 'ailang-channel'
+          & $installer -Channel beta -InstallRoot $installRoot
+          $env:PATH = "$installRoot\bin;$env:PATH"
+
+          ailang --version
+          aivm --version
+          aivectra help | Out-Null
+
+          $appDir = Join-Path $env:RUNNER_TEMP 'SmokeChannel'
+          ailang init $appDir --agent codex
+          ailang build $appDir
+          ailang run $appDir
+          .\scripts\test-installed-package-workflow.ps1

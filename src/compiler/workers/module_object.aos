@@ -1,0 +1,229 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="../structural_project_incremental.aos")
+  Import(path="../structural_project_module_object.aos")
+  Import(path="../structural_project_stage.aos")
+  Import(path="../structural_record_codec.aos")
+  Import(path="../format.aos")
+  Import(path="../parser.aos")
+  Export(name=moduleObjectWorkerRun)
+  Export(name=moduleObjectCompileRecordPayload)
+
+  Let(name=moduleObjectCompileRecordPayload) {
+    Fn(params=payloadBytes) {
+      Block {
+        Let(name=payload) {
+          Call(target=parse.parseDocument) {
+            Call(target=bytes.toUtf8String) { Var(name=payloadBytes) }
+          }
+        }
+        Let(name=stageDir) {
+          Call(target=moduleObjectWorkerAttrString) {
+            Var(name=payload) Lit(value="stageDir") Lit(value=0)
+          }
+        }
+        Let(name=projectDir) {
+          Call(target=moduleObjectWorkerAttrString) {
+            Var(name=payload) Lit(value="projectDir") Lit(value=0)
+          }
+        }
+        Let(name=moduleIndex) {
+          Call(target=moduleObjectWorkerAttrInt) {
+            Var(name=payload) Lit(value="moduleIndex") Lit(value=0)
+          }
+        }
+        Let(name=stage) {
+          Call(target=structuralProject.readParallelStage) { Var(name=stageDir) }
+        }
+        Let(name=result) {
+          If {
+            Eq { NodeKind { Var(name=stage) } Lit(value="Err") }
+            Block { Var(name=stage) }
+            Block {
+              Let(name=lockPath) {
+                StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") }
+              }
+              Let(name=lockText) {
+                Call(target=moduleObjectWorkerReadOptionalText) {
+                  Var(name=lockPath)
+                }
+              }
+              Call(target=structuralProject.prepareModuleObjectAt) {
+                ChildAt { Var(name=stage) Lit(value=0) }
+                Var(name=projectDir) Var(name=lockText)
+                ChildAt { Var(name=stage) Lit(value=1) }
+                Var(name=moduleIndex)
+              }
+            }
+          }
+        }
+        Return {
+          Call(target=structuralRecord.encode) {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerRun) {
+    Fn(params=args) {
+      Block {
+        Let(name=projectDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=0) } }
+        Let(name=stageDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=1) } }
+        Let(name=objDir) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=2) } }
+        Let(name=moduleIndexText) { Call(target=moduleObjectWorkerArg) { Var(name=args) Lit(value=3) } }
+        If {
+          Eq { Var(name=moduleIndexText) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="module_object_worker")
+                Lit(value="WORKER001")
+                Lit(value="Module object worker requires project, stage, object directory, and module index.")
+                Lit(value="arguments")
+              }
+            }
+          }
+          Block {
+            Let(name=lockPath) { StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") } }
+            Let(name=lockText) {
+              Call(target=moduleObjectWorkerReadOptionalText) { Var(name=lockPath) }
+            }
+            Let(name=stage) {
+              Call(target=structuralProject.readParallelStage) { Var(name=stageDir) }
+            }
+            If {
+              Eq { NodeKind { Var(name=stage) } Lit(value="Err") }
+              Block { Return { Var(name=stage) } }
+              Block {
+                Let(name=writeResult) {
+                  Call(target=structuralProject.writePreparedProjectObjectAt) {
+                    ChildAt { Var(name=stage) Lit(value=0) }
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=objDir)
+                    ChildAt { Var(name=stage) Lit(value=1) }
+                    Call(target=parse.parseIntValue) { Var(name=moduleIndexText) }
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=writeResult) } Lit(value="Err") }
+                  Block { Return { Var(name=writeResult) } }
+                  Block {
+                    Return {
+                      AppendAttr {
+                        AppendAttr {
+                          MakeNode {
+                            Lit(value="WorkerResult")
+                            Lit(value="module-object-worker-result")
+                          }
+                          MakeLitInt {
+                            Lit(value="index")
+                            Call(target=parse.parseIntValue) { Var(name=moduleIndexText) }
+                          }
+                        }
+                        MakeLitInt {
+                          Lit(value="modules") Lit(value=1)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Lt { Var(name=index) ChildCount { Var(name=args) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerReadOptionalText) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Return {
+              Call(target=bytes.toUtf8String) {
+                Call(target=sys.fs.file.read) { Var(name=path) }
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerAttrString) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block {
+                Return { AttrValueString { Var(name=node) Var(name=index) } }
+              }
+              Block {
+                Return {
+                  Call(target=moduleObjectWorkerAttrString) {
+                    Var(name=node) Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=moduleObjectWorkerAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=moduleObjectWorkerAttrInt) {
+                    Var(name=node) Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

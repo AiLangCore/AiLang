@@ -1,0 +1,30 @@
+Program {
+  Export(name=objectLinker.byteRangeHalf)
+
+  Let(name=objectLinker.byteRangeHalf) {
+    Fn(params=count) {
+      Block {
+        Return { Call(target=objectLinker.byteRangeHalfAt) { Var(name=count) Lit(value=0) } }
+      }
+    }
+  }
+
+  Let(name=objectLinker.byteRangeHalfAt) {
+    Fn(params=remaining,result) {
+      Block {
+        If {
+          Lt { Var(name=remaining) Lit(value=2) }
+          Block { Return { Var(name=result) } }
+          Block {
+            Return {
+              Call(target=objectLinker.byteRangeHalfAt) {
+                Sub { Var(name=remaining) Lit(value=2) }
+                Add { Var(name=result) Lit(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

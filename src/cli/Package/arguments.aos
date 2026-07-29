@@ -1,0 +1,32 @@
+Program {
+  Let(name=packageDefaultPath) {
+    Fn(params=path) {
+      Block {
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Lit(value=".") } }
+          Block { Return { Var(name=path) } }
+        }
+      }
+    }
+  }
+
+  Let(name=packageReadArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Lt { Var(name=index) ChildCount { Var(name=args) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+#!/usr/bin/env pwsh
+$ErrorActionPreference = 'Stop'
+
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$nativeSrc = if ($env:AIVM_C_SOURCE_DIR) {
+  $env:AIVM_C_SOURCE_DIR
+} elseif (Test-Path (Join-Path $root '..\AiVM\src')) {
+  (Resolve-Path (Join-Path $root '..\AiVM\src')).Path
+} else {
+  throw 'AiVM native source not found. Set AIVM_C_SOURCE_DIR or place AiVM next to AiLang.'
+}
+
+$sourcePath = Join-Path $nativeSrc 'ailang_cli\ailang.c'
+$uiHostWindowsPath = Join-Path $nativeSrc 'ailang_cli\airun_ui_host_windows.c'
+$nativeInclude = Join-Path $nativeSrc 'include'
+$hostWrapperPath = Join-Path $root 'tools\ailang.exe'
+$hostRuntimePath = Join-Path $root 'tools\aivm-runtime.exe'
+
+$targetArch = if ($env:AILANG_NATIVE_ARCH) { $env:AILANG_NATIVE_ARCH } else { 'x64' }
+if ($targetArch -ne 'x64' -and $targetArch -ne 'arm64') {
+  throw "unsupported AILANG_NATIVE_ARCH: $targetArch"
+}
+
+$projectText = Get-Content -Raw (Join-Path $root 'project.aiproj')
+$projectVersion = if ($projectText -match 'version="([^"]+)"') { $Matches[1] } else { 'local' }
+$detectedTag = ''
+try {
+  $detectedTag = (& git -C $root describe --tags --abbrev=0 --match 'v[0-9]*' 2>$null).Trim()
+} catch {
+  $detectedTag = ''
+}
+$detectedVersion = if ($detectedTag.StartsWith('v')) { $detectedTag.Substring(1) } else { $detectedTag }
+$buildVersion = if ($env:AILANG_BUILD_VERSION) {
+  $env:AILANG_BUILD_VERSION
+} elseif ($detectedVersion) {
+  $detectedVersion
+} else {
+  $projectVersion
+}
+$buildChannel = if ($env:AILANG_BUILD_CHANNEL) { $env:AILANG_BUILD_CHANNEL } else { 'local' }
+$buildCommit = if ($env:AILANG_BUILD_COMMIT) {
+  $env:AILANG_BUILD_COMMIT
+} else {
+  try { (& git -C $root rev-parse --short=12 HEAD 2>$null).Trim() } catch { 'unknown' }
+}
+if (-not $buildCommit) { $buildCommit = 'unknown' }
+
+$outDir = Join-Path $root ".artifacts\ailang-windows-$targetArch"
+$wrapperPath = Join-Path $outDir 'ailang.exe'
+$runtimePath = Join-Path $outDir 'aivm-runtime.exe'
+
+New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
+  throw 'MSVC cl.exe is required. Use ilammy/msvc-dev-cmd in CI.'
+}
+
+$coreSourceManifest = Join-Path $nativeSrc 'aivm_core_sources.txt'
+if (-not (Test-Path $coreSourceManifest)) {
+  throw "AiVM core source manifest not found: $coreSourceManifest"
+}
+$coreSources = Get-Content $coreSourceManifest |
+  Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+  ForEach-Object { Join-Path $nativeSrc $_ }
+
+$sources = @(
+  $sourcePath,
+  $uiHostWindowsPath,
+  (Join-Path $nativeSrc 'ailang_native_bridge.c'),
+  (Join-Path $nativeSrc 'ailang_package_manager.c')
+) + $coreSources
+$commonArgs = @(
+  '/nologo',
+  '/O2',
+  '/W4',
+  '/bigobj',
+  '/std:c11',
+  '/D_CRT_SECURE_NO_WARNINGS',
+  '/DAIRUN_UI_HOST_EXTERNAL=1',
+  "/DAILANG_BUILD_VERSION=`"$buildVersion`"",
+  "/DAILANG_BUILD_CHANNEL=`"$buildChannel`"",
+  "/DAILANG_BUILD_COMMIT=`"$buildCommit`"",
+  "/I$nativeInclude",
+  "/I$(Join-Path $nativeSrc 'ailang_cli')"
+)
+$linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib', 'Shell32.lib', 'Ole32.lib', 'Windowscodecs.lib', 'Uuid.lib')
+
+$clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs
+& cl @clArgs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+$runtimeArgs = $commonArgs + @('/DAIRUN_MINIMAL_RUNTIME=1', "/Fe:$runtimePath") + $sources + $linkLibs
+& cl @runtimeArgs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Get-ChildItem -Path $root -Filter '*.obj' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
+if ($targetArch -eq 'x64') {
+  New-Item -ItemType Directory -Force -Path (Join-Path $root 'tools') | Out-Null
+  Copy-Item $wrapperPath $hostWrapperPath -Force
+  Copy-Item $runtimePath $hostRuntimePath -Force
+  Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $root 'tools\airun.exe'), (Join-Path $root 'tools\airun')
+}

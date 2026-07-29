@@ -2,37 +2,71 @@
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$preferredSource = Join-Path $root 'src/AiVM.Core/native'
+$preferredSource = Join-Path (Split-Path $root -Parent) 'AiVM/src'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
-$buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path $root '.tmp/aivm-c-build-native' }
+$repoDir = Split-Path $sourceDir -Parent
+$buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path (Split-Path $root -Parent) 'AiVM/.tmp/aivm-c-build-native' }
+$aivmTests = if ($env:AIVM_C_TESTS_DIR) { $env:AIVM_C_TESTS_DIR } else { Join-Path $repoDir 'tests' }
+$presetFile = Join-Path $sourceDir 'CMakePresets.json'
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
-$parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $sourceDir 'tests/parity_commands_ci.txt' }
-
-$cmakeArgs = @('-S', $sourceDir, '-B', $buildDir, '-DAIVM_BUILD_SHARED=OFF')
-if ($IsWindows) {
-  $cmakeArgs += @('-G', 'Visual Studio 17 2022', '-A', 'x64')
+$parityManifest = if ($env:AIVM_PARITY_MANIFEST) { $env:AIVM_PARITY_MANIFEST } else { Join-Path $aivmTests 'golden/parity_commands_ci.txt' }
+$ctestFilterArgs = @()
+if ($env:AIVM_CTEST_EXCLUDE) {
+  $ctestFilterArgs += @('-E', $env:AIVM_CTEST_EXCLUDE)
+}
+if (-not (Test-Path $sourceDir)) {
+  throw "AiVM native source directory not found: $sourceDir. Set AIVM_C_SOURCE_DIR or check out AiVM beside AiLang."
 }
 
-& cmake @cmakeArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-if ($IsWindows) {
-  & cmake --build $buildDir --config Debug
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  & ctest --test-dir $buildDir -C Debug --output-on-failure
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  if (Get-Command cl -ErrorAction SilentlyContinue) {
-    & (Join-Path $root 'scripts/build-airun.ps1')
+if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
+  if ($IsWindows) {
+    Push-Location $sourceDir
+    & cmake --preset aivm-native-windows
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    if (!(Test-Path .\tools\airun.exe)) { throw 'failed to compile tools/airun.exe' }
+    & cmake --build --preset aivm-native-windows-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset aivm-native-windows-test --output-on-failure @ctestFilterArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Pop-Location
   } else {
-    Write-Host 'Skipping tools/airun.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
+    Push-Location $sourceDir
+    & cmake --preset aivm-native-unix
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & cmake --build --preset aivm-native-unix-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset aivm-native-unix-test --output-on-failure -LE wasm @ctestFilterArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    Pop-Location
   }
 } else {
-  & cmake --build $buildDir
+  $cmakeArgs = @('-S', $sourceDir, '-B', $buildDir, '-DAIVM_BUILD_SHARED=OFF')
+  if ($IsWindows) {
+    $cmakeArgs += @('-G', 'Visual Studio 17 2022', '-A', 'x64')
+  }
+
+  & cmake @cmakeArgs
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  & ctest --test-dir $buildDir --output-on-failure
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  if ($IsWindows) {
+    & cmake --build $buildDir --config Debug
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --test-dir $buildDir -C Debug --output-on-failure @ctestFilterArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  } else {
+    & cmake --build $buildDir
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --test-dir $buildDir --output-on-failure -LE wasm @ctestFilterArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  }
+}
+
+if ($IsWindows) {
+  if (Get-Command cl -ErrorAction SilentlyContinue) {
+    & (Join-Path $root 'scripts/build-ailang-native.ps1')
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    if (!(Test-Path .\tools\ailang.exe)) { throw 'failed to compile tools/ailang.exe' }
+  } else {
+    Write-Host 'Skipping tools/ailang.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
+  }
 }
 
 $parityDir = Split-Path -Parent $parityReport
@@ -41,12 +75,12 @@ if (-not (Test-Path $parityDir)) {
 }
 
 if ($IsWindows) {
-  if (Test-Path (Join-Path $root 'tools/airun.exe')) {
-    & (Join-Path $root 'tools/airun.exe') run (Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+  if (Test-Path (Join-Path $root 'tools/ailang.exe')) {
+    & (Join-Path $root 'tools/ailang.exe') run (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/airun.exe') publish (Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') publish (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params.exe'))) { throw 'native publish smoke failed: app executable missing' }
@@ -63,26 +97,26 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
     @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'main.aos') -NoNewline
-    & (Join-Path $root 'tools/airun.exe') publish $projectDir --out $projectOut | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') publish $projectDir --out $projectOut | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native publish target-from-manifest failed' }
     if (-not (Test-Path (Join-Path $projectOut 'projtarget.exe'))) { throw 'native publish target-from-manifest failed: projtarget.exe missing' }
     Set-Content -Path $parityReport -Value 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover'
   } else {
-    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun.exe'
+    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/ailang.exe'
   }
 } else {
-  if (Test-Path (Join-Path $root 'tools/airun')) {
-    & (Join-Path $root 'tools/airun') run (Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+  if (Test-Path (Join-Path $root 'tools/ailang')) {
+    & (Join-Path $root 'tools/ailang') run (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/airun') publish (Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang') publish (Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params'))) { throw 'native publish smoke failed: app executable missing' }
@@ -108,19 +142,31 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
       @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'main.aos') -NoNewline
-      & (Join-Path $root 'tools/airun') publish $projectDir --out $projectOut | Out-Null
+      & (Join-Path $root 'tools/ailang') publish $projectDir --out $projectOut | Out-Null
       if ($LASTEXITCODE -ne 0) { throw 'native publish target-from-manifest failed' }
       if (-not (Test-Path (Join-Path $projectOut 'projtarget'))) { throw 'native publish target-from-manifest failed: projtarget missing' }
     }
     Set-Content -Path $parityReport -Value 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover'
   } else {
-    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun'
+    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/ailang'
+  }
+}
+
+if ($env:AIVM_MEM_LEAK_GATE -eq '1') {
+  if ($IsWindows) {
+    Write-Host 'AIVM_MEM_LEAK_GATE is not implemented on Windows yet.'
+  } else {
+    $leakIterations = if ($env:AIVM_LEAK_CHECK_ITERATIONS) { $env:AIVM_LEAK_CHECK_ITERATIONS } else { '50' }
+    $leakTarget = if ($env:AIVM_LEAK_CHECK_TARGET) { $env:AIVM_LEAK_CHECK_TARGET } else { Join-Path $aivmTests 'golden/parity_cases/vm_c_execute_src_main_params.aos' }
+    if (-not $env:AIVM_LEAK_MAX_GROWTH_KB) { $env:AIVM_LEAK_MAX_GROWTH_KB = '2048' }
+    & (Join-Path $root 'scripts/aivm-mem-leak-check.sh') $leakTarget $leakIterations | Out-Null
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
 }
 

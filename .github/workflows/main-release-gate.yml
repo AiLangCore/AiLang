@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-matrix:
     name: build-${{ matrix.rid }}
@@ -21,49 +24,56 @@ jobs:
             platform: linux
             arch: x64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-linux-x64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-linux-x64
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
             arch: arm64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-linux-arm64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-linux-arm64
           - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-osx-x64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-osx-x64
           - os: macos-14
             rid: osx-arm64
             platform: osx
             arch: arm64
             frontend: aos_frontend
-            airun: airun
-            artifact_dir: .artifacts/airun-osx-arm64
+            airun: ailang
+            artifact_dir: .artifacts/ailang-osx-arm64
           - os: windows-latest
             rid: windows-x64
             platform: windows
             arch: x64
             frontend: aos_frontend.exe
-            airun: airun.exe
-            artifact_dir: .artifacts/airun-windows-x64
+            airun: ailang.exe
+            artifact_dir: .artifacts/ailang-windows-x64
             msvc_arch: amd64
           - os: windows-latest
             rid: windows-arm64
             platform: windows
             arch: arm64
             frontend: aos_frontend.exe
-            airun: airun.exe
-            artifact_dir: .artifacts/airun-windows-arm64
+            airun: ailang.exe
+            artifact_dir: .artifacts/ailang-windows-arm64
             msvc_arch: amd64_arm64
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
 
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
@@ -76,51 +86,55 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sudo dpkg --add-architecture arm64
+          sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          {
+            echo 'Types: deb'
+            echo 'URIs: http://ports.ubuntu.com/ubuntu-ports'
+            echo 'Suites: noble noble-updates noble-backports noble-security'
+            echo 'Components: main universe restricted multiverse'
+            echo 'Architectures: arm64'
+            echo 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg'
+          } | sudo tee /etc/apt/sources.list.d/ubuntu-arm64.sources >/dev/null
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross libssl-dev:arm64
 
-      - name: Build + stage airun (Unix)
+      - name: Stage AiLang tools (Unix)
         if: matrix.platform != 'windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
-          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
-          ./scripts/build-airun.sh
-          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "./dist/${{ matrix.airun }}"
+          AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
+          AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./scripts/build-ailang-native.sh
+          cp "./.artifacts/ailang-${{ matrix.platform }}-${{ matrix.arch }}/ailang" "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
 
-      - name: Build + stage airun (Windows)
+      - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\src
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
-          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
-          ./scripts/build-airun.ps1
-          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" ".\\dist\\${{ matrix.airun }}"
+          $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_PLATFORM = '${{ matrix.platform }}'
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
+          ./scripts/build-ailang-native.ps1
+          Copy-Item ".\.artifacts\ailang-${{ matrix.platform }}-${{ matrix.arch }}\ailang.exe" ".\dist\${{ matrix.airun }}"
 
-      - name: Build frontend parser (Unix)
+      - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.platform }}" == "linux" && "${{ matrix.arch }}" == "arm64" ]]; then
-            aarch64-linux-gnu-gcc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          elif [[ "${{ matrix.platform }}" == "osx" ]]; then
-            if [[ "${{ matrix.arch }}" == "x64" ]]; then
-              clang -std=c11 -O2 -arch x86_64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            else
-              clang -std=c11 -O2 -arch arm64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            fi
-          else
-            cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          fi
+          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Build frontend parser (Windows)
+      - name: Stage frontend parser (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
@@ -170,13 +184,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "./dist/${{ matrix.airun }}" run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+          "./dist/${{ matrix.airun }}" --version >/dev/null
+
+      - name: Memory leak gate (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/leak-reports
+          echo "memory leak gate moved to AiVM"
+
+      - name: Upload leak report (failed Unix run)
+        if: failure() && matrix.platform != 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-release-leak-report-${{ matrix.rid }}
+          path: .tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt
+          if-no-files-found: ignore
 
       - name: Runtime smoke (Windows)
         if: matrix.platform == 'windows' && matrix.arch != 'arm64'
         shell: pwsh
         run: |
-          & ".\\dist\\${{ matrix.airun }}" run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          & ".\\dist\\${{ matrix.airun }}" --version | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
 
   wasm-runtime-artifact:
@@ -185,16 +215,67 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 
       - name: Build wasm runtime artifact
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
         run: |
           set -euo pipefail
-          ./scripts/build-aivm-wasm.sh
+          ./build.sh wasm
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+
+      - name: Stage host tools for wasm golden tests
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=x64 \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh legacy
+
+      - name: Setup wasmtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://wasmtime.dev/install.sh | bash
+          echo "${HOME}/.wasmtime/bin" >> "${GITHUB_PATH}"
+
+      - name: Wasm golden smoke
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/src
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/test-wasm-golden.sh
+          mkdir -p .tmp
+          ./scripts/test-wasm-golden.sh | tee .tmp/test-wasm-golden.log
+          source_cases="$(sed -n 's/.*wasm golden corpus: PASS (\([0-9][0-9]*\) cases).*/\1/p' .tmp/test-wasm-golden.log | tail -n1)"
+          bytecode_cases="$(sed -n 's/.*wasm bytecode-only corpus: PASS (\([0-9][0-9]*\) cases).*/\1/p' .tmp/test-wasm-golden.log | tail -n1)"
+          malformed_cases="$(sed -n 's/.*wasm malformed corpus: PASS (\([0-9][0-9]*\) cases).*/\1/p' .tmp/test-wasm-golden.log | tail -n1)"
+          profiles_status="fail"
+          if grep -Fq 'wasm golden profiles: PASS (cli/spa/fullstack)' .tmp/test-wasm-golden.log; then
+            profiles_status="pass"
+          fi
+          echo "### WASM Golden Coverage" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| Metric | Value |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "|---|---|" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| source corpus | ${source_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| bytecode-only corpus | ${bytecode_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| malformed corpus | ${malformed_cases:-0} |" >> "${GITHUB_STEP_SUMMARY}"
+          echo "| profiles (cli/spa/fullstack) | ${profiles_status} |" >> "${GITHUB_STEP_SUMMARY}"

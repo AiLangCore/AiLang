@@ -1,0 +1,21 @@
+Program {
+  Import(path="target_packages.aos")
+
+  Export(name=publishPackageTarget)
+
+  Let(name=publishPackageTarget) {
+    Fn(params=path,target,outDir,mode,kind,projectName,projectVersion,entryFile,entryExport,type) {
+      Block {
+        If {
+          Call(target=targetSupportsArtifactType) { Var(name=target) Var(name=type) Var(name=path) }
+          Block {
+            Return { Call(target=publishPosixSelfContained) { Var(name=path) Var(name=target) Var(name=outDir) Var(name=mode) Var(name=projectName) Var(name=projectVersion) Var(name=entryFile) Var(name=entryExport) Var(name=type) } }
+          }
+          Block {
+            Return { Call(target=buildError) { Lit(value="AILANG021") Lit(value="Unsupported artifact type for target.") Lit(value="publish") } }
+          }
+        }
+      }
+    }
+  }
+}

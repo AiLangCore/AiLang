@@ -1,0 +1,91 @@
+Program {
+  Import(path="structural_object.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=structuralProject.collectModuleRecordsIncremental)
+  Export(name=structuralProject.collectModuleRecordChunks)
+  Export(name=structuralProject.parseModuleProgram)
+
+  Let(name=structuralProject.collectModuleRecordsIncremental) {
+    Fn(params=modulePaths,projectDir,lockText,index,records) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=records) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+              Block { Return { Var(name=program) } }
+              Block {
+                Let(name=moduleRecords) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
+                Return { Call(target=structuralProject.appendCompatibilityRecords) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Add { Var(name=index) Lit(value=1) } Var(name=records) Var(name=moduleRecords) Lit(value=0) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.appendCompatibilityRecords) {
+    Fn(params=modulePaths,projectDir,lockText,nextIndex,records,moduleRecords,recordIndex) {
+      Block {
+        If {
+          Eq { Var(name=recordIndex) ChildCount { Var(name=moduleRecords) } }
+          Block { Return { Call(target=structuralProject.collectModuleRecordsIncremental) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=nextIndex) Var(name=records) } } }
+          Block { Return { Call(target=structuralProject.appendCompatibilityRecords) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=nextIndex) AppendChild { Var(name=records) ChildAt { Var(name=moduleRecords) Var(name=recordIndex) } } Var(name=moduleRecords) Add { Var(name=recordIndex) Lit(value=1) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.collectModuleRecordChunks) {
+    Fn(params=modulePaths,projectDir,lockText,index,chunks) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+            Let(name=program) { Call(target=structuralProject.parseModuleProgram) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=program) } Lit(value="Err") }
+              Block { Return { Var(name=program) } }
+              Block {
+                Let(name=moduleRecords) { Call(target=lower.collectFunctionRecords) { Var(name=program) Var(name=modulePath) } }
+                Return {
+                  Call(target=structuralProject.collectModuleRecordChunks) {
+                    Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+                    Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=chunks) Var(name=moduleRecords) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.parseModuleProgram) {
+    Fn(params=modulePaths,projectDir,lockText,index) {
+      Block {
+        Let(name=modulePath) { AttrValueString { ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0) } }
+        Let(name=readPath) { Call(target=linker.resolveModuleReadPath) { Var(name=projectDir) Var(name=modulePath) Var(name=lockText) } }
+        If {
+          Eq { Var(name=readPath) Lit(value="") }
+          Block { Return { MakeErr { Lit(value="structural_project") Lit(value="OBJ031") Lit(value="Linked module could not be resolved for structural emission.") Var(name=modulePath) } } }
+          Block {
+            Let(name=programRecord) { ChildAt { Var(name=modulePaths) Var(name=index) } }
+            If {
+              Eq { ChildCount { Var(name=programRecord) } Lit(value=0) }
+              Block { Return { Call(target=parse.parseDocument) { Call(target=bytes.toUtf8String) { Call(target=sys.fs.file.read) { Var(name=readPath) } } } } }
+              Block { Return { ChildAt { Var(name=programRecord) Lit(value=0) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

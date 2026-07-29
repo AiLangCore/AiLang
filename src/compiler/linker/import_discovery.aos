@@ -1,0 +1,184 @@
+Program {
+  Import(path="../parser.aos")
+
+  Let(name=linkerDiscovery.parseImportProgram) {
+    Fn(params=source) {
+      Block {
+        Let(name=openBrace) { StringFind { Var(name=source) Lit(value="{") Lit(value=0) } }
+        If {
+          Eq { Var(name=openBrace) Lit(value=-1) }
+          Block { Return { MakeErr { Lit(value="linker_err") Lit(value="LINK003") Lit(value="Module source is missing a Program body.") Lit(value="import-discovery") } } }
+          Block {
+            Let(name=imports) { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Lit(value=0) Lit(value=0) Lit(value=false) Lit(value=false) Lit(value="") } }
+            Return { Call(target=parse.parseDocument) { StrConcat { Lit(value="Program { ") StrConcat { Var(name=imports) Lit(value=" }") } } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linkerDiscovery.collectTopLevelImports) {
+    Fn(params=source,index,depth,inString,escaped,result) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=source) } }
+          Block { Return { Var(name=result) } }
+          Block {
+            Let(name=ch) { Call(target=linkerDiscovery.slice) { Var(name=source) Var(name=index) Lit(value=1) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Var(name=inString)
+              Block {
+                If {
+                  Var(name=escaped)
+                  Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) Var(name=result) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="\\") }
+                      Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=true) Var(name=result) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="\"") }
+                          Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=false) Lit(value=false) Var(name=result) } } }
+                          Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) Var(name=result) } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\"") }
+                  Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) Var(name=result) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="{") }
+                      Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Add { Var(name=depth) Lit(value=1) } Lit(value=false) Lit(value=false) Var(name=result) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="}") }
+                          Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Sub { Var(name=depth) Lit(value=1) } Lit(value=false) Lit(value=false) Var(name=result) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=depth) Lit(value=1) }
+                              Block {
+                                If {
+                                  Call(target=linkerDiscovery.isImportStart) { Var(name=source) Var(name=index) }
+                                  Block {
+                                    Let(name=end) { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=index) Lit(value=0) Lit(value=false) Lit(value=false) } }
+                                    If {
+                                      Eq { Var(name=end) Lit(value=-1) }
+                                      Block { Return { Var(name=result) } }
+                                      Block {
+                                        Let(name=importText) { Call(target=linkerDiscovery.slice) { Var(name=source) Var(name=index) Sub { Var(name=end) Var(name=index) } } }
+                                        Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=end) Var(name=depth) Lit(value=false) Lit(value=false) StrConcat { Var(name=result) StrConcat { Var(name=importText) Lit(value=" ") } } } }
+                                      }
+                                    }
+                                  }
+                                  Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=false) Lit(value=false) Var(name=result) } } }
+                                }
+                              }
+                              Block { Return { Call(target=linkerDiscovery.collectTopLevelImports) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=false) Lit(value=false) Var(name=result) } } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linkerDiscovery.isImportStart) {
+    Fn(params=source,index) {
+      Block {
+        If {
+          Eq { Call(target=linkerDiscovery.slice) { Var(name=source) Var(name=index) Lit(value=6) } Lit(value="Import") }
+          Block {
+            Let(name=next) { Call(target=linkerDiscovery.slice) { Var(name=source) Add { Var(name=index) Lit(value=6) } Lit(value=1) } }
+            If {
+              Eq { Var(name=next) Lit(value="#") }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Eq { Var(name=next) Lit(value="(") } } }
+            }
+          }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=linkerDiscovery.findImportEnd) {
+    Fn(params=source,index,depth,inString,escaped) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=source) } }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            Let(name=ch) { Call(target=linkerDiscovery.slice) { Var(name=source) Var(name=index) Lit(value=1) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Var(name=inString)
+              Block {
+                If {
+                  Var(name=escaped)
+                  Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="\\") }
+                      Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=true) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="\"") }
+                          Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=false) Lit(value=false) } } }
+                          Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\"") }
+                  Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=true) Lit(value=false) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="(") }
+                      Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Add { Var(name=depth) Lit(value=1) } Lit(value=false) Lit(value=false) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value=")") }
+                          Block {
+                            If {
+                              Eq { Var(name=depth) Lit(value=1) }
+                              Block { Return { Var(name=nextIndex) } }
+                              Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Sub { Var(name=depth) Lit(value=1) } Lit(value=false) Lit(value=false) } } }
+                            }
+                          }
+                          Block { Return { Call(target=linkerDiscovery.findImportEnd) { Var(name=source) Var(name=nextIndex) Var(name=depth) Lit(value=false) Lit(value=false) } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linkerDiscovery.slice) {
+    Fn(params=text,start,length) {
+      Block { Return { StringSlice { Var(name=text) Var(name=start) Var(name=length) } } }
+    }
+  }
+}

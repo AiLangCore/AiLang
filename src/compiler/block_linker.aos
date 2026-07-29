@@ -1,0 +1,169 @@
+Program {
+  Import(path="block_layout.aos")
+  Export(name=blockLinker.flatten)
+
+  Let(name=blockLinker.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block { Return { Call(target=blockLinker.getAttr) { Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLinker.isBlock) {
+    Fn(params=node) {
+      Block { Return { Eq { StringFind { NodeId { Var(name=node) } Lit(value="ir-block:") Lit(value=0) } Lit(value=0) } } }
+    }
+  }
+
+  Let(name=blockLinker.isInstruction) {
+    Fn(params=node) {
+      Block { Return { Eq { NodeId { Var(name=node) } Lit(value="ir-inst") } } }
+    }
+  }
+
+  Let(name=blockLinker.isTerminator) {
+    Fn(params=node) {
+      Block { Return { Eq { NodeId { Var(name=node) } Lit(value="ir-term") } } }
+    }
+  }
+
+  Let(name=blockLinker.makeInstruction) {
+    Fn(params=op,target) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="ir-linked-inst") } }
+        Let(name=withOp) { AppendAttr { Var(name=base) MakeLitString { Lit(value="op") Var(name=op) } } }
+        Return { AppendAttr { Var(name=withOp) MakeLitInt { Lit(value="target") Var(name=target) } } }
+      }
+    }
+  }
+
+  Let(name=blockLinker.flatten) {
+    Fn(params=function) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=function) } Lit(value="Err") }
+          Block { Return { Var(name=function) } }
+          Block {
+            Let(name=layout) { Call(target=blockLayout.assign) { Var(name=function) } }
+            Let(name=base) { MakeBlock { Lit(value="ir-linked-function") } }
+            Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="name") Lit(value=0) } } } }
+            Let(name=plan) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Call(target=blockLinker.getAttr) { Var(name=function) Lit(value="symbol") Lit(value=0) } } } }
+            Return { Call(target=blockLinker.flattenAt) { Var(name=function) Var(name=layout) Lit(value=0) Var(name=plan) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLinker.flattenAt) {
+    Fn(params=function,layout,index,plan) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=function) } }
+          Block { Return { Var(name=plan) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=function) Var(name=index) } }
+            If {
+              Call(target=blockLinker.isBlock) { Var(name=child) }
+              Block {
+                Let(name=updated) { Call(target=blockLinker.flattenBlockAt) { Var(name=child) Var(name=layout) Lit(value=0) Var(name=plan) } }
+                If {
+                  Eq { NodeKind { Var(name=updated) } Lit(value="Err") }
+                  Block { Return { Var(name=updated) } }
+                  Block { Return { Call(target=blockLinker.flattenAt) { Var(name=function) Var(name=layout) Add { Var(name=index) Lit(value=1) } Var(name=updated) } } }
+                }
+              }
+              Block { Return { Call(target=blockLinker.flattenAt) { Var(name=function) Var(name=layout) Add { Var(name=index) Lit(value=1) } Var(name=plan) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLinker.flattenBlockAt) {
+    Fn(params=block,layout,index,plan) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=block) } }
+          Block { Return { Var(name=plan) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=block) Var(name=index) } }
+            If {
+              Call(target=blockLinker.isInstruction) { Var(name=child) }
+              Block { Return { Call(target=blockLinker.flattenBlockAt) { Var(name=block) Var(name=layout) Add { Var(name=index) Lit(value=1) } AppendChild { Var(name=plan) Var(name=child) } } } }
+              Block {
+                If {
+                  Call(target=blockLinker.isTerminator) { Var(name=child) }
+                  Block {
+                    Let(name=updated) { Call(target=blockLinker.patchTerminator) { Var(name=child) Var(name=layout) Var(name=plan) } }
+                    If {
+                      Eq { NodeKind { Var(name=updated) } Lit(value="Err") }
+                      Block { Return { Var(name=updated) } }
+                      Block { Return { Call(target=blockLinker.flattenBlockAt) { Var(name=block) Var(name=layout) Add { Var(name=index) Lit(value=1) } Var(name=updated) } } }
+                    }
+                  }
+                  Block { Return { Call(target=blockLinker.flattenBlockAt) { Var(name=block) Var(name=layout) Add { Var(name=index) Lit(value=1) } Var(name=plan) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLinker.patchTerminator) {
+    Fn(params=term,layout,plan) {
+      Block {
+        Let(name=op) { AttrValueString { Var(name=term) Lit(value=0) } }
+        If {
+          Eq { Var(name=op) Lit(value="RETURN") }
+          Block { Return { AppendChild { Var(name=plan) Call(target=blockLinker.makeInstruction) { Lit(value="RETURN") Lit(value=0) } } } }
+          Block {
+            If {
+              Eq { Var(name=op) Lit(value="JUMP") }
+              Block { Return { Call(target=blockLinker.appendJump) { Var(name=term) Var(name=layout) Var(name=plan) Lit(value=1) Lit(value="JUMP") } } }
+              Block {
+                If {
+                  Eq { Var(name=op) Lit(value="BRANCH") }
+                  Block {
+                    Let(name=withFalse) { Call(target=blockLinker.appendJump) { Var(name=term) Var(name=layout) Var(name=plan) Lit(value=3) Lit(value="JUMP_IF_FALSE") } }
+                    If {
+                      Eq { NodeKind { Var(name=withFalse) } Lit(value="Err") }
+                      Block { Return { Var(name=withFalse) } }
+                      Block { Return { Call(target=blockLinker.appendJump) { Var(name=term) Var(name=layout) Var(name=withFalse) Lit(value=2) Lit(value="JUMP") } } }
+                    }
+                  }
+                  Block { Return { MakeErr { Lit(value="block_linker") Lit(value="LINK022") Lit(value="Unsupported block terminator.") NodeId { Var(name=term) } } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockLinker.appendJump) {
+    Fn(params=term,layout,plan,attrIndex,op) {
+      Block {
+        Let(name=label) { AttrValueString { Var(name=term) Var(name=attrIndex) } }
+        Let(name=target) { Call(target=blockLayout.resolve) { Var(name=layout) Var(name=label) Lit(value=0) } }
+        Let(name=instruction) { Call(target=blockLinker.makeInstruction) { Var(name=op) Var(name=target) } }
+        Return { AppendChild { Var(name=plan) Var(name=instruction) } }
+      }
+    }
+  }
+}

@@ -6,6 +6,20 @@ if [[ -z "${REPO}" ]]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 fi
 
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
+
+contains_exact_line() {
+  local needle="$1"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -Fxq -- "${needle}"
+  else
+    grep -Fxq -- "${needle}"
+  fi
+}
+
 labels=(
   "parity:Parity and behavior matching"
   "zero-csharp:Repo-wide C# removal work"
@@ -27,7 +41,7 @@ milestones=(
 for entry in "${labels[@]}"; do
   name="${entry%%:*}"
   desc="${entry#*:}"
-  if gh label list -R "${REPO}" --limit 200 --json name --jq '.[].name' | rg -Fxq "${name}"; then
+  if gh label list -R "${REPO}" --limit 200 --json name --jq '.[].name' | contains_exact_line "${name}"; then
     gh label edit "${name}" -R "${REPO}" --description "${desc}" >/dev/null
   else
     gh label create "${name}" -R "${REPO}" --description "${desc}" >/dev/null
@@ -35,11 +49,10 @@ for entry in "${labels[@]}"; do
 done
 
 for ms in "${milestones[@]}"; do
-  if gh api -X GET "repos/${REPO}/milestones?state=all&per_page=100" --jq '.[].title' | rg -Fxq "${ms}"; then
+  if gh api -X GET "repos/${REPO}/milestones?state=all&per_page=100" --jq '.[].title' | contains_exact_line "${ms}"; then
     continue
   fi
   gh api -X POST "repos/${REPO}/milestones" -f title="${ms}" >/dev/null
 done
 
 echo "Synced zero-csharp labels and milestones for ${REPO}"
-

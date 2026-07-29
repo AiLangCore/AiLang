@@ -1,0 +1,71 @@
+Program {
+  Import(path="structural_project.aos")
+  Import(path="structural_project_object_selection.aos")
+  Import(path="object_linker.aos")
+  Export(name=structuralProject.writeProjectAibc1FromObjectFiles)
+  Export(name=structuralProject.emitProjectAibc1Bytes)
+
+  Let(name=structuralProject.emitProjectAibc1Bytes) {
+    Fn(params=modulePaths,projectDir,lockText) {
+      Block {
+        Let(name=plans) { Call(target=structuralProject.emitProjectPlans) { Var(name=modulePaths) Var(name=projectDir) Var(name=lockText) } }
+        If {
+          Eq { NodeKind { Var(name=plans) } Lit(value="Err") }
+          Block { Return { Var(name=plans) } }
+          Block { Return { Call(target=objectLinker.emitLinkedPlansAibc1Bytes) { Var(name=plans) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.writeProjectAibc1FromObjectFiles) {
+    Fn(params=modulePaths,projectDir,lockText,objDir,outputPath,entryFile,entryExport) {
+      Block {
+        Let(name=objects) {
+          Call(target=structuralProject.writeProjectObjectFilesSelected) {
+            Var(name=modulePaths)
+            Var(name=projectDir)
+            Var(name=lockText)
+            Var(name=objDir)
+            Var(name=entryFile)
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=objects) } Lit(value="Err") }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=collectedFunctions) { Call(target=objectLinker.collectFunctions) { Var(name=objects) } }
+            If {
+              Eq { NodeKind { Var(name=collectedFunctions) } Lit(value="Err") }
+              Block { Return { Var(name=collectedFunctions) } }
+              Block {
+                Let(name=entrySymbol) {
+                  StrConcat { Var(name=entryFile) StrConcat { Lit(value="::") Var(name=entryExport) } }
+                }
+                Let(name=functions) {
+                  Call(target=objectLinker.prependExecutableEntry) {
+                    Var(name=collectedFunctions) Var(name=entrySymbol)
+                  }
+                }
+                Let(name=supported) { Call(target=objectLinker.validateSupported) { Var(name=functions) } }
+                If {
+                  Eq { NodeKind { Var(name=supported) } Lit(value="Err") }
+                  Block { Return { Var(name=supported) } }
+                  Block {
+                    Let(name=linkedProgramBytes) {
+                      Call(target=objectLinker.emitAibc1BytesWithWorkers) {
+                        Var(name=objects) Var(name=functions)
+                      }
+                    }
+                    Call(target=sys.fs.file.write) { Var(name=outputPath) Var(name=linkedProgramBytes) }
+                    Return { MakeBlock { Lit(value="structural-link-ok") } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

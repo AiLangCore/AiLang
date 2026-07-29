@@ -1,0 +1,784 @@
+Program {
+  Import(path="parser.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/str.aos")
+  Import(path="linker/paths.aos")
+  Import(path="linker/import_discovery.aos")
+  Export(name=linker.collectProjectModulePaths)
+  Export(name=linker.buildLinkReportText)
+  Export(name=linker.collectProjectModulePathsWithLock)
+  Export(name=linker.resolveModuleReadPath)
+  Export(name=linker.canonicalImportPath)
+
+  Let(name=linker.collectProjectModulePaths) {
+    Fn(params=dir,entryProgram,entryFile) {
+      Block {
+        Return {
+          Call(target=linker.collectProjectModulePathsWithLock) {
+            Var(name=dir)
+            Var(name=entryProgram)
+            Var(name=entryFile)
+            Lit(value="")
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.collectProjectModulePathsWithLock) {
+    Fn(params=dir,entryProgram,entryFile,lockText) {
+      Block {
+        Let(name=canonicalEntryFile) { Call(target=linker.normalizeDisplayPath) { Var(name=entryFile) } }
+        Let(name=entryDirectory) { Call(target=linker.pathDirectory) { Var(name=canonicalEntryFile) } }
+        Let(name=entryReadRoot) { Call(target=linker.joinPath) { Var(name=dir) Var(name=entryDirectory) } }
+        Let(name=entryDisplayPrefix) { Call(target=linker.directoryPrefix) { Var(name=entryDirectory) } }
+        Let(name=paths) {
+          AppendChild {
+            MakeBlock { Lit(value="modules") }
+            AppendChild {
+              MakeLitString {
+                Lit(value="module0")
+                Var(name=canonicalEntryFile)
+              }
+              Var(name=entryProgram)
+            }
+          }
+        }
+        Let(name=active) {
+          AppendChild {
+            MakeBlock { Lit(value="active") }
+            MakeLitString {
+              Lit(value="active0")
+              Var(name=canonicalEntryFile)
+            }
+          }
+        }
+        Return {
+          Call(target=linker.collectImportPaths) {
+            Var(name=dir)
+            Var(name=entryReadRoot)
+            Var(name=entryDisplayPrefix)
+            Var(name=entryProgram)
+            Lit(value=0)
+            Var(name=paths)
+            Var(name=active)
+            Var(name=lockText)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.collectImportPaths) {
+    Fn(params=projectDir,readRoot,displayPrefix,program,index,paths,active,lockText) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Var(name=paths) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block {
+                Let(name=path) {
+                  Call(target=linker.getAttr) {
+                    Var(name=child)
+                    Lit(value="path")
+                    Lit(value=0)
+                  }
+                }
+                Let(name=sourcePath) { Call(target=linker.canonicalPathSeparators) { Var(name=path) Lit(value=0) } }
+                If {
+                  Eq { Var(name=path) Lit(value="") }
+                  Block {
+                    Return {
+                      Call(target=linker.collectImportPaths) {
+                        Var(name=projectDir)
+                        Var(name=readRoot)
+                        Var(name=displayPrefix)
+                        Var(name=program)
+                        Var(name=nextIndex)
+                        Var(name=paths)
+                        Var(name=active)
+                        Var(name=lockText)
+                      }
+                    }
+                  }
+                  Block {
+                    Let(name=packageName) {
+                      Call(target=linker.getAttr) {
+                        Var(name=child)
+                        Lit(value="package")
+                        Lit(value=0)
+                      }
+                    }
+                    Let(name=sdkName) {
+                      Call(target=linker.getAttr) {
+                        Var(name=child)
+                        Lit(value="sdk")
+                        Lit(value=0)
+                      }
+                    }
+                    Let(name=packagePath) {
+                      Call(target=linker.packagePath) {
+                        Var(name=lockText)
+                        Var(name=packageName)
+                      }
+                    }
+                    Let(name=packageRoot) {
+                      Call(target=linker.packageRoot) {
+                        Var(name=lockText)
+                        Var(name=packageName)
+                      }
+                    }
+                    If {
+                      Eq { Var(name=packageName) Lit(value="") }
+                      Block { Lit(value=0) }
+                      Block {
+                        If {
+                          Eq { Var(name=packagePath) Lit(value="") }
+                          Block {
+                            Return {
+                              MakeErr {
+                                Lit(value="linker_err")
+                                Lit(value="LINK002")
+                                Lit(value="Package import is not present in ailang.lock.toml.")
+                                NodeId { Var(name=child) }
+                              }
+                            }
+                          }
+                          Block { Lit(value=0) }
+                        }
+                      }
+                    }
+                    Let(name=packageBase) {
+                      Call(target=linker.packageBasePath) {
+                        Var(name=projectDir)
+                        Var(name=packagePath)
+                        Var(name=packageRoot)
+                      }
+                    }
+                    Let(name=importReadRoot) {
+                      Call(target=linker.importReadRoot) {
+                        Var(name=readRoot)
+                        Var(name=packageBase)
+                        Var(name=packageName)
+                        Var(name=sdkName)
+                      }
+                    }
+                    Let(name=importDisplayPrefix) {
+                      Call(target=linker.importDisplayPrefix) {
+                        Var(name=displayPrefix)
+                        Var(name=packageName)
+                        Var(name=sdkName)
+                      }
+                    }
+                    Let(name=importDirectory) { Call(target=linker.pathDirectory) { Var(name=sourcePath) } }
+                    Let(name=nextReadRoot) { Call(target=linker.joinPath) { Var(name=importReadRoot) Var(name=importDirectory) } }
+                    Let(name=nextDisplayPrefix) {
+                      Call(target=linker.joinDisplayPrefix) {
+                        Var(name=importDisplayPrefix)
+                        Var(name=importDirectory)
+                      }
+                    }
+                    Let(name=displayPath) {
+                      Call(target=linker.normalizeDisplayPath) {
+                        StrConcat {
+                          Var(name=importDisplayPrefix)
+                          Var(name=sourcePath)
+                        }
+                      }
+                    }
+                    If {
+                      Call(target=linker.containsPath) {
+                        Var(name=active)
+                        Var(name=displayPath)
+                        Lit(value=0)
+                      }
+                      Block {
+                        Return {
+                          MakeErr {
+                            Lit(value="linker_err")
+                            Lit(value="LINK001")
+                            Lit(value="Circular import detected.")
+                            NodeId { Var(name=child) }
+                          }
+                        }
+                      }
+                      Block {
+                        If {
+                          Call(target=linker.containsPath) {
+                            Var(name=paths)
+                            Var(name=displayPath)
+                            Lit(value=0)
+                          }
+                          Block {
+                            Return {
+                              Call(target=linker.collectImportPaths) {
+                                Var(name=projectDir)
+                                Var(name=readRoot)
+                                Var(name=displayPrefix)
+                                Var(name=program)
+                                Var(name=nextIndex)
+                                Var(name=paths)
+                                Var(name=active)
+                                Var(name=lockText)
+                              }
+                            }
+                          }
+                          Block {
+                            Let(name=importFilePath) {
+                              StrConcat {
+                                Var(name=importReadRoot)
+                                StrConcat {
+                                  Lit(value="/")
+                                  Var(name=sourcePath)
+                                }
+                              }
+                            }
+                            Let(name=importText) {
+                              Call(target=bytes.toUtf8String) {
+                                Call(target=sys.fs.file.read) {
+                                  Var(name=importFilePath)
+                                }
+                              }
+                            }
+                            Let(name=importProgram) { Call(target=linkerDiscovery.parseImportProgram) { Var(name=importText) } }
+                            If {
+                              Eq { NodeKind { Var(name=importProgram) } Lit(value="Err") }
+                              Block { Return { Var(name=importProgram) } }
+                              Block {
+                                Let(name=newPaths) {
+                                  AppendChild {
+                                    Var(name=paths)
+                                    MakeLitString {
+                                      StrConcat {
+                                        Lit(value="module")
+                                        ToString { ChildCount { Var(name=paths) } }
+                                      }
+                                      Var(name=displayPath)
+                                    }
+                                  }
+                                }
+                                Let(name=depPaths) {
+                                  Call(target=linker.collectImportPaths) {
+                                    Var(name=projectDir)
+                                    Var(name=nextReadRoot)
+                                    Var(name=nextDisplayPrefix)
+                                    Var(name=importProgram)
+                                    Lit(value=0)
+                                    Var(name=newPaths)
+                                    AppendChild {
+                                      Var(name=active)
+                                      MakeLitString {
+                                        StrConcat {
+                                          Lit(value="active")
+                                          ToString { ChildCount { Var(name=active) } }
+                                        }
+                                        Var(name=displayPath)
+                                      }
+                                    }
+                                    Var(name=lockText)
+                                  }
+                                }
+                                If {
+                                  Eq { NodeKind { Var(name=depPaths) } Lit(value="Err") }
+                                  Block { Return { Var(name=depPaths) } }
+                                  Block {
+                                    Return {
+                                      Call(target=linker.collectImportPaths) {
+                                        Var(name=projectDir)
+                                        Var(name=readRoot)
+                                        Var(name=displayPrefix)
+                                        Var(name=program)
+                                        Var(name=nextIndex)
+                                        Var(name=depPaths)
+                                        Var(name=active)
+                                        Var(name=lockText)
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=linker.collectImportPaths) {
+                    Var(name=projectDir)
+                    Var(name=readRoot)
+                    Var(name=displayPrefix)
+                    Var(name=program)
+                    Var(name=nextIndex)
+                    Var(name=paths)
+                    Var(name=active)
+                    Var(name=lockText)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=linker.getAttr) {
+                    Var(name=node)
+                    Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.canonicalImportPath) {
+    Fn(params=modulePath,importPath,packageName,sdkName) {
+      Block {
+        Let(name=moduleDirectory) { Call(target=linker.pathDirectory) { Var(name=modulePath) } }
+        Let(name=displayPrefix) { Call(target=linker.directoryPrefix) { Var(name=moduleDirectory) } }
+        Let(name=importPrefix) { Call(target=linker.importDisplayPrefix) { Var(name=displayPrefix) Var(name=packageName) Var(name=sdkName) } }
+        Return { Call(target=linker.normalizeDisplayPath) { StrConcat { Var(name=importPrefix) Var(name=importPath) } } }
+      }
+    }
+  }
+
+  Let(name=linker.pathDirectory) {
+    Fn(params=path) {
+      Block {
+        Let(name=lastSlash) {
+          Call(target=linker.findLastSlash) {
+            Var(name=path)
+            Lit(value=0)
+            Lit(value=-1)
+          }
+        }
+        If {
+          Eq { Var(name=lastSlash) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block { Return { StringSlice { Var(name=path) Lit(value=0) Var(name=lastSlash) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.findLastSlash) {
+    Fn(params=path,index,lastSlash) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=path) } }
+          Block { Return { Var(name=lastSlash) } }
+          Block {
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { StringSlice { Var(name=path) Var(name=index) Lit(value=1) } Lit(value="/") }
+              Block { Return { Call(target=linker.findLastSlash) { Var(name=path) Var(name=nextIndex) Var(name=index) } } }
+              Block { Return { Call(target=linker.findLastSlash) { Var(name=path) Var(name=nextIndex) Var(name=lastSlash) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.joinPath) {
+    Fn(params=base,path) {
+      Block {
+        If {
+          Eq { Var(name=path) Lit(value="") }
+          Block { Return { Var(name=base) } }
+          Block { Return { StrConcat { Var(name=base) StrConcat { Lit(value="/") Var(name=path) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.directoryPrefix) {
+    Fn(params=directory) {
+      Block {
+        If {
+          Eq { Var(name=directory) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block { Return { StrConcat { Var(name=directory) Lit(value="/") } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.joinDisplayPrefix) {
+    Fn(params=prefix,directory) {
+      Block {
+        If {
+          Eq { Var(name=directory) Lit(value="") }
+          Block { Return { Var(name=prefix) } }
+          Block { Return { StrConcat { Var(name=prefix) StrConcat { Var(name=directory) Lit(value="/") } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.containsPath) {
+    Fn(params=paths,path,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=paths) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq {
+                AttrValueString {
+                  ChildAt { Var(name=paths) Var(name=index) }
+                  Lit(value=0)
+                }
+                Var(name=path)
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                Return {
+                  Call(target=linker.containsPath) {
+                    Var(name=paths)
+                    Var(name=path)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.packagePath) {
+    Fn(params=lockText,packageName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            Return {
+              Call(target=linker.lockPackageValue) {
+                Var(name=lockText)
+                Var(name=packageName)
+                Lit(value="path = \"")
+                Lit(value=8)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.importReadRoot) {
+    Fn(params=readRoot,packageBase,packageName,sdkName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=sdkName) Lit(value="ailang") }
+              Block { Return { Call(target=sys.process.env.get) { Lit(value="AILANG_SDK_ROOT") } } }
+              Block { Return { Var(name=readRoot) } }
+            }
+          }
+          Block { Return { Var(name=packageBase) } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.importDisplayPrefix) {
+    Fn(params=displayPrefix,packageName,sdkName) {
+      Block {
+        If {
+          Eq { Var(name=packageName) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=sdkName) Lit(value="ailang") }
+              Block { Return { Lit(value="sdk:ailang/") } }
+              Block { Return { Var(name=displayPrefix) } }
+            }
+          }
+          Block {
+            Return {
+              StrConcat {
+                Lit(value="package:")
+                StrConcat {
+                  Var(name=packageName)
+                  Lit(value="/")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.packageRoot) {
+    Fn(params=lockText,packageName) {
+      Block {
+        Let(name=rootValue) {
+          Call(target=linker.lockPackageValue) {
+            Var(name=lockText)
+            Var(name=packageName)
+            Lit(value="packageRoot = \"")
+            Lit(value=15)
+          }
+        }
+        If {
+          Eq { Var(name=rootValue) Lit(value="") }
+          Block { Return { Lit(value=".") } }
+          Block { Return { Var(name=rootValue) } }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.packageBasePath) {
+    Fn(params=projectDir,packagePath,packageRoot) {
+      Block {
+        Let(name=basePath) {
+          StrConcat {
+            Var(name=projectDir)
+            StrConcat {
+              Lit(value="/")
+              Var(name=packagePath)
+            }
+          }
+        }
+        If {
+          Eq { Var(name=packageRoot) Lit(value=".") }
+          Block { Return { Var(name=basePath) } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=basePath)
+                StrConcat {
+                  Lit(value="/")
+                  Var(name=packageRoot)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.resolveModuleReadPath) {
+    Fn(params=projectDir,displayPath,lockText) {
+      Block {
+        If {
+          Eq { Call(target=find) { Var(name=displayPath) Lit(value="sdk:ailang/") Lit(value=0) } Lit(value=0) }
+          Block {
+            Let(name=sdkRoot) { Call(target=sys.process.env.get) { Lit(value="AILANG_SDK_ROOT") } }
+            If {
+              Eq { Var(name=sdkRoot) Lit(value="") }
+              Block { Return { Lit(value="") } }
+              Block {
+                Let(name=relativePath) { Call(target=substring) { Var(name=displayPath) Lit(value=11) Lit(value=2147483647) } }
+                Return { Call(target=linker.joinPath) { Var(name=sdkRoot) Var(name=relativePath) } }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { Call(target=find) { Var(name=displayPath) Lit(value="package:") Lit(value=0) } Lit(value=0) }
+              Block {
+                Let(name=tail) { Call(target=substring) { Var(name=displayPath) Lit(value=8) Lit(value=2147483647) } }
+                Let(name=slash) { Call(target=find) { Var(name=tail) Lit(value="/") Lit(value=0) } }
+                If {
+                  Eq { Var(name=slash) Lit(value=-1) }
+                  Block { Return { Lit(value="") } }
+                  Block {
+                    Let(name=packageName) { Call(target=substring) { Var(name=tail) Lit(value=0) Var(name=slash) } }
+                    Let(name=relativePath) { Call(target=substring) { Var(name=tail) Add { Var(name=slash) Lit(value=1) } Lit(value=2147483647) } }
+                    Let(name=packagePath) { Call(target=linker.packagePath) { Var(name=lockText) Var(name=packageName) } }
+                    Let(name=packageRoot) { Call(target=linker.packageRoot) { Var(name=lockText) Var(name=packageName) } }
+                    Let(name=basePath) { Call(target=linker.packageBasePath) { Var(name=projectDir) Var(name=packagePath) Var(name=packageRoot) } }
+                    If {
+                      Eq { Var(name=basePath) Lit(value="") }
+                      Block { Return { Lit(value="") } }
+                      Block { Return { StrConcat { Var(name=basePath) StrConcat { Lit(value="/") Var(name=relativePath) } } } }
+                    }
+                  }
+                }
+              }
+              Block { Return { Call(target=linker.joinPath) { Var(name=projectDir) Var(name=displayPath) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.lockPackageValue) {
+    Fn(params=lockText,packageName,valuePrefix,prefixLength) {
+      Block {
+        Let(name=nameNeedle) {
+          StrConcat {
+            Lit(value="name = \"")
+            StrConcat {
+              Var(name=packageName)
+              Lit(value="\"")
+            }
+          }
+        }
+        Let(name=namePos) {
+          Call(target=find) {
+            Var(name=lockText)
+            Var(name=nameNeedle)
+            Lit(value=0)
+          }
+        }
+        If {
+          Eq { Var(name=namePos) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterName) {
+              Call(target=substring) {
+                Var(name=lockText)
+                Var(name=namePos)
+                Lit(value=2147483647)
+              }
+            }
+            Let(name=valuePos) {
+              Call(target=find) {
+                Var(name=afterName)
+                Var(name=valuePrefix)
+                Lit(value=0)
+              }
+            }
+            If {
+              Eq { Var(name=valuePos) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block {
+                Let(name=afterValue) {
+                  Call(target=substring) {
+                    Var(name=afterName)
+                    Add { Var(name=valuePos) Var(name=prefixLength) }
+                    Lit(value=2147483647)
+                  }
+                }
+                Let(name=endPos) {
+                  Call(target=find) {
+                    Var(name=afterValue)
+                    Lit(value="\"")
+                    Lit(value=0)
+                  }
+                }
+                If {
+                  Eq { Var(name=endPos) Lit(value=-1) }
+                  Block { Return { Lit(value="") } }
+                  Block {
+                    Return {
+                      Call(target=substring) {
+                        Var(name=afterValue)
+                        Lit(value=0)
+                        Var(name=endPos)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.buildLinkReportText) {
+    Fn(params=paths) {
+      Block {
+        Return {
+          Call(target=linker.appendLinkReportModules) {
+            Var(name=paths)
+            Lit(value=0)
+            StrConcat {
+              Lit(value="LinkReport#linker_report(moduleCount=")
+              StrConcat {
+                ToString { ChildCount { Var(name=paths) } }
+                Lit(value=") { ")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.appendLinkReportModules) {
+    Fn(params=paths,index,text) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=paths) } }
+          Block {
+            Return {
+              StrConcat {
+                Var(name=text)
+                Lit(value="}")
+              }
+            }
+          }
+          Block {
+            Let(name=modulePath) {
+              AttrValueString {
+                ChildAt { Var(name=paths) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+            Return {
+              Call(target=linker.appendLinkReportModules) {
+                Var(name=paths)
+                Add { Var(name=index) Lit(value=1) }
+                StrConcat {
+                  Var(name=text)
+                  StrConcat {
+                    Lit(value="Module#index")
+                    StrConcat {
+                      ToString { Var(name=index) }
+                      StrConcat {
+                        Lit(value="(path=\"")
+                        StrConcat {
+                          Var(name=modulePath)
+                          Lit(value="\") ")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

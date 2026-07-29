@@ -13,29 +13,56 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Required Structural Rules
 
-- Source may omit node ids (`Kind(...)` / `Kind { ... }`); parser/canonicalizer assigns deterministic ids before validation.
+- Source must not assign node ids. Authorable source uses `Kind(...)` / `Kind { ... }`; parser/canonicalizer assigns deterministic ids before validation.
+- Generated node ids are compilation-local metadata. They are unique within each parsed module, immutable after parsing, and must not be used as durable application, storage, protocol, or UI identities.
+- Diagnostic and tooling views may render generated node ids explicitly, but normal formatting must omit them.
 - Node ids in the canonical tree must be unique (`VAL001`).
 - Required attributes must exist (for example `Let.name`, `Var.name`, `Lit.value`, `Call.target`).
 - Module nodes require:
 - `Import.path` (string) with `0` children.
+- `Import.package`, when present, must be a non-empty string naming an
+  `Include` from the project manifest.
 - `Export.name` (identifier) with `0` children.
 - Manifest node requires:
-- `Project.name` (string), `Project.entryFile` (string, relative path), `Project.entryExport` (non-empty string), and `0` children.
-- Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`).
+- `Project.name` (string), `Project.entryFile` (string, relative path), and
+  `Project.entryExport` (non-empty string).
+- `Project` children, when present, must all be `Include` nodes.
+- `Include.name` and `Include.version` are required strings.
+- `Include.path`, when present, must be a relative string path for local
+  development includes.
+- Child arity must match node contract (for example `Let=1`, `Var=0`,
+  `Eq=2`, numeric primitives `Add/Sub/Mul/Div/Mod/Pow/Lt=2`, `If=2..3`,
+  `Match=2..N`, `Case=2`, `Default=1`, `Loop=1`, `Break=0`,
+  `Continue=0`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
+- `Match` child `0` is its subject. Every remaining child must be a `Case` or
+  `Default` (`VAL023`). A `Case` contains `Lit` then `Block` (`VAL024`), and a
+  `Default` contains one `Block` and must be final (`VAL025`-`VAL027`).
+  `Case` and `Default` outside `Match` are rejected (`VAL028`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).
 - `Await` must have exactly one child (`VAL167`).
 - `Par` must have at least two child expressions (`VAL168`).
 
 ## Type/Capability Rules
 
-- Validation enforces primitive compatibility for core operators (`Eq`, `Add`, `StrConcat`, etc.).
+- Validation enforces primitive compatibility for core operators (`Eq`,
+  numeric primitives, `StrConcat`, etc.).
 - Capability calls are permission-gated (`VAL040` family).
 - Unknown call targets are rejected unless resolved as user-defined functions.
+- Equality declarations are language-owned declarations, never host-owned
+  registrations.
+- Equality dispatch declarations must use fully qualified type identity.
+- Duplicate `Equality(leftType,rightType,handler)` declarations are validation
+  errors.
+- Equality handlers must resolve to AiLang functions, be pure, and return
+  `std.Bool`.
+- Built-in RC-1 equality handlers cover `std.Number`, `std.String`, `std.Bool`,
+  and `std.Null`; future package/user handlers must participate in the same
+  deterministic collection path.
 
 ## UI Event Payload Rules
 
-- `sys.ui_pollEvent` contract is canonical and deterministic:
+- `sys.ui.pollEvent` contract is canonical and deterministic:
 - return value is a `UiEvent` node as defined by `SPEC/IL.md`.
 - `type` must be one of `none`, `closed`, `click`, `key`.
 - `modifiers` tokens must be unique, sorted (`StringComparer.Ordinal`), and drawn from `alt,ctrl,meta,shift`.
@@ -45,55 +72,114 @@ This file is normative for semantic validation used by `aic check` (default path
 - These constraints are semantic runtime contract requirements and must not be delegated to host-specific UI behavior.
 - Host adapters may normalize transport payloads (key token naming, printable text extraction), but semantic editing behavior remains library-owned.
 
-- `sys.ui_getWindowSize` contract is canonical and deterministic:
+- `sys.ui.getWindowSize` contract is canonical and deterministic:
 - return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.
 - `width` and `height` must be integers; `-1` is reserved for unavailable/invalid handles.
 
-- `sys.ui_waitFrame` contract is deterministic:
+- `sys.ui.waitFrame` contract is deterministic:
 - arguments are `(int windowHandle)`.
 - return value is `void`; host may block until next frame/tick opportunity.
-- UI libraries should prefer `sys.ui_waitFrame` to `sys.time_sleepMs` for frame pacing when host support exists.
+- UI libraries should prefer `sys.ui.waitFrame` to `sys.time.sleepMs` for frame pacing when host support exists.
 
-- `sys.ui_drawImage` contract is deterministic:
+- `sys.ui.drawImage` contract is deterministic:
 - arguments are `(int windowHandle, int x, int y, int width, int height, string rgbaBase64)`.
 - payload is raw RGBA8 bytes encoded as base64; semantic interpretation stays in libraries.
 
-- `sys.str_substring(text,start,length)` and `sys.str_remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
+- Temporary migration note: deterministic `sys.str.*` and `sys.bytes.*`
+  contracts exist only until the equivalent `std.str`/`std.bytes` behavior can
+  be expressed through non-syscall AiLang primitives or intrinsic operations.
+
+- `sys.str.substring(text,start,length)` and `sys.str.remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
 - indexing is by Unicode scalar sequence (not bytes).
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).
 - out-of-range inputs must not throw.
+- `sys.str.find(text,pattern,start)` is a deterministic UTF-8 text-search helper:
+- indexing is by Unicode scalar sequence (not bytes).
+- `start` is clamped to valid range, empty `pattern` returns the clamped start index, and a miss returns `-1`.
 
-- `sys.worker_start(taskName,payload)` contract:
-- args are `(string, string)` and return int worker handle.
-- `sys.worker_poll(workerHandle)` contract:
-- args are `(int)` and return status int (`0,1,-1,-2,-3`).
-- `sys.worker_result(workerHandle)` and `sys.worker_error(workerHandle)` return strings.
-- `sys.worker_cancel(workerHandle)` returns bool.
+- `sys.bytes.length(data)` contract:
+- args are `(bytes)` and returns int length.
+- `sys.bytes.at(data,index)` contract:
+- args are `(bytes, int)` and returns int (`0..255`, or `-1` when out of range).
+- `sys.bytes.slice(data,start,length)` contract:
+- args are `(bytes, int, int)` and returns bytes.
+- `sys.bytes.concat(left,right)` contract:
+- args are `(bytes, bytes)` and returns bytes.
+- `sys.bytes.fromBase64(text)` contract:
+- args are `(string)` and returns bytes.
+- `sys.bytes.fromUtf8String(text)` contract:
+- args are `(string)` and returns UTF-8 bytes.
+- `sys.bytes.toBase64(data)` contract:
+- args are `(bytes)` and returns string.
+- `sys.bytes.toUtf8String(data)` contract:
+- args are `(bytes)` and returns string when payload is valid UTF-8, else `""`.
+- `BytesFromBase64(text)` primitive:
+- arity is `1`; invalid payloads are runtime errors.
+- `BytesToBase64(data)` primitive:
+- arity is `1`.
+- `sys.image.decodeToRgbaBase64(data,mimeType)` contract:
+- args are `(bytes, string)` and returns base64-encoded row-major RGBA8 bytes suitable for `sys.ui.drawImage`.
+- unsupported hosts or decode failures must surface as typed syscall failure, never as a silent empty image.
 
-- `sys.debug_emit(channel,payload)` contract:
+- `Worker` declarations resolve structurally through the restored project and
+  package graph. Their `Function.target` must exist, be exported, have exact
+  signature `Fn(bytes) -> bytes`, and have no captured environment.
+- An unqualified worker `Function.target` is resolved only among functions in
+  the declaring module. Same-named functions in other modules do not satisfy
+  the declaration; qualified imported/package targets require their specified
+  project/package resolution form.
+- Validation computes the target's transitive reachable code, immutable data,
+  and statically required capabilities. Required capabilities must be permitted
+  by the worker declaration when a ceiling is present and by project policy.
+- Worker transport ABI and bytecode compatibility are derived by the builder;
+  authorable source does not repeat fixed input/result or ABI metadata.
+- `WorkerRef`, `Task`, and `WorkerTasks` values are opaque and non-forgeable.
+  They are rejected in constants, worker payloads/results, persisted values,
+  linker records, canonical output, equality, ordering, and hashing.
+- `WorkerRef(name=<worker-name>)` must name a validated `Worker` declaration in
+  the current module. Missing, empty, duplicate, or non-worker targets are
+  rejected before final bytecode emission. The validated reference lowers to a
+  worker relocation whose target is `<modulePath>::worker::<worker-name>`.
+- `std.worker.run` accepts `(WorkerRef,bytes)`.
+- `std.worker.runAll` accepts `(WorkerRef,ordered bytes collection)`.
+- The initial ordered bytes collection is the canonical worker batch envelope:
+  repeated `u32le length` plus exact payload bytes, with at least one record.
+- `std.worker.taskAt` accepts `(WorkerTasks,int)`.
+- `std.task.cancel` accepts `Task`.
+- `Await` accepts only `Task`; first consumption is one-shot.
+- Worker dependency graphs must be acyclic, canonically indexed, transport
+  compatible, and bounded by declared/runtime workload policies.
+- `whenAny` is rejected in compiler and other canonical-output contexts.
+
+- `sys.debug.emit(channel,payload)` contract:
 - args are `(string, string)`.
-- `sys.debug_mode()` contract:
+- `sys.debug.mode()` contract:
 - no args; returns string mode.
-- `sys.debug_captureFrameBegin(frameId,width,height)` contract:
+- `sys.debug.captureFrameBegin(frameId,width,height)` contract:
 - args are `(int, int, int)`.
-- `sys.debug_captureFrameEnd(frameId)` contract:
+- `sys.debug.captureFrameEnd(frameId)` contract:
 - args are `(int)`.
-- `sys.debug_captureDraw(op,args)` contract:
+- `sys.debug.captureDraw(op,args)` contract:
 - args are `(string, string)`.
-- `sys.debug_captureInput(eventPayload)` contract:
+- `sys.debug.captureInput(eventPayload)` contract:
 - args are `(string)`.
-- `sys.debug_captureState(key,valuePayload)` contract:
+- `sys.debug.captureState(key,valuePayload)` contract:
 - args are `(string, string)`.
-- `sys.debug_replayLoad(path)` contract:
+- `sys.debug.replayLoad(path)` contract:
 - args are `(string)` and returns int replay handle.
-- `sys.debug_replayNext(handle)` contract:
+- `sys.debug.replayNext(handle)` contract:
 - args are `(int)` and returns string.
-- `sys.debug_assert(cond,code,message)` contract:
+- `sys.debug.assert(cond,code,message)` contract:
 - args are `(bool, string, string)`.
-- `sys.debug_artifactWrite(path,text)` contract:
+- `sys.debug.artifactWrite(path,text)` contract:
 - args are `(string, string)` and returns bool.
-- `sys.debug_traceAsync(opId,phase,detail)` contract:
+- `sys.debug.traceAsync(opId,phase,detail)` contract:
 - args are `(int, string, string)`.
+- `sys.debug.taskReclaimStats()` contract:
+- no args; returns node task-reclaim telemetry payload.
+- `sys.host.openDefault(target)` contract:
+- args are `(string)` and returns `bool`.
+- current native host path accepts `http://` and `https://` only and must return quickly without blocking on external browser/app completion.
 
 ## Async Safety Rules
 
@@ -103,21 +189,20 @@ This file is normative for semantic validation used by `aic check` (default path
 - `sys.*` calls are rejected in compute-only `Par` branches (`VAL169`).
 - Blocking calls are rejected in lifecycle `update` context (`VAL340`).
 - Current blocking target set includes:
-- `sys.net_asyncAwait`
-- `sys.net_accept`
-- `sys.net_readHeaders`
-- `sys.net_tcpAccept`
-- `sys.net_tcpConnect`
-- `sys.net_tcpConnectTls`
-- `sys.net_tcpRead`
-- `sys.net_tcpWrite`
-- `sys.net_udpRecv`
-- `sys.time_sleepMs`
-- `sys.fs_readFile`
-- `sys.fs_readDir`
-- `sys.fs_stat`
-- `sys.console_readLine`
-- `sys.console_readAllStdin`
+- `sys.net.async.await`
+- `sys.net.accept`
+- `sys.net.tcp.accept`
+- `sys.net.tcp.connect`
+- `sys.net.tcp.connectTls`
+- `sys.net.tcp.read`
+- `sys.net.tcp.write`
+- `sys.net.udp.recv`
+- `sys.time.sleepMs`
+- `sys.fs.file.read`
+- `sys.fs.dir.list`
+- `sys.fs.path.stat`
+- `sys.console.readLine`
+- `sys.console.readAllStdin`
 - `io.readLine`
 - `io.readAllStdin`
 - `io.readFile`
@@ -126,11 +211,11 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Host Async Boundary Rules
 
-- Validation treats `*Start` + `net_async*` patterns as the canonical non-blocking effect model for UI/update paths.
+- Validation treats `*Start` + `sys.net.async.*` patterns as the canonical non-blocking effect model for UI/update paths.
 - Blocking waits in update paths remain invalid (`VAL340` set above), including `httpRequestAwait`.
 - Runtime contract requirements (normative, host-enforced):
 - `*Start` syscalls must not block on operation completion.
-- `sys.net_asyncPoll`/`sys.net_asyncResult*`/`sys.net_asyncError` must be non-blocking.
+- `sys.net.async.poll`/`sys.net.async.result*`/`sys.net.async.error` must be non-blocking.
 - Host worker threads may execute effectful work, but VM state mutation is owner-thread only and must occur via deterministic evaluator steps.
 
 ## Contracts for `aic check`

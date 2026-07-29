@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TMP_DIR="${ROOT_DIR}/.tmp/clean-bootstrap-routing"
+FIXTURE_ROOT="${TMP_DIR}/repo"
+INSTALL_ROOT="${TMP_DIR}/install"
+
+rm -rf "${TMP_DIR}"
+mkdir -p "${FIXTURE_ROOT}/scripts" "${INSTALL_ROOT}/local/bin"
+cp "${ROOT_DIR}/scripts/stage-installed-toolchain.sh" \
+  "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh"
+
+cat > "${FIXTURE_ROOT}/ailang-toolchain.toml" <<'EOF'
+[toolchain]
+version = "local"
+EOF
+cat > "${INSTALL_ROOT}/local/bin/ailang" <<'EOF'
+#!/usr/bin/env sh
+echo staged-ailang
+EOF
+cat > "${INSTALL_ROOT}/local/bin/aivm-runtime" <<'EOF'
+#!/usr/bin/env sh
+echo staged-runtime
+EOF
+chmod +x \
+  "${INSTALL_ROOT}/local/bin/ailang" \
+  "${INSTALL_ROOT}/local/bin/aivm-runtime"
+
+AILANG_INSTALL_ROOT="${INSTALL_ROOT}" \
+  "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh" >/dev/null
+
+test -x "${FIXTURE_ROOT}/tools/ailang"
+test -x "${FIXTURE_ROOT}/tools/aivm-runtime"
+test "$("${FIXTURE_ROOT}/tools/ailang")" = "staged-ailang"
+test "$("${FIXTURE_ROOT}/tools/aivm-runtime")" = "staged-runtime"
+
+rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/build.sh"
+rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"
+rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"
+rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/scripts/test.sh"
+rg -q 'AILANG_NATIVE_PLATFORM=' "${ROOT_DIR}/.github/workflows/main-release-gate.yml"
+rg -q 'AILANG_NATIVE_ARCH=' "${ROOT_DIR}/.github/workflows/main-release-gate.yml"
+rg -q 'AILANG_RELEASE_CLI_SHA256:' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'AILANG_RELEASE_BUILTINS_SHA256:' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'gh release download.*needs.prepare.outputs.tag' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'sha256sum --check' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'commands/package.aibc1' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'bin/aivm-runtime" run.*cli/app.aibc1.*--' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+rg -q 'AILANG_OBJECT_PIPELINE.*legacy' \
+  "${ROOT_DIR}/.github/workflows/toolkit-release.yml"
+if rg -q 'AIVM_AIRUN_(PLATFORM|ARCH)=' \
+    "${ROOT_DIR}/.github/workflows/main-release-gate.yml"; then
+  echo "clean bootstrap routing: obsolete cross-target variable remains" >&2
+  exit 1
+fi
+
+echo "clean bootstrap routing: PASS"

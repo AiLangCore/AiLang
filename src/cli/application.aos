@@ -1,0 +1,206 @@
+Program {
+  Import(package="std-cli" path="src/cli/cli.aos")
+  Import(path="builtin_paths.aos")
+
+  Let(name=cliCommandHandler) {
+    Fn(params=invocation) {
+      Block {
+        Let(name=command) { Call(target=mapGetStringOr) { Var(name=invocation) Lit(value="command") Lit(value="") } }
+        Let(name=args) { Call(target=invocationRawArgs) { Var(name=invocation) } }
+        If {
+          Eq { Var(name=command) Lit(value="build") }
+          Block { Return { Call(target=runBuild) { Var(name=args) } } }
+          Block {
+            If {
+              Eq { Var(name=command) Lit(value="run") }
+              Block { Return { Call(target=runRun) { Var(name=args) } } }
+              Block {
+                Return { Call(target=runPublish) { Var(name=args) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangCliApplication) {
+    Fn(params=_) {
+      Block {
+        Let(name=app0) { Call(target=createApplication) { Lit(value="ailang") Lit(value="0.0.1-dev") Lit(value="AiLang compiler and development tools") } }
+        Let(name=app1) { Call(target=registerCommand) { Var(name=app0) Call(target=ailangInitCommand) { Lit(value=0) } } }
+        Let(name=app2) { Call(target=registerCommand) { Var(name=app1) Call(target=ailangTemplateCommand) { Lit(value=0) } } }
+        Let(name=app3) { Call(target=registerCommand) { Var(name=app2) Call(target=ailangAgentCommand) { Lit(value=0) } } }
+        Let(name=app4) { Call(target=registerCommand) { Var(name=app3) Call(target=ailangBuildCommand) { Lit(value=0) } } }
+        Let(name=app5) { Call(target=registerCommand) { Var(name=app4) Call(target=ailangSimpleCommand) { Lit(value="run") Lit(value="Run an AiLang project or program") Lit(value="run <project-dir|source.aos|program.aibc1> [args...]") } } }
+        Let(name=app6) { Call(target=registerCommand) { Var(name=app5) Call(target=ailangPublishCommand) { Lit(value=0) } } }
+        Let(name=app7) { Call(target=registerCommand) { Var(name=app6) Call(target=ailangCleanCommand) { Lit(value=0) } } }
+        Let(name=app8) { Call(target=registerCommand) { Var(name=app7) Call(target=ailangPackageCommand) { Lit(value=0) } } }
+        Return { Call(target=registerCommand) { Var(name=app8) Call(target=ailangProjectCommand) { Lit(value=0) } } }
+      }
+    }
+  }
+
+  Let(name=ailangProjectCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Call(target=ailangSimpleCommand) {
+              Lit(value="project")
+              Lit(value="Inspect project metadata")
+              Lit(value="project version <project-dir>")
+            }
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="project") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangInitExecutable) {
+    Fn(params=command) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Var(name=command)
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="init") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangTemplateCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Call(target=ailangSimpleCommand) {
+              Lit(value="template")
+              Lit(value="Manage project templates")
+              Lit(value="template <list|show|path> [name]")
+            }
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="template") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangAgentCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Call(target=ailangSimpleCommand) {
+              Lit(value="agent")
+              Lit(value="List supported coding agents")
+              Lit(value="agent list")
+            }
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="agent") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangPackageCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Call(target=ailangSimpleCommand) {
+              Lit(value="package")
+              Lit(value="Manage project dependencies")
+              Lit(value="package <restore|list|add|remove> [project-dir]")
+            }
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="package") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangCleanCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandAsExecutable) {
+            Call(target=ailangSimpleCommand) {
+              Lit(value="clean")
+              Lit(value="Clean project outputs")
+              Lit(value="clean <project-dir>")
+            }
+            Call(target=ailangBuiltinRuntime) { Lit(value=0) }
+            Call(target=ailangBuiltinArgumentPrefix) { Lit(value="clean") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangSimpleCommand) {
+    Fn(params=name,summary,usage) {
+      Block {
+        Return {
+          Call(target=commandAllowTrailing) {
+            Call(target=commandWithUsage) {
+              Call(target=createCommand) { Var(name=name) Var(name=summary) Var(name=name) }
+              Var(name=usage)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangInitCommand) {
+    Fn(params=_) {
+      Block {
+        Let(name=c0) { Call(target=ailangSimpleCommand) { Lit(value="init") Lit(value="Create an AiLang project") Lit(value="init <project-dir> [--template <name>] [--agent <name>|--agents <list>] [--force]") } }
+        Let(name=c1) { Call(target=commandWithOption) { Var(name=c0) Call(target=createOption) { Lit(value="template") Lit(value="t") Lit(value=true) Lit(value=false) Lit(value="Project template") } } }
+        Let(name=c2) { Call(target=commandWithOption) { Var(name=c1) Call(target=createOption) { Lit(value="agent") Lit(value="a") Lit(value=true) Lit(value=false) Lit(value="Coding agent") } } }
+        Let(name=c3) { Call(target=commandWithOption) { Var(name=c2) Call(target=createOption) { Lit(value="agents") Lit(value="") Lit(value=true) Lit(value=false) Lit(value="Coding agent list") } } }
+        Return {
+          Call(target=ailangInitExecutable) {
+            Call(target=commandWithOption) {
+              Var(name=c3)
+              Call(target=createOption) { Lit(value="force") Lit(value="f") Lit(value=false) Lit(value=false) Lit(value="Overwrite generated files") }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangBuildCommand) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=commandWithOption) {
+            Call(target=ailangSimpleCommand) { Lit(value="build") Lit(value="Build an AiLang project") Lit(value="build <project-dir> [--out <dir>]") }
+            Call(target=createOption) { Lit(value="out") Lit(value="o") Lit(value=true) Lit(value=false) Lit(value="Output directory") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=ailangPublishCommand) {
+    Fn(params=_) {
+      Block {
+        Let(name=c0) { Call(target=ailangSimpleCommand) { Lit(value="publish") Lit(value="Publish an AiLang project") Lit(value="publish <project-dir> [--target <rid>] [--out <dir>]") } }
+        Let(name=c1) { Call(target=commandWithOption) { Var(name=c0) Call(target=createOption) { Lit(value="target") Lit(value="t") Lit(value=true) Lit(value=false) Lit(value="Target runtime") } } }
+        Let(name=c2) { Call(target=commandWithOption) { Var(name=c1) Call(target=createOption) { Lit(value="out") Lit(value="o") Lit(value=true) Lit(value=false) Lit(value="Output directory") } } }
+        Let(name=c3) { Call(target=commandWithOption) { Var(name=c2) Call(target=createOption) { Lit(value="mode") Lit(value="m") Lit(value=true) Lit(value=false) Lit(value="Publish mode") } } }
+        Return { Call(target=commandWithOption) { Var(name=c3) Call(target=createOption) { Lit(value="kind") Lit(value="k") Lit(value=true) Lit(value=false) Lit(value="Launcher kind") } } }
+      }
+    }
+  }
+}

@@ -1,0 +1,230 @@
+Program {
+  Import(path="object_linker_support.aos")
+  Import(path="worker_catalog_capabilities.aos")
+  Import(path="worker_catalog_identity.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=objectLinker.emitWorkerCatalogSection)
+
+  Let(name=objectLinker.emitWorkerCatalogSection) {
+    Fn(params=catalogPlan,layout,artifacts) {
+      Block {
+        Let(name=entries) {
+          Call(target=objectLinker.emitWorkerCatalogEntries) {
+            Var(name=catalogPlan) Var(name=layout) Var(name=artifacts) Lit(value=0)
+          }
+        }
+        If {
+          Eq { ValueKind { Var(name=entries) } Lit(value="node") }
+          Block { Return { Var(name=entries) } }
+          Block {
+            Let(name=payload) {
+              Call(target=bytes.concat) {
+                Call(target=bytes.u32le) { ChildCount { Var(name=catalogPlan) } }
+                Var(name=entries)
+              }
+            }
+            Return {
+              Call(target=bytes.concat) {
+                Call(target=bytes.concat) {
+                  Call(target=bytes.u32le) { Lit(value=3) }
+                  Call(target=bytes.u32le) { Call(target=bytes.length) { Var(name=payload) } }
+                }
+                Var(name=payload)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.emitWorkerCatalogEntries) {
+    Fn(params=catalogPlan,layout,artifacts,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=catalogPlan) } }
+          Block { Return { Call(target=bytes.fromUtf8String) { Lit(value="") } } }
+          Block {
+            Let(name=entry) { ChildAt { Var(name=catalogPlan) Var(name=index) } }
+            Let(name=symbol) {
+              Call(target=objectLinker.workerCatalogEmitAttr) {
+                Var(name=entry) Lit(value="symbol") Lit(value=0)
+              }
+            }
+            Let(name=artifactRecord) {
+              Call(target=objectLinker.findWorkerArtifact) {
+                Var(name=artifacts) Var(name=symbol) Lit(value=0)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=artifactRecord) } Lit(value="Err") }
+              Block { Return { Var(name=artifactRecord) } }
+              Block { Lit(value=0) }
+            }
+            Let(name=artifact) {
+              Call(target=bytes.fromBase64) {
+                Call(target=objectLinker.workerCatalogEmitAttr) {
+                  Var(name=artifactRecord) Lit(value="artifactBase64") Lit(value=0)
+                }
+              }
+            }
+            Let(name=functionTarget) {
+              Call(target=objectLinker.workerCatalogEmitAttrInt) {
+                Var(name=artifactRecord) Lit(value="functionTarget") Lit(value=0)
+              }
+            }
+            Let(name=capabilityMask) {
+              Call(target=workerCatalog.capabilityMask) { Var(name=artifactRecord) }
+            }
+            Let(name=transportAbi) { Lit(value=1) }
+            Let(name=bytecodeVersion) {
+              Call(target=objectLinker.workerCatalogEmitAttrInt) {
+                Var(name=artifactRecord) Lit(value="bytecodeVersion") Lit(value=0)
+              }
+            }
+            Let(name=identity) {
+              Call(target=workerCatalog.identity) {
+                Var(name=functionTarget) Var(name=capabilityMask)
+                Var(name=transportAbi) Var(name=bytecodeVersion) Var(name=artifact)
+              }
+            }
+            Let(name=metadata) {
+              Call(target=objectLinker.workerCatalogEntryMetadata) {
+                Var(name=functionTarget) Var(name=capabilityMask) Var(name=transportAbi)
+                Var(name=bytecodeVersion) Call(target=bytes.length) { Var(name=artifact) }
+                Var(name=identity)
+              }
+            }
+            Let(name=tail) {
+              Call(target=objectLinker.emitWorkerCatalogEntries) {
+                Var(name=catalogPlan) Var(name=layout) Var(name=artifacts)
+                Add { Var(name=index) Lit(value=1) }
+              }
+            }
+            If {
+              Eq { ValueKind { Var(name=tail) } Lit(value="node") }
+              Block { Return { Var(name=tail) } }
+              Block {
+                Return {
+                  Call(target=bytes.concat) {
+                    Call(target=bytes.concat) { Var(name=metadata) Var(name=artifact) }
+                    Var(name=tail)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerCatalogEntryMetadata) {
+    Fn(params=functionTarget,capabilityMask,transportAbi,bytecodeVersion,artifactLength,identity) {
+      Block {
+        Return {
+          Call(target=bytes.concat) {
+            Call(target=bytes.concat) {
+              Call(target=bytes.concat) {
+                Call(target=bytes.u32le) { Var(name=functionTarget) }
+                Call(target=bytes.u32le) { Var(name=capabilityMask) }
+              }
+              Call(target=bytes.concat) {
+                Call(target=bytes.u32le) { Var(name=transportAbi) }
+                Call(target=bytes.u32le) { Var(name=bytecodeVersion) }
+              }
+            }
+            Call(target=bytes.concat) {
+              Call(target=bytes.u32le) { Var(name=artifactLength) } Var(name=identity)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.findWorkerArtifact) {
+    Fn(params=artifacts,symbol,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=artifacts) } }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="object_linker") Lit(value="LINKW006")
+                Lit(value="Bundled worker artifact is missing.") Var(name=symbol)
+              }
+            }
+          }
+          Block {
+            Let(name=record) { ChildAt { Var(name=artifacts) Var(name=index) } }
+            If {
+              Eq {
+                Call(target=objectLinker.workerCatalogEmitAttr) {
+                  Var(name=record) Lit(value="symbol") Lit(value=0)
+                }
+                Var(name=symbol)
+              }
+              Block { Return { Var(name=record) } }
+              Block {
+                Return {
+                  Call(target=objectLinker.findWorkerArtifact) {
+                    Var(name=artifacts) Var(name=symbol) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerCatalogEmitAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerCatalogEmitAttr) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=objectLinker.workerCatalogEmitAttrInt) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueInt { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=objectLinker.workerCatalogEmitAttrInt) {
+                    Var(name=node) Var(name=key) Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

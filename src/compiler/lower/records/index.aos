@@ -1,0 +1,196 @@
+Program {
+  Import(sdk="ailang" path="std/collections/map.aos")
+  Export(name=lower.buildCallRecordContext)
+  Export(name=lower.indexedCallRecord)
+
+  Let(name=lower.buildCallRecordContext) {
+    Fn(params=records) {
+      Block {
+        Let(name=builder) { Call(target=collections.mapBuilder) {} }
+        Let(name=index) {
+          If {
+            Eq { NodeId { Var(name=records) } Lit(value="record-chunks") }
+            Block {
+              Call(target=lower.buildChunkCallIndex) {
+                Var(name=records)
+                Sub { ChildCount { Var(name=records) } Lit(value=1) }
+                Sub { Call(target=lower.recordCountInChunks) { Var(name=records) Lit(value=0) } Lit(value=1) }
+                Var(name=builder)
+              }
+            }
+            Block {
+              Call(target=lower.buildRecordCallIndex) {
+                Var(name=records)
+                Sub { ChildCount { Var(name=records) } Lit(value=1) }
+                Var(name=builder)
+              }
+            }
+          }
+        }
+        Return { MakePair { Var(name=records) Var(name=index) } }
+      }
+    }
+  }
+
+  Let(name=lower.recordCountInChunks) {
+    Fn(params=chunks,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=chunks) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Return {
+              Add {
+                ChildCount { ChildAt { Var(name=chunks) Var(name=index) } }
+                Call(target=lower.recordCountInChunks) {
+                  Var(name=chunks) Add { Var(name=index) Lit(value=1) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.buildRecordCallIndex) {
+    Fn(params=records,index,builder) {
+      Block {
+        If {
+          Eq { Var(name=index) Lit(value=-1) }
+          Block {
+            Return { Call(target=collections.mapBuilderFinish) { Var(name=builder) } }
+          }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=index) } }
+            Let(name=name) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) }
+            }
+            Return {
+              Call(target=lower.buildRecordCallIndex) {
+                Var(name=records) Sub { Var(name=index) Lit(value=1) }
+                Call(target=collections.mapBuilderPutStringInt) {
+                  Var(name=builder) Var(name=name) Var(name=index)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.buildChunkCallIndex) {
+    Fn(params=chunks,chunkIndex,ordinal,builder) {
+      Block {
+        If {
+          Eq { Var(name=chunkIndex) Lit(value=-1) }
+          Block {
+            Return { Call(target=collections.mapBuilderFinish) { Var(name=builder) } }
+          }
+          Block {
+            Let(name=records) { ChildAt { Var(name=chunks) Var(name=chunkIndex) } }
+            Return {
+              Call(target=lower.buildChunkRecordCallIndex) {
+                Var(name=chunks) Var(name=chunkIndex) Var(name=records)
+                Sub { ChildCount { Var(name=records) } Lit(value=1) }
+                Var(name=ordinal) Var(name=builder)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.buildChunkRecordCallIndex) {
+    Fn(params=chunks,chunkIndex,records,recordIndex,ordinal,builder) {
+      Block {
+        If {
+          Eq { Var(name=recordIndex) Lit(value=-1) }
+          Block {
+            Return {
+              Call(target=lower.buildChunkCallIndex) {
+                Var(name=chunks) Sub { Var(name=chunkIndex) Lit(value=1) }
+                Var(name=ordinal) Var(name=builder)
+              }
+            }
+          }
+          Block {
+            Let(name=record) { ChildAt { Var(name=records) Var(name=recordIndex) } }
+            Let(name=name) {
+              AttrValueString { ChildAt { Var(name=record) Lit(value=1) } Lit(value=0) }
+            }
+            Return {
+              Call(target=lower.buildChunkRecordCallIndex) {
+                Var(name=chunks) Var(name=chunkIndex) Var(name=records)
+                Sub { Var(name=recordIndex) Lit(value=1) }
+                Sub { Var(name=ordinal) Lit(value=1) }
+                Call(target=collections.mapBuilderPutStringInt) {
+                  Var(name=builder) Var(name=name) Var(name=ordinal)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.indexedCallRecord) {
+    Fn(params=context,name) {
+      Block {
+        Let(name=records) { PairFirst { Var(name=context) } }
+        Let(name=ordinal) {
+          Call(target=collections.mapGetStringIntOr) {
+            PairSecond { Var(name=context) } Var(name=name) Lit(value=-1)
+          }
+        }
+        If {
+          Eq { Var(name=ordinal) Lit(value=-1) }
+          Block { Return { MakeBlock { Lit(value="missing-call-record") } } }
+          Block {
+            If {
+              Eq { NodeId { Var(name=records) } Lit(value="record-chunks") }
+              Block {
+                Return {
+                  Call(target=lower.recordInChunksAtOrdinal) {
+                    Var(name=records) Var(name=ordinal) Lit(value=0)
+                  }
+                }
+              }
+              Block { Return { ChildAt { Var(name=records) Var(name=ordinal) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.recordInChunksAtOrdinal) {
+    Fn(params=chunks,ordinal,chunkIndex) {
+      Block {
+        If {
+          Eq { Var(name=chunkIndex) ChildCount { Var(name=chunks) } }
+          Block { Return { MakeBlock { Lit(value="missing-call-record") } } }
+          Block {
+            Let(name=records) { ChildAt { Var(name=chunks) Var(name=chunkIndex) } }
+            If {
+              Lt { Var(name=ordinal) ChildCount { Var(name=records) } }
+              Block { Return { ChildAt { Var(name=records) Var(name=ordinal) } } }
+              Block {
+                Return {
+                  Call(target=lower.recordInChunksAtOrdinal) {
+                    Var(name=chunks)
+                    Sub { Var(name=ordinal) ChildCount { Var(name=records) } }
+                    Add { Var(name=chunkIndex) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

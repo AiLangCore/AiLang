@@ -1,0 +1,211 @@
+Program {
+  Import(path="./core.aos")
+
+  Let(name=nowUnixMs) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.nowUnixMs) }
+      }
+    }
+  }
+
+  Let(name=monotonicMs) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.monotonicMs) }
+      }
+    }
+  }
+
+  Let(name=sleepMs) {
+    Fn(params=durationMs) {
+      Block {
+        Return { Call(target=sys.time.sleepMs) { Var(name=durationMs) } }
+      }
+    }
+  }
+
+  Let(name=timeZoneId) {
+    Fn(params=_) {
+      Block {
+        Return { Call(target=sys.time.timeZoneId) }
+      }
+    }
+  }
+
+  Let(name=timeZoneOffsetMinutesAt) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=sys.time.timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+        }
+      }
+    }
+  }
+
+  Let(name=timeFromUnixMs) {
+    Fn(params=unixMs,zoneId,offsetMinutes) {
+      Block {
+        Let(name=base) { Map { } }
+        Let(name=withType) {
+          Call(target=mapSet) {
+            Var(name=base)
+            Lit(value="type")
+            Lit(value="time")
+          }
+        }
+        Let(name=withUnixMs) {
+          Call(target=mapSet) {
+            Var(name=withType)
+            Lit(value="unixMs")
+            Var(name=unixMs)
+          }
+        }
+        Let(name=withZone) {
+          Call(target=mapSet) {
+            Var(name=withUnixMs)
+            Lit(value="zoneId")
+            Var(name=zoneId)
+          }
+        }
+        Return {
+          Call(target=mapSet) {
+            Var(name=withZone)
+            Lit(value="offsetMinutes")
+            Var(name=offsetMinutes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=now) {
+    Fn(params=_) {
+      Block {
+        Let(name=unixMs) { Call(target=nowUnixMs) { } }
+        Let(name=zoneId) { Call(target=timeZoneId) { } }
+        Let(name=offsetMinutes) {
+          Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+        }
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Var(name=zoneId)
+            Var(name=offsetMinutes)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=nowUtc) {
+    Fn(params=_) {
+      Block {
+        Return {
+          Call(target=timeUtc) {
+            Call(target=nowUnixMs) { }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeLocal) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Call(target=timeZoneId) { }
+            Call(target=timeZoneOffsetMinutesAt) { Var(name=unixMs) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeUnixMs) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=timeValue)
+            Lit(value="unixMs")
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeZone) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetStringOr) {
+            Var(name=timeValue)
+            Lit(value="zoneId")
+            Lit(value="")
+          }
+        }
+      }
+    }
+  }
+
+
+  Let(name=timeUtc) {
+    Fn(params=unixMs) {
+      Block {
+        Return {
+          Call(target=timeFromUnixMs) {
+            Var(name=unixMs)
+            Lit(value="UTC")
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeIsUtc) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Eq {
+            Call(target=timeOffsetMinutes) { Var(name=timeValue) }
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=timeOffsetMinutes) {
+    Fn(params=timeValue) {
+      Block {
+        Return {
+          Call(target=mapGetIntOr) {
+            Var(name=timeValue)
+            Lit(value="offsetMinutes")
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Export(name=nowUnixMs)
+  Export(name=monotonicMs)
+  Export(name=sleepMs)
+  Export(name=timeZoneId)
+  Export(name=timeZoneOffsetMinutesAt)
+  Export(name=timeFromUnixMs)
+  Export(name=now)
+  Export(name=nowUtc)
+  Export(name=timeLocal)
+  Export(name=timeUnixMs)
+  Export(name=timeZone)
+  Export(name=timeUtc)
+  Export(name=timeIsUtc)
+  Export(name=timeOffsetMinutes)
+}

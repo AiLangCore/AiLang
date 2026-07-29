@@ -1,0 +1,39 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Export(name=bootstrapIo.pathExists)
+  Export(name=bootstrapIo.makeDir)
+  Export(name=bootstrapIo.writeFile)
+
+  Let(name=bootstrapIo.pathExists) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+        }
+      }
+    }
+  }
+
+  Let(name=bootstrapIo.makeDir) {
+    Fn(params=path) {
+      Block {
+        Return {
+          Call(target=sys.fs.dir.create) { Var(name=path) }
+        }
+      }
+    }
+  }
+
+  Let(name=bootstrapIo.writeFile) {
+    Fn(params=path,text) {
+      Block {
+        Return {
+          Call(target=sys.fs.file.write) {
+            Var(name=path)
+            Call(target=bytes.fromUtf8String) { Var(name=text) }
+          }
+        }
+      }
+    }
+  }
+}

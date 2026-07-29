@@ -1,0 +1,49 @@
+Program {
+  Import(path="target_packages.aos")
+
+  Export(name=runDoctor)
+
+  Let(name=runDoctor) {
+    Fn(params=args) {
+      Block {
+        Let(name=path) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
+        Let(name=target) { Call(target=readOption) { Var(name=args) Lit(value=2) Lit(value="--target") Lit(value="") } }
+        If {
+          Eq { Var(name=target) Lit(value="") }
+          Block {
+            Call(target=sys.stdout.writeLine) { Lit(value="Usage: ailang doctor <project-dir> --target <target>") }
+            Return { Lit(value=1) }
+          }
+          Block {
+            Let(name=tool) { Call(target=targetRequiredTool) { Var(name=target) Lit(value="run") } }
+            If {
+              Eq { Var(name=tool) Lit(value="") }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"doctor-check-ok\")") }
+                Return { Lit(value=0) }
+              }
+              Block {
+                Let(name=command) { Call(target=targetRequiredCommand) { Var(name=target) Lit(value="run") } }
+                Let(name=packageName) { Call(target=targetPackageName) { Var(name=target) Var(name=path) } }
+                Let(name=handle) { Call(target=sys.process.spawn) { Lit(value="which") MakeBlock { MakeLitString { Lit(value="arg0") Var(name=command) } } Lit(value="") MakeBlock {} } }
+                Let(name=code) { Call(target=sys.process.wait) { Var(name=handle) } }
+                If {
+                  Eq { Var(name=code) Lit(value=0) }
+                  Block {
+                    Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"doctor-check-ok\")") }
+                    Return { Lit(value=0) }
+                  }
+                  Block {
+                    Let(name=message) { Call(target=targetMissingRequirementDiagnostic) { Var(name=packageName) Var(name=target) Lit(value="run") Var(name=tool) Var(name=command) } }
+                    Call(target=sys.stdout.writeLine) { Var(name=message) }
+                    Return { Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1594 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Import(path="parser/token_cursor.aos")
+  Import(path="parser/attribute_values.aos")
+
+  Let(name=parse.charAt) {
+    Fn(params=text,index) {
+      Block {
+        Return {
+          Call(target=substring) {
+            Var(name=text)
+            Var(name=index)
+            Lit(value=1)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isWhitespace) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value=" ") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="
+") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="\t") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="\r") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.skipWhitespace) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Var(name=index) } }
+          Block {
+            If {
+              Call(target=parse.isWhitespace) { Var(name=ch) }
+              Block {
+                Return {
+                  Call(target=parse.skipWhitespace) {
+                    Var(name=text)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+              Block { Return { Var(name=index) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isDelimiter) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Call(target=parse.isWhitespace) { Var(name=ch) }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="#") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="(") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value=")") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="{") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="}") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="=") }
+          Block { Return { Lit(value=true) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=ch) Lit(value="\"") }
+          Block { Return { Lit(value=true) } }
+          Block { Return { Lit(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.earlierFoundIndex) {
+    Fn(params=current,candidate) {
+      Block {
+        If {
+          Eq { Var(name=candidate) Lit(value=-1) }
+          Block { Return { Var(name=current) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=current) Lit(value=-1) }
+          Block { Return { Var(name=candidate) } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Lt { Var(name=candidate) Var(name=current) }
+          Block { Return { Var(name=candidate) } }
+          Block { Return { Var(name=current) } }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readNameEnd) {
+    Fn(params=text,index) {
+      Block {
+        Return { Call(target=parseCursor.readNameEnd) { Var(name=text) Var(name=index) } }
+      }
+    }
+  }
+
+  Let(name=parse.readNameText) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=end) { Call(target=parse.readNameEnd) { Var(name=text) Var(name=index) } }
+        Return {
+          Call(target=substring) {
+            Var(name=text)
+            Var(name=index)
+            Sub { Var(name=end) Var(name=index) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readStringEnd) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=quoteIndex) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=34) } Var(name=index) } }
+        Let(name=escapeIndex) { StringFind { Var(name=text) StringFromCodePoint { Lit(value=92) } Var(name=index) } }
+        If {
+          Eq { Var(name=quoteIndex) Lit(value=-1) }
+          Block { Return { StringScalarLength { Var(name=text) } } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=escapeIndex) Lit(value=-1) }
+          Block { Return { Add { Var(name=quoteIndex) Lit(value=1) } } }
+          Block { Lit(value=0) }
+        }
+        If {
+          Lt { Var(name=quoteIndex) Var(name=escapeIndex) }
+          Block { Return { Add { Var(name=quoteIndex) Lit(value=1) } } }
+          Block { Lit(value=0) }
+        }
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Var(name=index) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block { Return { Add { Var(name=index) Lit(value=1) } } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\\") }
+                  Block {
+                    Return {
+                      Call(target=parse.readStringEnd) {
+                        Var(name=text)
+                        Add { Var(name=index) Lit(value=2) }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=parse.readStringEnd) {
+                        Var(name=text)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readEscapedStringText) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block { Return { Lit(value="") } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="\\") }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Call(target=parse.decodeEscape) {
+                          Call(target=parse.charAt) {
+                            Var(name=text)
+                            Add { Var(name=index) Lit(value=1) }
+                          }
+                        }
+                        Call(target=parse.readEscapedStringText) {
+                          Var(name=text)
+                          Add { Var(name=index) Lit(value=2) }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      StrConcat {
+                        Var(name=ch)
+                        Call(target=parse.readEscapedStringText) {
+                          Var(name=text)
+                          Add { Var(name=index) Lit(value=1) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readStringTextAtEnd) {
+    Fn(params=text,index,end) {
+      Block {
+        If {
+          Eq { Var(name=end) Var(name=index) }
+          Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+          Block {
+            Let(name=closingIndex) { Sub { Var(name=end) Lit(value=1) } }
+            If {
+              Eq {
+                Call(target=parse.charAt) { Var(name=text) Var(name=closingIndex) }
+                Lit(value="\"")
+              }
+              Block {
+                Let(name=raw) {
+                  Call(target=substring) {
+                    Var(name=text)
+                    Var(name=index)
+                    Sub { Var(name=closingIndex) Var(name=index) }
+                  }
+                }
+                If {
+                  Eq {
+                    Call(target=find) { Var(name=raw) Lit(value="\\") Lit(value=0) }
+                    Lit(value=-1)
+                  }
+                  Block { Return { Var(name=raw) } }
+                  Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+                }
+              }
+              Block { Return { Call(target=parse.readEscapedStringText) { Var(name=text) Var(name=index) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.readStringText) {
+    Fn(params=text,index) {
+      Block {
+        Return {
+          Call(target=parse.readStringTextAtEnd) {
+            Var(name=text)
+            Var(name=index)
+            Call(target=parse.readStringEnd) { Var(name=text) Var(name=index) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.decodeEscape) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="n") }
+          Block { Return { Lit(value="
+") } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="t") }
+              Block { Return { Lit(value="\t") } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="r") }
+                  Block { Return { Lit(value="\r") } }
+                  Block { Return { Var(name=ch) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeToken) {
+    Fn(params=kind,value,nextIndex) {
+      Block {
+        Return {
+          MakePair {
+            MakePair {
+              Var(name=kind)
+              Var(name=value)
+            }
+            Var(name=nextIndex)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.tokenFields) {
+    Fn(params=token) {
+      Block {
+        Return {
+          PairFirst {
+            Var(name=token)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.tokenKind) {
+    Fn(params=token) {
+      Block {
+        Return {
+          PairFirst {
+            Call(target=parse.tokenFields) {
+              Var(name=token)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.tokenValue) {
+    Fn(params=token) {
+      Block {
+        Return {
+          PairSecond {
+            Call(target=parse.tokenFields) {
+              Var(name=token)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.tokenNext) {
+    Fn(params=token) {
+      Block {
+        Return {
+          PairSecond {
+            Var(name=token)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.nextSymbolToken) {
+    Fn(params=ch,index) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="#") }
+          Block { Return { Call(target=parse.makeToken) { Lit(value="hash") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="{") }
+              Block { Return { Call(target=parse.makeToken) { Lit(value="lbrace") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="}") }
+                  Block { Return { Call(target=parse.makeToken) { Lit(value="rbrace") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="(") }
+                      Block { Return { Call(target=parse.makeToken) { Lit(value="lparen") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value=")") }
+                          Block { Return { Call(target=parse.makeToken) { Lit(value="rparen") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="=") }
+                              Block { Return { Call(target=parse.makeToken) { Lit(value="equals") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                              Block { Return { Call(target=parse.makeToken) { Lit(value="quote") Var(name=ch) Add { Var(name=index) Lit(value=1) } } } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.nextToken) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=start) { Call(target=parse.skipWhitespace) { Var(name=text) Var(name=index) } }
+        Let(name=ch) { Call(target=parse.charAt) { Var(name=text) Var(name=start) } }
+        If {
+          Eq { Var(name=ch) Lit(value="") }
+          Block { Return { Call(target=parse.makeToken) { Lit(value="eof") Lit(value="") Var(name=start) } } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="\"") }
+              Block {
+                Let(name=stringStart) { Add { Var(name=start) Lit(value=1) } }
+                Let(name=stringEnd) {
+                  Call(target=parse.readStringEnd) { Var(name=text) Var(name=stringStart) }
+                }
+                Return {
+                  Call(target=parse.makeToken) {
+                    Lit(value="string")
+                    Call(target=parse.readStringTextAtEnd) {
+                      Var(name=text)
+                      Var(name=stringStart)
+                      Var(name=stringEnd)
+                    }
+                    Var(name=stringEnd)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Call(target=parse.isDelimiter) { Var(name=ch) }
+                  Block { Return { Call(target=parse.nextSymbolToken) { Var(name=ch) Var(name=start) } } }
+                  Block {
+                    Return {
+                      Call(target=parse.makeToken) {
+                        Lit(value="name")
+                        Call(target=parse.readNameText) { Var(name=text) Var(name=start) }
+                        Call(target=parse.readNameEnd) { Var(name=text) Var(name=start) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseEmptyNode) {
+    Fn(params=text) {
+      Block {
+        Let(name=kindToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Lit(value=0)
+          }
+        }
+        Let(name=hashToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=kindToken) }
+          }
+        }
+        Let(name=idToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=hashToken) }
+          }
+        }
+        Return {
+          MakeNode {
+            Call(target=parse.tokenValue) { Var(name=kindToken) }
+            Call(target=parse.tokenValue) { Var(name=idToken) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseNodeWithNameAttr) {
+    Fn(params=text) {
+      Block {
+        Return {
+          Call(target=parse.parseNodeWithNameAttrAt) {
+            Var(name=text)
+            Lit(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeAttrLit) {
+    Fn(params=keyToken,valueToken) {
+      Block {
+        If {
+          Call(target=parse.isBooleanAttributeToken) {
+            Var(name=valueToken) Lit(value="true")
+          }
+          Block {
+            Return {
+              MakeLitBool {
+                Call(target=parse.tokenValue) { Var(name=keyToken) }
+                Lit(value=true)
+              }
+            }
+          }
+          Block {
+            If {
+              Call(target=parse.isBooleanAttributeToken) {
+                Var(name=valueToken) Lit(value="false")
+              }
+              Block {
+                Return {
+                  MakeLitBool {
+                    Call(target=parse.tokenValue) { Var(name=keyToken) }
+                    Lit(value=false)
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=valueToken) }
+                    Lit(value="name")
+                  }
+                  Block {
+                    If {
+                      Call(target=parse.isIntToken) { Var(name=valueToken) }
+                      Block {
+                        Return {
+                          MakeLitInt {
+                            Call(target=parse.tokenValue) { Var(name=keyToken) }
+                            Call(target=parse.parseIntToken) { Var(name=valueToken) }
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          MakeLitString {
+                            Call(target=parse.tokenValue) { Var(name=keyToken) }
+                            Call(target=parse.tokenValue) { Var(name=valueToken) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      MakeLitString {
+                        Call(target=parse.tokenValue) { Var(name=keyToken) }
+                        Call(target=parse.tokenValue) { Var(name=valueToken) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isIntToken) {
+    Fn(params=token) {
+      Block {
+        Let(name=value) { Call(target=parse.tokenValue) { Var(name=token) } }
+        Let(name=first) { Call(target=parse.charAt) { Var(name=value) Lit(value=0) } }
+        If {
+          Call(target=parse.isDigit) { Var(name=first) }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=first) Lit(value="-") }
+              Block {
+                Return {
+                  Call(target=parse.isDigit) {
+                    Call(target=parse.charAt) {
+                      Var(name=value)
+                      Lit(value=1)
+                    }
+                  }
+                }
+              }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isDigit) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="0") }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="1") }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="2") }
+                  Block { Return { Lit(value=true) } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="3") }
+                      Block { Return { Lit(value=true) } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="4") }
+                          Block { Return { Lit(value=true) } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="5") }
+                              Block { Return { Lit(value=true) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=ch) Lit(value="6") }
+                                  Block { Return { Lit(value=true) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=ch) Lit(value="7") }
+                                      Block { Return { Lit(value=true) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=ch) Lit(value="8") }
+                                          Block { Return { Lit(value=true) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=ch) Lit(value="9") }
+                                              Block { Return { Lit(value=true) } }
+                                              Block { Return { Lit(value=false) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.digitValue) {
+    Fn(params=ch) {
+      Block {
+        If {
+          Eq { Var(name=ch) Lit(value="0") }
+          Block { Return { Lit(value=0) } }
+          Block {
+            If {
+              Eq { Var(name=ch) Lit(value="1") }
+              Block { Return { Lit(value=1) } }
+              Block {
+                If {
+                  Eq { Var(name=ch) Lit(value="2") }
+                  Block { Return { Lit(value=2) } }
+                  Block {
+                    If {
+                      Eq { Var(name=ch) Lit(value="3") }
+                      Block { Return { Lit(value=3) } }
+                      Block {
+                        If {
+                          Eq { Var(name=ch) Lit(value="4") }
+                          Block { Return { Lit(value=4) } }
+                          Block {
+                            If {
+                              Eq { Var(name=ch) Lit(value="5") }
+                              Block { Return { Lit(value=5) } }
+                              Block {
+                                If {
+                                  Eq { Var(name=ch) Lit(value="6") }
+                                  Block { Return { Lit(value=6) } }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=ch) Lit(value="7") }
+                                      Block { Return { Lit(value=7) } }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=ch) Lit(value="8") }
+                                          Block { Return { Lit(value=8) } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=ch) Lit(value="9") }
+                                              Block { Return { Lit(value=9) } }
+                                              Block { Return { Lit(value=0) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.mul10) {
+    Fn(params=value) {
+      Block {
+        Let(name=two) { Add { Var(name=value) Var(name=value) } }
+        Let(name=four) { Add { Var(name=two) Var(name=two) } }
+        Let(name=eight) { Add { Var(name=four) Var(name=four) } }
+        Return { Add { Var(name=eight) Var(name=two) } }
+      }
+    }
+  }
+
+  Let(name=parse.parseIntText) {
+    Fn(params=text,index,end,acc) {
+      Block {
+        If {
+          Eq { Var(name=index) Var(name=end) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=parse.parseIntText) {
+                Var(name=text)
+                Add { Var(name=index) Lit(value=1) }
+                Var(name=end)
+                Add {
+                  Call(target=parse.mul10) { Var(name=acc) }
+                  Call(target=parse.digitValue) {
+                    Call(target=parse.charAt) { Var(name=text) Var(name=index) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.negateInt) {
+    Fn(params=value,acc) {
+      Block {
+        If {
+          Eq { Var(name=value) Lit(value=0) }
+          Block { Return { Var(name=acc) } }
+          Block {
+            Return {
+              Call(target=parse.negateInt) {
+                Add { Var(name=value) Lit(value=-1) }
+                Add { Var(name=acc) Lit(value=-1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseIntToken) {
+    Fn(params=token) {
+      Block {
+        Return {
+          Call(target=parse.parseIntValue) {
+            Call(target=parse.tokenValue) { Var(name=token) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseIntValue) {
+    Fn(params=value) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.charAt) { Var(name=value) Lit(value=0) }
+            Lit(value="-")
+          }
+          Block {
+            Return {
+              Call(target=parse.negateInt) {
+                Call(target=parse.parseIntText) {
+                  Var(name=value)
+                  Lit(value=1)
+                  Call(target=parse.readNameEnd) { Var(name=value) Lit(value=0) }
+                  Lit(value=0)
+                }
+                Lit(value=0)
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=parse.parseIntText) {
+                Var(name=value)
+                Lit(value=0)
+                Call(target=parse.readNameEnd) { Var(name=value) Lit(value=0) }
+                Lit(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseNodeWithNameAttrAt) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        Let(name=hashToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+        Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=hashToken) } } }
+        Let(name=lparenToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+        Return {
+          Call(target=parse.resultNode) {
+            Call(target=parse.parseAttrNodeFromTokens) {
+              Var(name=text)
+              Var(name=kindToken)
+              Var(name=idToken)
+              Var(name=lparenToken)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseProgramWithOneChild) {
+    Fn(params=text) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Lit(value=0) } }
+        Let(name=hashToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+        Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=hashToken) } } }
+        Let(name=lbraceToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+        Return {
+          FinishNodeBuilder {
+            BuilderAppendChild {
+              MakeNodeBuilder {
+                Call(target=parse.tokenValue) { Var(name=kindToken) }
+                Call(target=parse.tokenValue) { Var(name=idToken) }
+              }
+              Call(target=parse.parseNodeWithNameAttrAt) {
+                Var(name=text)
+                Call(target=parse.tokenNext) { Var(name=lbraceToken) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeResult) {
+    Fn(params=node,nextIndex) {
+      Block {
+        Return {
+          MakePair {
+            Var(name=node)
+            Var(name=nextIndex)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.finishNodeResult) {
+    Fn(params=result) {
+      Block {
+        If {
+          Eq {
+            ValueKind { Call(target=parse.resultNode) { Var(name=result) } }
+            Lit(value="node")
+          }
+          Block { Return { Var(name=result) } }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                FinishNodeBuilder { Call(target=parse.resultNode) { Var(name=result) } }
+                Call(target=parse.resultNext) { Var(name=result) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.resultNode) {
+    Fn(params=result) {
+      Block {
+        Return {
+          PairFirst {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.resultNext) {
+    Fn(params=result) {
+      Block {
+        Return {
+          PairSecond {
+            Var(name=result)
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.makeSyntheticId) {
+    Fn(params=kindToken) {
+      Block {
+        Return {
+          StrConcat {
+            StrConcat {
+              Call(target=parse.tokenValue) { Var(name=kindToken) }
+              Lit(value="_")
+            }
+            ToString {
+              Call(target=parse.tokenNext) { Var(name=kindToken) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseNodeAt) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=kindToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=kindToken) }
+            Lit(value="eof")
+          }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                MakeErr {
+                  Lit(value="parse_eof")
+                  Lit(value="PARSE001")
+                  Lit(value="Unexpected end of input.")
+                  Lit(value="parser")
+                }
+                Call(target=parse.tokenNext) { Var(name=kindToken) }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=kindToken) }
+                Lit(value="name")
+              }
+              Block {
+                Let(name=lookaheadToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=kindToken) } } }
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                    Lit(value="lparen")
+                  }
+                  Block {
+                    Return {
+                      Call(target=parse.parseAttrNodeFromTokens) {
+                        Var(name=text)
+                        Var(name=kindToken)
+                        Call(target=parse.makeToken) {
+                          Lit(value="name")
+                          Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
+                          Call(target=parse.tokenNext) { Var(name=kindToken) }
+                        }
+                        Var(name=lookaheadToken)
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq {
+                        Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                        Lit(value="lbrace")
+                      }
+                      Block {
+                        Return {
+                          Call(target=parse.parseChildrenInto) {
+                            Var(name=text)
+                            Call(target=parse.tokenNext) { Var(name=lookaheadToken) }
+                            MakeNodeBuilder {
+                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                              Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
+                            }
+                          }
+                        }
+                      }
+                      Block {
+                        If {
+                          Eq {
+                            Call(target=parse.tokenKind) { Var(name=lookaheadToken) }
+                            Lit(value="hash")
+                          }
+                          Block {
+                            Let(name=idToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=lookaheadToken) } } }
+                            If {
+                              Eq {
+                                Call(target=parse.tokenKind) { Var(name=idToken) }
+                                Lit(value="name")
+                              }
+                              Block {
+                                Let(name=afterIdToken) { Call(target=parse.nextToken) { Var(name=text) Call(target=parse.tokenNext) { Var(name=idToken) } } }
+                                If {
+                                  Eq {
+                                    Call(target=parse.tokenKind) { Var(name=afterIdToken) }
+                                    Lit(value="lparen")
+                                  }
+                                  Block {
+                                    Return {
+                                      Call(target=parse.parseAttrNodeFromTokens) {
+                                        Var(name=text)
+                                        Var(name=kindToken)
+                                        Var(name=idToken)
+                                        Var(name=afterIdToken)
+                                      }
+                                    }
+                                  }
+                                  Block {
+                                    If {
+                                      Eq {
+                                        Call(target=parse.tokenKind) { Var(name=afterIdToken) }
+                                        Lit(value="lbrace")
+                                      }
+                                      Block {
+                                        Return {
+                                          Call(target=parse.parseChildrenInto) {
+                                            Var(name=text)
+                                            Call(target=parse.tokenNext) { Var(name=afterIdToken) }
+                                            MakeNodeBuilder {
+                                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                              Call(target=parse.tokenValue) { Var(name=idToken) }
+                                            }
+                                          }
+                                        }
+                                      }
+                                      Block {
+                                        Return {
+                                          Call(target=parse.makeResult) {
+                                            MakeNode {
+                                              Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                              Call(target=parse.tokenValue) { Var(name=idToken) }
+                                            }
+                                            Call(target=parse.tokenNext) { Var(name=idToken) }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                              Block {
+                                Return {
+                                  Call(target=parse.makeResult) {
+                                    MakeErr {
+                                      Lit(value="parse_node_id")
+                                      Lit(value="PARSE007")
+                                      Lit(value="Expected node id after '#'.")
+                                      Lit(value="parser")
+                                    }
+                                    Call(target=parse.tokenNext) { Var(name=idToken) }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          Block {
+                            Return {
+                              Call(target=parse.makeResult) {
+                                MakeNode {
+                                  Call(target=parse.tokenValue) { Var(name=kindToken) }
+                                  Call(target=parse.makeSyntheticId) { Var(name=kindToken) }
+                                }
+                                Call(target=parse.tokenNext) { Var(name=kindToken) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_node_start")
+                      Lit(value="PARSE005")
+                      Lit(value="Expected node kind.")
+                      Lit(value="parser")
+                    }
+                    Call(target=parse.tokenNext) { Var(name=kindToken) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseAttrNodeFromTokens) {
+    Fn(params=text,kindToken,idToken,lparenToken) {
+      Block {
+        Let(name=attrResult) {
+          Call(target=parse.parseAttrsInto) {
+            Var(name=text)
+            Call(target=parse.tokenNext) { Var(name=lparenToken) }
+            MakeNodeBuilder {
+              Call(target=parse.tokenValue) { Var(name=kindToken) }
+              Call(target=parse.tokenValue) { Var(name=idToken) }
+            }
+          }
+        }
+        Let(name=afterAttrsToken) {
+          Call(target=parse.nextToken) {
+            Var(name=text)
+            Call(target=parse.resultNext) { Var(name=attrResult) }
+          }
+        }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=afterAttrsToken) }
+            Lit(value="lbrace")
+          }
+          Block {
+            Return {
+              Call(target=parse.parseChildrenInto) {
+                Var(name=text)
+                Call(target=parse.tokenNext) { Var(name=afterAttrsToken) }
+                Call(target=parse.resultNode) { Var(name=attrResult) }
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=parse.finishNodeResult) { Var(name=attrResult) }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isAttrListUnexpectedEndToken) {
+    Fn(params=token) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=token) }
+            Lit(value="eof")
+          }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=token) }
+                Lit(value="rbrace")
+              }
+              Block { Return { Lit(value=true) } }
+              Block { Return { Lit(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.isAttrValueMissingToken) {
+    Fn(params=token) {
+      Block {
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=token) }
+            Lit(value="eof")
+          }
+          Block { Return { Lit(value=true) } }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=token) }
+                Lit(value="rparen")
+              }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=token) }
+                    Lit(value="rbrace")
+                  }
+                  Block { Return { Lit(value=true) } }
+                  Block { Return { Lit(value=false) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseAttrsInto) {
+    Fn(params=text,index,node) {
+      Block {
+        Let(name=nextToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=nextToken) }
+            Lit(value="rparen")
+          }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                Var(name=node)
+                Call(target=parse.tokenNext) { Var(name=nextToken) }
+              }
+            }
+          }
+          Block {
+            If {
+              Call(target=parse.isAttrListUnexpectedEndToken) { Var(name=nextToken) }
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_attr")
+                      Lit(value="PARSE002")
+                      Lit(value="Expected attribute or ')'.")
+                      Lit(value="parser")
+                    }
+                    Call(target=parse.tokenNext) { Var(name=nextToken) }
+                  }
+                }
+              }
+              Block {
+                If {
+                  Eq {
+                    Call(target=parse.tokenKind) { Var(name=nextToken) }
+                    Lit(value="name")
+                  }
+                  Block {
+                    Let(name=equalsToken) {
+                      Call(target=parse.nextToken) {
+                        Var(name=text)
+                        Call(target=parse.tokenNext) { Var(name=nextToken) }
+                      }
+                    }
+                    If {
+                      Eq {
+                        Call(target=parse.tokenKind) { Var(name=equalsToken) }
+                        Lit(value="equals")
+                      }
+                      Block {
+                        Let(name=valueToken) {
+                          Call(target=parse.nextToken) {
+                            Var(name=text)
+                            Call(target=parse.tokenNext) { Var(name=equalsToken) }
+                          }
+                        }
+                        If {
+                          Call(target=parse.isAttrValueMissingToken) { Var(name=valueToken) }
+                          Block {
+                            Return {
+                              Call(target=parse.makeResult) {
+                                MakeErr {
+                                  Lit(value="parse_attr_value")
+                                  Lit(value="PARSE004")
+                                  Lit(value="Expected attribute value.")
+                                  Lit(value="parser")
+                                }
+                                Call(target=parse.tokenNext) { Var(name=valueToken) }
+                              }
+                            }
+                          }
+                          Block {
+                            Return {
+                              Call(target=parse.parseAttrsInto) {
+                                Var(name=text)
+                                Call(target=parse.tokenNext) { Var(name=valueToken) }
+                                BuilderAppendAttr {
+                                  Var(name=node)
+                                  Call(target=parse.makeAttrLit) {
+                                    Var(name=nextToken)
+                                    Var(name=valueToken)
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      Block {
+                        Return {
+                          Call(target=parse.makeResult) {
+                            MakeErr {
+                              Lit(value="parse_attr_equals")
+                              Lit(value="PARSE003")
+                              Lit(value="Expected '=' after attribute name.")
+                              Lit(value="parser")
+                            }
+                            Call(target=parse.tokenNext) { Var(name=equalsToken) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block {
+                    Return {
+                      Call(target=parse.makeResult) {
+                        MakeErr {
+                          Lit(value="parse_attr_key")
+                          Lit(value="PARSE008")
+                          Lit(value="Expected attribute name.")
+                          Lit(value="parser")
+                        }
+                        Call(target=parse.tokenNext) { Var(name=nextToken) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseChildrenInto) {
+    Fn(params=text,index,parent) {
+      Block {
+        Let(name=nextToken) { Call(target=parse.nextToken) { Var(name=text) Var(name=index) } }
+        If {
+          Eq {
+            Call(target=parse.tokenKind) { Var(name=nextToken) }
+            Lit(value="rbrace")
+          }
+          Block {
+            Return {
+              Call(target=parse.makeResult) {
+                FinishNodeBuilder { Var(name=parent) }
+                Call(target=parse.tokenNext) { Var(name=nextToken) }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=nextToken) }
+                Lit(value="eof")
+              }
+              Block {
+                Return {
+                  Call(target=parse.makeResult) {
+                    MakeErr {
+                      Lit(value="parse_children_eof")
+                      Lit(value="PARSE006")
+                      Lit(value="Expected '}' before end of input.")
+                      Lit(value="parser")
+                    }
+                    Call(target=parse.tokenNext) { Var(name=nextToken) }
+                  }
+                }
+              }
+              Block {
+                Let(name=childResult) {
+                  Call(target=parse.parseNodeAt) {
+                    Var(name=text)
+                    Var(name=index)
+                  }
+                }
+                If {
+                  Eq {
+                    NodeKind {
+                      Call(target=parse.resultNode) { Var(name=childResult) }
+                    }
+                    Lit(value="Err")
+                  }
+                  Block { Return { Var(name=childResult) } }
+                  Block {
+                    Return {
+                      Call(target=parse.parseChildrenInto) {
+                        Var(name=text)
+                        Call(target=parse.resultNext) { Var(name=childResult) }
+                        BuilderAppendChild {
+                          Var(name=parent)
+                          Call(target=parse.resultNode) { Var(name=childResult) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseNode) {
+    Fn(params=text) {
+      Block {
+        Return {
+          Call(target=parse.resultNode) {
+            Call(target=parse.parseNodeAt) {
+              Var(name=text)
+              Lit(value=0)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parse.parseDocument) {
+    Fn(params=text) {
+      Block {
+        Let(name=rootResult) {
+          Call(target=parse.parseNodeAt) {
+            Var(name=text)
+            Lit(value=0)
+          }
+        }
+        Let(name=rootNode) {
+          Call(target=parse.resultNode) {
+            Var(name=rootResult)
+          }
+        }
+        If {
+          Eq {
+            NodeKind { Var(name=rootNode) }
+            Lit(value="Err")
+          }
+          Block { Return { Var(name=rootNode) } }
+          Block {
+            Let(name=afterRootToken) {
+              Call(target=parse.nextToken) {
+                Var(name=text)
+                Call(target=parse.resultNext) {
+                  Var(name=rootResult)
+                }
+              }
+            }
+            If {
+              Eq {
+                Call(target=parse.tokenKind) { Var(name=afterRootToken) }
+                Lit(value="eof")
+              }
+              Block { Return { Var(name=rootNode) } }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="parse_trailing_input")
+                    Lit(value="PARSE009")
+                    Lit(value="Unexpected trailing input after root node.")
+                    Lit(value="parser")
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Export(name=parse.charAt)
+  Export(name=parse.isWhitespace)
+  Export(name=parse.skipWhitespace)
+  Export(name=parse.isDelimiter)
+  Export(name=parse.readNameEnd)
+  Export(name=parse.readNameText)
+  Export(name=parse.readStringEnd)
+  Export(name=parse.readStringText)
+  Export(name=parse.decodeEscape)
+  Export(name=parse.makeToken)
+  Export(name=parse.tokenKind)
+  Export(name=parse.tokenValue)
+  Export(name=parse.tokenNext)
+  Export(name=parse.nextToken)
+  Export(name=parse.parseEmptyNode)
+  Export(name=parse.parseNodeWithNameAttr)
+  Export(name=parse.makeAttrLit)
+  Export(name=parse.isIntToken)
+  Export(name=parse.isDigit)
+  Export(name=parse.digitValue)
+  Export(name=parse.mul10)
+  Export(name=parse.parseIntText)
+  Export(name=parse.negateInt)
+  Export(name=parse.parseIntToken)
+  Export(name=parse.parseIntValue)
+  Export(name=parse.parseProgramWithOneChild)
+  Export(name=parse.parseNode)
+  Export(name=parse.parseDocument)
+}

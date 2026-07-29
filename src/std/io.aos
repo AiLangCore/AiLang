@@ -1,26 +1,57 @@
-Program#std_io_p1 {
-  Let#std_io_l1(name=print) {
-    Fn#std_io_f1(params=value) {
-      Block#std_io_b1 {
-        Return#std_io_r1 {
-          Call#std_io_c1(target=io.print) { Var#std_io_v1(name=value) }
+Program {
+  Let(name=write) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=sys.console.write) { Var(name=value) }
         }
       }
     }
   }
 
-  Let#std_io_l2(name=println) {
-    Fn#std_io_f2(params=value) {
-      Block#std_io_b2 {
-        Return#std_io_r2 {
-          Call#std_io_c2(target=io.print) {
-            StrConcat#std_io_s1 { Var#std_io_v2(name=value) Lit#std_io_i1(value="\n") }
-          }
+  Let(name=writeLine) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=sys.console.writeLine) { Var(name=value) }
         }
       }
     }
   }
 
-  Export#std_io_e1(name=print)
-  Export#std_io_e2(name=println)
+  Let(name=writeErrLine) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=sys.console.writeErrLine) { Var(name=value) }
+        }
+      }
+    }
+  }
+
+  Let(name=print) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=writeLine) { Var(name=value) }
+        }
+      }
+    }
+  }
+
+  Let(name=println) {
+    Fn(params=value) {
+      Block {
+        Return {
+          Call(target=writeLine) { Var(name=value) }
+        }
+      }
+    }
+  }
+
+  Export(name=write)
+  Export(name=writeLine)
+  Export(name=writeErrLine)
+  Export(name=print)
+  Export(name=println)
 }

@@ -1,0 +1,461 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${ROOT_DIR}"
+
+TMP_DIR="${ROOT_DIR}/.tmp/parser-selfhost"
+rm -rf "${TMP_DIR}"
+mkdir -p "${TMP_DIR}"
+
+cat > "${TMP_DIR}/app.aos" <<'AOS'
+Program#test_p1 {
+  Import#test_i1(path="../../src/compiler/parser.aos")
+  Import#test_i2(path="../../src/std/bytes.aos")
+  Export#test_e1(name=start)
+
+  Let#test_l1(name=fail) {
+    Fn#test_f1(params=message) {
+      Block#test_b1 {
+        Call#test_c1(target=sys.stdout.writeLine) { Var#test_v1(name=message) }
+        Return#test_r1 { Lit#test_i1(value=1) }
+      }
+    }
+  }
+
+  Let#test_l2(name=start) {
+    Fn#test_f2(params=args) {
+      Block#test_b2 {
+        Let#test_l3(name=sample) { Lit#test_i2(value="   Name#node") }
+        Let#test_l4(name=startIndex) { Call#test_c2(target=parse.skipWhitespace) { Var#test_v2(name=sample) Lit#test_i3(value=0) } }
+        If#test_if1 {
+          Eq#test_e2 { Var#test_v3(name=startIndex) Lit#test_i4(value=3) }
+          Block#test_b3 { Lit#test_i5(value=0) }
+          Block#test_b4 { Return#test_r2 { Call#test_c3(target=fail) { Lit#test_i6(value="skipWhitespace failed") } } }
+        }
+        Let#test_l5(name=endIndex) { Call#test_c4(target=parse.readNameEnd) { Var#test_v4(name=sample) Var#test_v5(name=startIndex) } }
+        If#test_if2 {
+          Eq#test_e3 { Var#test_v6(name=endIndex) Lit#test_i7(value=7) }
+          Block#test_b5 { Lit#test_i8(value=0) }
+          Block#test_b6 { Return#test_r3 { Call#test_c5(target=fail) { Lit#test_i9(value="readNameEnd failed") } } }
+        }
+        If#test_if3 {
+          Call#test_c6(target=parse.isDelimiter) { Call#test_c7(target=parse.charAt) { Var#test_v7(name=sample) Var#test_v8(name=endIndex) } }
+          Block#test_b7 { Lit#test_i10(value=0) }
+          Block#test_b8 { Return#test_r4 { Call#test_c8(target=fail) { Lit#test_i11(value="delimiter failed") } } }
+        }
+        Let#test_l6(name=tok1) { Call#test_c9(target=parse.nextToken) { Var#test_v9(name=sample) Lit#test_i12(value=0) } }
+        If#test_if4 {
+          Eq#test_e4 { Call#test_c10(target=parse.tokenKind) { Var#test_v10(name=tok1) } Lit#test_i13(value="name") }
+          Block#test_b9 { Lit#test_i14(value=0) }
+          Block#test_b10 { Return#test_r5 { Call#test_c11(target=fail) { Lit#test_i15(value="token kind failed") } } }
+        }
+        If#test_if5 {
+          Eq#test_e5 { Call#test_c12(target=parse.tokenValue) { Var#test_v11(name=tok1) } Lit#test_i16(value="Name") }
+          Block#test_b11 { Lit#test_i17(value=0) }
+          Block#test_b12 { Return#test_r6 { Call#test_c13(target=fail) { Lit#test_i18(value="token value failed") } } }
+        }
+        Let#test_l7(name=tok2) { Call#test_c14(target=parse.nextToken) { Var#test_v12(name=sample) Call#test_c15(target=parse.tokenNext) { Var#test_v13(name=tok1) } } }
+        If#test_if6 {
+          Eq#test_e6 { Call#test_c16(target=parse.tokenKind) { Var#test_v14(name=tok2) } Lit#test_i19(value="hash") }
+          Block#test_b13 { Lit#test_i20(value=0) }
+          Block#test_b14 { Return#test_r7 { Call#test_c17(target=fail) { Lit#test_i21(value="symbol token failed") } } }
+        }
+        Let#test_l8(name=programNode) { Call#test_c18(target=parse.parseEmptyNode) { Lit#test_i22(value="Program#p1 { }") } }
+        If#test_if7 {
+          Eq#test_e7 { NodeKind#test_nk1 { Var#test_v15(name=programNode) } Lit#test_i23(value="Program") }
+          Block#test_b15 { Lit#test_i24(value=0) }
+          Block#test_b16 { Return#test_r8 { Call#test_c19(target=fail) { Lit#test_i25(value="node kind failed") } } }
+        }
+        If#test_if8 {
+          Eq#test_e8 { NodeId#test_nid1 { Var#test_v16(name=programNode) } Lit#test_i26(value="p1") }
+          Block#test_b17 { Lit#test_i27(value=0) }
+          Block#test_b18 { Return#test_r9 { Call#test_c20(target=fail) { Lit#test_i28(value="node id failed") } } }
+        }
+        Let#test_l9(name=exportNode) { Call#test_c21(target=parse.parseNodeWithNameAttr) { Lit#test_i29(value="Export#e1(name=start)") } }
+        If#test_if9 {
+          Eq#test_e9 { NodeKind#test_nk2 { Var#test_v17(name=exportNode) } Lit#test_i30(value="Export") }
+          Block#test_b19 { Lit#test_i31(value=0) }
+          Block#test_b20 { Return#test_r10 { Call#test_c22(target=fail) { Lit#test_i32(value="attr node kind failed") } } }
+        }
+        If#test_if10 {
+          Eq#test_e10 { AttrCount#test_ac1 { Var#test_v18(name=exportNode) } Lit#test_i33(value=1) }
+          Block#test_b21 { Lit#test_i34(value=0) }
+          Block#test_b22 { Return#test_r11 { Call#test_c23(target=fail) { Lit#test_i35(value="attr count failed") } } }
+        }
+        If#test_if11 {
+          Eq#test_e11 { AttrKey#test_ak1 { Var#test_v19(name=exportNode) Lit#test_i36(value=0) } Lit#test_i37(value="name") }
+          Block#test_b23 { Lit#test_i38(value=0) }
+          Block#test_b24 { Return#test_r12 { Call#test_c24(target=fail) { Lit#test_i39(value="attr key failed") } } }
+        }
+        If#test_if12 {
+          Eq#test_e12 { AttrValueString#test_avs1 { Var#test_v20(name=exportNode) Lit#test_i40(value=0) } Lit#test_i41(value="start") }
+          Block#test_b25 { Lit#test_i42(value=0) }
+          Block#test_b26 { Return#test_r13 { Call#test_c25(target=fail) { Lit#test_i43(value="attr value failed") } } }
+        }
+        Let#test_l10(name=programTree) { Call#test_c26(target=parse.parseProgramWithOneChild) { Lit#test_i44(value="Program#p2 { Export#e2(name=start) }") } }
+        If#test_if13 {
+          Eq#test_e13 { ChildCount#test_cc1 { Var#test_v21(name=programTree) } Lit#test_i45(value=1) }
+          Block#test_b27 { Lit#test_i46(value=0) }
+          Block#test_b28 { Return#test_r14 { Call#test_c27(target=fail) { Lit#test_i47(value="program child count failed") } } }
+        }
+        Let#test_l11(name=childNode) { ChildAt#test_ca1 { Var#test_v22(name=programTree) Lit#test_i48(value=0) } }
+        If#test_if14 {
+          Eq#test_e14 { NodeKind#test_nk3 { Var#test_v23(name=childNode) } Lit#test_i49(value="Export") }
+          Block#test_b29 { Lit#test_i50(value=0) }
+          Block#test_b30 { Return#test_r15 { Call#test_c28(target=fail) { Lit#test_i51(value="program child kind failed") } } }
+        }
+        If#test_if15 {
+          Eq#test_e15 { AttrValueString#test_avs2 { Var#test_v24(name=childNode) Lit#test_i52(value=0) } Lit#test_i53(value="start") }
+          Block#test_b31 { Lit#test_i54(value=0) }
+          Block#test_b32 { Return#test_r16 { Call#test_c29(target=fail) { Lit#test_i55(value="program child attr failed") } } }
+        }
+        Let#test_l12(name=twoChildProgram) {
+          Call#test_c30(target=parse.parseNode) {
+            Lit#test_i56(value="Program#p3 { Export#e3(name=start) Export#e4(name=stop) }")
+          }
+        }
+        If#test_if16 {
+          Eq#test_e16 { ChildCount#test_cc2 { Var#test_v25(name=twoChildProgram) } Lit#test_i57(value=2) }
+          Block#test_b33 { Lit#test_i58(value=0) }
+          Block#test_b34 { Return#test_r17 { Call#test_c31(target=fail) { Lit#test_i59(value="two child count failed") } } }
+        }
+        Let#test_l13(name=secondChild) { ChildAt#test_ca2 { Var#test_v26(name=twoChildProgram) Lit#test_i60(value=1) } }
+        If#test_if17 {
+          Eq#test_e17 { NodeId#test_nid2 { Var#test_v27(name=secondChild) } Lit#test_i61(value="e4") }
+          Block#test_b35 { Lit#test_i62(value=0) }
+          Block#test_b36 { Return#test_r18 { Call#test_c32(target=fail) { Lit#test_i63(value="second child id failed") } } }
+        }
+        If#test_if18 {
+          Eq#test_e18 { AttrValueString#test_avs3 { Var#test_v28(name=secondChild) Lit#test_i64(value=0) } Lit#test_i65(value="stop") }
+          Block#test_b37 { Lit#test_i66(value=0) }
+          Block#test_b38 { Return#test_r19 { Call#test_c33(target=fail) { Lit#test_i67(value="second child attr failed") } } }
+        }
+        Let#test_l14(name=nestedProgram) {
+          Call#test_c34(target=parse.parseNode) {
+            Lit#test_i68(value="Program#p4 { Let#l4 { Export#e5(name=start) } }")
+          }
+        }
+        Let#test_l15(name=letNode) { ChildAt#test_ca3 { Var#test_v29(name=nestedProgram) Lit#test_i69(value=0) } }
+        If#test_if19 {
+          Eq#test_e19 { NodeKind#test_nk4 { Var#test_v30(name=letNode) } Lit#test_i70(value="Let") }
+          Block#test_b39 { Lit#test_i71(value=0) }
+          Block#test_b40 { Return#test_r20 { Call#test_c35(target=fail) { Lit#test_i72(value="nested let kind failed") } } }
+        }
+        If#test_if20 {
+          Eq#test_e20 { ChildCount#test_cc3 { Var#test_v31(name=letNode) } Lit#test_i73(value=1) }
+          Block#test_b41 { Lit#test_i74(value=0) }
+          Block#test_b42 { Return#test_r21 { Call#test_c36(target=fail) { Lit#test_i75(value="nested child count failed") } } }
+        }
+        Let#test_l16(name=nestedExport) { ChildAt#test_ca4 { Var#test_v32(name=letNode) Lit#test_i76(value=0) } }
+        If#test_if21 {
+          Eq#test_e21 { AttrValueString#test_avs4 { Var#test_v33(name=nestedExport) Lit#test_i77(value=0) } Lit#test_i78(value="start") }
+          Block#test_b43 { Lit#test_i79(value=0) }
+          Block#test_b44 { Return#test_r22 { Call#test_c37(target=fail) { Lit#test_i80(value="nested export attr failed") } } }
+        }
+        Let#test_l17(name=quotedToken) {
+          Call#test_c38(target=parse.nextToken) {
+            Lit#test_i81(value="\"./app.aos\"")
+            Lit#test_i82(value=0)
+          }
+        }
+        If#test_if22 {
+          Eq#test_e22 { Call#test_c39(target=parse.tokenKind) { Var#test_v34(name=quotedToken) } Lit#test_i83(value="string") }
+          Block#test_b45 { Lit#test_i84(value=0) }
+          Block#test_b46 { Return#test_r23 { Call#test_c40(target=fail) { Lit#test_i85(value="quoted token kind failed") } } }
+        }
+        If#test_if23 {
+          Eq#test_e23 { Call#test_c41(target=parse.tokenValue) { Var#test_v35(name=quotedToken) } Lit#test_i86(value="./app.aos") }
+          Block#test_b47 { Lit#test_i87(value=0) }
+          Block#test_b48 { Return#test_r24 { Call#test_c42(target=fail) { Lit#test_i88(value="quoted token value failed") } } }
+        }
+        Let#test_l18(name=importNode) {
+          Call#test_c43(target=parse.parseNode) {
+            Lit#test_i89(value="Import#i1(path=\"./app.aos\")")
+          }
+        }
+        If#test_if24 {
+          Eq#test_e24 { AttrValueString#test_avs5 { Var#test_v36(name=importNode) Lit#test_i90(value=0) } Lit#test_i91(value="./app.aos") }
+          Block#test_b49 { Lit#test_i92(value=0) }
+          Block#test_b50 { Return#test_r25 { Call#test_c44(target=fail) { Lit#test_i93(value="quoted attr value failed") } } }
+        }
+        Let#test_l19(name=escapedNode) {
+          Call#test_c45(target=parse.parseNode) {
+            Lit#test_i94(value="Esc#e1(text=\"a\\\"b\")")
+          }
+        }
+        If#test_if25 {
+          Eq#test_e25 { AttrValueString#test_avs9 { Var#test_v37(name=escapedNode) Lit#test_i95(value=0) } Lit#test_i96(value="a\"b") }
+          Block#test_b51 { Lit#test_i97(value=0) }
+          Block#test_b52 { Return#test_r26 { Call#test_c46(target=fail) { Lit#test_i98(value="escaped quote attr failed") } } }
+        }
+        Let#test_l20(name=boolNode) {
+          Call#test_c47(target=parse.parseNode) {
+            Lit#test_i99(value="Flag#f1(enabled=true)")
+          }
+        }
+        If#test_if26 {
+          Eq#test_e26 { AttrValueBool#test_avb1 { Var#test_v38(name=boolNode) Lit#test_i100(value=0) } Lit#test_i101(value=true) }
+          Block#test_b53 { Lit#test_i102(value=0) }
+          Block#test_b54 { Return#test_r27 { Call#test_c48(target=fail) { Lit#test_i103(value="bool attr value failed") } } }
+        }
+        Let#test_l21(name=intNode) {
+          Call#test_c49(target=parse.parseNode) {
+            Lit#test_i104(value="Window#w1(width=320)")
+          }
+        }
+        If#test_if27 {
+          Eq#test_e27 { AttrValueInt#test_avi1 { Var#test_v39(name=intNode) Lit#test_i105(value=0) } Lit#test_i106(value=320) }
+          Block#test_b55 { Lit#test_i176(value=0) }
+          Block#test_b56 { Return#test_r28 { Call#test_c50(target=fail) { Lit#test_i107(value="int attr value failed") } } }
+        }
+        Let#test_l43(name=multiAttrNode) {
+          Call#test_c72(target=parse.parseNode) {
+            Lit#test_i175(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2)")
+          }
+        }
+        If#test_if28 {
+          Eq#test_e28 { AttrValueString#test_avs6 { Var#test_v40(name=multiAttrNode) Lit#test_i108(value=1) } Lit#test_i109(value="AiBC1") }
+          Block#test_b57 { Lit#test_i110(value=0) }
+          Block#test_b58 { Return#test_r29 { Call#test_c51(target=fail) { Lit#test_i111(value="multi attr string failed") } } }
+        }
+        If#test_if29 {
+          Eq#test_e29 { AttrValueInt#test_avi2 { Var#test_v41(name=multiAttrNode) Lit#test_i112(value=3) } Lit#test_i113(value=2) }
+          Block#test_b59 { Lit#test_i114(value=0) }
+          Block#test_b60 { Return#test_r30 { Call#test_c52(target=fail) { Lit#test_i115(value="multi attr int failed") } } }
+        }
+        Let#test_l22(name=negativeIntNode) {
+          Call#test_c53(target=parse.parseNode) {
+            Lit#test_i116(value="Lit#neg1(value=-360)")
+          }
+        }
+        If#test_if30 {
+          Eq#test_e30 { AttrValueInt#test_avi3 { Var#test_v42(name=negativeIntNode) Lit#test_i117(value=0) } Lit#test_i118(value=-360) }
+          Block#test_b61 { Lit#test_i119(value=0) }
+          Block#test_b62 { Return#test_r31 { Call#test_c54(target=fail) { Lit#test_i120(value="negative int attr failed") } } }
+        }
+        Let#test_l210(name=noIdAttrNode) {
+          Call#test_c210(target=parse.parseNode) {
+            Lit#test_i210(value="Export(name=start)")
+          }
+        }
+        If#test_if210 {
+          Eq#test_e210 { NodeId#test_nid210 { Var#test_v210(name=noIdAttrNode) } Lit#test_i211(value="Export_6") }
+          Block#test_b210 { Lit#test_i212(value=0) }
+          Block#test_b211 { Return#test_r210 { Call#test_c211(target=fail) { Lit#test_i213(value="no-id attr synthetic id failed") } } }
+        }
+        Let#test_l211(name=noIdProgramNode) {
+          Call#test_c212(target=parse.parseNode) {
+            Lit#test_i214(value="Program { Lit(value=1) }")
+          }
+        }
+        If#test_if211 {
+          Eq#test_e211 { NodeId#test_nid211 { Var#test_v211(name=noIdProgramNode) } Lit#test_i215(value="Program_7") }
+          Block#test_b212 { Lit#test_i216(value=0) }
+          Block#test_b213 { Return#test_r211 { Call#test_c213(target=fail) { Lit#test_i217(value="no-id program synthetic id failed") } } }
+        }
+        Let#test_l212(name=noIdProgramChild) { ChildAt#test_ca210 { Var#test_v212(name=noIdProgramNode) Lit#test_i218(value=0) } }
+        If#test_if212 {
+          Eq#test_e212 { NodeId#test_nid212 { Var#test_v213(name=noIdProgramChild) } Lit#test_i219(value="Lit_13") }
+          Block#test_b214 { Lit#test_i220(value=0) }
+          Block#test_b215 { Return#test_r212 { Call#test_c214(target=fail) { Lit#test_i221(value="no-id child synthetic id failed") } } }
+        }
+        Let#test_l213(name=noIdBareNode) {
+          Call#test_c215(target=parse.parseNode) {
+            Lit#test_i222(value="Return")
+          }
+        }
+        If#test_if213 {
+          Eq#test_e213 { NodeId#test_nid213 { Var#test_v214(name=noIdBareNode) } Lit#test_i223(value="Return_6") }
+          Block#test_b216 { Lit#test_i224(value=0) }
+          Block#test_b217 { Return#test_r213 { Call#test_c216(target=fail) { Lit#test_i225(value="no-id bare synthetic id failed") } } }
+        }
+        Let#test_l214(name=explicitBareProgram) {
+          Call#test_c217(target=parse.parseNode) {
+            Lit#test_i232(value="Block#b1 { Return#r1 }")
+          }
+        }
+        If#test_if214 {
+          Eq#test_e214 { ChildCount#test_cc214 { Var#test_v215(name=explicitBareProgram) } Lit#test_i233(value=1) }
+          Block#test_b218 { Lit#test_i234(value=0) }
+          Block#test_b219 { Return#test_r214 { Call#test_c218(target=fail) { Lit#test_i235(value="explicit bare child count failed") } } }
+        }
+        Let#test_l215(name=explicitBareChild) { ChildAt#test_ca215 { Var#test_v216(name=explicitBareProgram) Lit#test_i236(value=0) } }
+        If#test_if215 {
+          Eq#test_e215 { NodeId#test_nid215 { Var#test_v217(name=explicitBareChild) } Lit#test_i237(value="r1") }
+          Block#test_b220 { Lit#test_i238(value=0) }
+          Block#test_b221 { Return#test_r215 { Call#test_c219(target=fail) { Lit#test_i239(value="explicit bare id failed") } } }
+        }
+        Let#test_l200(name=missingEqualsErr) {
+          Call#test_c200(target=parse.parseNode) {
+            Lit#test_i200(value="Export(name)")
+          }
+        }
+        If#test_if200 {
+          Eq#test_e200 { NodeKind#test_nk200 { Var#test_v200(name=missingEqualsErr) } Lit#test_i201(value="Err") }
+          Block#test_b200 { Lit#test_i202(value=0) }
+          Block#test_b201 { Return#test_r200 { Call#test_c201(target=fail) { Lit#test_i203(value="missing attr equals diagnostic failed") } } }
+        }
+        Let#test_l201(name=missingValueErr) {
+          Call#test_c202(target=parse.parseNode) {
+            Lit#test_i204(value="Export(name=)")
+          }
+        }
+        If#test_if201 {
+          Eq#test_e201 { NodeKind#test_nk201 { Var#test_v201(name=missingValueErr) } Lit#test_i205(value="Err") }
+          Block#test_b202 { Lit#test_i206(value=0) }
+          Block#test_b203 { Return#test_r201 { Call#test_c203(target=fail) { Lit#test_i207(value="missing attr value diagnostic failed") } } }
+        }
+        Let#test_l204(name=missingIdErr) {
+          Call#test_c208(target=parse.parseNode) {
+            Lit#test_i240(value="Export#(name=start)")
+          }
+        }
+        If#test_if204 {
+          Eq#test_e204 { NodeKind#test_nk204 { Var#test_v204(name=missingIdErr) } Lit#test_i241(value="Err") }
+          Block#test_b208 { Lit#test_i242(value=0) }
+          Block#test_b209 { Return#test_r204 { Call#test_c209(target=fail) { Lit#test_i243(value="missing node id diagnostic failed") } } }
+        }
+        Let#test_l205(name=invalidAttrKeyErr) {
+          Call#test_c220(target=parse.parseNode) {
+            Lit#test_i244(value="Export(=start)")
+          }
+        }
+        If#test_if205 {
+          Eq#test_e205 { NodeKind#test_nk205 { Var#test_v205(name=invalidAttrKeyErr) } Lit#test_i245(value="Err") }
+          Block#test_b222 { Lit#test_i246(value=0) }
+          Block#test_b223 { Return#test_r205 { Call#test_c221(target=fail) { Lit#test_i247(value="invalid attr key diagnostic failed") } } }
+        }
+        Let#test_l202(name=missingBraceErr) {
+          Call#test_c204(target=parse.parseNode) {
+            Lit#test_i208(value="Program { Lit(value=1)")
+          }
+        }
+        If#test_if202 {
+          Eq#test_e202 { NodeKind#test_nk202 { Var#test_v202(name=missingBraceErr) } Lit#test_i209(value="Err") }
+          Block#test_b204 { Lit#test_i226(value=0) }
+          Block#test_b205 { Return#test_r202 { Call#test_c205(target=fail) { Lit#test_i227(value="missing child brace diagnostic failed") } } }
+        }
+        Let#test_l203(name=invalidChildStartErr) {
+          Call#test_c206(target=parse.parseNode) {
+            Lit#test_i228(value="Program { ) }")
+          }
+        }
+        If#test_if203 {
+          Eq#test_e203 { NodeKind#test_nk203 { Var#test_v203(name=invalidChildStartErr) } Lit#test_i229(value="Err") }
+          Block#test_b206 { Lit#test_i230(value=0) }
+          Block#test_b207 { Return#test_r203 { Call#test_c207(target=fail) { Lit#test_i231(value="invalid child start diagnostic failed") } } }
+        }
+        Let#test_l206(name=validDocument) {
+          Call#test_c222(target=parse.parseDocument) {
+            Lit#test_i248(value="Program { Lit(value=1) }")
+          }
+        }
+        If#test_if206 {
+          Eq#test_e206 { NodeKind#test_nk206 { Var#test_v206(name=validDocument) } Lit#test_i249(value="Program") }
+          Block#test_b224 { Lit#test_i250(value=0) }
+          Block#test_b225 { Return#test_r206 { Call#test_c223(target=fail) { Lit#test_i251(value="valid document parse failed") } } }
+        }
+        Let#test_l207(name=trailingDocumentErr) {
+          Call#test_c224(target=parse.parseDocument) {
+            Lit#test_i252(value="Program { } Export(name=start)")
+          }
+        }
+        If#test_if207 {
+          Eq#test_e207 { NodeKind#test_nk207 { Var#test_v207(name=trailingDocumentErr) } Lit#test_i253(value="Err") }
+          Block#test_b226 { Lit#test_i254(value=0) }
+          Block#test_b227 { Return#test_r207 { Call#test_c225(target=fail) { Lit#test_i255(value="trailing document diagnostic failed") } } }
+        }
+        Let#test_l23(name=realSource) {
+          Call#test_c55(target=bytes.toUtf8String) {
+            Call#test_c56(target=sys.fs.file.read) {
+              Lit#test_i121(value="examples/golden/run_nontrivial.in.aos")
+            }
+          }
+        }
+        Let#test_l24(name=realProgram) { Call#test_c57(target=parse.parseNode) { Var#test_v43(name=realSource) } }
+        If#test_if31 {
+          Eq#test_e31 { NodeKind#test_nk5 { Var#test_v44(name=realProgram) } Lit#test_i122(value="Program") }
+          Block#test_b63 { Lit#test_i123(value=0) }
+          Block#test_b64 { Return#test_r32 { Call#test_c58(target=fail) { Lit#test_i124(value="real root kind failed") } } }
+        }
+        If#test_if32 {
+          Eq#test_e32 { NodeId#test_nid3 { Var#test_v45(name=realProgram) } Lit#test_i125(value="p1") }
+          Block#test_b65 { Lit#test_i126(value=0) }
+          Block#test_b66 { Return#test_r33 { Call#test_c59(target=fail) { Lit#test_i127(value="real root id failed") } } }
+        }
+        If#test_if33 {
+          Eq#test_e33 { ChildCount#test_cc4 { Var#test_v46(name=realProgram) } Lit#test_i128(value=3) }
+          Block#test_b67 { Lit#test_i129(value=0) }
+          Block#test_b68 { Return#test_r34 { Call#test_c60(target=fail) { Lit#test_i130(value="real root child count failed") } } }
+        }
+        Let#test_l25(name=realLetX) { ChildAt#test_ca5 { Var#test_v47(name=realProgram) Lit#test_i131(value=0) } }
+        If#test_if34 {
+          Eq#test_e34 { NodeKind#test_nk6 { Var#test_v48(name=realLetX) } Lit#test_i132(value="Let") }
+          Block#test_b69 { Lit#test_i133(value=0) }
+          Block#test_b70 { Return#test_r35 { Call#test_c61(target=fail) { Lit#test_i134(value="real let kind failed") } } }
+        }
+        If#test_if35 {
+          Eq#test_e35 { AttrValueString#test_avs7 { Var#test_v49(name=realLetX) Lit#test_i135(value=0) } Lit#test_i136(value="x") }
+          Block#test_b71 { Lit#test_i137(value=0) }
+          Block#test_b72 { Return#test_r36 { Call#test_c62(target=fail) { Lit#test_i138(value="real let attr failed") } } }
+        }
+        Let#test_l26(name=realLitTwo) { ChildAt#test_ca6 { Var#test_v50(name=realLetX) Lit#test_i139(value=0) } }
+        If#test_if36 {
+          Eq#test_e36 { AttrValueInt#test_avi4 { Var#test_v51(name=realLitTwo) Lit#test_i140(value=0) } Lit#test_i141(value=2) }
+          Block#test_b73 { Lit#test_i142(value=0) }
+          Block#test_b74 { Return#test_r37 { Call#test_c63(target=fail) { Lit#test_i143(value="real int literal attr failed") } } }
+        }
+        Let#test_l27(name=realIf) { ChildAt#test_ca7 { Var#test_v52(name=realProgram) Lit#test_i144(value=2) } }
+        If#test_if37 {
+          Eq#test_e37 { NodeKind#test_nk7 { Var#test_v53(name=realIf) } Lit#test_i145(value="If") }
+          Block#test_b75 { Lit#test_i146(value=0) }
+          Block#test_b76 { Return#test_r38 { Call#test_c64(target=fail) { Lit#test_i147(value="real if kind failed") } } }
+        }
+        If#test_if38 {
+          Eq#test_e38 { ChildCount#test_cc5 { Var#test_v54(name=realIf) } Lit#test_i148(value=3) }
+          Block#test_b77 { Lit#test_i149(value=0) }
+          Block#test_b78 { Return#test_r39 { Call#test_c65(target=fail) { Lit#test_i150(value="real if child count failed") } } }
+        }
+        Let#test_l28(name=realThenBlock) { ChildAt#test_ca8 { Var#test_v55(name=realIf) Lit#test_i151(value=1) } }
+        Let#test_l29(name=realConcat) { ChildAt#test_ca9 { Var#test_v56(name=realThenBlock) Lit#test_i152(value=0) } }
+        Let#test_l30(name=realOkLit) { ChildAt#test_ca10 { Var#test_v57(name=realConcat) Lit#test_i153(value=0) } }
+        If#test_if39 {
+          Eq#test_e39 { AttrValueString#test_avs8 { Var#test_v58(name=realOkLit) Lit#test_i154(value=0) } Lit#test_i155(value="ok-") }
+          Block#test_b79 { Lit#test_i156(value=0) }
+          Block#test_b80 { Return#test_r40 { Call#test_c66(target=fail) { Lit#test_i157(value="real quoted literal attr failed") } } }
+        }
+        Let#test_l31(name=loopSource) {
+          Call#test_c67(target=bytes.toUtf8String) {
+            Call#test_c68(target=sys.fs.file.read) {
+              Lit#test_i158(value="examples/bench/loop_compute.aos")
+            }
+          }
+        }
+        Let#test_l32(name=loopProgram) { Call#test_c69(target=parse.parseNode) { Var#test_v59(name=loopSource) } }
+        Let#test_l33(name=loopLetSum) { ChildAt#test_ca11 { Var#test_v60(name=loopProgram) Lit#test_i159(value=0) } }
+        Let#test_l34(name=loopFn) { ChildAt#test_ca12 { Var#test_v61(name=loopLetSum) Lit#test_i160(value=0) } }
+        Let#test_l35(name=loopBlock) { ChildAt#test_ca13 { Var#test_v62(name=loopFn) Lit#test_i161(value=0) } }
+        Let#test_l36(name=loopIf) { ChildAt#test_ca14 { Var#test_v63(name=loopBlock) Lit#test_i162(value=0) } }
+        Let#test_l37(name=loopElseBlock) { ChildAt#test_ca15 { Var#test_v64(name=loopIf) Lit#test_i163(value=2) } }
+        Let#test_l38(name=loopReturn) { ChildAt#test_ca16 { Var#test_v65(name=loopElseBlock) Lit#test_i164(value=0) } }
+        Let#test_l39(name=loopOuterAdd) { ChildAt#test_ca17 { Var#test_v66(name=loopReturn) Lit#test_i165(value=0) } }
+        Let#test_l40(name=loopCall) { ChildAt#test_ca18 { Var#test_v67(name=loopOuterAdd) Lit#test_i166(value=1) } }
+        Let#test_l41(name=loopInnerAdd) { ChildAt#test_ca19 { Var#test_v68(name=loopCall) Lit#test_i167(value=0) } }
+        Let#test_l42(name=loopNegativeLit) { ChildAt#test_ca20 { Var#test_v69(name=loopInnerAdd) Lit#test_i168(value=1) } }
+        If#test_if40 {
+          Eq#test_e40 { AttrValueInt#test_avi5 { Var#test_v70(name=loopNegativeLit) Lit#test_i169(value=0) } Lit#test_i170(value=-1) }
+          Block#test_b81 { Lit#test_i171(value=0) }
+          Block#test_b82 { Return#test_r41 { Call#test_c70(target=fail) { Lit#test_i172(value="real negative literal attr failed") } } }
+        }
+        Call#test_c71(target=sys.stdout.writeLine) { Lit#test_i173(value="parser-selfhost-ok") }
+        Return#test_r44 { Lit#test_i174(value=0) }
+      }
+    }
+  }
+}
+AOS
+
+OUT="$(./tools/ailang run "${TMP_DIR}/app.aos")"
+printf '%s\n' "${OUT}" | rg -Fq 'parser-selfhost-ok'
+printf '%s\n' "${OUT}" | rg -Fq 'Ok#ok1(type=int value=0)'

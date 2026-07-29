@@ -1,0 +1,206 @@
+Program {
+  Export(name=resolve.findFirstUndeclaredPackageImport)
+  Export(name=resolve.projectHasInclude)
+  Export(name=resolve.findFirstImportPath)
+  Export(name=resolve.findImportNodeIdByPath)
+
+  Let(name=resolve.findFirstUndeclaredPackageImport) {
+    Fn(params=program,projectNode,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block {
+                Let(name=packageName) { Call(target=resolve.getAttr) { Var(name=child) Lit(value="package") Lit(value=0) } }
+                If {
+                  Eq { Var(name=packageName) Lit(value="") }
+                  Block {
+                    Return {
+                      Call(target=resolve.findFirstUndeclaredPackageImport) {
+                        Var(name=program)
+                        Var(name=projectNode)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                  Block {
+                    If {
+                      Call(target=resolve.projectHasInclude) {
+                        Var(name=projectNode)
+                        Var(name=packageName)
+                        Lit(value=0)
+                      }
+                      Block {
+                        Return {
+                          Call(target=resolve.findFirstUndeclaredPackageImport) {
+                            Var(name=program)
+                            Var(name=projectNode)
+                            Add { Var(name=index) Lit(value=1) }
+                          }
+                        }
+                      }
+                      Block { Return { NodeId { Var(name=child) } } }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=resolve.findFirstUndeclaredPackageImport) {
+                    Var(name=program)
+                    Var(name=projectNode)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolve.projectHasInclude) {
+    Fn(params=projectNode,packageName,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=projectNode) } }
+          Block { Return { Lit(value=false) } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=projectNode) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Include") }
+              Block {
+                If {
+                  Eq {
+                    Call(target=resolve.getAttr) { Var(name=child) Lit(value="name") Lit(value=0) }
+                    Var(name=packageName)
+                  }
+                  Block { Return { Lit(value=true) } }
+                  Block {
+                    Return {
+                      Call(target=resolve.projectHasInclude) {
+                        Var(name=projectNode)
+                        Var(name=packageName)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=resolve.projectHasInclude) {
+                    Var(name=projectNode)
+                    Var(name=packageName)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolve.getAttr) {
+    Fn(params=node,key,index) {
+      Block {
+        If {
+          Eq { Var(name=index) AttrCount { Var(name=node) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            If {
+              Eq { AttrKey { Var(name=node) Var(name=index) } Var(name=key) }
+              Block { Return { AttrValueString { Var(name=node) Var(name=index) } } }
+              Block {
+                Return {
+                  Call(target=resolve.getAttr) {
+                    Var(name=node)
+                    Var(name=key)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolve.findFirstImportPath) {
+    Fn(params=program,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block { Return { Call(target=resolve.getAttr) { Var(name=child) Lit(value="path") Lit(value=0) } } }
+              Block {
+                Return {
+                  Call(target=resolve.findFirstImportPath) {
+                    Var(name=program)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=resolve.findImportNodeIdByPath) {
+    Fn(params=program,path,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=program) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=child) { ChildAt { Var(name=program) Var(name=index) } }
+            If {
+              Eq { NodeKind { Var(name=child) } Lit(value="Import") }
+              Block {
+                If {
+                  Eq {
+                    Call(target=resolve.getAttr) { Var(name=child) Lit(value="path") Lit(value=0) }
+                    Var(name=path)
+                  }
+                  Block { Return { NodeId { Var(name=child) } } }
+                  Block {
+                    Return {
+                      Call(target=resolve.findImportNodeIdByPath) {
+                        Var(name=program)
+                        Var(name=path)
+                        Add { Var(name=index) Lit(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  Call(target=resolve.findImportNodeIdByPath) {
+                    Var(name=program)
+                    Var(name=path)
+                    Add { Var(name=index) Lit(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

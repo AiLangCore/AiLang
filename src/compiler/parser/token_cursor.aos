@@ -1,0 +1,43 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Export(name=parseCursor.readNameEnd)
+
+  Let(name=parseCursor.readNameEnd) {
+    Fn(params=text,index) {
+      Block {
+        Let(name=ch) { Call(target=parseCursor.charAt) { Var(name=text) Var(name=index) } }
+        If {
+          Call(target=parseCursor.isDelimiter) { Var(name=ch) }
+          Block { Return { Var(name=index) } }
+          Block { Return { Call(target=parseCursor.readNameEnd) { Var(name=text) Add { Var(name=index) Lit(value=1) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=parseCursor.charAt) {
+    Fn(params=text,index) {
+      Block { Return { Call(target=substring) { Var(name=text) Var(name=index) Lit(value=1) } } }
+    }
+  }
+
+  Let(name=parseCursor.isDelimiter) {
+    Fn(params=ch) {
+      Block {
+        If { Eq { Var(name=ch) Lit(value="") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value=" ") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="
+") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="\t") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="\r") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="#") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="(") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value=")") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="{") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="}") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="=") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="\"") } Block { Return { Lit(value=true) } } Block { Return { Lit(value=false) } } }
+      }
+    }
+  }
+}

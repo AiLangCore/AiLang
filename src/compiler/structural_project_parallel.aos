@@ -1,0 +1,161 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="parser.aos")
+  Import(path="build_telemetry.aos")
+  Import(path="structural_project.aos")
+  Import(path="structural_project_stage.aos")
+  Import(path="structural_project_queue.aos")
+  Export(name=structuralProject.writeProjectObjectFilesParallel)
+
+  Let(name=structuralProject.writeProjectObjectFilesParallel) {
+    Fn(params=modulePaths,projectDir,lockText,objDir) {
+      Block {
+        Let(name=jobsText) { Call(target=envGet) { Lit(value="AILANG_BUILD_JOBS") } }
+        Let(name=runtime) { Call(target=envGet) { Lit(value="AILANG_BUILD_WORKER_RUNTIME") } }
+        Let(name=artifact) { Call(target=envGet) { Lit(value="AILANG_BUILD_WORKER_ARTIFACT") } }
+        If {
+          Eq { Var(name=jobsText) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_project_parallel")
+                Lit(value="PARBUILD001")
+                Lit(value="Parallel object build requires AILANG_BUILD_JOBS.")
+                Lit(value="jobs")
+              }
+            }
+          }
+          Block {
+            Let(name=jobs) { Call(target=parse.parseIntValue) { Var(name=jobsText) } }
+            Let(name=stageStartedAt) { Call(target=buildTelemetry.now) {} }
+            Let(name=stageDir) { StrConcat { Var(name=objDir) Lit(value="/parallel-stage") } }
+            Let(name=staged) {
+              Call(target=structuralProject.prepareParallelStage) {
+                Var(name=modulePaths)
+                Var(name=projectDir)
+                Var(name=lockText)
+                Var(name=stageDir)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=staged) } Lit(value="Err") }
+              Block { Return { Var(name=staged) } }
+              Block {
+                Call(target=buildTelemetry.phase) {
+                  Lit(value="stage") Var(name=stageStartedAt)
+                }
+                Let(name=workersStartedAt) { Call(target=buildTelemetry.now) {} }
+                Let(name=queueResult) {
+                  Call(target=structuralProject.runObjectTaskQueue) {
+                    Var(name=projectDir)
+                    Var(name=objDir)
+                    Var(name=stageDir)
+                    Var(name=runtime)
+                    Var(name=artifact)
+                    Var(name=jobs)
+                    ChildCount { Var(name=modulePaths) }
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=queueResult) } Lit(value="Err") }
+                  Block { Return { Var(name=queueResult) } }
+                  Block {
+                    Call(target=buildTelemetry.phase) {
+                      Lit(value="workers") Var(name=workersStartedAt)
+                    }
+                    Let(name=reloadStartedAt) { Call(target=buildTelemetry.now) {} }
+                    Let(name=objects) {
+                      Call(target=structuralProject.readObjectFilesInOrder) {
+                        Var(name=modulePaths)
+                        Var(name=objDir)
+                        Lit(value=0)
+                        MakeBlock { Lit(value="objects") }
+                        Var(name=reloadStartedAt)
+                      }
+                    }
+                    Call(target=buildTelemetry.phase) {
+                      Lit(value="reload") Var(name=reloadStartedAt)
+                    }
+                    Return { Var(name=objects) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.readObjectFilesInOrder) {
+    Fn(params=modulePaths,objDir,index,objects,reloadStartedAt) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=objects) } }
+          Block {
+            Let(name=objectPath) {
+              StrConcat {
+                Var(name=objDir)
+                StrConcat {
+                  Lit(value="/module-")
+                  StrConcat { ToString { Var(name=index) } Lit(value=".aibco") }
+                }
+              }
+            }
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=objectPath) }
+              Block {
+                Let(name=object) {
+                  Call(target=parse.parseDocument) {
+                    Call(target=bytes.toUtf8String) {
+                      Call(target=sys.fs.file.read) { Var(name=objectPath) }
+                    }
+                  }
+                }
+                Let(name=nextObjects) {
+                  Call(target=structuralProject.appendParsedObject) {
+                    Var(name=objects)
+                    Var(name=object)
+                    Var(name=objectPath)
+                  }
+                }
+                If {
+                  Eq { NodeKind { Var(name=nextObjects) } Lit(value="Err") }
+                  Block { Return { Var(name=nextObjects) } }
+                  Block {
+                    Call(target=buildTelemetry.reloadProgress) {
+                      Add { Var(name=index) Lit(value=1) }
+                      Var(name=reloadStartedAt)
+                    }
+                    Return {
+                      Call(target=structuralProject.readObjectFilesInOrder) {
+                        Var(name=modulePaths)
+                        Var(name=objDir)
+                        Add { Var(name=index) Lit(value=1) }
+                        Var(name=nextObjects)
+                        Var(name=reloadStartedAt)
+                      }
+                    }
+                  }
+                }
+              }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="structural_project_parallel")
+                    Lit(value="PARBUILD003")
+                    Lit(value="Module object worker did not produce its assigned object.")
+                    Var(name=objectPath)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

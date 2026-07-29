@@ -1,0 +1,27 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+  Export(name=getManifestAttr)
+
+  Let(name=getManifestAttr) {
+    Fn(params=text,key,needleLength) {
+      Block {
+        Let(name=needle) { StrConcat { Var(name=key) Lit(value="=\"") } }
+        Let(name=found) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=found) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=found) Var(name=needleLength) } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\"") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

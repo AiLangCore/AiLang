@@ -1,0 +1,120 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+
+  Let(name=linker.normalizeDisplayPath) {
+    Fn(params=path) {
+      Block {
+        Return { Call(target=linker.normalizeDisplayPathAt) { Call(target=linker.canonicalPathSeparators) { Var(name=path) Lit(value=0) } Lit(value=0) Lit(value="") } }
+      }
+    }
+  }
+
+  Let(name=linker.canonicalPathSeparators) {
+    Fn(params=path,index) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=path) } }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=ch) { Call(target=substring) { Var(name=path) Var(name=index) Lit(value=1) } }
+            Let(name=canonical) {
+              If {
+                Eq { Var(name=ch) Lit(value="\\") }
+                Block { Lit(value="/") }
+                Block { Var(name=ch) }
+              }
+            }
+            Return { StrConcat { Var(name=canonical) Call(target=linker.canonicalPathSeparators) { Var(name=path) Add { Var(name=index) Lit(value=1) } } } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.normalizeDisplayPathAt) {
+    Fn(params=path,index,result) {
+      Block {
+        Let(name=length) { StringScalarLength { Var(name=path) } }
+        If {
+          Eq { Var(name=index) Var(name=length) }
+          Block { Return { Var(name=result) } }
+          Block {
+            Let(name=slash) { Call(target=find) { Var(name=path) Lit(value="/") Var(name=index) } }
+            Let(name=end) {
+              If {
+                Eq { Var(name=slash) Lit(value=-1) }
+                Block { Var(name=length) }
+                Block { Var(name=slash) }
+              }
+            }
+            Let(name=segment) { Call(target=substring) { Var(name=path) Var(name=index) Sub { Var(name=end) Var(name=index) } } }
+            Let(name=nextResult) { Call(target=linker.appendNormalizedPathSegment) { Var(name=result) Var(name=segment) } }
+            Let(name=nextIndex) {
+              If {
+                Eq { Var(name=slash) Lit(value=-1) }
+                Block { Var(name=length) }
+                Block { Add { Var(name=slash) Lit(value=1) } }
+              }
+            }
+            Return { Call(target=linker.normalizeDisplayPathAt) { Var(name=path) Var(name=nextIndex) Var(name=nextResult) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.appendNormalizedPathSegment) {
+    Fn(params=path,segment) {
+      Block {
+        If {
+          Eq { Var(name=segment) Lit(value="") }
+          Block { Return { Var(name=path) } }
+          Block {
+            If {
+              Eq { Var(name=segment) Lit(value=".") }
+              Block { Return { Var(name=path) } }
+              Block {
+                If {
+                  Eq { Var(name=segment) Lit(value="..") }
+                  Block { Return { Call(target=linker.normalizedPathParent) { Var(name=path) Lit(value=0) Lit(value=-1) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=path) Lit(value="") }
+                      Block { Return { Var(name=segment) } }
+                      Block { Return { StrConcat { Var(name=path) StrConcat { Lit(value="/") Var(name=segment) } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=linker.normalizedPathParent) {
+    Fn(params=path,index,lastSlash) {
+      Block {
+        If {
+          Eq { Var(name=index) StringScalarLength { Var(name=path) } }
+          Block {
+            If {
+              Eq { Var(name=lastSlash) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block { Return { Call(target=substring) { Var(name=path) Lit(value=0) Var(name=lastSlash) } } }
+            }
+          }
+          Block {
+            Let(name=nextIndex) { Add { Var(name=index) Lit(value=1) } }
+            If {
+              Eq { Call(target=substring) { Var(name=path) Var(name=index) Lit(value=1) } Lit(value="/") }
+              Block { Return { Call(target=linker.normalizedPathParent) { Var(name=path) Var(name=nextIndex) Var(name=index) } } }
+              Block { Return { Call(target=linker.normalizedPathParent) { Var(name=path) Var(name=nextIndex) Var(name=lastSlash) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

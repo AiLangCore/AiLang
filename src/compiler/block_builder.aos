@@ -1,0 +1,181 @@
+Program {
+  Export(name=blockBuilder.beginFunction)
+  Export(name=blockBuilder.beginBlock)
+  Export(name=blockBuilder.emit)
+  Export(name=blockBuilder.terminateReturn)
+  Export(name=blockBuilder.terminateJump)
+  Export(name=blockBuilder.terminateBranch)
+  Export(name=blockBuilder.seal)
+  Export(name=blockBuilder.appendBlock)
+  Export(name=blockBuilder.finishFunction)
+
+  Let(name=blockBuilder.beginFunction) {
+    Fn(params=name,symbol,params,locals) {
+      Block {
+        Let(name=base) { MakeBlock { Lit(value="ir-function") } }
+        Let(name=withName) { AppendAttr { Var(name=base) MakeLitString { Lit(value="name") Var(name=name) } } }
+        Let(name=withSymbol) { AppendAttr { Var(name=withName) MakeLitString { Lit(value="symbol") Var(name=symbol) } } }
+        Let(name=withParams) { AppendAttr { Var(name=withSymbol) MakeLitString { Lit(value="params") Var(name=params) } } }
+        Return { AppendAttr { Var(name=withParams) MakeLitString { Lit(value="locals") Var(name=locals) } } }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.beginBlock) {
+    Fn(params=label) {
+      Block {
+        Let(name=base) { MakeBlock { StrConcat { Lit(value="ir-block:") Var(name=label) } } }
+        Let(name=block) { AppendAttr { Var(name=base) MakeLitString { Lit(value="label") Var(name=label) } } }
+        Return { MakePair { Var(name=block) Lit(value=false) } }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.emit) {
+    Fn(params=context,op,a) {
+      Block {
+        If {
+          Eq { ValueKind { Var(name=context) } Lit(value="node") }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=context) } Lit(value="Err") }
+              Block { Return { Var(name=context) } }
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR004") Lit(value="Block context must be a pair.") NodeId { Var(name=context) } } } }
+            }
+          }
+          Block {
+            Let(name=block) { PairFirst { Var(name=context) } }
+            Let(name=sealed) { PairSecond { Var(name=context) } }
+            If {
+              Var(name=sealed)
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR001") Lit(value="Cannot emit into a sealed block.") NodeId { Var(name=block) } } } }
+              Block {
+                If {
+                  Eq { ValueKind { Var(name=op) } Lit(value="string") }
+                  Block {
+                    If {
+                      Eq { ValueKind { Var(name=a) } Lit(value="string") }
+                      Block {
+                        Let(name=instruction) { MakeBlock { Lit(value="ir-inst") } }
+                        Let(name=withOp) { AppendAttr { Var(name=instruction) MakeLitString { Lit(value="op") Var(name=op) } } }
+                        Let(name=withOperand) { AppendAttr { Var(name=withOp) MakeLitString { Lit(value="a") Var(name=a) } } }
+                        Return { MakePair { AppendChild { Var(name=block) Var(name=withOperand) } Lit(value=false) } }
+                      }
+                      Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR005") Lit(value="Instruction operand must be a string.") NodeId { Var(name=block) } } } }
+                    }
+                  }
+                  Block {
+                    If {
+                      Eq { ValueKind { Var(name=op) } Lit(value="node") }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=op) } Lit(value="Err") }
+                          Block { Return { Var(name=op) } }
+                          Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR005") Lit(value="Instruction opcode must be a string.") NodeId { Var(name=block) } } } }
+                        }
+                      }
+                      Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR005") Lit(value="Instruction opcode must be a string.") NodeId { Var(name=block) } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.terminateReturn) {
+    Fn(params=context) {
+      Block { Return { Call(target=blockBuilder.terminate) { Var(name=context) Lit(value="RETURN") Lit(value="") Lit(value="") } } }
+    }
+  }
+
+  Let(name=blockBuilder.terminateJump) {
+    Fn(params=context,target) {
+      Block { Return { Call(target=blockBuilder.terminate) { Var(name=context) Lit(value="JUMP") Var(name=target) Lit(value="") } } }
+    }
+  }
+
+  Let(name=blockBuilder.terminateBranch) {
+    Fn(params=context,trueTarget,falseTarget) {
+      Block { Return { Call(target=blockBuilder.terminate) { Var(name=context) Lit(value="BRANCH") Var(name=trueTarget) Var(name=falseTarget) } } }
+    }
+  }
+
+  Let(name=blockBuilder.terminate) {
+    Fn(params=context,op,target,alternate) {
+      Block {
+        If {
+          Eq { ValueKind { Var(name=context) } Lit(value="node") }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=context) } Lit(value="Err") }
+              Block { Return { Var(name=context) } }
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR004") Lit(value="Block context must be a pair.") NodeId { Var(name=context) } } } }
+            }
+          }
+          Block {
+            Let(name=block) { PairFirst { Var(name=context) } }
+            Let(name=sealed) { PairSecond { Var(name=context) } }
+            If {
+              Var(name=sealed)
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR002") Lit(value="Block already has a terminator.") NodeId { Var(name=block) } } } }
+              Block {
+                Let(name=term) { MakeBlock { Lit(value="ir-term") } }
+                Let(name=withOp) { AppendAttr { Var(name=term) MakeLitString { Lit(value="op") Var(name=op) } } }
+                Let(name=withTarget) { AppendAttr { Var(name=withOp) MakeLitString { Lit(value="target") Var(name=target) } } }
+                Let(name=withTrueTarget) { AppendAttr { Var(name=withTarget) MakeLitString { Lit(value="trueTarget") Var(name=target) } } }
+                Let(name=withFalseTarget) { AppendAttr { Var(name=withTrueTarget) MakeLitString { Lit(value="falseTarget") Var(name=alternate) } } }
+                Return { MakePair { AppendChild { Var(name=block) Var(name=withFalseTarget) } Lit(value=true) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.seal) {
+    Fn(params=context) {
+      Block {
+        If {
+          Eq { ValueKind { Var(name=context) } Lit(value="node") }
+          Block {
+            If {
+              Eq { NodeKind { Var(name=context) } Lit(value="Err") }
+              Block { Return { Var(name=context) } }
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR004") Lit(value="Block context must be a pair.") NodeId { Var(name=context) } } } }
+            }
+          }
+          Block {
+            If {
+              PairSecond { Var(name=context) }
+              Block { Return { PairFirst { Var(name=context) } } }
+              Block { Return { MakeErr { Lit(value="block_builder") Lit(value="IR003") Lit(value="Block is missing a terminator.") NodeId { PairFirst { Var(name=context) } } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.appendBlock) {
+    Fn(params=function,block) {
+      Block {
+        If {
+          Eq { NodeKind { Var(name=block) } Lit(value="Err") }
+          Block { Return { Var(name=block) } }
+          Block { Return { AppendChild { Var(name=function) Var(name=block) } } }
+        }
+      }
+    }
+  }
+
+  Let(name=blockBuilder.finishFunction) {
+    Fn(params=function) {
+      Block { Return { Var(name=function) } }
+    }
+  }
+}

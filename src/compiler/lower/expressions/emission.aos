@@ -1,0 +1,187 @@
+Program {
+  Let(name=lower.appendStructuralNativeExpression) {
+    Fn(params=context,expr,params,records) {
+      Block {
+        Let(name=kind) { NodeKind { Var(name=expr) } }
+        Let(name=indexOpcode) { Call(target=lower.structuralNativeIndexOpcode) { Var(name=kind) } }
+        Let(name=unaryOpcode) { Call(target=lower.structuralNativeUnaryOpcode) { Var(name=kind) } }
+        If {
+          Eq { Var(name=kind) Lit(value="WorkerRef") }
+          Block {
+            Return {
+              Call(target=lower.appendStructuralWorkerRef) {
+                Var(name=context) Var(name=expr)
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { Var(name=kind) Lit(value="Map") }
+              Block { Return { Call(target=lower.appendStructuralMapLiteral) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) } } }
+              Block {
+                If {
+                  Eq { Var(name=kind) Lit(value="Lit") }
+                  Block { Return { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=expr) Var(name=params) Lit(value="") Lit(value=-1) } } }
+                  Block {
+                    If {
+                      Eq { Var(name=kind) Lit(value="Var") }
+                      Block { Return { Call(target=lower.appendStructuralValue) { Var(name=context) Var(name=expr) Var(name=params) Lit(value="") Lit(value=-1) } } }
+                      Block {
+                        If {
+                          Eq { Var(name=indexOpcode) Lit(value="") }
+                          Block {
+                            If {
+                              Eq { Var(name=unaryOpcode) Lit(value="") }
+                              Block {
+                                If {
+                                  Eq { Call(target=lower.structuralNativeVariadicOpcodeForExpression) { Var(name=expr) } Lit(value="") }
+                                  Block {
+                                    Let(name=binaryOpcode) { Call(target=lower.structuralNativeBinaryOpcode) { Var(name=kind) } }
+                                    If {
+                                      Eq { Var(name=binaryOpcode) Lit(value="") }
+                                      Block {
+                                        If {
+                                          Eq { Var(name=kind) Lit(value="Eq") }
+                                          Block { Return { Call(target=lower.appendStructuralNativeBinaryExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Call(target=lower.structuralEqualityOp) { ChildAt { Var(name=expr) Lit(value=0) } ChildAt { Var(name=expr) Lit(value=1) } } } } }
+                                          Block {
+                                            If {
+                                              Eq { Var(name=kind) Lit(value="Lt") }
+                                              Block { Return { Call(target=lower.appendStructuralNativeBinaryExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Lit(value="LT_NUM") } } }
+                                              Block {
+                                                If {
+                                                  Eq { Var(name=kind) Lit(value="Call") }
+                                                  Block {
+                                                    Let(name=targetName) { Call(target=lower.getAttr) { Var(name=expr) Lit(value="target") Lit(value=0) } }
+                                                    Let(name=syscallTarget) { Call(target=lower.canonicalStructuralSyscallTarget) { Var(name=targetName) } }
+                                                    If {
+                                                      Eq { Var(name=syscallTarget) Lit(value="") }
+                                                      Block {
+                                                        Let(name=target) { Call(target=lower.resolveStructuralCallSymbol) { Var(name=records) Var(name=targetName) Lit(value=0) } }
+                                                        If {
+                                                          Eq { NodeKind { Var(name=target) } Lit(value="Err") }
+                                                          Block { Return { Var(name=target) } }
+                                                          Block { Return { Call(target=blockBuilder.emit) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } Lit(value="CALL") AttrValueString { Var(name=target) Lit(value=0) } } } }
+                                                        }
+                                                      }
+                                                      Block {
+                                                        Let(name=withTarget) { Call(target=blockBuilder.emit) { Var(name=context) Lit(value="CONST") StrConcat { Lit(value="string:") Var(name=syscallTarget) } } }
+                                                        Let(name=withArguments) { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=withTarget) Var(name=expr) Var(name=params) Var(name=records) Lit(value=0) } }
+                                                        Return { Call(target=blockBuilder.emit) { Var(name=withArguments) Lit(value="CALL_SYS") ToString { ChildCount { Var(name=expr) } } } }
+                                                      }
+                                                    }
+                                                  }
+                                                  Block {
+                                                    If {
+                                                      Call(target=lower.isStructuralNumericBinaryExpression) { Var(name=expr) }
+                                                      Block { Return { Call(target=lower.appendStructuralNativeBinaryExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Call(target=lower.structuralBinaryOp) { Var(name=expr) } } } }
+                                                      Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER031") Lit(value="Structural native expression is unsupported.") NodeId { Var(name=expr) } } } }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                      Block { Return { Call(target=lower.appendStructuralNativeBinaryExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Var(name=binaryOpcode) } } }
+                                    }
+                                  }
+                                  Block { Return { Call(target=lower.appendStructuralNativeVariadicExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) } } }
+                                }
+                              }
+                              Block {
+                                Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) ChildAt { Var(name=expr) Lit(value=0) } Var(name=params) Var(name=records) } }
+                                If {
+                                  Call(target=lower.isStructuralError) { Var(name=withValue) }
+                                  Block { Return { Var(name=withValue) } }
+                                  Block { Return { Call(target=blockBuilder.emit) { Var(name=withValue) Var(name=unaryOpcode) Lit(value="") } } }
+                                }
+                              }
+                            }
+                          }
+                          Block { Return { Call(target=lower.appendStructuralNativeNodeIndexExpression) { Var(name=context) Var(name=expr) Var(name=params) Var(name=records) Var(name=indexOpcode) } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeNodeIndexExpression) {
+    Fn(params=context,expr,params,records,op) {
+      Block {
+        Let(name=withNode) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) ChildAt { Var(name=expr) Lit(value=0) } Var(name=params) Var(name=records) } }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withNode) }
+          Block { Return { Var(name=withNode) } }
+          Block {
+            Let(name=withIndex) { Call(target=lower.appendStructuralNativeExpression) { Var(name=withNode) ChildAt { Var(name=expr) Lit(value=1) } Var(name=params) Var(name=records) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=withIndex) }
+              Block { Return { Var(name=withIndex) } }
+              Block { Return { Call(target=blockBuilder.emit) { Var(name=withIndex) Var(name=op) Lit(value="") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeCallArguments) {
+    Fn(params=context,call,params,records,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=call) } }
+          Block { Return { Var(name=context) } }
+          Block {
+            Let(name=withArgument) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) ChildAt { Var(name=call) Var(name=index) } Var(name=params) Var(name=records) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=withArgument) }
+              Block { Return { Var(name=withArgument) } }
+              Block { Return { Call(target=lower.appendStructuralNativeCallArguments) { Var(name=withArgument) Var(name=call) Var(name=params) Var(name=records) Add { Var(name=index) Lit(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeBinaryExpression) {
+    Fn(params=context,expr,params,records,op) {
+      Block {
+        Let(name=withLeft) { Call(target=lower.appendStructuralNativeExpression) { Var(name=context) ChildAt { Var(name=expr) Lit(value=0) } Var(name=params) Var(name=records) } }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withLeft) }
+          Block { Return { Var(name=withLeft) } }
+          Block {
+            Let(name=withRight) { Call(target=lower.appendStructuralNativeExpression) { Var(name=withLeft) ChildAt { Var(name=expr) Lit(value=1) } Var(name=params) Var(name=records) } }
+            If {
+              Call(target=lower.isStructuralError) { Var(name=withRight) }
+              Block { Return { Var(name=withRight) } }
+              Block { Return { Call(target=blockBuilder.emit) { Var(name=withRight) Var(name=op) Lit(value="") } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.appendStructuralNativeBinding) {
+    Fn(params=bindings,name) {
+      Block {
+        If {
+          Eq { Var(name=bindings) Lit(value="") }
+          Block { Return { Var(name=name) } }
+          Block { Return { StrConcat { Var(name=bindings) StrConcat { Lit(value=",") Var(name=name) } } } }
+        }
+      }
+    }
+  }
+
+}

@@ -19,6 +19,8 @@ Program {
   Import(path="lower/returns/worker_batches.aos")
   Import(path="lower/control/value_if.aos")
   Import(path="lower/control/dynamic_call.aos")
+  Import(path="lower/control/dynamic_call_statement.aos")
+  Import(path="lower/control/dynamic_call_return.aos")
   Import(path="lower/control/native_branches.aos")
   Import(path="lower/control/statement_binding.aos")
   Import(path="lower/control/statement_return.aos")

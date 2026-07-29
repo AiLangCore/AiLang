@@ -56,6 +56,17 @@ Program {
               }
               Block {
                 If {
+                  Eq { NodeKind { Var(name=node) } Lit(value="CallDynamic") }
+                  Block {
+                    Return {
+                      Call(target=lower.dynamicCall.appendStatementBranch) {
+                        Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings)
+                        Var(name=records) Var(name=index) Var(name=mergeLabel) Var(name=node)
+                      }
+                    }
+                  }
+                  Block {
+                If {
                   Eq { NodeKind { Var(name=node) } Lit(value="Lit") }
                   Block { Return { Call(target=lower.statementIf.appendBranch) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Add { Var(name=index) Lit(value=1) } Var(name=mergeLabel) } } }
                   Block {
@@ -76,6 +87,8 @@ Program {
                         }
                       }
                     }
+                  }
+                }
                   }
                 }
               }

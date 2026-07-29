@@ -1,0 +1,154 @@
+Program {
+  Export(name=lower.dynamicCall.appendReturn)
+
+  Let(name=lower.dynamicCall.appendReturn) {
+    Fn(params=function,context,bindings,records,callNode) {
+      Block {
+        Let(name=candidate) { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="candidates") Lit(value=0) } }
+        If {
+          Eq { Var(name=candidate) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="lower") Lit(value="LOWER034")
+                Lit(value="CallDynamic requires one build-validated candidate.")
+                NodeId { Var(name=callNode) }
+              }
+            }
+          }
+          Block {
+            If {
+              Eq { StringFind { Var(name=candidate) Lit(value=",") Lit(value=0) } Lit(value=-1) }
+              Block {
+                Return {
+                  Call(target=lower.dynamicCall.appendSingleCandidateReturn) {
+                    Var(name=function) Var(name=context) Var(name=bindings)
+                    Var(name=records) Var(name=callNode) Var(name=candidate)
+                  }
+                }
+              }
+              Block {
+                Return {
+                  MakeErr {
+                    Lit(value="lower") Lit(value="LOWER034")
+                    Lit(value="CallDynamic candidate sets are not yet supported by self-hosted lowering.")
+                    NodeId { Var(name=callNode) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.dynamicCall.appendSingleCandidateReturn) {
+    Fn(params=function,context,bindings,records,callNode,candidate) {
+      Block {
+        Let(name=targetSlot) { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } }
+        Let(name=candidateLabel) { StrConcat { Lit(value="dynamic-return-candidate-") NodeId { Var(name=callNode) } } }
+        Let(name=fallbackLabel) { StrConcat { Lit(value="dynamic-return-fallback-") NodeId { Var(name=callNode) } } }
+        Let(name=withTarget) {
+          Call(target=lower.appendStructuralNativeExpression) {
+            Var(name=context) ChildAt { Var(name=callNode) Lit(value=0) }
+            Var(name=bindings) Var(name=records)
+          }
+        }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withTarget) }
+          Block { Return { Var(name=withTarget) } }
+          Block {
+            Let(name=withTargetStore) {
+              Call(target=blockBuilder.emit) {
+                Var(name=withTarget) Lit(value="STORE_LOCAL") ToString { Var(name=targetSlot) }
+              }
+            }
+            Let(name=withTargetLoad) {
+              Call(target=blockBuilder.emit) {
+                Var(name=withTargetStore) Lit(value="LOAD_LOCAL") ToString { Var(name=targetSlot) }
+              }
+            }
+            Let(name=withCandidateName) {
+              Call(target=blockBuilder.emit) {
+                Var(name=withTargetLoad) Lit(value="CONST") StrConcat { Lit(value="string:") Var(name=candidate) }
+              }
+            }
+            Let(name=withComparison) {
+              Call(target=blockBuilder.emit) { Var(name=withCandidateName) Lit(value="EQ") Lit(value="") }
+            }
+            Let(name=withEntry) {
+              Call(target=blockBuilder.appendBlock) {
+                Var(name=function)
+                Call(target=blockBuilder.seal) {
+                  Call(target=blockBuilder.terminateBranch) {
+                    Var(name=withComparison) Var(name=candidateLabel) Var(name=fallbackLabel)
+                  }
+                }
+              }
+            }
+            Let(name=resolved) {
+              Call(target=lower.resolveStructuralCallSymbol) {
+                Var(name=records) Var(name=candidate) Lit(value=0)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=resolved) } Lit(value="Err") }
+              Block { Return { Var(name=resolved) } }
+              Block {
+                Let(name=candidateContext) {
+                  Call(target=lower.dynamicCall.appendArguments) {
+                    Call(target=blockBuilder.beginBlock) { Var(name=candidateLabel) }
+                    Var(name=callNode) Var(name=bindings) Var(name=records) Lit(value=1)
+                  }
+                }
+                If {
+                  Call(target=lower.isStructuralError) { Var(name=candidateContext) }
+                  Block { Return { Var(name=candidateContext) } }
+                  Block {
+                    Let(name=withCall) {
+                      Call(target=blockBuilder.emit) {
+                        Var(name=candidateContext) Lit(value="CALL")
+                        AttrValueString { Var(name=resolved) Lit(value=0) }
+                      }
+                    }
+                    Let(name=withCandidateBlock) {
+                      Call(target=blockBuilder.appendBlock) {
+                        Var(name=withEntry)
+                        Call(target=blockBuilder.seal) {
+                          Call(target=blockBuilder.terminateReturn) { Var(name=withCall) }
+                        }
+                      }
+                    }
+                    Let(name=fallbackContext) {
+                      Call(target=blockBuilder.emit) {
+                        Call(target=blockBuilder.emit) {
+                          Call(target=blockBuilder.beginBlock) { Var(name=fallbackLabel) }
+                          Lit(value="CONST") Lit(value="string:sys.dynamic.missingFunction")
+                        }
+                        Lit(value="LOAD_LOCAL") ToString { Var(name=targetSlot) }
+                      }
+                    }
+                    Let(name=withFallbackCall) {
+                      Call(target=blockBuilder.emit) {
+                        Var(name=fallbackContext) Lit(value="CALL_SYS") Lit(value="1")
+                      }
+                    }
+                    Return {
+                      Call(target=blockBuilder.appendBlock) {
+                        Var(name=withCandidateBlock)
+                        Call(target=blockBuilder.seal) {
+                          Call(target=blockBuilder.terminateReturn) { Var(name=withFallbackCall) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

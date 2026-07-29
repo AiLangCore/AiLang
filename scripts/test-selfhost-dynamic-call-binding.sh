@@ -23,6 +23,19 @@ Program {
     }
   }
 
+  Let(name=dynamicResult) {
+    Fn(params=target,args) {
+      Block {
+        Return {
+          CallDynamic(candidates="selected") {
+            Var(name=target)
+            Var(name=args)
+          }
+        }
+      }
+    }
+  }
+
   Let(name=start) {
     Fn(params=args) {
       Block {
@@ -37,7 +50,18 @@ Program {
           Var(name=target)
           Var(name=args)
         }
-        Return { Var(name=result) }
+        If {
+          Lit(value=true)
+          Block {
+            CallDynamic(candidates="selected") {
+              Var(name=target)
+              Var(name=args)
+            }
+            Lit(value=0)
+          }
+          Block { Lit(value=0) }
+        }
+        Return { Call(target=dynamicResult) { Var(name=target) Var(name=args) } }
       }
     }
   }
@@ -55,4 +79,4 @@ if [[ ${actual} -ne 17 ]]; then
   exit 1
 fi
 
-echo "self-hosted dynamic Call binding and statement: PASS"
+echo "self-hosted dynamic Call binding, statement, conditional branch, and return: PASS"

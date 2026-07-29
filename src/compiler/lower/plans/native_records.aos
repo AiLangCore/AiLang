@@ -11,9 +11,23 @@ Program {
         Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
         Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
         Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=context) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
-        Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=withParams) Var(name=value) Var(name=params) Var(name=records) } }
-        Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } }
-        Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
+        If {
+          Eq { NodeKind { Var(name=value) } Lit(value="CallDynamic") }
+          Block {
+            Return {
+              Call(target=blockLinker.flatten) {
+                Call(target=lower.dynamicCall.appendReturn) {
+                  Var(name=function) Var(name=withParams) Var(name=params) Var(name=records) Var(name=value)
+                }
+              }
+            }
+          }
+          Block {
+            Let(name=withValue) { Call(target=lower.appendStructuralNativeExpression) { Var(name=withParams) Var(name=value) Var(name=params) Var(name=records) } }
+            Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withValue) } }
+            Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
+          }
+        }
       }
     }
   }

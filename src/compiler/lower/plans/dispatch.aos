@@ -103,9 +103,21 @@ Program {
                       }
                       Block {
                         If {
-                          Call(target=lower.isStructuralNativeExpression) { Var(name=value) }
-                          Block { Return { Call(target=lower.emitStructuralNativeReturnRecordPlan) { Var(name=record) Var(name=records) } } }
-                          Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+                          Eq { NodeKind { Var(name=value) } Lit(value="CallDynamic") }
+                          Block {
+                            Return {
+                              Call(target=lower.emitStructuralNativeReturnRecordPlan) {
+                                Var(name=record) Var(name=records)
+                              }
+                            }
+                          }
+                          Block {
+                            If {
+                              Call(target=lower.isStructuralNativeExpression) { Var(name=value) }
+                              Block { Return { Call(target=lower.emitStructuralNativeReturnRecordPlan) { Var(name=record) Var(name=records) } } }
+                              Block { Return { Call(target=lower.emitStructuralRecordPlan) { Var(name=record) } } }
+                            }
+                          }
                         }
                       }
                     }

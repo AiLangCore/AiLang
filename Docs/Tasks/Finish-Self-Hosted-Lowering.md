@@ -966,11 +966,21 @@ the former invalid `ChildAt` failure. Numeric expression policy and opcode
 selection have also moved into a focused module, including the specified
 `Pow` to `POW_NUM` mapping.
 
-Weather now advances through both of those frontiers. Its current deterministic
-frontier is `If_6031`, a value-producing `If` nested where structural native
-expression lowering does not yet accept `If`. The next acceptance step is to
-route nested value conditionals through the existing focused value-`If`
-lowering without moving conditional semantics into AiVM.
+Weather now advances through both of those frontiers. Investigation of
+`If_6031` showed that it was package source embedding a multi-block conditional
+inside a value expression, not a missing mechanical VM operation. The
+authoritative AiVectra and `vectra-ui` sources now bind those conditionals as
+ordinary statement control flow before consuming their values.
+
+The restored graph subsequently exposed package portability issues in
+`std-http`: a compiler-parser dependency used to construct a command, legacy
+unqualified byte helpers, `ToInt`, unsupported `Or` expressions, and another
+return-valued conditional. Those paths now use direct structural construction,
+canonical `bytes.*` exports, the package's decimal parser, and deterministic
+statement control flow. The latest completed generation pass reached
+`If_43197` in redirect status classification; that source is normalized for the
+next proof run. No new semantics were added to AiVM or the generic expression
+emitter.
 
 ## Acceptance Criteria
 

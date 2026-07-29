@@ -108,6 +108,18 @@ The migrated C launcher is temporarily parked in:
 ../AiVM/src/ailang_cli
 ```
 
+Self-hosted release payloads are packaged from a completed default self-host
+build with:
+
+```text
+./scripts/package-selfhost-release-payloads.sh
+```
+
+The helper emits the bytecode CLI, the built-in command archive, and their
+SHA-256 values. Release packaging pins those hashes and consumes only the
+prevalidated self-hosted payloads; it does not silently substitute native
+bootstrap command implementations.
+
 ## Remaining Native Launcher Debt
 
 The native launcher still contains command-policy code during the bootstrap

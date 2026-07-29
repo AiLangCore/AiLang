@@ -259,6 +259,11 @@ resolution is:
 2. globally installed tool under `~/.ailang/tools`
 3. local package tool from the current project's lockfile
 
+The self-hosted CLI owns local package-tool resolution in focused
+`package_tool_dispatch.aos` and `package_lock_tools.aos` modules. It preserves
+compiled command priority, resolves restored package roots in canonical
+lockfile order, and forwards tool arguments through `std.process`.
+
 If a package declares `tool` and its tool name conflicts with a compiled,
 global, or already-local tool, restore fails instead of silently shadowing a
 command.

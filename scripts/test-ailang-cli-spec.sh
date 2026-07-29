@@ -94,7 +94,8 @@ printf '%s\n' "${TEMPLATE_PATH_OUT}" | rg -q '^templates/projects/cli$'
 
 mkdir -p \
   "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/projects/hello" \
-  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/view"
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/view" \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts"
 cat > "${TEMPLATE_PACKAGE_DIR}/ailang.lock.toml" <<'EOF'
 schema = "ailang.lock.v1"
 
@@ -115,10 +116,20 @@ cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/index
 name = "view"
 path = "templates/files/view"
 EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts/sample-kit" <<'EOF'
+#!/usr/bin/env sh
+printf 'sample-package-tool:%s\n' "$1"
+EOF
+chmod +x "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts/sample-kit"
 TEMPLATE_PROJECTS_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list projects "${TEMPLATE_PACKAGE_DIR}")"
 printf '%s\n' "${TEMPLATE_PROJECTS_OUT}" | rg -q '^sample-kit/hello$'
 TEMPLATE_FILES_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list files "${TEMPLATE_PACKAGE_DIR}")"
 printf '%s\n' "${TEMPLATE_FILES_OUT}" | rg -q '^sample-kit/view$'
+TEMPLATE_TOOL_OUT="$(
+  cd "${TEMPLATE_PACKAGE_DIR}"
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" sample-kit probe
+)"
+printf '%s\n' "${TEMPLATE_TOOL_OUT}" | rg -q '^sample-package-tool:probe$'
 
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" init "${APP_DIR}" --template cli-args --agents all >/dev/null
 test -f "${APP_DIR}/project.aiproj"

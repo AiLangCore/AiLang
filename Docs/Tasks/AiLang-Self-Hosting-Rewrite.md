@@ -79,6 +79,10 @@ Current bootstrap status:
   deterministic `templates/<kind>/index.toml` files; the AiLang command
   qualifies entries as `<package>/<template>` without host directory
   enumeration.
+- Unknown compiled command names now fall through to an AiLang-authored local
+  package-tool resolver. It reads the current project lockfile, resolves tools
+  in canonical package order, and invokes the selected executable through
+  `std.process`; the main CLI remains a thin facade.
 - The self-hosted compiler pipeline already produces deterministic per-module
   AiBCO1 objects in `obj/module-<index>.aibco`, writes `obj/app.aibco` as the
   stable entry object, links `bin/app.aibc1`, and executes supported linked

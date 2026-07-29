@@ -1,10 +1,25 @@
 Program {
   Let(name=lower.appendStructuralNativeTerminalSequence) {
-    Fn(params=function,context,branch,bindings,records,index) {
+    Fn(params=function,context,branch,bindings,records,index,continueLabel,breakLabel) {
       Block {
         If {
           Eq { Var(name=index) ChildCount { Var(name=branch) } }
-          Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branch is missing a Return or If.") NodeId { Var(name=branch) } } } }
+          Block {
+            If {
+              Eq { Var(name=continueLabel) Lit(value="") }
+              Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branch is missing a Return or If.") NodeId { Var(name=branch) } } } }
+              Block {
+                Return {
+                  Call(target=blockBuilder.appendBlock) {
+                    Var(name=function)
+                    Call(target=blockBuilder.seal) {
+                      Call(target=blockBuilder.terminateJump) { Var(name=context) Var(name=continueLabel) }
+                    }
+                  }
+                }
+              }
+            }
+          }
           Block {
             Let(name=node) { ChildAt { Var(name=branch) Var(name=index) } }
             If {
@@ -14,7 +29,7 @@ Program {
                 Let(name=value) { ChildAt { Var(name=node) Lit(value=0) } }
                 If {
                   Eq { NodeKind { Var(name=value) } Lit(value="If") }
-                  Block { Return { Call(target=lower.valueIf.appendBinding) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=name) Var(name=value) } } }
+                  Block { Return { Call(target=lower.valueIf.appendBinding) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=name) Var(name=value) Var(name=continueLabel) Var(name=breakLabel) } } }
                   Block {
                     If {
                       Eq { NodeKind { Var(name=value) } Lit(value="CallDynamic") }
@@ -23,6 +38,7 @@ Program {
                           Call(target=lower.dynamicCall.appendBinding) {
                             Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings)
                             Var(name=records) Var(name=index) Var(name=name) Var(name=value)
+                            Var(name=continueLabel) Var(name=breakLabel)
                           }
                         }
                       }
@@ -32,9 +48,9 @@ Program {
                           Call(target=lower.isStructuralError) { Var(name=withValue) }
                           Block { Return { Var(name=withValue) } }
                           Block {
-                            Let(name=slot) { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } }
+                            Let(name=slot) { Call(target=lower.structuralNativeBindingSlot) { Var(name=bindings) Var(name=name) } }
                             Let(name=withStore) { Call(target=blockBuilder.emit) { Var(name=withValue) Lit(value="STORE_LOCAL") ToString { Var(name=slot) } } }
-                            Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withStore) Var(name=branch) Call(target=lower.appendStructuralNativeBinding) { Var(name=bindings) Var(name=name) } Var(name=records) Add { Var(name=index) Lit(value=1) } } }
+                            Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withStore) Var(name=branch) Call(target=lower.appendStructuralNativeBinding) { Var(name=bindings) Var(name=name) } Var(name=records) Add { Var(name=index) Lit(value=1) } Var(name=continueLabel) Var(name=breakLabel) } }
                           }
                         }
                       }
@@ -52,7 +68,7 @@ Program {
                       Block { Return { Var(name=withCall) } }
                       Block {
                         Let(name=withDiscard) { Call(target=blockBuilder.emit) { Var(name=withCall) Lit(value="POP") Lit(value="") } }
-                        Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withDiscard) Var(name=branch) Var(name=bindings) Var(name=records) Add { Var(name=index) Lit(value=1) } } }
+                        Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=withDiscard) Var(name=branch) Var(name=bindings) Var(name=records) Add { Var(name=index) Lit(value=1) } Var(name=continueLabel) Var(name=breakLabel) } }
                       }
                     }
                   }
@@ -65,7 +81,7 @@ Program {
                             Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings)
                             Var(name=records) Var(name=index)
                             StrConcat { Lit(value="__dynamic_discard_") NodeId { Var(name=node) } }
-                            Var(name=node)
+                            Var(name=node) Var(name=continueLabel) Var(name=breakLabel)
                           }
                         }
                       }
@@ -106,11 +122,77 @@ Program {
                       Block {
                         If {
                           Eq { Add { Var(name=index) Lit(value=1) } ChildCount { Var(name=branch) } }
-                          Block { Return { Call(target=lower.appendStructuralNativeIfTree) { Var(name=function) Var(name=context) Var(name=node) Var(name=bindings) Var(name=records) } } }
-                          Block { Return { Call(target=lower.statementIf.append) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=node) } } }
+                          Block {
+                            If {
+                              Eq { Var(name=continueLabel) Lit(value="") }
+                              Block { Return { Call(target=lower.appendStructuralNativeIfTree) { Var(name=function) Var(name=context) Var(name=node) Var(name=bindings) Var(name=records) } } }
+                              Block { Return { Call(target=lower.statementIf.append) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=node) Var(name=continueLabel) Var(name=breakLabel) } } }
+                            }
+                          }
+                          Block { Return { Call(target=lower.statementIf.append) { Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings) Var(name=records) Var(name=index) Var(name=node) Var(name=continueLabel) Var(name=breakLabel) } } }
                         }
                       }
-                      Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branches support Let, Call, Return, or If.") StrConcat { NodeKind { Var(name=node) } StrConcat { Lit(value=":") NodeId { Var(name=node) } } } } } }
+                      Block {
+                        If {
+                          Eq { NodeKind { Var(name=node) } Lit(value="Loop") }
+                          Block {
+                            Return {
+                              Call(target=lower.loop.append) {
+                                Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings)
+                                Var(name=records) Var(name=index) Var(name=node)
+                                Var(name=continueLabel) Var(name=breakLabel)
+                              }
+                            }
+                          }
+                          Block {
+                            If {
+                              Eq { NodeKind { Var(name=node) } Lit(value="Break") }
+                              Block {
+                                If {
+                                  Eq { Var(name=breakLabel) Lit(value="") }
+                                  Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER035") Lit(value="Break requires an enclosing Loop.") NodeId { Var(name=node) } } } }
+                                  Block {
+                                    Return {
+                                      Call(target=blockBuilder.appendBlock) {
+                                        Var(name=function)
+                                        Call(target=blockBuilder.seal) {
+                                          Call(target=blockBuilder.terminateJump) {
+                                            Var(name=context) Var(name=breakLabel)
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                              Block {
+                                If {
+                                  Eq { NodeKind { Var(name=node) } Lit(value="Continue") }
+                                  Block {
+                                    If {
+                                      Eq { Var(name=continueLabel) Lit(value="") }
+                                      Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER035") Lit(value="Continue requires an enclosing Loop.") NodeId { Var(name=node) } } } }
+                                      Block {
+                                        Return {
+                                          Call(target=blockBuilder.appendBlock) {
+                                            Var(name=function)
+                                            Call(target=blockBuilder.seal) {
+                                              Call(target=blockBuilder.terminateJump) {
+                                                Var(name=context) Var(name=continueLabel)
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                  Block { Return { MakeErr { Lit(value="lower") Lit(value="LOWER032") Lit(value="Terminal branches support Let, Call, Return, If, Loop, Break, or Continue.") StrConcat { NodeKind { Var(name=node) } StrConcat { Lit(value=":") NodeId { Var(name=node) } } } } } }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                   }
@@ -128,7 +210,7 @@ Program {
 
   Let(name=lower.appendStructuralNativeBranch) {
     Fn(params=function,context,branch,params,records) {
-      Block { Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=context) Var(name=branch) Var(name=params) Var(name=records) Lit(value=0) } } }
+      Block { Return { Call(target=lower.appendStructuralNativeTerminalSequence) { Var(name=function) Var(name=context) Var(name=branch) Var(name=params) Var(name=records) Lit(value=0) Lit(value="") Lit(value="") } } }
     }
   }
 

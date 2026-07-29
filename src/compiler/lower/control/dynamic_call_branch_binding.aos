@@ -1,8 +1,8 @@
 Program {
-  Export(name=lower.dynamicCall.appendStatementBranch)
+  Export(name=lower.dynamicCall.appendBranchBinding)
 
-  Let(name=lower.dynamicCall.appendStatementBranch) {
-    Fn(params=function,context,branch,bindings,records,index,outerMergeLabel,callNode,continueLabel,breakLabel) {
+  Let(name=lower.dynamicCall.appendBranchBinding) {
+    Fn(params=function,context,branch,bindings,records,index,mergeLabel,letName,callNode,continueLabel,breakLabel) {
       Block {
         Let(name=candidate) { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="candidates") Lit(value=0) } }
         If {
@@ -21,9 +21,9 @@ Program {
               Eq { StringFind { Var(name=candidate) Lit(value=",") Lit(value=0) } Lit(value=-1) }
               Block {
                 Return {
-                  Call(target=lower.dynamicCall.appendSingleCandidateStatementBranch) {
+                  Call(target=lower.dynamicCall.appendSingleCandidateBranchBinding) {
                     Var(name=function) Var(name=context) Var(name=branch) Var(name=bindings)
-                    Var(name=records) Var(name=index) Var(name=outerMergeLabel)
+                    Var(name=records) Var(name=index) Var(name=mergeLabel) Var(name=letName)
                     Var(name=callNode) Var(name=candidate) Var(name=continueLabel) Var(name=breakLabel)
                   }
                 }
@@ -44,13 +44,16 @@ Program {
     }
   }
 
-  Let(name=lower.dynamicCall.appendSingleCandidateStatementBranch) {
-    Fn(params=function,context,branch,bindings,records,index,outerMergeLabel,callNode,candidate,continueLabel,breakLabel) {
+  Let(name=lower.dynamicCall.appendSingleCandidateBranchBinding) {
+    Fn(params=function,context,branch,bindings,records,index,outerMergeLabel,letName,callNode,candidate,continueLabel,breakLabel) {
       Block {
-        Let(name=targetSlot) { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } }
-        Let(name=candidateLabel) { StrConcat { Lit(value="dynamic-statement-candidate-") NodeId { Var(name=callNode) } } }
-        Let(name=fallbackLabel) { StrConcat { Lit(value="dynamic-statement-fallback-") NodeId { Var(name=callNode) } } }
-        Let(name=mergeLabel) { StrConcat { Lit(value="dynamic-statement-merge-") NodeId { Var(name=callNode) } } }
+        Let(name=resultSlot) {
+          Call(target=lower.structuralNativeBindingSlot) { Var(name=bindings) Var(name=letName) }
+        }
+        Let(name=targetSlot) { Add { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } Lit(value=1) } }
+        Let(name=candidateLabel) { StrConcat { Lit(value="dynamic-binding-candidate-") NodeId { Var(name=callNode) } } }
+        Let(name=fallbackLabel) { StrConcat { Lit(value="dynamic-binding-fallback-") NodeId { Var(name=callNode) } } }
+        Let(name=mergeLabel) { StrConcat { Lit(value="dynamic-binding-merge-") NodeId { Var(name=callNode) } } }
         Let(name=withTarget) {
           Call(target=lower.appendStructuralNativeExpression) {
             Var(name=context) ChildAt { Var(name=callNode) Lit(value=0) }
@@ -114,14 +117,16 @@ Program {
                         AttrValueString { Var(name=resolved) Lit(value=0) }
                       }
                     }
-                    Let(name=withDiscard) {
-                      Call(target=blockBuilder.emit) { Var(name=withCall) Lit(value="POP") Lit(value="") }
+                    Let(name=withResultStore) {
+                      Call(target=blockBuilder.emit) {
+                        Var(name=withCall) Lit(value="STORE_LOCAL") ToString { Var(name=resultSlot) }
+                      }
                     }
                     Let(name=withCandidateBlock) {
                       Call(target=blockBuilder.appendBlock) {
                         Var(name=withEntry)
                         Call(target=blockBuilder.seal) {
-                          Call(target=blockBuilder.terminateJump) { Var(name=withDiscard) Var(name=mergeLabel) }
+                          Call(target=blockBuilder.terminateJump) { Var(name=withResultStore) Var(name=mergeLabel) }
                         }
                       }
                     }
@@ -139,9 +144,9 @@ Program {
                         Var(name=fallbackContext) Lit(value="CALL_SYS") Lit(value="1")
                       }
                     }
-                    Let(name=withFallbackDiscard) {
+                    Let(name=withFallbackStore) {
                       Call(target=blockBuilder.emit) {
-                        Var(name=withFallbackCall) Lit(value="POP") Lit(value="")
+                        Var(name=withFallbackCall) Lit(value="STORE_LOCAL") ToString { Var(name=resultSlot) }
                       }
                     }
                     Let(name=withFallbackBlock) {
@@ -149,7 +154,7 @@ Program {
                         Var(name=withCandidateBlock)
                         Call(target=blockBuilder.seal) {
                           Call(target=blockBuilder.terminateJump) {
-                            Var(name=withFallbackDiscard) Var(name=mergeLabel)
+                            Var(name=withFallbackStore) Var(name=mergeLabel)
                           }
                         }
                       }
@@ -158,9 +163,12 @@ Program {
                       Call(target=lower.statementIf.appendBranch) {
                         Var(name=withFallbackBlock)
                         Call(target=blockBuilder.beginBlock) { Var(name=mergeLabel) }
-                        Var(name=branch) Var(name=bindings) Var(name=records)
-                        Add { Var(name=index) Lit(value=1) } Var(name=outerMergeLabel)
-                        Var(name=continueLabel) Var(name=breakLabel)
+                        Var(name=branch)
+                        Call(target=lower.appendStructuralNativeBinding) {
+                          Var(name=bindings) Var(name=letName)
+                        }
+                        Var(name=records) Add { Var(name=index) Lit(value=1) }
+                        Var(name=outerMergeLabel) Var(name=continueLabel) Var(name=breakLabel)
                       }
                     }
                   }

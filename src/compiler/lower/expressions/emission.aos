@@ -175,10 +175,34 @@ Program {
   Let(name=lower.appendStructuralNativeBinding) {
     Fn(params=bindings,name) {
       Block {
+        Let(name=existing) {
+          Call(target=lower.parameterSlot) { Var(name=bindings) Var(name=name) Lit(value=0) Lit(value=0) }
+        }
         If {
-          Eq { Var(name=bindings) Lit(value="") }
-          Block { Return { Var(name=name) } }
-          Block { Return { StrConcat { Var(name=bindings) StrConcat { Lit(value=",") Var(name=name) } } } }
+          Eq { Var(name=existing) Lit(value=-1) }
+          Block {
+            If {
+              Eq { Var(name=bindings) Lit(value="") }
+              Block { Return { Var(name=name) } }
+              Block { Return { StrConcat { Var(name=bindings) StrConcat { Lit(value=",") Var(name=name) } } } }
+            }
+          }
+          Block { Return { Var(name=bindings) } }
+        }
+      }
+    }
+  }
+
+  Let(name=lower.structuralNativeBindingSlot) {
+    Fn(params=bindings,name) {
+      Block {
+        Let(name=existing) {
+          Call(target=lower.parameterSlot) { Var(name=bindings) Var(name=name) Lit(value=0) Lit(value=0) }
+        }
+        If {
+          Eq { Var(name=existing) Lit(value=-1) }
+          Block { Return { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } } }
+          Block { Return { Var(name=existing) } }
         }
       }
     }

@@ -2,7 +2,7 @@ Program {
   Export(name=lower.dynamicCall.appendBinding)
 
   Let(name=lower.dynamicCall.appendBinding) {
-    Fn(params=function,context,sequence,bindings,records,index,name,callNode) {
+    Fn(params=function,context,sequence,bindings,records,index,name,callNode,continueLabel,breakLabel) {
       Block {
         Let(name=candidate) { Call(target=lower.getAttr) { Var(name=callNode) Lit(value="candidates") Lit(value=0) } }
         If {
@@ -24,6 +24,7 @@ Program {
                   Call(target=lower.dynamicCall.appendSingleCandidateBinding) {
                     Var(name=function) Var(name=context) Var(name=sequence) Var(name=bindings)
                     Var(name=records) Var(name=index) Var(name=name) Var(name=callNode) Var(name=candidate)
+                    Var(name=continueLabel) Var(name=breakLabel)
                   }
                 }
               }
@@ -44,10 +45,10 @@ Program {
   }
 
   Let(name=lower.dynamicCall.appendSingleCandidateBinding) {
-    Fn(params=function,context,sequence,bindings,records,index,name,callNode,candidate) {
+    Fn(params=function,context,sequence,bindings,records,index,name,callNode,candidate,continueLabel,breakLabel) {
       Block {
         Let(name=targetSlot) { Add { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } Lit(value=1) } }
-        Let(name=resultSlot) { Call(target=lower.parameterCount) { Var(name=bindings) Lit(value=0) } }
+        Let(name=resultSlot) { Call(target=lower.structuralNativeBindingSlot) { Var(name=bindings) Var(name=name) } }
         Let(name=candidateLabel) { StrConcat { Lit(value="dynamic-call-candidate-") NodeId { Var(name=callNode) } } }
         Let(name=fallbackLabel) { StrConcat { Lit(value="dynamic-call-fallback-") NodeId { Var(name=callNode) } } }
         Let(name=mergeLabel) { StrConcat { Lit(value="dynamic-call-merge-") NodeId { Var(name=callNode) } } }
@@ -155,6 +156,7 @@ Program {
                         Var(name=sequence)
                         Call(target=lower.appendStructuralNativeBinding) { Var(name=bindings) Var(name=name) }
                         Var(name=records) Add { Var(name=index) Lit(value=1) }
+                        Var(name=continueLabel) Var(name=breakLabel)
                       }
                     }
                   }

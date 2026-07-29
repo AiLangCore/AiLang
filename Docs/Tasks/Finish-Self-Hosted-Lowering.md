@@ -942,8 +942,8 @@ removes the `DEV008` failure that followed the package-owned
 
 ### Build-validated dynamic call lowering
 
-Status: binding, statement, conditional-branch, and return continuations
-implemented on 2026-07-29; loop continuation pending.
+Status: binding, statement, conditional-branch, return, and loop continuations
+implemented on 2026-07-29.
 
 The self-hosted lowerer now owns single-candidate `CallDynamic` dispatch in
 focused control modules. It evaluates and stores the runtime target, compares
@@ -952,12 +952,21 @@ and preserves the `sys.dynamic.missingFunction` fallback. Binding, discarded
 statement, statement-`If` branch, and return continuations have executable
 coverage.
 
-The restored Weather graph advances through all dynamic calls before its
-application loop. Its current deterministic frontier is `Loop_13000`, reported
-as `LOWER032` because structural terminal-sequence lowering does not yet accept
-`Loop`. The next acceptance step is modular loop/body lowering with canonical
-back edges and explicit `Break`/`Continue` handling; no loop policy belongs in
-AiVM.
+The self-hosted lowerer now accepts structural `Loop` nodes through a focused
+control module with canonical entry, body, and exit blocks. `Break` and
+`Continue` resolve only from the loop labels threaded through nested statement
+branches, and loop-local rebinding reuses the existing local slot. Focused
+coverage includes a dynamic call binding nested in a loop conditional.
+
+The restored Weather graph now lowers its complete application loop. Removing
+AiVectra's unused pre-release `guiRun`/`guiLoop` facade exposes the next
+deterministic frontier in the self-hosted compiler: the legacy two-statement
+record planner selects `lower.emitStructuralLocalBinaryRecordPlan` for a
+non-binary return value and reaches an invalid `ChildAt` instead of selecting
+the native sequence planner. The next acceptance step is to move that
+two-statement classification into a focused plan module, validate the return
+shape before destructuring it, and route all other supported values through the
+symbol-aware native sequence path.
 
 ## Acceptance Criteria
 

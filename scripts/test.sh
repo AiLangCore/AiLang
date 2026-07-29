@@ -55,6 +55,7 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-lower-structural-native-terminal-let-module.sh
 ./scripts/test-lower-structural-value-if-binding-module.sh
 ./scripts/test-selfhost-dynamic-call-binding.sh
+./scripts/test-selfhost-loop-control.sh
 ./scripts/test-lower-structural-nested-native-if-module.sh
 ./scripts/test-lower-structural-native-if-call-module.sh
 ./scripts/test-lower-structural-native-sequence-module.sh

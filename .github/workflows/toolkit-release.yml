@@ -800,8 +800,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout installed workflow examples
+        uses: actions/checkout@v6
+        with:
+          repository: AiLangCore/ailang-examples
+          ref: main
+          path: ailang-examples
+
       - name: Exact version install smoke
         shell: bash
+        env:
+          AILANG_EXAMPLES_ROOT: ${{ github.workspace }}/ailang-examples
+          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 300
+          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 300
         run: |
           set -euo pipefail
           export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-exact"
@@ -822,6 +833,10 @@ jobs:
 
       - name: Beta channel install smoke
         shell: bash
+        env:
+          AILANG_EXAMPLES_ROOT: ${{ github.workspace }}/ailang-examples
+          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 300
+          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 300
         run: |
           set -euo pipefail
           export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-channel"

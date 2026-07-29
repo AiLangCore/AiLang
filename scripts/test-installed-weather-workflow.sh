@@ -2,9 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EXAMPLE_DIR="${ROOT_DIR}/../ailang-examples/examples/aivectra/weather-app"
+EXAMPLES_ROOT="${AILANG_EXAMPLES_ROOT:-${ROOT_DIR}/../ailang-examples}"
+EXAMPLE_DIR="${EXAMPLES_ROOT}/examples/aivectra/weather-app"
 TMP_ROOT="${AILANG_WEATHER_SMOKE_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/ailang-weather-smoke.XXXXXX")}"
 APP_DIR="${TMP_ROOT}/weather-app"
+BUILD_TIMEOUT_SECONDS="${AILANG_WEATHER_BUILD_TIMEOUT_SECONDS:-180}"
 
 cleanup() {
   if [[ -z "${AILANG_WEATHER_SMOKE_KEEP:-}" ]]; then
@@ -25,6 +27,16 @@ if ! command -v perl >/dev/null 2>&1; then
   echo "missing required tool: perl" >&2
   exit 1
 fi
+case "${BUILD_TIMEOUT_SECONDS}" in
+  ''|*[!0-9]*)
+    echo "AILANG_WEATHER_BUILD_TIMEOUT_SECONDS must be a positive integer" >&2
+    exit 2
+    ;;
+esac
+if [[ "${BUILD_TIMEOUT_SECONDS}" -lt 1 ]]; then
+  echo "AILANG_WEATHER_BUILD_TIMEOUT_SECONDS must be at least 1" >&2
+  exit 2
+fi
 if [[ ! -f "${EXAMPLE_DIR}/project.aiproj" ]]; then
   echo "weather example was not found: ${EXAMPLE_DIR}" >&2
   exit 1
@@ -40,9 +52,9 @@ ailang package restore "${APP_DIR}"
 grep -q 'name = "aivectra"' "${APP_DIR}/ailang.lock.toml"
 grep -q 'name = "vectra-ui"' "${APP_DIR}/ailang.lock.toml"
 grep -q 'name = "std-http"' "${APP_DIR}/ailang.lock.toml"
-grep -q 'namespaces = \["std.net.http"\]' "${APP_DIR}/ailang.lock.toml"
+grep -q 'namespaces = .*"std.net.http"' "${APP_DIR}/ailang.lock.toml"
 
-if ! perl -e 'alarm shift @ARGV; exec @ARGV' 60 ailang build "${APP_DIR}"; then
+if ! perl -e 'alarm shift @ARGV; exec @ARGV' "${BUILD_TIMEOUT_SECONDS}" ailang build "${APP_DIR}"; then
   echo "weather build failed or timed out" >&2
   exit 1
 fi

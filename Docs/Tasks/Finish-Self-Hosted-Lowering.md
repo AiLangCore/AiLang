@@ -994,12 +994,21 @@ proof, the restored Weather application now compiles completely to
 `bin/app.aibc1`. App-owned inline conditionals in HTTP URL construction,
 forecast text, UI control states, and the ForecastCard companion were moved
 into focused reusable functions. The default worker path remains blocked
-earlier: the first canonical module task fails at `Await`, and the runtime
-currently propagates an empty worker error detail. The serial success isolates
-that defect to worker execution or failure transport rather than Weather
-lowering. Runtime launch reaches the macOS application boundary, but injected
-close did not terminate the application, so executable runtime acceptance
-remains open.
+earlier: the first canonical module task fails at `Await`. AiVM diagnosis now
+snapshots terminal worker details before automatic Task reclamation. The
+canonical failure is therefore visible as `AIVMS008`: the module-object worker
+calls `sys.fs.path.exists`, but filesystem capability is intentionally denied
+because the current filesystem host binding retains process-global mutable
+state.
+
+The serial success isolates that defect to the path-coupled worker task schema
+rather than Weather lowering. The next worker iteration must transport
+canonical staged input bytes or compact records to the isolated invocation; it
+must not grant unsafe concurrent filesystem access. The measured Weather stage
+documents are 99,433 bytes before program payload expansion, providing the
+first bound for that transport design. Runtime launch reaches the macOS
+application boundary, but injected close did not terminate the application, so
+executable runtime acceptance remains open.
 
 ## Acceptance Criteria
 

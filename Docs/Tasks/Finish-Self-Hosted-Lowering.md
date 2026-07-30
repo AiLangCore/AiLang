@@ -982,6 +982,25 @@ statement control flow. The latest completed generation pass reached
 next proof run. No new semantics were added to AiVM or the generic expression
 emitter.
 
+The following iteration added optional-else support to the focused
+`lower.statementIf` module. A statement `If` with two children now receives a
+deterministic empty else block during lowering instead of attempting an
+out-of-range `ChildAt`. The focused regression and the default self-host build
+pass; the latter generated the self-hosted CLI in 677 seconds using nine jobs
+derived from the 96-percent capacity profile.
+
+Using that fresh self-hosted CLI with the explicit serial object-selection
+proof, the restored Weather application now compiles completely to
+`bin/app.aibc1`. App-owned inline conditionals in HTTP URL construction,
+forecast text, UI control states, and the ForecastCard companion were moved
+into focused reusable functions. The default worker path remains blocked
+earlier: the first canonical module task fails at `Await`, and the runtime
+currently propagates an empty worker error detail. The serial success isolates
+that defect to worker execution or failure transport rather than Weather
+lowering. Runtime launch reaches the macOS application boundary, but injected
+close did not terminate the application, so executable runtime acceptance
+remains open.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

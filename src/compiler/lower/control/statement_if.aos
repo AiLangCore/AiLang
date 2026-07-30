@@ -1,10 +1,22 @@
 Program {
+  Let(name=lower.statementIf.elseBranch) {
+    Fn(params=ifNode) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=ifNode) } Lit(value=2) }
+          Block { Return { MakeBlock { StrConcat { Lit(value="statement-if-empty-") NodeId { Var(name=ifNode) } } } } }
+          Block { Return { ChildAt { Var(name=ifNode) Lit(value=2) } } }
+        }
+      }
+    }
+  }
+
   Let(name=lower.statementIf.append) {
     Fn(params=function,context,sequence,bindings,records,index,ifNode,continueLabel,breakLabel) {
       Block {
         Let(name=condition) { ChildAt { Var(name=ifNode) Lit(value=0) } }
         Let(name=thenBranch) { ChildAt { Var(name=ifNode) Lit(value=1) } }
-        Let(name=elseBranch) { ChildAt { Var(name=ifNode) Lit(value=2) } }
+        Let(name=elseBranch) { Call(target=lower.statementIf.elseBranch) { Var(name=ifNode) } }
         Let(name=thenLabel) { StrConcat { Lit(value="statement-if-then-") NodeId { Var(name=ifNode) } } }
         Let(name=elseLabel) { StrConcat { Lit(value="statement-if-else-") NodeId { Var(name=ifNode) } } }
         Let(name=mergeLabel) { StrConcat { Lit(value="statement-if-merge-") NodeId { Var(name=ifNode) } } }
@@ -163,7 +175,7 @@ Program {
               Call(target=lower.isStructuralError) { Var(name=withThen) }
               Block { Return { Var(name=withThen) } }
               Block {
-                Let(name=withElse) { Call(target=lower.statementIf.appendBranch) { Var(name=withThen) Call(target=blockBuilder.beginBlock) { Var(name=elseLabel) } ChildAt { Var(name=ifNode) Lit(value=2) } Var(name=bindings) Var(name=records) Lit(value=0) Var(name=mergeLabel) Var(name=continueLabel) Var(name=breakLabel) } }
+                Let(name=withElse) { Call(target=lower.statementIf.appendBranch) { Var(name=withThen) Call(target=blockBuilder.beginBlock) { Var(name=elseLabel) } Call(target=lower.statementIf.elseBranch) { Var(name=ifNode) } Var(name=bindings) Var(name=records) Lit(value=0) Var(name=mergeLabel) Var(name=continueLabel) Var(name=breakLabel) } }
                 If {
                   Call(target=lower.isStructuralError) { Var(name=withElse) }
                   Block { Return { Var(name=withElse) } }

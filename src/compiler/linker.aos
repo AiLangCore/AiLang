@@ -564,11 +564,14 @@ Program {
     Fn(params=projectDir,packagePath,packageRoot) {
       Block {
         Let(name=basePath) {
-          StrConcat {
-            Var(name=projectDir)
-            StrConcat {
-              Lit(value="/")
-              Var(name=packagePath)
+          If {
+            Call(target=linker.isAbsoluteHostPath) { Var(name=packagePath) }
+            Block { Var(name=packagePath) }
+            Block {
+              StrConcat {
+                Var(name=projectDir)
+                StrConcat { Lit(value="/") Var(name=packagePath) }
+              }
             }
           }
         }

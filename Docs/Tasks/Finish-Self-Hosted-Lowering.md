@@ -1024,9 +1024,27 @@ for transporting compiler records: kinds, attributes, and children alone are
 not sufficient because canonical function symbols use node identity. A valid
 two-module project built by the newly self-hosted compiler produces
 byte-identical `.aibc1` output through the serial reference and VM-worker
-pipelines. The public Weather checkout currently fails import-graph linking in
-both serial and worker modes before object generation, so a refreshed restored
-Weather proof remains a separate acceptance gate.
+pipelines.
+
+The refreshed public Weather graph exposed one owner-side portability bug:
+absolute local-development package paths from `ailang.lock.toml` were being
+prefixed with the project directory. Absolute-path classification now lives in
+the focused linker path module, and the linker has a regression covering an
+external absolute package root. No package-resolution policy was added to
+AiVM.
+
+With that correction, Weather builds through both the serial self-host
+reference and the built-in worker pipeline. Both paths emit the same
+214,324-byte `.aibc1` with SHA-256
+`7c86601954fa17c0c1b41e1b13bcf2f47f3e539c8d47eb60aaad08605f12297d`.
+Using the same packaged self-host compiler and restored graph, the serial
+reference build takes 199.78 seconds and the built-in worker build takes 80.17
+seconds. That is a 119.61-second reduction, or 59.9 percent, while preserving
+the final bytes.
+Runtime launch creates the Weather window and reaches the live Open-Meteo TLS
+boundary. An injected close event is observed, but network work continues and
+the application does not terminate promptly, so close/shutdown acceptance
+remains open.
 
 ## Acceptance Criteria
 

@@ -11,6 +11,7 @@ PROJECT_DIR="${TMP_DIR}/project"
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}" "${PROJECT_DIR}/src"
 mkdir -p "${PROJECT_DIR}/.ailang/packages/local-lib/src"
+mkdir -p "${TMP_DIR}/absolute-lib/src"
 
 cat > "${PROJECT_DIR}/src/dep1.aos" <<'AOS'
 Program#dep1_p1 {
@@ -47,6 +48,13 @@ cat > "${PROJECT_DIR}/.ailang/packages/local-lib/src/pkg-nested.aos" <<'AOS'
 Program#pkg_nested_p1 {
   Export#pkg_nested_e1(name=pkgNested)
   Let#pkg_nested_l1(name=pkgNested) { Lit#pkg_nested_i2(value=5) }
+}
+AOS
+
+cat > "${TMP_DIR}/absolute-lib/src/lib.aos" <<'AOS'
+Program#absolute_pkg_p1 {
+  Export#absolute_pkg_e1(name=absolutePackageValue)
+  Let#absolute_pkg_l1(name=absolutePackageValue) { Lit#absolute_pkg_v1(value=6) }
 }
 AOS
 
@@ -201,6 +209,27 @@ Program#test_p1 {
           Block#test_b14 { Return#test_r9 { Lit#test_i35(value=0) } }
           Block#test_b15 { Return#test_r10 { Lit#test_i36(value=8) } }
         }
+        Let#test_absolute_entry(name=absoluteEntry) {
+          Call#test_absolute_parse(target=parse.parseDocument) {
+            Lit#test_absolute_source(value="Program#absolute_entry { Import#absolute_import(package=\"absolute-lib\" path=\"src/lib.aos\") Export#absolute_export(name=\"start\") Let#absolute_start(name=\"start\") { Lit#absolute_value(value=0) } }")
+          }
+        }
+        Let#test_absolute_paths(name=absolutePaths) {
+          Call#test_absolute_collect(target=linker.collectProjectModulePathsWithLock) {
+            Lit#test_absolute_project(value="__PROJECT_DIR__")
+            Var#test_absolute_program(name=absoluteEntry)
+            Lit#test_absolute_entry_path(value="src/absolute-entry.aos")
+            Lit#test_absolute_lock(value="[[package]]\nname = \"absolute-lib\"\nversion = \"0.0.1\"\npath = \"__ABSOLUTE_LIB__\"\npackageRoot = \".\"\n")
+          }
+        }
+        If#test_absolute_count_if {
+          Eq#test_absolute_count_eq {
+            ChildCount#test_absolute_count { Var#test_absolute_paths_var(name=absolutePaths) }
+            Lit#test_absolute_expected_count(value=2)
+          }
+          Block#test_absolute_ok { Return#test_absolute_return_ok { Lit#test_absolute_zero(value=0) } }
+          Block#test_absolute_fail { Return#test_absolute_return_fail { Lit#test_absolute_error(value=10) } }
+        }
       }
     }
   }
@@ -208,6 +237,7 @@ Program#test_p1 {
 AOS
 
 perl -0pi -e 's#__PROJECT_DIR__#'"${PROJECT_DIR}"'#g' "${APP}"
+perl -0pi -e 's#__ABSOLUTE_LIB__#'"${TMP_DIR}/absolute-lib"'#g' "${APP}"
 
 ./tools/ailang run "${APP}" >/tmp/linker-module.out
 echo "linker-module-ok"

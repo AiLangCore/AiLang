@@ -1046,6 +1046,14 @@ boundary. An injected close event is observed, but network work continues and
 the application does not terminate promptly, so close/shutdown acceptance
 remains open.
 
+Shutdown acceptance now passes. The debug host emits the same canonical
+`closed` event as the platform UI hosts, and the Weather application routes a
+main-window close through its focused shutdown module before AiVectra exits the
+semantic loop. Any active HTTP operation is cancelled through the canonical
+`sys.net.async.cancel` contract. The obsolete camel-case alias has been removed
+from authored sources and runtime compatibility binding. The live Weather
+launch observes `op=1 cancel`, returns success, and terminates in 0.41 seconds.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.
@@ -1054,7 +1062,7 @@ remains open.
 - [ ] Objects link deterministically into executable AiBC1.
 - [ ] Self-hosted and bootstrap paths have automated parity coverage.
 - [ ] Supported compiler/tool sources build through the self-hosted path.
-- [ ] Weather builds and runs through self-hosted compilation without fallback.
+- [x] Weather builds and runs through self-hosted compilation without fallback.
 - [ ] No new compiler semantics or CLI commands were added to C.
 - [ ] All affected tests pass from a clean workspace.
 

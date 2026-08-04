@@ -10,20 +10,32 @@ TRACE_OBJECT_INDEX="${TRACE_OBJECT_INDEX:--1}"
 ENTRY_FILE="${ENTRY_FILE:-src/cli/ailang.aos}"
 ENTRY_EXPORT="${ENTRY_EXPORT:-main}"
 OUTPUT_NAME="${OUTPUT_NAME:-ailang.aibc1}"
+PROBE_SOURCE="${PROJECT_DIR}/.selfhost-link-probe.aos"
+PROJECT_MANIFEST="${PROJECT_DIR}/project.aiproj"
+SAVED_PROJECT_MANIFEST="${TMP_DIR}/project.aiproj.saved"
+
+restore_project() {
+  rm -f "${PROBE_SOURCE}"
+  if [[ -f "${SAVED_PROJECT_MANIFEST}" ]]; then
+    cp "${SAVED_PROJECT_MANIFEST}" "${PROJECT_MANIFEST}"
+  fi
+}
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}/obj" "${TMP_DIR}/bin"
+cp "${PROJECT_MANIFEST}" "${SAVED_PROJECT_MANIFEST}"
+trap restore_project EXIT
 
-cat > "${TMP_DIR}/app.aos" <<AOS
+cat > "${PROBE_SOURCE}" <<AOS
 Program {
-  Import(path="../../src/compiler/parser.aos")
-  Import(path="../../src/compiler/linker.aos")
-  Import(path="../../src/compiler/structural_project_link.aos")
-  Import(path="../../src/compiler/structural_project_symbols.aos")
-  Import(path="../../src/compiler/structural_object_chunks.aos")
-  Import(path="../../src/compiler/object_linker.aos")
-  Import(path="../../src/compiler/object_linker_constant_plan.aos")
-  Import(path="../../src/std/bytes.aos")
+  Import(path="src/compiler/parser.aos")
+  Import(path="src/compiler/linker.aos")
+  Import(path="src/compiler/structural_project_link.aos")
+  Import(path="src/compiler/structural_project_symbols.aos")
+  Import(path="src/compiler/structural_object_chunks.aos")
+  Import(path="src/compiler/object_linker.aos")
+  Import(path="src/compiler/object_linker_constant_plan.aos")
+  Import(path="src/std/bytes.aos")
   Export(name=start)
 
   Let(name=traceRecordPlans) {
@@ -370,18 +382,18 @@ Program {
 }
 AOS
 
-cat > "${TMP_DIR}/project.aiproj" <<EOF
+cat > "${PROJECT_MANIFEST}" <<EOF
 Program {
   Project(
     name="selfhost-compiler-link"
-    entryFile="app.aos"
+    entryFile=".selfhost-link-probe.aos"
     entryExport="start"
     version="0.0.1"
   ) {}
 }
 EOF
 
-"${AILANG_BIN:-${ROOT_DIR}/tools/ailang}" build "${TMP_DIR}" --out "${TMP_DIR}" >/dev/null
+"${AILANG_BIN:-${ROOT_DIR}/tools/ailang}" build "${PROJECT_DIR}" --out "${TMP_DIR}" >/dev/null
 AILANG_SDK_ROOT="${AILANG_SDK_ROOT:-${ROOT_DIR}/.artifacts/ailang-selfhost}" \
 AILANG_VM_PROFILE=tooling \
   "${AIVM_RUNTIME:-${ROOT_DIR}/tools/aivm-runtime}" run "${TMP_DIR}/app.aibc1"

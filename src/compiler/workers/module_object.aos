@@ -4,7 +4,6 @@ Program {
   Import(path="../structural_project_module_object.aos")
   Import(path="../structural_project_stage.aos")
   Import(path="../structural_record_codec.aos")
-  Import(path="../format.aos")
   Import(path="../parser.aos")
   Export(name=moduleObjectWorkerRun)
   Export(name=moduleObjectCompileRecordPayload)
@@ -13,46 +12,23 @@ Program {
     Fn(params=payloadBytes) {
       Block {
         Let(name=payload) {
-          Call(target=parse.parseDocument) {
-            Call(target=bytes.toUtf8String) { Var(name=payloadBytes) }
-          }
-        }
-        Let(name=stageDir) {
-          Call(target=moduleObjectWorkerAttrString) {
-            Var(name=payload) Lit(value="stageDir") Lit(value=0)
-          }
-        }
-        Let(name=projectDir) {
-          Call(target=moduleObjectWorkerAttrString) {
-            Var(name=payload) Lit(value="projectDir") Lit(value=0)
-          }
-        }
-        Let(name=moduleIndex) {
-          Call(target=moduleObjectWorkerAttrInt) {
-            Var(name=payload) Lit(value="moduleIndex") Lit(value=0)
-          }
-        }
-        Let(name=stage) {
-          Call(target=structuralProject.readParallelStage) { Var(name=stageDir) }
+          Call(target=structuralRecord.decode) { Var(name=payloadBytes) }
         }
         Let(name=result) {
           If {
-            Eq { NodeKind { Var(name=stage) } Lit(value="Err") }
-            Block { Var(name=stage) }
+            Eq { NodeKind { Var(name=payload) } Lit(value="Err") }
+            Block { Var(name=payload) }
             Block {
-              Let(name=lockPath) {
-                StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") }
-              }
-              Let(name=lockText) {
-                Call(target=moduleObjectWorkerReadOptionalText) {
-                  Var(name=lockPath)
+              Call(target=structuralProject.prepareModuleObjectForProgram) {
+                Call(target=parse.parseDocument) {
+                  Call(target=moduleObjectWorkerAttrString) {
+                    Var(name=payload) Lit(value="moduleSource") Lit(value=0)
+                  }
                 }
-              }
-              Call(target=structuralProject.prepareModuleObjectAt) {
-                ChildAt { Var(name=stage) Lit(value=0) }
-                Var(name=projectDir) Var(name=lockText)
-                ChildAt { Var(name=stage) Lit(value=1) }
-                Var(name=moduleIndex)
+                Call(target=moduleObjectWorkerAttrString) {
+                  Var(name=payload) Lit(value="modulePath") Lit(value=0)
+                }
+                ChildAt { Var(name=payload) Lit(value=0) }
               }
             }
           }

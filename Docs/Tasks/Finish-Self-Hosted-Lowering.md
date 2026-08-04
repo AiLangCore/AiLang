@@ -1010,6 +1010,24 @@ first bound for that transport design. Runtime launch reaches the macOS
 application boundary, but injected close did not terminate the application, so
 executable runtime acceptance remains open.
 
+The following iteration removes host paths from the built-in module-object
+worker payload. The owner compiler resolves and reads each canonical module,
+then submits its raw source together with validated project function-record
+chunks. The isolated worker parses that source, lowers it without filesystem
+capability, and returns the existing linker-ready compact object record.
+Compiler-owned payload construction lives in focused worker-input and
+worker-source modules; AiVM behavior is unchanged.
+
+The compact structural codec now preserves stable node IDs and correctly
+encodes lengths larger than one varint byte. These are semantic requirements
+for transporting compiler records: kinds, attributes, and children alone are
+not sufficient because canonical function symbols use node identity. A valid
+two-module project built by the newly self-hosted compiler produces
+byte-identical `.aibc1` output through the serial reference and VM-worker
+pipelines. The public Weather checkout currently fails import-graph linking in
+both serial and worker modes before object generation, so a refreshed restored
+Weather proof remains a separate acceptance gate.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

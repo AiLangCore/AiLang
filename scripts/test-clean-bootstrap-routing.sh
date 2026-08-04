@@ -8,6 +8,7 @@ INSTALL_ROOT="${TMP_DIR}/install"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${FIXTURE_ROOT}/scripts" "${INSTALL_ROOT}/local/bin"
+mkdir -p "${INSTALL_ROOT}/local/libexec/ailang/commands"
 cp "${ROOT_DIR}/scripts/stage-installed-toolchain.sh" \
   "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh"
 
@@ -28,6 +29,8 @@ EOF
 chmod +x \
   "${INSTALL_ROOT}/local/bin/ailang" \
   "${INSTALL_ROOT}/local/bin/aivm-runtime"
+printf 'package-bytecode\n' \
+  >"${INSTALL_ROOT}/local/libexec/ailang/commands/package.aibc1"
 
 AILANG_INSTALL_ROOT="${INSTALL_ROOT}" \
   "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh" >/dev/null
@@ -38,8 +41,12 @@ test "$("${FIXTURE_ROOT}/tools/ailang")" = "staged-ailang"
 test "$("${FIXTURE_ROOT}/tools/aivm-runtime")" = "staged-runtime"
 rg -Fq "${INSTALL_ROOT}/local/bin/ailang" \
   "${FIXTURE_ROOT}/tools/ailang"
+test -s \
+  "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/commands/package.aibc1"
 
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/build.sh"
+rg -q 'ailang-bootstrap/commands' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
 rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"
 rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/scripts/test.sh"

@@ -10,6 +10,7 @@ PROJECT_DIR="${WORK_DIR}/project"
 BOOTSTRAP_PROJECT_DIR="${WORK_DIR}/bootstrap-project"
 SELFHOST_BIN="${OUT_DIR}/bin/ailang.aibc1"
 WORKER_DIR="${OUT_DIR}/libexec/ailang/build-workers"
+BOOTSTRAP_COMMANDS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap/commands"
 
 resolve_tool() {
   local name="$1"
@@ -60,9 +61,16 @@ phase_end
 
 phase_begin builtins
 cp "${AIVM_RUNTIME}" "${OUT_DIR}/bin/aivm-runtime"
-AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
-AILANG_BIN="${AILANG_BIN}" \
-  "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
+if [[ -s "${BOOTSTRAP_COMMANDS_DIR}/package.aibc1" ]]; then
+  rm -rf "${OUT_DIR}/bin/commands"
+  mkdir -p "${OUT_DIR}/bin/commands"
+  cp "${BOOTSTRAP_COMMANDS_DIR}"/*.aibc1 "${OUT_DIR}/bin/commands/"
+  echo "AiLang built-in commands: ${OUT_DIR}/bin/commands (installed SDK)"
+else
+  AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
+  AILANG_BIN="${AILANG_BIN}" \
+    "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
+fi
 phase_end
 
 phase_begin package-restore

@@ -67,8 +67,7 @@ EOF
     AILANG_SDK_ROOT="${SDK_ROOT}" \
       "${AILANG_BIN}" build \
       "${ROOT_DIR}/src/cli/${entry}" \
-      --out "${command_build_dir}" \
-      --no-cache
+      --out "${command_build_dir}"
   fi
 }
 

@@ -17,6 +17,8 @@ version = "local"
 EOF
 cat > "${INSTALL_ROOT}/local/bin/ailang" <<'EOF'
 #!/usr/bin/env sh
+SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+test -x "${SDK_ROOT}/bin/aivm-runtime"
 echo staged-ailang
 EOF
 cat > "${INSTALL_ROOT}/local/bin/aivm-runtime" <<'EOF'
@@ -34,6 +36,8 @@ test -x "${FIXTURE_ROOT}/tools/ailang"
 test -x "${FIXTURE_ROOT}/tools/aivm-runtime"
 test "$("${FIXTURE_ROOT}/tools/ailang")" = "staged-ailang"
 test "$("${FIXTURE_ROOT}/tools/aivm-runtime")" = "staged-runtime"
+rg -Fq "${INSTALL_ROOT}/local/bin/ailang" \
+  "${FIXTURE_ROOT}/tools/ailang"
 
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/build.sh"
 rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"

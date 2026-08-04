@@ -44,6 +44,19 @@ copy_executable() {
   chmod +x "${dst}"
 }
 
+write_sdk_launcher() {
+  local src="$1"
+  local dst="$2"
+  local escaped_src
+  escaped_src="$(printf '%s' "${src}" | sed "s/'/'\\\\''/g")"
+  printf '%s\n' \
+    '#!/usr/bin/env sh' \
+    'set -eu' \
+    "exec '${escaped_src}' \"\$@\"" \
+    >"${dst}"
+  chmod +x "${dst}"
+}
+
 SDK_ROOT="$(resolve_toolchain_root)"
 SDK_BIN="${SDK_ROOT}/bin"
 LEGACY_BOOTSTRAP="${AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK:-0}"
@@ -79,7 +92,7 @@ fi
 
 mkdir -p "${TOOLS_DIR}"
 rm -f "${TOOLS_DIR}/ailang" "${TOOLS_DIR}/ailang.exe"
-copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
+write_sdk_launcher "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
 
 RUNTIME_BIN="$(resolve_sdk_executable aivm-runtime || true)"
 if [[ -n "${RUNTIME_BIN}" ]]; then

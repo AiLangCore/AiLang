@@ -370,7 +370,18 @@ Program {
 }
 AOS
 
-"${AILANG_BIN:-${ROOT_DIR}/tools/ailang}" build "${TMP_DIR}/app.aos" --out "${TMP_DIR}" --no-cache >/dev/null
+cat > "${TMP_DIR}/project.aiproj" <<EOF
+Program {
+  Project(
+    name="selfhost-compiler-link"
+    entryFile="app.aos"
+    entryExport="start"
+    version="0.0.1"
+  ) {}
+}
+EOF
+
+"${AILANG_BIN:-${ROOT_DIR}/tools/ailang}" build "${TMP_DIR}" --out "${TMP_DIR}" >/dev/null
 AILANG_SDK_ROOT="${AILANG_SDK_ROOT:-${ROOT_DIR}/.artifacts/ailang-selfhost}" \
 AILANG_VM_PROFILE=tooling \
   "${AIVM_RUNTIME:-${ROOT_DIR}/tools/aivm-runtime}" run "${TMP_DIR}/app.aibc1"

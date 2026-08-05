@@ -15,8 +15,18 @@ if rg -n 'copy_if_exists "\$\{AILANG_DIR\}/tools/ailang" "\$\{TMP_ROOT\}/bin/ail
 fi
 
 rg -q 'write_sdk_ailang_shim' "${SCRIPT}"
-rg -q 'exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "\$@"' "${SCRIPT}"
+rg -q 'exec "\$SDK_ROOT/bin/aivm-runtime" run "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "\$@"' "${SCRIPT}"
 rg -q 'staged ailang must be a non-C shim' "${SCRIPT}"
+rg -Fq 'file -b "${SDK_ROOT}/bin/ailang"' "${SCRIPT}"
+rg -Fq '(cd "${AILANG_DIR}" && ./build.sh)' "${SCRIPT}"
+rg -Fq '${SELFHOST_DIR}/bin/ailang.aibc1' "${SCRIPT}"
+rg -Fq '${SELFHOST_DIR}/bin/commands/.' "${SCRIPT}"
+rg -Fq '${SELFHOST_DIR}/libexec/ailang/build-workers/.' "${SCRIPT}"
+if rg -n './build\.sh legacy' "${SCRIPT}" >/tmp/ailang-local-legacy-build.out; then
+  cat /tmp/ailang-local-legacy-build.out >&2
+  echo "local toolchain policy violation: SDK must be built by the default self-host path" >&2
+  exit 1
+fi
 
 if rg -n 'cp "\./\$\{\{ matrix\.artifact_dir \}\}/\$\{\{ matrix\.tool \}\}" "\$\{PACKAGE_DIR\}/bin/ailang"' "${RELEASE_WORKFLOW}" >/tmp/ailang-release-shim-copy.out; then
   cat /tmp/ailang-release-shim-copy.out >&2
@@ -30,7 +40,7 @@ if rg -n 'Copy-Item "\.\\\\\$\{\{ matrix\.artifact_dir \}\}\\\\\$\{\{ matrix\.to
   exit 1
 fi
 
-rg -q 'exec "\$SDK_ROOT/bin/aivm" "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" "\$@"' "${RELEASE_WORKFLOW}"
+rg -q 'exec "\$SDK_ROOT/bin/aivm-runtime" run "\$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "\$@"' "${RELEASE_WORKFLOW}"
 rg -q 'release package violation: bin/ailang must be a non-C shim' "${RELEASE_WORKFLOW}"
 rg -q 'ailang\.cmd' "${RELEASE_WORKFLOW}"
 rg -q 'release package violation: bin/ailang\.exe must not be staged as native command' "${RELEASE_WORKFLOW}"

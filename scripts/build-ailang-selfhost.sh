@@ -10,6 +10,11 @@ PROJECT_DIR="${WORK_DIR}/project"
 BOOTSTRAP_PROJECT_DIR="${WORK_DIR}/bootstrap-project"
 SELFHOST_BIN="${OUT_DIR}/bin/ailang.aibc1"
 WORKER_DIR="${OUT_DIR}/libexec/ailang/build-workers"
+BOOTSTRAP_COMMANDS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap/commands"
+INSTALLED_BOOTSTRAP_CLI="${ROOT_DIR}/.artifacts/ailang-bootstrap/cli/app.aibc1"
+INSTALLED_BOOTSTRAP_WORKER="${ROOT_DIR}/.artifacts/ailang-bootstrap/build-workers/module-object.aibc1"
+LOCAL_SELFHOST_CLI="${OUT_DIR}/bin/ailang.aibc1"
+LOCAL_SELFHOST_WORKER="${OUT_DIR}/libexec/ailang/build-workers/module-object.aibc1"
 
 resolve_tool() {
   local name="$1"
@@ -60,9 +65,16 @@ phase_end
 
 phase_begin builtins
 cp "${AIVM_RUNTIME}" "${OUT_DIR}/bin/aivm-runtime"
-AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
-AILANG_BIN="${AILANG_BIN}" \
-  "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
+if [[ -s "${BOOTSTRAP_COMMANDS_DIR}/package.aibc1" ]]; then
+  rm -rf "${OUT_DIR}/bin/commands"
+  mkdir -p "${OUT_DIR}/bin/commands"
+  cp "${BOOTSTRAP_COMMANDS_DIR}"/*.aibc1 "${OUT_DIR}/bin/commands/"
+  echo "AiLang built-in commands: ${OUT_DIR}/bin/commands (installed SDK)"
+else
+  AILANG_BUILTIN_SDK_ROOT="${OUT_DIR}" \
+  AILANG_BIN="${AILANG_BIN}" \
+    "${ROOT_DIR}/scripts/build-ailang-builtins.sh" "${OUT_DIR}/bin/commands"
+fi
 phase_end
 
 phase_begin package-restore
@@ -78,17 +90,36 @@ cp "${PROJECT_DIR}/ailang.lock.toml" "${BOOTSTRAP_PROJECT_DIR}/ailang.lock.toml"
 phase_end
 
 phase_begin bootstrap-link
-AILANG_SDK_ROOT="${OUT_DIR}" \
-SELFHOST_LINK_WORK_DIR="${BOOTSTRAP_DIR}" \
-AILANG_BIN="${AILANG_BIN}" \
-AIVM_RUNTIME="${AIVM_RUNTIME}" \
-  "${ROOT_DIR}/scripts/probe-selfhost-compiler-link.sh" "${BOOTSTRAP_PROJECT_DIR}"
+if [[ -s "${INSTALLED_BOOTSTRAP_CLI}" ]]; then
+  mkdir -p "${BOOTSTRAP_DIR}/bin"
+  cp "${INSTALLED_BOOTSTRAP_CLI}" "${BOOTSTRAP_DIR}/bin/ailang.aibc1"
+  echo "selfhost-bootstrap-cli=installed-sdk"
+elif [[ -s "${LOCAL_SELFHOST_CLI}" ]]; then
+  mkdir -p "${BOOTSTRAP_DIR}/bin"
+  cp "${LOCAL_SELFHOST_CLI}" "${BOOTSTRAP_DIR}/bin/ailang.aibc1"
+  echo "selfhost-bootstrap-cli=previous-selfhost"
+else
+  AILANG_SDK_ROOT="${OUT_DIR}" \
+  SELFHOST_LINK_WORK_DIR="${BOOTSTRAP_DIR}" \
+  AILANG_BIN="${AILANG_BIN}" \
+  AIVM_RUNTIME="${AIVM_RUNTIME}" \
+    "${ROOT_DIR}/scripts/probe-selfhost-compiler-link.sh" "${BOOTSTRAP_PROJECT_DIR}"
+fi
 phase_end
 
 phase_begin build-workers
-AILANG_WORKER_SDK_ROOT="${OUT_DIR}" \
-AILANG_BIN="${AILANG_BIN}" \
-  "${ROOT_DIR}/scripts/build-ailang-workers.sh" "${WORKER_DIR}"
+if [[ -s "${INSTALLED_BOOTSTRAP_WORKER}" ]]; then
+  rm -rf "${WORKER_DIR}"
+  mkdir -p "${WORKER_DIR}"
+  cp "${INSTALLED_BOOTSTRAP_WORKER}" "${WORKER_DIR}/module-object.aibc1"
+  echo "selfhost-bootstrap-worker=installed-sdk"
+elif [[ -s "${LOCAL_SELFHOST_WORKER}" ]]; then
+  echo "selfhost-bootstrap-worker=previous-selfhost"
+else
+  AILANG_WORKER_SDK_ROOT="${OUT_DIR}" \
+  AILANG_BIN="${AILANG_BIN}" \
+    "${ROOT_DIR}/scripts/build-ailang-workers.sh" "${WORKER_DIR}"
+fi
 phase_end
 
 phase_begin generation-build

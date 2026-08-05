@@ -10,12 +10,19 @@ Program {
   Import(path="manifest.aos")
   Import(path="target_packages.aos")
   Import(path="application.aos")
+  Import(path="package_tool_dispatch.aos")
+  Import(path="runtime_invocation.aos")
   Export(name=main)
 
   Let(name=main) {
     Fn(params=args) {
       Block {
-        Return { Call(target=run) { Call(target=ailangCliApplication) { Lit(value=0) } Var(name=args) } }
+        Return {
+          Call(target=runAilangCommand) {
+            Call(target=ailangCliApplication) { Lit(value=0) }
+            Var(name=args)
+          }
+        }
       }
     }
   }
@@ -983,7 +990,13 @@ Program {
     Fn(params=path,args) {
       Block {
         Let(name=compilerPath) { Call(target=resolveBootstrapCompilerForRun) { Var(name=path) } }
-        Let(name=spawnArgs) { Call(target=makeRunSpawnArgs) { Var(name=path) Var(name=args) } }
+        Let(name=spawnArgs) {
+          Call(target=runtimeInvocation.arguments) {
+            Call(target=isBytecodePath) { Var(name=path) }
+            Var(name=path)
+            Var(name=args)
+          }
+        }
         Let(name=env) { MakeBlock { Lit(value="env") } }
         Let(name=handle) { Call(target=spawn) { Var(name=compilerPath) Var(name=spawnArgs) Lit(value="") Var(name=env) } }
         Let(name=code) { Call(target=wait) { Var(name=handle) } }
@@ -1009,87 +1022,12 @@ Program {
       Block {
         If {
           Call(target=isBytecodePath) { Var(name=path) }
-          Block { Return { Call(target=resolveAivmExecutable) { Lit(value=0) } } }
+          Block {
+            Return {
+              Call(target=runtimeInvocation.executable)
+            }
+          }
           Block { Return { Call(target=resolveBootstrapCompiler) { Var(name=path) } } }
-        }
-      }
-    }
-  }
-
-  Let(name=resolveAivmExecutable) {
-    Fn(params=_) {
-      Block {
-        Let(name=fromEnv) { Call(target=sys.process.env.get) { Lit(value="AIVM") } }
-        If {
-          Eq { Var(name=fromEnv) Lit(value="") }
-          Block { Return { Lit(value="aivm") } }
-          Block { Return { Var(name=fromEnv) } }
-        }
-      }
-    }
-  }
-
-  Let(name=makeRunSpawnArgs) {
-    Fn(params=path,args) {
-      Block {
-        If {
-          Call(target=isBytecodePath) { Var(name=path) }
-          Block {
-            Return {
-              Call(target=appendRunAppArgs) {
-                AppendChild {
-                  MakeBlock { Lit(value="args") }
-                  MakeLitString { Lit(value="arg0") Var(name=path) }
-                }
-                Var(name=args)
-                Lit(value=2)
-                Lit(value=1)
-              }
-            }
-          }
-          Block {
-            Return {
-              Call(target=appendRunAppArgs) {
-                AppendChild {
-                  AppendChild {
-                    MakeBlock { Lit(value="args") }
-                    MakeLitString { Lit(value="arg0") Lit(value="run") }
-                  }
-                  MakeLitString { Lit(value="arg1") Var(name=path) }
-                }
-                Var(name=args)
-                Lit(value=2)
-                Lit(value=2)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=appendRunAppArgs) {
-    Fn(params=spawnArgs,args,readIndex,writeIndex) {
-      Block {
-        If {
-          Eq { Var(name=readIndex) ChildCount { Var(name=args) } }
-          Block { Return { Var(name=spawnArgs) } }
-          Block {
-            Return {
-              Call(target=appendRunAppArgs) {
-                AppendChild {
-                  Var(name=spawnArgs)
-                  MakeLitString {
-                    StrConcat { Lit(value="arg") ToString { Var(name=writeIndex) } }
-                    Call(target=readArg) { Var(name=args) Var(name=readIndex) }
-                  }
-                }
-                Var(name=args)
-                Add { Var(name=readIndex) Lit(value=1) }
-                Add { Var(name=writeIndex) Lit(value=1) }
-              }
-            }
-          }
         }
       }
     }

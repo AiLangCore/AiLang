@@ -15,7 +15,6 @@ Program {
         If {
           Var(name=value)
           Block { Call(target=sys.stdout.writeLine) { Lit(value=1) } }
-          Block { Lit(value=0) }
         }
         Return { Lit(value=0) }
       }

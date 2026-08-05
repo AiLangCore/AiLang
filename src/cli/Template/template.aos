@@ -1,5 +1,6 @@
 Program {
   Import(path="../common.aos")
+  Import(path="catalog.aos")
   Export(name=runTemplate)
 
   Let(name=runTemplate) {
@@ -7,9 +8,26 @@ Program {
       Block {
         Let(name=subcmd) { Call(target=readArg) { Var(name=args) Lit(value=1) } }
         Let(name=name) { Call(target=readArg) { Var(name=args) Lit(value=2) } }
+        Let(name=projectDir) { Call(target=readArg) { Var(name=args) Lit(value=3) } }
         If {
           Eq { Var(name=subcmd) Lit(value="list") }
-          Block { Return { Call(target=listTemplates) { Lit(value=0) } } }
+          Block {
+            Let(name=kind) {
+              If {
+                Eq { Var(name=name) Lit(value="") }
+                Block { Lit(value="projects") }
+                Block { Var(name=name) }
+              }
+            }
+            Let(name=resolvedProjectDir) {
+              If {
+                Eq { Var(name=projectDir) Lit(value="") }
+                Block { Lit(value=".") }
+                Block { Var(name=projectDir) }
+              }
+            }
+            Return { Call(target=listTemplateCatalog) { Var(name=kind) Var(name=resolvedProjectDir) } }
+          }
           Block {
             If {
               Eq { Var(name=subcmd) Lit(value="show") }
@@ -67,26 +85,6 @@ Program {
           }
           Block {
             Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
-            Return { Lit(value=1) }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=listTemplates) {
-    Fn(params=_) {
-      Block {
-        If {
-          Call(target=sys.fs.path.exists) { Lit(value="templates/projects/index.toml") }
-          Block {
-            Call(target=sys.stdout.writeLine) {
-              Call(target=readTextFile) { Lit(value="templates/projects/index.toml") }
-            }
-            Return { Lit(value=0) }
-          }
-          Block {
-            Call(target=sys.stdout.writeLine) { Lit(value="Err#err0(code=AILANG005 message=\"Template registry is not installed.\" nodeId=\"template\")") }
             Return { Lit(value=1) }
           }
         }

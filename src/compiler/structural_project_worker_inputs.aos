@@ -1,0 +1,96 @@
+Program {
+  Import(sdk="ailang" path="std/worker.aos")
+  Import(path="structural_object_chunks.aos")
+  Import(path="structural_project_records.aos")
+  Import(path="structural_project_symbols.aos")
+  Import(path="structural_project_worker_sources.aos")
+  Import(path="structural_record_codec.aos")
+  Export(name=structuralProject.prepareWorkerProjectRecords)
+  Export(name=structuralProject.moduleObjectTaskBatch)
+
+  Let(name=structuralProject.prepareWorkerProjectRecords) {
+    Fn(params=modulePaths,projectDir,lockText) {
+      Block {
+        Let(name=chunks) {
+          Call(target=structuralProject.collectProjectSymbolChunks) {
+            Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+            Lit(value=0) MakeBlock { Lit(value="record-chunks") }
+          }
+        }
+        If {
+          Eq { NodeKind { Var(name=chunks) } Lit(value="Err") }
+          Block { Return { Var(name=chunks) } }
+          Block {
+            Return {
+              Call(target=structuralObject.validateProjectFunctionRecordChunks) {
+                Var(name=chunks)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=structuralProject.moduleObjectTaskBatch) {
+    Fn(params=modulePaths,projectDir,lockText,records,index,batch) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=modulePaths) } }
+          Block { Return { Var(name=batch) } }
+          Block {
+            Let(name=modulePath) {
+              AttrValueString {
+                ChildAt { Var(name=modulePaths) Var(name=index) } Lit(value=0)
+              }
+            }
+            Let(name=moduleSource) {
+              Call(target=structuralProject.readWorkerModuleSource) {
+                Var(name=projectDir) Var(name=lockText) Var(name=modulePath)
+              }
+            }
+            If {
+              Eq { NodeKind { Var(name=moduleSource) } Lit(value="Err") }
+              Block { Return { Var(name=moduleSource) } }
+              Block {
+                Let(name=task) {
+                  AppendChild {
+                    AppendAttr {
+                      AppendAttr {
+                        AppendAttr {
+                          MakeNode {
+                            Lit(value="ModuleObjectTask")
+                            StrConcat {
+                              Lit(value="module-") ToString { Var(name=index) }
+                            }
+                          }
+                          MakeLitInt { Lit(value="moduleIndex") Var(name=index) }
+                        }
+                        MakeLitString { Lit(value="modulePath") Var(name=modulePath) }
+                      }
+                      MakeLitString {
+                        Lit(value="moduleSource")
+                        AttrValueString { Var(name=moduleSource) Lit(value=0) }
+                      }
+                    }
+                    Var(name=records)
+                  }
+                }
+                Return {
+                  Call(target=structuralProject.moduleObjectTaskBatch) {
+                    Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+                    Var(name=records) Add { Var(name=index) Lit(value=1) }
+                    Call(target=worker.batch.append) {
+                      Var(name=batch)
+                      Call(target=structuralRecord.encode) { Var(name=task) }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

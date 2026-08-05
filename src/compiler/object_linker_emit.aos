@@ -119,6 +119,11 @@ Program {
     Fn(params=op) {
       Block {
         If {
+          Eq { Var(name=op) Lit(value="POW_NUM") }
+          Block { Return { Lit(value=71) } }
+          Block { Lit(value=0) }
+        }
+        If {
           Eq { Var(name=op) Lit(value="MAKE_BLOCK") }
           Block { Return { Lit(value=41) } }
           Block {

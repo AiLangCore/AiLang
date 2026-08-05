@@ -1,0 +1,71 @@
+Program {
+  Import(path="../common.aos")
+  Import(path="package_catalog.aos")
+
+  Export(name=listTemplateCatalog)
+
+  Let(name=listTemplateCatalog) {
+    Fn(params=kind,projectDir) {
+      Block {
+        Let(name=builtin) { Call(target=builtinTemplateCatalog) { Var(name=kind) } }
+        Let(name=packages) { Call(target=packageTemplateCatalog) { Var(name=kind) Var(name=projectDir) } }
+        If {
+          Eq { Var(name=builtin) Lit(value="") }
+          Block {
+            If {
+              Eq { Var(name=packages) Lit(value="") }
+              Block { Return { Call(target=missingTemplateCatalog) { Var(name=kind) } } }
+              Block {
+                Call(target=sys.stdout.writeLine) { Var(name=packages) }
+                Return { Lit(value=0) }
+              }
+            }
+          }
+          Block {
+            Call(target=sys.stdout.writeLine) { Var(name=builtin) }
+            If {
+              Eq { Var(name=packages) Lit(value="") }
+              Block { Return { Lit(value=0) } }
+              Block {
+                Call(target=sys.stdout.writeLine) { Var(name=packages) }
+                Return { Lit(value=0) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=builtinTemplateCatalog) {
+    Fn(params=kind) {
+      Block {
+        If {
+          Eq { Var(name=kind) Lit(value="projects") }
+          Block {
+            If {
+              Call(target=sys.fs.path.exists) { Lit(value="templates/projects/index.toml") }
+              Block { Return { Call(target=readTextFile) { Lit(value="templates/projects/index.toml") } } }
+              Block { Return { Lit(value="") } }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+
+  Let(name=missingTemplateCatalog) {
+    Fn(params=kind) {
+      Block {
+        Call(target=sys.stdout.writeLine) {
+          StrConcat {
+            Lit(value="Err#err0(code=AILANG005 message=\"Template registry is not installed.\" nodeId=\"template/")
+            StrConcat { Var(name=kind) Lit(value="\")") }
+          }
+        }
+        Return { Lit(value=1) }
+      }
+    }
+  }
+}

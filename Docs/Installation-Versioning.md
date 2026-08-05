@@ -254,8 +254,10 @@ cd AiLang
 ./scripts/update-local-toolchain.sh
 ```
 
-That command rebuilds the sibling AiVM checkout when present, rebuilds AiLang,
-stages AiVectra source/launcher when present, and updates `~/.ailang/local`.
+That command rebuilds the sibling AiVM checkout when present, builds AiLang
+through the default self-host path, stages the compiled AiLang CLI, built-in
+commands, module worker, and AiVectra source/launcher, then updates
+`~/.ailang/local`. It does not invoke the deprecated AiLang C bootstrap target.
 It does not change `~/.ailang/current`.
 After that, commands run from projects selecting `local` resolve through the
 refreshed local SDK:

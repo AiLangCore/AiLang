@@ -1,0 +1,30 @@
+Program {
+  Import(path="../../block_builder.aos")
+  Import(path="../../block_linker.aos")
+
+  Let(name=lower.emitStructuralReturnIntPlan) {
+    Fn(params=name,symbol,value) {
+      Block {
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Lit(value="") Lit(value="") } }
+        Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withConstant) { Call(target=blockBuilder.emit) { Var(name=context) Lit(value="CONST") StrConcat { Lit(value="int:") Var(name=value) } } }
+        Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withConstant) } }
+        Let(name=block) { Call(target=blockBuilder.seal) { Var(name=terminated) } }
+        Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Var(name=block) } } }
+      }
+    }
+  }
+
+  Let(name=lower.emitStructuralReturnLiteralPlan) {
+    Fn(params=name,symbol,params,target) {
+      Block {
+        Let(name=function) { Call(target=blockBuilder.beginFunction) { Var(name=name) Var(name=symbol) Var(name=params) Lit(value="") } }
+        Let(name=context) { Call(target=blockBuilder.beginBlock) { Lit(value="entry") } }
+        Let(name=withParams) { Call(target=lower.appendStructuralParameterStores) { Var(name=context) Sub { Call(target=lower.parameterCount) { Var(name=params) Lit(value=0) } Lit(value=1) } } }
+        Let(name=withConstant) { Call(target=blockBuilder.emit) { Var(name=withParams) Lit(value="CONST") Var(name=target) } }
+        Let(name=terminated) { Call(target=blockBuilder.terminateReturn) { Var(name=withConstant) } }
+        Return { Call(target=blockLinker.flatten) { Call(target=blockBuilder.appendBlock) { Var(name=function) Call(target=blockBuilder.seal) { Var(name=terminated) } } } }
+      }
+    }
+  }
+}

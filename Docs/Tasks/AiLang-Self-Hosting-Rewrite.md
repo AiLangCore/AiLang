@@ -35,12 +35,8 @@ AiVM owns:
 - native process/bootstrap entrypoint
 - C library adapter boundary
 
-Temporary exception:
-
-- `tools/aos_frontend.c` remains in AiLang for now as the bootstrap AOS parser
-  frontend. It should be rewritten in AiLang, but it is narrower than the native
-  CLI launcher and is intentionally kept with the language/parser code during
-  the rewrite.
+The former standalone C parser exception has been removed. Canonical corpus
+validation now runs through the compiled AiLang `parse-check.aibc1` command.
 
 ## Current Starting Point
 
@@ -74,6 +70,15 @@ Current bootstrap status:
   first bytecode-runnable implementations.
 - `init` renders installed `.tpl` files under `templates/projects`. Missing
   template files are an error.
+- `template list projects|files <project-dir>` discovers restored package
+  template catalogs in canonical lockfile order. Package catalogs are
+  deterministic `templates/<kind>/index.toml` files; the AiLang command
+  qualifies entries as `<package>/<template>` without host directory
+  enumeration.
+- Unknown compiled command names now fall through to an AiLang-authored local
+  package-tool resolver. It reads the current project lockfile, resolves tools
+  in canonical package order, and invokes the selected executable through
+  `std.process`; the main CLI remains a thin facade.
 - The self-hosted compiler pipeline already produces deterministic per-module
   AiBCO1 objects in `obj/module-<index>.aibco`, writes `obj/app.aibco` as the
   stable entry object, links `bin/app.aibc1`, and executes supported linked
@@ -102,6 +107,18 @@ The migrated C launcher is temporarily parked in:
 ```text
 ../AiVM/src/ailang_cli
 ```
+
+Self-hosted release payloads are packaged from a completed default self-host
+build with:
+
+```text
+./scripts/package-selfhost-release-payloads.sh
+```
+
+The helper emits the bytecode CLI, the built-in command archive, and their
+SHA-256 values. Release packaging pins those hashes and consumes only the
+prevalidated self-hosted payloads; it does not silently substitute native
+bootstrap command implementations.
 
 ## Remaining Native Launcher Debt
 
@@ -239,10 +256,11 @@ native bridge libraries, but not in AiLang command implementation.
     bootstrap compiler fallback.
   - [x] Add package-root-aware graph linking so package imports also flow
     through the AiLang linker artifact path.
-- [ ] Rewrite `tools/aos_frontend.c` in AiLang.
+- [x] Rewrite `tools/aos_frontend.c` in AiLang.
   - [x] Removed `aos_frontend` from normal local/installed SDK staging and
-    release package `bin/` outputs. The C frontend remains a bootstrap and
-    canonical-formatting test tool until the parser/formatter rewrite lands.
+    release package outputs. The compiled `parse-check.aibc1` built-in now
+    parses the canonical corpus through `parse.parseDocument`; the standalone C
+    frontend source and its CI/release artifacts have been removed.
 - [x] Add release-gating tests that execute the installed `ailang` command
   through the bytecode CLI for `--version`, `help`, `init`, `template`, `agent`,
   `build`, `run`, `publish`, `clean`, `project version`, and `package restore`.

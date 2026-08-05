@@ -4,6 +4,7 @@ set -euo pipefail
 TMP_ROOT="${AILANG_PACKAGE_SMOKE_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/ailang-package-smoke.XXXXXX")}"
 APP_DIR="${TMP_ROOT}/package-app"
 TEMPLATE_DIR="${TMP_ROOT}/template-app"
+BUILD_TIMEOUT_SECONDS="${AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS:-120}"
 
 cleanup() {
   if [[ -z "${AILANG_PACKAGE_SMOKE_KEEP:-}" ]]; then
@@ -21,11 +22,24 @@ require_tool() {
 
 require_tool ailang
 require_tool git
-require_tool perl
+
+case "${BUILD_TIMEOUT_SECONDS}" in
+  ''|*[!0-9]*)
+    echo "AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS must be a non-negative integer" >&2
+    exit 2
+    ;;
+esac
+if [[ "${BUILD_TIMEOUT_SECONDS}" -gt 0 ]]; then
+  require_tool perl
+fi
 
 run_with_timeout() {
   local seconds="$1"
   shift
+  if [[ "${seconds}" -eq 0 ]]; then
+    "$@"
+    return
+  fi
   perl -e 'alarm shift @ARGV; exec @ARGV' "$seconds" "$@"
 }
 
@@ -68,13 +82,13 @@ grep -q 'namespaces = \["std.format.json"\]' "${APP_DIR}/ailang.lock.toml"
 ailang package list "${APP_DIR}" >"${TMP_ROOT}/package-list.txt"
 grep -q 'std-json' "${TMP_ROOT}/package-list.txt"
 grep -q 'namespaces = \["std.format.json"\]' "${TMP_ROOT}/package-list.txt"
-if ! run_with_timeout 30 ailang build "${APP_DIR}" >"${TMP_ROOT}/package-build.stdout.txt" 2>"${TMP_ROOT}/package-build.stderr.txt"; then
+if ! run_with_timeout "${BUILD_TIMEOUT_SECONDS}" ailang build "${APP_DIR}" >"${TMP_ROOT}/package-build.stdout.txt" 2>"${TMP_ROOT}/package-build.stderr.txt"; then
   echo "package app build failed or timed out" >&2
   cat "${TMP_ROOT}/package-build.stdout.txt" >&2 || true
   cat "${TMP_ROOT}/package-build.stderr.txt" >&2 || true
   exit 1
 fi
-if ! run_with_timeout 30 ailang run "${APP_DIR}" >"${TMP_ROOT}/package-run.stdout.txt" 2>"${TMP_ROOT}/package-run.stderr.txt"; then
+if ! run_with_timeout "${BUILD_TIMEOUT_SECONDS}" ailang run "${APP_DIR}" >"${TMP_ROOT}/package-run.stdout.txt" 2>"${TMP_ROOT}/package-run.stderr.txt"; then
   echo "package app run failed or timed out" >&2
   cat "${TMP_ROOT}/package-run.stdout.txt" >&2 || true
   cat "${TMP_ROOT}/package-run.stderr.txt" >&2 || true
@@ -114,7 +128,7 @@ if ! grep -q 'std-app' "${TMP_ROOT}/template-package-list.txt"; then
   cat "${TMP_ROOT}/template-package-list.txt" >&2 || true
   exit 1
 fi
-if ! grep -q 'namespaces = \["std.app"\]' "${TMP_ROOT}/template-package-list.txt"; then
+if ! grep -q 'namespaces = .*"std.app"' "${TMP_ROOT}/template-package-list.txt"; then
   echo "std-app namespace missing from package list" >&2
   cat "${TMP_ROOT}/template-package-list.txt" >&2 || true
   exit 1

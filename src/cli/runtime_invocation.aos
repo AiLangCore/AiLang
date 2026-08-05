@@ -1,0 +1,143 @@
+Program {
+  Import(sdk="ailang" path="std/process.aos")
+
+  Export(name=runtimeInvocation.executable)
+  Export(name=runtimeInvocation.arguments)
+
+  Let(name=runtimeInvocation.executable) {
+    Fn() {
+      Block {
+        Let(name=explicitRuntime) {
+          Call(target=envGet) {
+            Lit(value="AIVM")
+          }
+        }
+        If {
+          Eq { Var(name=explicitRuntime) Lit(value="") }
+          Block {
+            Let(name=sdkRoot) {
+              Call(target=envGet) {
+                Lit(value="AILANG_SDK_ROOT")
+              }
+            }
+            If {
+              Eq { Var(name=sdkRoot) Lit(value="") }
+              Block { Return { Lit(value="aivm-runtime") } }
+              Block {
+                Return {
+                  StrConcat {
+                    Var(name=sdkRoot)
+                    Lit(value="/bin/aivm-runtime")
+                  }
+                }
+              }
+            }
+          }
+          Block { Return { Var(name=explicitRuntime) } }
+        }
+      }
+    }
+  }
+
+  Let(name=runtimeInvocation.arguments) {
+    Fn(params=isBytecode,path,args) {
+      Block {
+        If {
+          Var(name=isBytecode)
+          Block {
+            Return {
+              Call(target=runtimeInvocation.appendAppArguments) {
+                AppendChild {
+                  AppendChild {
+                    AppendChild {
+                      MakeBlock { Lit(value="args") }
+                      MakeLitString {
+                        Lit(value="arg0")
+                        Lit(value="run")
+                      }
+                    }
+                    MakeLitString {
+                      Lit(value="arg1")
+                      Var(name=path)
+                    }
+                  }
+                  MakeLitString {
+                    Lit(value="arg2")
+                    Lit(value="--")
+                  }
+                }
+                Var(name=args)
+                Lit(value=2)
+                Lit(value=3)
+              }
+            }
+          }
+          Block {
+            Return {
+              Call(target=runtimeInvocation.appendAppArguments) {
+                AppendChild {
+                  AppendChild {
+                    MakeBlock { Lit(value="args") }
+                    MakeLitString {
+                      Lit(value="arg0")
+                      Lit(value="run")
+                    }
+                  }
+                  MakeLitString {
+                    Lit(value="arg1")
+                    Var(name=path)
+                  }
+                }
+                Var(name=args)
+                Lit(value=2)
+                Lit(value=2)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=runtimeInvocation.appendAppArguments) {
+    Fn(params=spawnArgs,args,readIndex,writeIndex) {
+      Block {
+        If {
+          Eq { Var(name=readIndex) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=spawnArgs) } }
+          Block {
+            Return {
+              Call(target=runtimeInvocation.appendAppArguments) {
+                AppendChild {
+                  Var(name=spawnArgs)
+                  MakeLitString {
+                    StrConcat {
+                      Lit(value="arg")
+                      ToString { Var(name=writeIndex) }
+                    }
+                    AttrValueString {
+                      ChildAt {
+                        Var(name=args)
+                        Var(name=readIndex)
+                      }
+                      Lit(value=0)
+                    }
+                  }
+                }
+                Var(name=args)
+                Add {
+                  Var(name=readIndex)
+                  Lit(value=1)
+                }
+                Add {
+                  Var(name=writeIndex)
+                  Lit(value=1)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

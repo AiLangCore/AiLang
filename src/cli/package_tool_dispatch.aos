@@ -1,0 +1,238 @@
+Program {
+  Import(package="std-cli" path="src/cli/cli.aos")
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(sdk="ailang" path="std/process.aos")
+  Import(path="package_lock_tools.aos")
+
+  Export(name=runAilangCommand)
+
+  Let(name=runAilangCommand) {
+    Fn(params=application,args) {
+      Block {
+        If {
+          Eq { ChildCount { Var(name=args) } Lit(value=0) }
+          Block { Return { Call(target=run) { Var(name=application) Var(name=args) } } }
+          Block {
+            Let(name=commandName) { Call(target=packageToolArg) { Var(name=args) Lit(value=0) } }
+            If {
+              Call(target=isBuiltInAilangCommand) { Var(name=commandName) }
+              Block { Return { Call(target=run) { Var(name=application) Var(name=args) } } }
+              Block {
+                Let(name=packageToolExit) { Call(target=runLocalPackageTool) { Var(name=args) } }
+                If {
+                  Eq { Var(name=packageToolExit) Lit(value=-1) }
+                  Block { Return { Call(target=run) { Var(name=application) Var(name=args) } } }
+                  Block { Return { Var(name=packageToolExit) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isBuiltInAilangCommand) {
+    Fn(params=name) {
+      Block {
+        Return {
+          Call(target=packageToolOr) {
+            Call(target=packageToolOr) {
+              Call(target=packageToolOr) {
+                Call(target=packageToolOr) {
+                  Call(target=packageToolOr) {
+                    Call(target=packageToolOr) {
+                      Eq { Var(name=name) Lit(value="init") }
+                      Eq { Var(name=name) Lit(value="template") }
+                    }
+                    Eq { Var(name=name) Lit(value="agent") }
+                  }
+                  Eq { Var(name=name) Lit(value="build") }
+                }
+                Eq { Var(name=name) Lit(value="run") }
+              }
+              Call(target=isBuiltInAilangCommandTail) { Var(name=name) }
+            }
+            Call(target=isBuiltInAilangMetaCommand) { Var(name=name) }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isBuiltInAilangCommandTail) {
+    Fn(params=name) {
+      Block {
+        Return {
+          Call(target=packageToolOr) {
+            Call(target=packageToolOr) {
+              Call(target=packageToolOr) {
+                Eq { Var(name=name) Lit(value="publish") }
+                Eq { Var(name=name) Lit(value="clean") }
+              }
+              Eq { Var(name=name) Lit(value="package") }
+            }
+            Eq { Var(name=name) Lit(value="project") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=isBuiltInAilangMetaCommand) {
+    Fn(params=name) {
+      Block {
+        Return {
+          Call(target=packageToolOr) {
+            Call(target=packageToolOr) {
+              Call(target=packageToolOr) {
+                Eq { Var(name=name) Lit(value="help") }
+                Eq { Var(name=name) Lit(value="version") }
+              }
+              Call(target=packageToolOr) {
+                Eq { Var(name=name) Lit(value="--help") }
+                Eq { Var(name=name) Lit(value="-h") }
+              }
+            }
+            Eq { Var(name=name) Lit(value="--version") }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageToolOr) {
+    Fn(params=left,right) {
+      Block {
+        If {
+          Var(name=left)
+          Block { Return { Lit(value=true) } }
+          Block { Return { Var(name=right) } }
+        }
+      }
+    }
+  }
+
+  Let(name=runLocalPackageTool) {
+    Fn(params=args) {
+      Block {
+        Let(name=toolName) { Call(target=packageToolArg) { Var(name=args) Lit(value=0) } }
+        Let(name=projectDir) { Call(target=cwd) { Lit(value=0) } }
+        Let(name=lockPath) { StrConcat { Var(name=projectDir) Lit(value="/ailang.lock.toml") } }
+        If {
+          Eq { Call(target=sys.fs.path.exists) { Var(name=lockPath) } Lit(value=false) }
+          Block { Return { Lit(value=-1) } }
+          Block {
+            Let(name=lockText) {
+              Call(target=bytes.toUtf8String) {
+                Call(target=sys.fs.file.read) { Var(name=lockPath) }
+              }
+            }
+            Let(name=toolPath) {
+              Call(target=packageLockToolPath) {
+                Var(name=projectDir)
+                Var(name=lockText)
+                Var(name=toolName)
+                Lit(value=0)
+              }
+            }
+            If {
+              Eq { Var(name=toolPath) Lit(value="") }
+              Block { Return { Lit(value=-1) } }
+              Block {
+                Let(name=result) {
+                  Call(target=runCaptured) {
+                    Var(name=toolPath)
+                    Call(target=packageToolArguments) { Var(name=args) Lit(value=1) Lit(value=0) }
+                    Var(name=projectDir)
+                    MakeBlock { Lit(value="Environment") }
+                  }
+                }
+                Let(name=stdoutText) { Call(target=processResultStdoutText) { Var(name=result) } }
+                Let(name=stderrText) { Call(target=processResultStderrText) { Var(name=result) } }
+                If {
+                  Eq { Var(name=stdoutText) Lit(value="") }
+                  Block { Lit(value=0) }
+                  Block { Call(target=sys.stdout.writeLine) { Var(name=stdoutText) } }
+                }
+                If {
+                  Eq { Var(name=stderrText) Lit(value="") }
+                  Block { Lit(value=0) }
+                  Block { Call(target=sys.stdout.writeLine) { Var(name=stderrText) } }
+                }
+                Return { Call(target=processResultExitCode) { Var(name=result) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageToolArguments) {
+    Fn(params=args,readIndex,writeIndex) {
+      Block {
+        If {
+          Eq { Var(name=readIndex) ChildCount { Var(name=args) } }
+          Block { Return { MakeBlock { Lit(value="Arguments") } } }
+          Block {
+            Return {
+              Call(target=packageToolAppendArguments) {
+                Var(name=args)
+                Var(name=readIndex)
+                Var(name=writeIndex)
+                MakeBlock { Lit(value="Arguments") }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageToolAppendArguments) {
+    Fn(params=args,readIndex,writeIndex,result) {
+      Block {
+        If {
+          Eq { Var(name=readIndex) ChildCount { Var(name=args) } }
+          Block { Return { Var(name=result) } }
+          Block {
+            Return {
+              Call(target=packageToolAppendArguments) {
+                Var(name=args)
+                Add { Var(name=readIndex) Lit(value=1) }
+                Add { Var(name=writeIndex) Lit(value=1) }
+                AppendChild {
+                  Var(name=result)
+                  MakeLitString {
+                    StrConcat { Lit(value="arg") ToString { Var(name=writeIndex) } }
+                    Call(target=packageToolArg) { Var(name=args) Var(name=readIndex) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageToolArg) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Lt { Var(name=index) ChildCount { Var(name=args) } }
+          Block {
+            Return {
+              AttrValueString {
+                ChildAt { Var(name=args) Var(name=index) }
+                Lit(value=0)
+              }
+            }
+          }
+          Block { Return { Lit(value="") } }
+        }
+      }
+    }
+  }
+}

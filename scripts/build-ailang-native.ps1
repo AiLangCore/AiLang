@@ -84,12 +84,13 @@ $commonArgs = @(
   "/I$(Join-Path $nativeSrc 'ailang_cli')"
 )
 $linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib', 'Shell32.lib', 'Ole32.lib', 'Windowscodecs.lib', 'Uuid.lib')
+$linkArgs = @('/link', '/STACK:16777216')
 
-$clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs
+$clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs + $linkArgs
 & cl @clArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$runtimeArgs = $commonArgs + @('/DAIRUN_MINIMAL_RUNTIME=1', "/Fe:$runtimePath") + $sources + $linkLibs
+$runtimeArgs = $commonArgs + @('/DAIRUN_MINIMAL_RUNTIME=1', "/Fe:$runtimePath") + $sources + $linkLibs + $linkArgs
 & cl @runtimeArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

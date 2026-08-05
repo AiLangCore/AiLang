@@ -54,6 +54,8 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-lower-structural-local-bound-if-calls-module.sh
 ./scripts/test-lower-structural-native-terminal-let-module.sh
 ./scripts/test-lower-structural-value-if-binding-module.sh
+./scripts/test-selfhost-dynamic-call-binding.sh
+./scripts/test-selfhost-loop-control.sh
 ./scripts/test-lower-structural-nested-native-if-module.sh
 ./scripts/test-lower-structural-native-if-call-module.sh
 ./scripts/test-lower-structural-native-sequence-module.sh
@@ -63,10 +65,12 @@ bash ./scripts/check-doc-taxonomy.sh
 ./scripts/test-selfhost-statement-call-pipeline.sh
 ./scripts/test-selfhost-syscall-statement-pipeline.sh
 ./scripts/test-selfhost-native-primitive-pipeline.sh
+./scripts/test-selfhost-numeric-operators-pipeline.sh
 ./scripts/test-selfhost-lowering-error-propagation.sh
 ./scripts/test-selfhost-transitive-module-symbol-pipeline.sh
 ./scripts/test-object-linker-structural-call-module.sh
 ./scripts/test-clean-bootstrap-routing.sh
+./scripts/test-runtime-invocation-module.sh
 ./scripts/test-local-toolchain-shim.sh
 ./scripts/test-installed-bytecode-cli.sh
 ./scripts/test-validator-unknown-kind.sh

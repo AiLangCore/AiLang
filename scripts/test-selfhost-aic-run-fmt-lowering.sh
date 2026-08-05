@@ -8,7 +8,7 @@ OUTPUT="$(
   ENTRY_EXPORT=main \
   OUTPUT_NAME=aic.aibc1 \
   TRACE_OBJECT_INDEX=0 \
-  STOP_AFTER_OBJECT_INDEX=0 \
+  STOP_AFTER_OBJECT_INDEX=-1 \
   "${ROOT_DIR}/scripts/probe-selfhost-compiler-link.sh"
 )"
 

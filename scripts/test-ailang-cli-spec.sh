@@ -34,6 +34,7 @@ PACKAGE_RESTORE_DUP_DIR="${TMP_DIR}/package-restore-dup-app"
 PACKAGE_RESTORE_CYCLE_DIR="${TMP_DIR}/package-restore-cycle-app"
 PACKAGE_REGISTRY_DIR="${TMP_DIR}/package-registry"
 PACKAGE_SOURCE_REPO="${TMP_DIR}/package-source-repo"
+TEMPLATE_PACKAGE_DIR="${TMP_DIR}/template-package-app"
 
 run_aivm_program() {
   local program="$1"
@@ -90,6 +91,45 @@ printf '%s\n' "${TEMPLATE_SHOW_OUT}" | rg -q 'entry_file = "src/app.aos"'
 
 TEMPLATE_PATH_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template path cli)"
 printf '%s\n' "${TEMPLATE_PATH_OUT}" | rg -q '^templates/projects/cli$'
+
+mkdir -p \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/projects/hello" \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/view" \
+  "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts"
+cat > "${TEMPLATE_PACKAGE_DIR}/ailang.lock.toml" <<'EOF'
+schema = "ailang.lock.v1"
+
+[[package]]
+name = "sample-kit"
+version = "0.0.1"
+path = ".ailang/packages/sample-kit"
+packageRoot = "."
+namespaces = []
+EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/projects/index.toml" <<'EOF'
+[[template]]
+name = "hello"
+path = "templates/projects/hello"
+EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/templates/files/index.toml" <<'EOF'
+[[template]]
+name = "view"
+path = "templates/files/view"
+EOF
+cat > "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts/sample-kit" <<'EOF'
+#!/usr/bin/env sh
+printf 'sample-package-tool:%s\n' "$1"
+EOF
+chmod +x "${TEMPLATE_PACKAGE_DIR}/.ailang/packages/sample-kit/scripts/sample-kit"
+TEMPLATE_PROJECTS_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list projects "${TEMPLATE_PACKAGE_DIR}")"
+printf '%s\n' "${TEMPLATE_PROJECTS_OUT}" | rg -q '^sample-kit/hello$'
+TEMPLATE_FILES_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" template list files "${TEMPLATE_PACKAGE_DIR}")"
+printf '%s\n' "${TEMPLATE_FILES_OUT}" | rg -q '^sample-kit/view$'
+TEMPLATE_TOOL_OUT="$(
+  cd "${TEMPLATE_PACKAGE_DIR}"
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" sample-kit probe
+)"
+printf '%s\n' "${TEMPLATE_TOOL_OUT}" | rg -q '^sample-package-tool:probe$'
 
 run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" init "${APP_DIR}" --template cli-args --agents all >/dev/null
 test -f "${APP_DIR}/project.aiproj"
@@ -485,13 +525,15 @@ printf '%s\n' "${MULTI_STDOUT_OUT}" | rg -q '^second$'
 mkdir -p "${FAKE_INSTALL_ROOT}/local/bin" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli"
 cp "${AIVM_BIN}" "${FAKE_INSTALL_ROOT}/local/bin/aivm"
 chmod +x "${FAKE_INSTALL_ROOT}/local/bin/aivm"
+cp "${ROOT_DIR}/tools/aivm-runtime" "${FAKE_INSTALL_ROOT}/local/bin/aivm-runtime"
+chmod +x "${FAKE_INSTALL_ROOT}/local/bin/aivm-runtime"
 cp "${CLI_BYTECODE_DIR}/app.aibc1" "${FAKE_INSTALL_ROOT}/local/libexec/ailang/cli/app.aibc1"
 cat > "${FAKE_INSTALL_ROOT}/local/bin/ailang" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 export AILANG_SDK_ROOT="$SDK_ROOT"
-exec "$SDK_ROOT/bin/aivm" "$SDK_ROOT/libexec/ailang/cli/app.aibc1" "$@"
+exec "$SDK_ROOT/bin/aivm-runtime" run "$SDK_ROOT/libexec/ailang/cli/app.aibc1" -- "$@"
 EOF
 chmod +x "${FAKE_INSTALL_ROOT}/local/bin/ailang"
 if file "${FAKE_INSTALL_ROOT}/local/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
@@ -540,8 +582,10 @@ UNAVAILABLE_TARGET_OUT="$(run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" publi
 printf '%s\n' "${UNAVAILABLE_TARGET_OUT}" | rg -q 'code=AILANG019'
 unset AILANG_INSTALL_ROOT
 
-run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${APP_DIR}" >/dev/null
-AIVM="${AIVM_BIN}" run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${BUILD_DIR}/app.aibc1" >/dev/null
+AIVM="${ROOT_DIR}/tools/aivm-runtime" \
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${APP_DIR}" >/dev/null
+AIVM="${ROOT_DIR}/tools/aivm-runtime" \
+  run_aivm_program "${CLI_BYTECODE_DIR}/app.aibc1" run "${BUILD_DIR}/app.aibc1" >/dev/null
 
 mkdir -p "${APP_DIR}/bin" "${APP_DIR}/dist" "${APP_DIR}/.toolchain"
 touch "${APP_DIR}/bin/app.aibc1" "${APP_DIR}/dist/app.aibc1" "${APP_DIR}/.toolchain/cache"

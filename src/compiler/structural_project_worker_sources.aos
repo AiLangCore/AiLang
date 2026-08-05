@@ -1,0 +1,43 @@
+Program {
+  Import(sdk="ailang" path="std/bytes.aos")
+  Import(path="linker.aos")
+  Export(name=structuralProject.readWorkerModuleSource)
+
+  Let(name=structuralProject.readWorkerModuleSource) {
+    Fn(params=projectDir,lockText,modulePath) {
+      Block {
+        Let(name=readPath) {
+          Call(target=linker.resolveModuleReadPath) {
+            Var(name=projectDir) Var(name=modulePath) Var(name=lockText)
+          }
+        }
+        If {
+          Eq { Var(name=readPath) Lit(value="") }
+          Block {
+            Return {
+              MakeErr {
+                Lit(value="structural_project_worker_sources")
+                Lit(value="OBJ031")
+                Lit(value="Linked module could not be resolved for worker input.")
+                Var(name=modulePath)
+              }
+            }
+          }
+          Block {
+            Return {
+              AppendAttr {
+                MakeNode { Lit(value="WorkerModuleSource") Lit(value="source") }
+                MakeLitString {
+                  Lit(value="text")
+                  Call(target=bytes.toUtf8String) {
+                    Call(target=sys.fs.file.read) { Var(name=readPath) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

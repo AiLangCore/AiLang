@@ -1,6 +1,38 @@
 Program {
   Import(sdk="ailang" path="std/str.aos")
 
+  Let(name=linker.isAbsoluteHostPath) {
+    Fn(params=path) {
+      Block {
+        Let(name=length) { StringScalarLength { Var(name=path) } }
+        If {
+          Eq { Var(name=length) Lit(value=0) }
+          Block { Return { Lit(value=false) } }
+          Block {
+            If {
+              Eq { Call(target=substring) { Var(name=path) Lit(value=0) Lit(value=1) } Lit(value="/") }
+              Block { Return { Lit(value=true) } }
+              Block {
+                If {
+                  Lt { Var(name=length) Lit(value=3) }
+                  Block { Return { Lit(value=false) } }
+                  Block {
+                    Return {
+                      Eq {
+                        Call(target=substring) { Var(name=path) Lit(value=1) Lit(value=1) }
+                        Lit(value=":")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let(name=linker.normalizeDisplayPath) {
     Fn(params=path) {
       Block {

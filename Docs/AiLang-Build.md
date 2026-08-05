@@ -44,21 +44,22 @@ of the output.
 `src/cli/ailang.aos` owns the command contract, argument validation, output
 path policy, and user-facing diagnostics.
 
-Before binary emission, the AiLang-authored build command parses the entry
-module, constructs the deterministic linker module graph, and writes:
+The AiLang-authored build command parses the entry module, constructs the
+deterministic linker module graph, emits module objects, and links the final
+AiBC1 program. It writes:
 
 ```text
 <project-dir>/obj/link-report.aos
 <project-dir>/obj/linked-bundle.aos
 ```
 
-These files are compiler-owned intermediate artifacts. They make the current
-self-hosting boundary explicit: graph construction and bundle description are
-AiLang code; final AiBC binary emission is still the remaining bootstrap
-adapter.
+These files are compiler-owned intermediate artifacts. Graph construction,
+module-object preparation, validation, ordering, and final AiBC binary emission
+are AiLang code. AiVM supplies only mechanical execution, worker scheduling,
+resource enforcement, and host capabilities.
 
-During the alpha bootstrap phase it delegates source-to-AiBC compilation to a
-bootstrap compiler process:
+The repository default build is self-hosted. It seeds generation from the
+selected installed SDK's compiled AiLang CLI and module-worker artifacts:
 
 ```text
 AILANG_BOOTSTRAP_COMPILER, when set
@@ -74,14 +75,10 @@ step. `AILANG_INSTALL_ROOT` overrides the SDK root; otherwise the root is
 `~/.ailang/local/bin/ailang`; other selectors resolve to
 `~/.ailang/toolchains/<version>/bin/ailang`.
 
-Production `aivm` binds the process syscalls needed to run this alpha build
-path, so the compiled AiLang CLI can execute `build` under `aivm` as long as the
-bootstrap compiler executable is present.
-
-This is temporary. The long-term implementation must replace the bootstrap
-compiler process with AiLang-authored compiler code that runs as compiled
-AiLang bytecode. Do not move compiler semantics into AiVM syscalls to close this
-gap.
+An installed SDK seed is resolved before execution and is independent of the
+checkout location and current working directory. The deprecated `legacy` target
+remains an explicit recovery path while the final standalone parser-bootstrap
+tool is replaced; it is not part of the default build.
 
 ## Errors
 

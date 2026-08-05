@@ -25,7 +25,7 @@ Program {
               Call(target=bytes.concat) {
                 Call(target=bytes.fromUtf8String) { Lit(value="AOLR") }
                 Call(target=bytes.concat) {
-                  Call(target=bytes.fromByte) { Lit(value=1) }
+                  Call(target=bytes.fromByte) { Lit(value=2) }
                   Call(target=structuralRecord.encodeNode) { Var(name=node) }
                 }
               }
@@ -78,7 +78,7 @@ Program {
                   Eq { Var(name=magic) Lit(value="AOLR") }
                   Block {
                     If {
-                      Eq { Var(name=version) Lit(value=1) }
+                      Eq { Var(name=version) Lit(value=2) }
                       Block {
                         Let(name=decoded) {
                           Call(target=structuralRecord.decodeNode) {
@@ -146,7 +146,10 @@ Program {
         Let(name=head) {
           Call(target=bytes.concat) {
             Call(target=structuralRecord.encodeString) { NodeKind { Var(name=node) } }
-            Call(target=structuralRecord.encodeVarUInt) { AttrCount { Var(name=node) } }
+            Call(target=bytes.concat) {
+              Call(target=structuralRecord.encodeString) { NodeId { Var(name=node) } }
+              Call(target=structuralRecord.encodeVarUInt) { AttrCount { Var(name=node) } }
+            }
           }
         }
         Let(name=attrs) {
@@ -298,9 +301,20 @@ Program {
             Let(name=afterKind) {
               AttrValueInt { ChildAt { Var(name=kindResult) Lit(value=1) } Lit(value=0) }
             }
+            Let(name=nodeIdResult) {
+              Call(target=structuralRecord.decodeString) {
+                Var(name=data) Var(name=afterKind)
+              }
+            }
+            Let(name=nodeId) {
+              AttrValueString { ChildAt { Var(name=nodeIdResult) Lit(value=0) } Lit(value=0) }
+            }
+            Let(name=afterNodeId) {
+              AttrValueInt { ChildAt { Var(name=nodeIdResult) Lit(value=1) } Lit(value=0) }
+            }
             Let(name=attrCountResult) {
               Call(target=structuralRecord.decodeVarUInt) {
-                Var(name=data) Var(name=afterKind) Lit(value=1) Lit(value=0)
+                Var(name=data) Var(name=afterNodeId) Lit(value=1) Lit(value=0)
               }
             }
             Let(name=attrCount) {
@@ -313,7 +327,7 @@ Program {
               Call(target=structuralRecord.decodeAttrs) {
                 Var(name=data) Var(name=afterAttrCount)
                 Var(name=attrCount) Lit(value=0)
-                MakeNode { Var(name=kind) Lit(value="compact-record") }
+                MakeNode { Var(name=kind) Var(name=nodeId) }
               }
             }
             If {
@@ -579,7 +593,17 @@ Program {
                   Add { Mod { Var(name=value) Lit(value=128) } Lit(value=128) }
                 }
                 Call(target=structuralRecord.encodeVarUInt) {
-                  Div { Var(name=value) Lit(value=128) }
+                  Call(target=parse.parseIntValue) {
+                    ToString {
+                      Div {
+                        Sub {
+                          Var(name=value)
+                          Mod { Var(name=value) Lit(value=128) }
+                        }
+                        Lit(value=128)
+                      }
+                    }
+                  }
                 }
               }
             }

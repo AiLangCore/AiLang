@@ -94,6 +94,12 @@ Current self-build frontier:
   control-flow regressions remain green, while the phase probe remains in
   `phase=graph` after 150 seconds and the compiler-files parser test still does
   not complete within its 30-second diagnostic window.
+- Literal-return plan emission now lives in the focused
+  `lower/plans/literal_returns.aos` module. It owns integer and typed literal
+  return plans while `lower.aos` retains only their public exports and routing.
+  The extraction reduces the facade to 1,648 lines and 103,699 bytes without
+  changing emitted records. Parser, focused lowering, module-bundle, AiBCO
+  round-trip, and canonical formatting gates remain green.
 - Native return, native If, and terminal-sequence record-plan construction now
   lives in the focused `lower/plans/native_records.aos` module. Expression
   eligibility, expression emission, branch traversal, and record-plan policy
@@ -924,17 +930,201 @@ Validation boundary:
 - the optional performance harness currently reports its existing string
   benchmark type mismatch in both smoke and full modes.
 
+### Canonical installed runtime invocation
+
+Status: implemented and validated on 2026-07-29.
+
+Installed bytecode execution now resolves the SDK-owned `aivm-runtime` and uses
+the canonical `run <artifact> -- <application arguments>` contract. Runtime
+selection and argument construction live in the focused
+`src/cli/runtime_invocation.aos` module instead of the large CLI facade.
+
+The focused argument golden, complete CLI contract suite, and installed
+bytecode CLI gate pass. The published beta.53 self-host compiled the complete
+updated CLI project, and that generated CLI built and ran the restored
+`std-json` package application through the installed runtime boundary. This
+removes the `DEV008` failure that followed the package-owned
+`std.json.stringify` correction.
+
+### Build-validated dynamic call lowering
+
+Status: binding, statement, conditional-branch, return, and loop continuations
+implemented on 2026-07-29.
+
+The self-hosted lowerer now owns single-candidate `CallDynamic` dispatch in
+focused control modules. It evaluates and stores the runtime target, compares
+it with the build-validated candidate, invokes the resolved canonical symbol,
+and preserves the `sys.dynamic.missingFunction` fallback. Binding, discarded
+statement, statement-`If` branch, and return continuations have executable
+coverage.
+
+The self-hosted lowerer now accepts structural `Loop` nodes through a focused
+control module with canonical entry, body, and exit blocks. `Break` and
+`Continue` resolve only from the loop labels threaded through nested statement
+branches, and loop-local rebinding reuses the existing local slot. Focused
+coverage includes a dynamic call binding nested in a loop conditional.
+
+The restored Weather graph now lowers its complete application loop. The
+two-statement classification has moved into a focused plan module: only a
+validated local `Match` uses its specialized plan, while other supported
+records route through the symbol-aware native sequence planner. This removes
+the former invalid `ChildAt` failure. Numeric expression policy and opcode
+selection have also moved into a focused module, including the specified
+`Pow` to `POW_NUM` mapping.
+
+Weather now advances through both of those frontiers. Investigation of
+`If_6031` showed that it was package source embedding a multi-block conditional
+inside a value expression, not a missing mechanical VM operation. The
+authoritative AiVectra and `vectra-ui` sources now bind those conditionals as
+ordinary statement control flow before consuming their values.
+
+The restored graph subsequently exposed package portability issues in
+`std-http`: a compiler-parser dependency used to construct a command, legacy
+unqualified byte helpers, `ToInt`, unsupported `Or` expressions, and another
+return-valued conditional. Those paths now use direct structural construction,
+canonical `bytes.*` exports, the package's decimal parser, and deterministic
+statement control flow. The latest completed generation pass reached
+`If_43197` in redirect status classification; that source is normalized for the
+next proof run. No new semantics were added to AiVM or the generic expression
+emitter.
+
+The following iteration added optional-else support to the focused
+`lower.statementIf` module. A statement `If` with two children now receives a
+deterministic empty else block during lowering instead of attempting an
+out-of-range `ChildAt`. The focused regression and the default self-host build
+pass; the latter generated the self-hosted CLI in 677 seconds using nine jobs
+derived from the 96-percent capacity profile.
+
+Using that fresh self-hosted CLI with the explicit serial object-selection
+proof, the restored Weather application now compiles completely to
+`bin/app.aibc1`. App-owned inline conditionals in HTTP URL construction,
+forecast text, UI control states, and the ForecastCard companion were moved
+into focused reusable functions. The default worker path remains blocked
+earlier: the first canonical module task fails at `Await`. AiVM diagnosis now
+snapshots terminal worker details before automatic Task reclamation. The
+canonical failure is therefore visible as `AIVMS008`: the module-object worker
+calls `sys.fs.path.exists`, but filesystem capability is intentionally denied
+because the current filesystem host binding retains process-global mutable
+state.
+
+The serial success isolates that defect to the path-coupled worker task schema
+rather than Weather lowering. The next worker iteration must transport
+canonical staged input bytes or compact records to the isolated invocation; it
+must not grant unsafe concurrent filesystem access. The measured Weather stage
+documents are 99,433 bytes before program payload expansion, providing the
+first bound for that transport design. Runtime launch reaches the macOS
+application boundary, but injected close did not terminate the application, so
+executable runtime acceptance remains open.
+
+The following iteration removes host paths from the built-in module-object
+worker payload. The owner compiler resolves and reads each canonical module,
+then submits its raw source together with validated project function-record
+chunks. The isolated worker parses that source, lowers it without filesystem
+capability, and returns the existing linker-ready compact object record.
+Compiler-owned payload construction lives in focused worker-input and
+worker-source modules; AiVM behavior is unchanged.
+
+The compact structural codec now preserves stable node IDs and correctly
+encodes lengths larger than one varint byte. These are semantic requirements
+for transporting compiler records: kinds, attributes, and children alone are
+not sufficient because canonical function symbols use node identity. A valid
+two-module project built by the newly self-hosted compiler produces
+byte-identical `.aibc1` output through the serial reference and VM-worker
+pipelines.
+
+The refreshed public Weather graph exposed one owner-side portability bug:
+absolute local-development package paths from `ailang.lock.toml` were being
+prefixed with the project directory. Absolute-path classification now lives in
+the focused linker path module, and the linker has a regression covering an
+external absolute package root. No package-resolution policy was added to
+AiVM.
+
+With that correction, Weather builds through both the serial self-host
+reference and the built-in worker pipeline. Both paths emit the same
+214,324-byte `.aibc1` with SHA-256
+`7c86601954fa17c0c1b41e1b13bcf2f47f3e539c8d47eb60aaad08605f12297d`.
+Using the same packaged self-host compiler and restored graph, the serial
+reference build takes 199.78 seconds and the built-in worker build takes 80.17
+seconds. That is a 119.61-second reduction, or 59.9 percent, while preserving
+the final bytes.
+Runtime launch creates the Weather window and reaches the live Open-Meteo TLS
+boundary. An injected close event is observed, but network work continues and
+the application does not terminate promptly, so close/shutdown acceptance
+remains open.
+
+Shutdown acceptance now passes. The debug host emits the same canonical
+`closed` event as the platform UI hosts, and the Weather application routes a
+main-window close through its focused shutdown module before AiVectra exits the
+semantic loop. Any active HTTP operation is cancelled through the canonical
+`sys.net.async.cancel` contract. The obsolete camel-case alias has been removed
+from authored sources and runtime compatibility binding. The live Weather
+launch observes `op=1 cancel`, returns success, and terminates in 0.41 seconds.
+
+The clean-checkout bootstrap audit now stages an installed SDK without copying
+its relative `bin/ailang` launcher out of context. Modern SDK launchers remain
+bound to their installed SDK root, and published built-in command bytecode is
+reused for package restore instead of recompiling those commands through an
+older CLI contract. The clean-bootstrap regression covers both behaviors.
+
+The default build reaches bootstrap linking from a checkout containing no
+generated `tools/ailang` or `tools/aivm-runtime`, without invoking the legacy C
+build. The latest installed published SDK, beta.53, cannot finish seeding this
+branch: it predates the current nested modular compiler graph and reports
+`AILANG021` while linking the generated bootstrap probe. A later relocated
+release-candidate SDK supplies the current self-host seed and passes the clean
+checkout proof described below.
+
+The release-candidate SDK proof now passes from a detached clean checkout. The
+relocated SDK supplies its compiled AiLang CLI, built-in commands, module-object
+worker, and AiVM runtime; the default build does not invoke `build.sh legacy`,
+recompile the native launcher, or select artifacts by checkout-relative host
+paths. Generation completes in 662 seconds and self-hosted built-ins in 44
+seconds. The generation-one and generation-two CLI artifacts are byte-identical
+at 622,083 bytes with SHA-256
+`af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
+
+The fixed 16, 32, and 64 MiB tooling byte-arena ceilings have been removed.
+AiVM now compacts dead phase-local bytes before growing pressure-aware hosted
+backing, spills completed unobserved worker results to reloadable temporary
+storage, releases materialized batch framing, and reduces physical worker
+dispatch as available memory falls. Production and debug remain bounded. A
+full default self-host completes generation in 630 seconds and seven built-ins in 62
+seconds; generation-one and generation-two remain byte-identical at 622,083
+bytes with SHA-256
+`af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
+The build also reuses a prior local self-host CLI and module-object worker when
+an installed bootstrap catalog is absent, preventing stale native-runtime
+refresh from falling back to the obsolete modular-link probe.
+
+The compiled `parse-check.aibc1` built-in now parses the ordered authored AOS
+corpus through `parse.parseDocument`. The canonical formatting gate invokes
+that bytecode command through AiVM, and the standalone `tools/aos_frontend.c`
+source, native build helper, SDK staging, and CI/release matrix artifacts have
+been removed. The migration also corrected the generated command registry by
+removing non-AOS comment syntax discovered by the self-host parser.
+
+The self-hosted parser corpus gate passes on macOS, Linux, and Windows release
+hosts. The direct Windows native build now reserves the same 16 MiB stack as
+the existing AiVM CMake build, and parser newline literals use explicit escape
+sequences so Git checkout line-ending conversion cannot change their semantic
+value. A native PowerShell gate parses the full Windows corpus and verifies the
+canonical malformed-input diagnostic without relying on a POSIX compatibility
+shell. These changes remain host/build mechanics and do not add parser policy
+to AiVM. Broader Windows execution coverage remains a focused AiVM
+host-boundary item; it must not reintroduce a C parser or duplicate parsing
+semantics in the runtime.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.
-- [ ] Full compiler-file self-hosted parser gate passes.
+- [x] Full compiler-file self-hosted parser gate passes.
 - [ ] Supported compiler modules lower to deterministic AiBCO1 objects.
 - [ ] Objects link deterministically into executable AiBC1.
-- [ ] Self-hosted and bootstrap paths have automated parity coverage.
-- [ ] Supported compiler/tool sources build through the self-hosted path.
-- [ ] Weather builds and runs through self-hosted compilation without fallback.
-- [ ] No new compiler semantics or CLI commands were added to C.
-- [ ] All affected tests pass from a clean workspace.
+- [x] Self-hosted and bootstrap paths have automated parity coverage.
+- [x] Supported compiler/tool sources build through the self-hosted path.
+- [x] Weather builds and runs through self-hosted compilation without fallback.
+- [x] No new compiler semantics or CLI commands were added to C.
+- [x] All affected tests pass from a clean workspace.
 
 ## Deliverables
 

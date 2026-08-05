@@ -1,0 +1,123 @@
+Program {
+  Import(sdk="ailang" path="std/str.aos")
+
+  Export(name=packageLockToolPath)
+
+  Let(name=packageLockToolPath) {
+    Fn(params=projectDir,lockText,toolName,startIndex) {
+      Block {
+        Let(name=sectionStart) { Call(target=find) { Var(name=lockText) Lit(value="[[package]]") Var(name=startIndex) } }
+        If {
+          Eq { Var(name=sectionStart) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=afterStart) { Add { Var(name=sectionStart) Lit(value=11) } }
+            Let(name=nextStart) { Call(target=find) { Var(name=lockText) Lit(value="[[package]]") Var(name=afterStart) } }
+            Let(name=section) {
+              If {
+                Eq { Var(name=nextStart) Lit(value=-1) }
+                Block { Call(target=substring) { Var(name=lockText) Var(name=sectionStart) Lit(value=2147483647) } }
+                Block { Call(target=substring) { Var(name=lockText) Var(name=sectionStart) Sub { Var(name=nextStart) Var(name=sectionStart) } } }
+              }
+            }
+            Let(name=packagePath) { Call(target=packageLockQuotedValue) { Var(name=section) Lit(value="path") } }
+            Let(name=packageRoot) { Call(target=packageLockQuotedValue) { Var(name=section) Lit(value="packageRoot") } }
+            Let(name=rootPath) { Call(target=packageSourceRoot) { Var(name=projectDir) Var(name=packagePath) Var(name=packageRoot) } }
+            Let(name=toolPath) { Call(target=toolPathInRoot) { Var(name=rootPath) Var(name=toolName) } }
+            If {
+              Eq { Var(name=toolPath) Lit(value="") }
+              Block {
+                Let(name=nextIndex) {
+                  If {
+                    Eq { Var(name=nextStart) Lit(value=-1) }
+                    Block { Lit(value=2147483647) }
+                    Block { Var(name=nextStart) }
+                  }
+                }
+                Return {
+                  Call(target=packageLockToolPath) {
+                    Var(name=projectDir)
+                    Var(name=lockText)
+                    Var(name=toolName)
+                    Var(name=nextIndex)
+                  }
+                }
+              }
+              Block { Return { Var(name=toolPath) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageLockQuotedValue) {
+    Fn(params=text,key) {
+      Block {
+        Let(name=needle) { StrConcat { Var(name=key) Lit(value=" = \"") } }
+        Let(name=valueKey) { Call(target=find) { Var(name=text) Var(name=needle) Lit(value=0) } }
+        If {
+          Eq { Var(name=valueKey) Lit(value=-1) }
+          Block { Return { Lit(value="") } }
+          Block {
+            Let(name=valueStart) { Add { Var(name=valueKey) StringUtf8ByteCount { Var(name=needle) } } }
+            Let(name=rest) { Call(target=substring) { Var(name=text) Var(name=valueStart) Lit(value=2147483647) } }
+            Let(name=valueEnd) { Call(target=find) { Var(name=rest) Lit(value="\"") Lit(value=0) } }
+            If {
+              Eq { Var(name=valueEnd) Lit(value=-1) }
+              Block { Return { Lit(value="") } }
+              Block { Return { Call(target=substring) { Var(name=rest) Lit(value=0) Var(name=valueEnd) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=packageSourceRoot) {
+    Fn(params=projectDir,packagePath,packageRoot) {
+      Block {
+        Let(name=restoredRoot) { StrConcat { Var(name=projectDir) StrConcat { Lit(value="/") Var(name=packagePath) } } }
+        If {
+          Eq { Var(name=packageRoot) Lit(value=".") }
+          Block { Return { Var(name=restoredRoot) } }
+          Block { Return { StrConcat { Var(name=restoredRoot) StrConcat { Lit(value="/") Var(name=packageRoot) } } } }
+        }
+      }
+    }
+  }
+
+  Let(name=toolPathInRoot) {
+    Fn(params=rootPath,toolName) {
+      Block {
+        Let(name=toolsPath) { StrConcat { Var(name=rootPath) StrConcat { Lit(value="/tools/") Var(name=toolName) } } }
+        Let(name=binPath) { StrConcat { Var(name=rootPath) StrConcat { Lit(value="/bin/") Var(name=toolName) } } }
+        Let(name=scriptsPath) { StrConcat { Var(name=rootPath) StrConcat { Lit(value="/scripts/") Var(name=toolName) } } }
+        Let(name=rootToolPath) { StrConcat { Var(name=rootPath) StrConcat { Lit(value="/") Var(name=toolName) } } }
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=toolsPath) }
+          Block { Return { Var(name=toolsPath) } }
+          Block {
+            If {
+              Call(target=sys.fs.path.exists) { Var(name=binPath) }
+              Block { Return { Var(name=binPath) } }
+              Block {
+                If {
+                  Call(target=sys.fs.path.exists) { Var(name=scriptsPath) }
+                  Block { Return { Var(name=scriptsPath) } }
+                  Block {
+                    If {
+                      Call(target=sys.fs.path.exists) { Var(name=rootToolPath) }
+                      Block { Return { Var(name=rootToolPath) } }
+                      Block { Return { Lit(value="") } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

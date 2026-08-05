@@ -26,8 +26,7 @@ Program {
           Block { Lit(value=0) }
         }
         If {
-          Eq { Var(name=ch) Lit(value="
-") }
+          Eq { Var(name=ch) Lit(value="\n") }
           Block { Return { Lit(value=true) } }
           Block { Lit(value=0) }
         }
@@ -331,8 +330,7 @@ Program {
       Block {
         If {
           Eq { Var(name=ch) Lit(value="n") }
-          Block { Return { Lit(value="
-") } }
+          Block { Return { Lit(value="\n") } }
           Block {
             If {
               Eq { Var(name=ch) Lit(value="t") }

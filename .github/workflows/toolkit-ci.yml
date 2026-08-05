@@ -161,11 +161,17 @@ jobs:
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs .\dist\.artifacts\aivm-wasm32\
           .\scripts\stage-sdk-docs.ps1 .\dist
 
-      - name: Self-hosted parser corpus
+      - name: Self-hosted parser corpus (non-Windows)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           ./scripts/test-canonical-formatting.sh
+
+      - name: Self-hosted parser corpus (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\scripts\test-selfhosted-parser-corpus.ps1
 
       - name: Deterministic golden corpus
         shell: bash

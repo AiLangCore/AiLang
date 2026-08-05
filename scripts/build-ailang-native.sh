@@ -67,8 +67,6 @@ RUNTIME_PATH="${OUT_DIR}/${RUNTIME_BIN_NAME}"
 AIOS_FRAMEBUFFER_RUNTIME_PATH="${OUT_DIR}/aivectra-framebuffer"
 AIVECTRA_X11_RUNTIME_PATH="${OUT_DIR}/aivectra-x11"
 
-"${ROOT_DIR}/scripts/build-frontend.sh"
-
 mkdir -p "${OUT_DIR}"
 
 CC_BIN="${CC:-cc}"

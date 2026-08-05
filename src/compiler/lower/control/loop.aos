@@ -1,0 +1,44 @@
+Program {
+  Export(name=lower.loop.append)
+
+  Let(name=lower.loop.append) {
+    Fn(params=function,context,sequence,bindings,records,index,loopNode,outerContinueLabel,outerBreakLabel) {
+      Block {
+        Let(name=bodyLabel) { StrConcat { Lit(value="loop-body-") NodeId { Var(name=loopNode) } } }
+        Let(name=exitLabel) { StrConcat { Lit(value="loop-exit-") NodeId { Var(name=loopNode) } } }
+        Let(name=withEntry) {
+          Call(target=blockBuilder.appendBlock) {
+            Var(name=function)
+            Call(target=blockBuilder.seal) {
+              Call(target=blockBuilder.terminateJump) { Var(name=context) Var(name=bodyLabel) }
+            }
+          }
+        }
+        Let(name=withBody) {
+          Call(target=lower.appendStructuralNativeTerminalSequence) {
+            Var(name=withEntry)
+            Call(target=blockBuilder.beginBlock) { Var(name=bodyLabel) }
+            ChildAt { Var(name=loopNode) Lit(value=0) }
+            Var(name=bindings) Var(name=records) Lit(value=0)
+            Var(name=bodyLabel) Var(name=exitLabel)
+          }
+        }
+        If {
+          Call(target=lower.isStructuralError) { Var(name=withBody) }
+          Block { Return { Var(name=withBody) } }
+          Block {
+            Return {
+              Call(target=lower.appendStructuralNativeTerminalSequence) {
+                Var(name=withBody)
+                Call(target=blockBuilder.beginBlock) { Var(name=exitLabel) }
+                Var(name=sequence) Var(name=bindings) Var(name=records)
+                Add { Var(name=index) Lit(value=1) }
+                Var(name=outerContinueLabel) Var(name=outerBreakLabel)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

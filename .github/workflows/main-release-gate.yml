@@ -23,35 +23,30 @@ jobs:
             rid: linux-x64
             platform: linux
             arch: x64
-            frontend: aos_frontend
             airun: ailang
             artifact_dir: .artifacts/ailang-linux-x64
           - os: ubuntu-latest
             rid: linux-arm64
             platform: linux
             arch: arm64
-            frontend: aos_frontend
             airun: ailang
             artifact_dir: .artifacts/ailang-linux-arm64
           - os: macos-14
             rid: osx-x64
             platform: osx
             arch: x64
-            frontend: aos_frontend
             airun: ailang
             artifact_dir: .artifacts/ailang-osx-x64
           - os: macos-14
             rid: osx-arm64
             platform: osx
             arch: arm64
-            frontend: aos_frontend
             airun: ailang
             artifact_dir: .artifacts/ailang-osx-arm64
           - os: windows-latest
             rid: windows-x64
             platform: windows
             arch: x64
-            frontend: aos_frontend.exe
             airun: ailang.exe
             artifact_dir: .artifacts/ailang-windows-x64
             msvc_arch: amd64
@@ -59,7 +54,6 @@ jobs:
             rid: windows-arm64
             platform: windows
             arch: arm64
-            frontend: aos_frontend.exe
             airun: ailang.exe
             artifact_dir: .artifacts/ailang-windows-arm64
             msvc_arch: amd64_arm64
@@ -126,21 +120,6 @@ jobs:
           ./scripts/build-ailang-native.ps1
           Copy-Item ".\.artifacts\ailang-${{ matrix.platform }}-${{ matrix.arch }}\ailang.exe" ".\dist\${{ matrix.airun }}"
 
-      - name: Stage frontend parser (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.frontend }}"
-
-      - name: Stage frontend parser (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
-
       - name: Stage compiler assets (Unix)
         if: matrix.platform != 'windows'
         shell: bash
@@ -162,7 +141,6 @@ jobs:
         run: |
           set -euo pipefail
           test -x "./dist/${{ matrix.airun }}"
-          test -x "./dist/${{ matrix.frontend }}"
           test -f ./dist/compiler/format.aos
           test -f ./dist/compiler/validate.aos
           test -f ./dist/compiler/route.aos
@@ -175,7 +153,6 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path ".\\dist\\${{ matrix.airun }}")) { throw 'missing airun' }
-          if (-not (Test-Path ".\\dist\\${{ matrix.frontend }}")) { throw 'missing aos_frontend' }
           if (-not (Test-Path .\dist\compiler\format.aos)) { throw 'missing compiler assets' }
           if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
 

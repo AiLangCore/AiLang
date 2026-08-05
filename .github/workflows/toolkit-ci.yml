@@ -64,15 +64,12 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            frontend: aos_frontend
             airun: ailang
             runtime: aivm-runtime
           - os: macos-14
-            frontend: aos_frontend
             airun: ailang
             runtime: aivm-runtime
           - os: windows-latest
-            frontend: aos_frontend.exe
             airun: ailang.exe
             runtime: aivm-runtime.exe
 
@@ -119,28 +116,12 @@ jobs:
           ./build.ps1 legacy
           if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
-      - name: Stage frontend parser (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ./dist
-          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.frontend }}"
-
-      - name: Stage frontend parser (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .\dist | Out-Null
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
-
       - name: Stage runtime binary (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p ./dist
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
           if [ -x ./.artifacts/ailang-linux-x64/aivectra-framebuffer ]; then
@@ -151,6 +132,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
           Copy-Item .\tools\ailang.exe .\dist\${{ matrix.airun }}
           Copy-Item .\tools\aivm-runtime.exe .\dist\${{ matrix.runtime }}
 
@@ -179,11 +161,22 @@ jobs:
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs .\dist\.artifacts\aivm-wasm32\
           .\scripts\stage-sdk-docs.ps1 .\dist
 
-      - name: Deterministic golden corpus
+      - name: Self-hosted parser corpus (non-Windows)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           ./scripts/test-canonical-formatting.sh
+
+      - name: Self-hosted parser corpus (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\scripts\test-selfhosted-parser-corpus.ps1
+
+      - name: Deterministic golden corpus
+        shell: bash
+        run: |
+          set -euo pipefail
           ./scripts/test-golden-determinism.sh
 
       - name: Upload toolkit artifact

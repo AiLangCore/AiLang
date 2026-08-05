@@ -1,9 +1,7 @@
 Program {
-  Import(sdk="ailang" path="std/bytes.aos")
   Import(sdk="ailang" path="std/worker.aos")
-  Import(path="format.aos")
   Import(path="structural_record_codec.aos")
-  Import(path="structural_project_stage.aos")
+  Import(path="structural_project_worker_inputs.aos")
   Import(path="workers/module_object.aos")
   Export(name=structuralProject.writeProjectObjectRecordsWithWorkers)
   Export(name=structuralProject.moduleObjectRecordWorker)
@@ -27,20 +25,19 @@ Program {
   Let(name=structuralProject.writeProjectObjectRecordsWithWorkers) {
     Fn(params=modulePaths,projectDir,lockText,stageDir) {
       Block {
-        Let(name=staged) {
-          Call(target=structuralProject.prepareParallelStage) {
-            Var(name=modulePaths) Var(name=projectDir)
-            Var(name=lockText) Var(name=stageDir)
+        Let(name=records) {
+          Call(target=structuralProject.prepareWorkerProjectRecords) {
+            Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
           }
         }
         If {
-          Eq { NodeKind { Var(name=staged) } Lit(value="Err") }
-          Block { Return { Var(name=staged) } }
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
+          Block { Return { Var(name=records) } }
           Block {
             Let(name=batch) {
-              Call(target=structuralProject.moduleObjectRecordBatch) {
-                Var(name=projectDir) Var(name=stageDir)
-                ChildCount { Var(name=modulePaths) } Lit(value=0)
+              Call(target=structuralProject.moduleObjectTaskBatch) {
+                Var(name=modulePaths) Var(name=projectDir) Var(name=lockText)
+                Var(name=records) Lit(value=0)
                 Call(target=worker.batch.empty)
               }
             }
@@ -54,46 +51,6 @@ Program {
               Call(target=structuralProject.collectModuleObjectRecords) {
                 Var(name=tasks) ChildCount { Var(name=modulePaths) }
                 Lit(value=0) MakeBlock { Lit(value="objects") }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let(name=structuralProject.moduleObjectRecordBatch) {
-    Fn(params=projectDir,stageDir,moduleCount,index,batch) {
-      Block {
-        If {
-          Eq { Var(name=index) Var(name=moduleCount) }
-          Block { Return { Var(name=batch) } }
-          Block {
-            Let(name=payload) {
-              AppendAttr {
-                AppendAttr {
-                  AppendAttr {
-                    MakeNode {
-                      Lit(value="ModuleObjectTask")
-                      StrConcat { Lit(value="module-") ToString { Var(name=index) } }
-                    }
-                    MakeLitString { Lit(value="projectDir") Var(name=projectDir) }
-                  }
-                  MakeLitString { Lit(value="stageDir") Var(name=stageDir) }
-                }
-                MakeLitInt { Lit(value="moduleIndex") Var(name=index) }
-              }
-            }
-            Return {
-              Call(target=structuralProject.moduleObjectRecordBatch) {
-                Var(name=projectDir) Var(name=stageDir) Var(name=moduleCount)
-                Add { Var(name=index) Lit(value=1) }
-                Call(target=worker.batch.append) {
-                  Var(name=batch)
-                  Call(target=bytes.fromUtf8String) {
-                    Call(target=format.format) { Var(name=payload) }
-                  }
-                }
               }
             }
           }

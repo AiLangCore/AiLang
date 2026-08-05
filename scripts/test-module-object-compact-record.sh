@@ -14,6 +14,7 @@ Program {
   Let(name=start) {
     Fn() {
       Block {
+        Let(name=input) { Lit(value=7) }
         Return { Call(target=answer) { Lit(value=7) } }
       }
     }
@@ -46,7 +47,7 @@ Program {
   Import(path="../../src/compiler/object_linker.aos")
   Import(path="../../src/compiler/parser.aos")
   Import(path="../../src/compiler/structural_project_incremental.aos")
-  Import(path="../../src/compiler/structural_project_stage.aos")
+  Import(path="../../src/compiler/structural_project_worker_inputs.aos")
   Import(path="../../src/compiler/structural_record_codec.aos")
   Import(path="../../src/compiler/workers/module_object.aos")
   Import(path="../../src/std/bytes.aos")
@@ -69,21 +70,15 @@ Program {
             Lit(value="${TMP_DIR}") Var(name=entry) Lit(value="src/app.aos")
           }
         }
-        Let(name=staged) {
-          Call(target=structuralProject.prepareParallelStage) {
+        Let(name=records) {
+          Call(target=structuralProject.prepareWorkerProjectRecords) {
             Var(name=paths) Lit(value="${TMP_DIR}") Lit(value="")
-            Lit(value="${TMP_DIR}/stage")
           }
         }
         If {
-          Eq { NodeKind { Var(name=staged) } Lit(value="Err") }
+          Eq { NodeKind { Var(name=records) } Lit(value="Err") }
           Block { Return { Lit(value=10) } }
           Block { Lit(value=0) }
-        }
-        Let(name=stage) {
-          Call(target=structuralProject.readParallelStage) {
-            Lit(value="${TMP_DIR}/stage")
-          }
         }
         Let(name=expectedObjects) {
           Call(target=structuralProject.writeProjectObjectFilesIncremental) {
@@ -93,8 +88,8 @@ Program {
         }
         Let(name=actualObjects) {
           Call(target=verify.collectWorkerRecords) {
-            Lit(value="${TMP_DIR}") Lit(value="${TMP_DIR}/stage")
-            ChildCount { Var(name=paths) } Lit(value=0)
+            Var(name=paths) Lit(value="${TMP_DIR}") Lit(value="")
+            Var(name=records) ChildCount { Var(name=paths) } Lit(value=0)
             MakeBlock { Lit(value="objects") }
           }
         }
@@ -141,33 +136,54 @@ Program {
   }
 
   Let(name=verify.collectWorkerRecords) {
-    Fn(params=projectDir,stageDir,count,index,objects) {
+    Fn(params=paths,projectDir,lockText,records,count,index,objects) {
       Block {
         If {
           Eq { Var(name=index) Var(name=count) }
           Block { Return { Var(name=objects) } }
           Block {
             Let(name=payload) {
-              AppendAttr {
+              AppendChild {
                 AppendAttr {
                   AppendAttr {
-                    MakeNode {
-                      Lit(value="ModuleObjectTask")
-                      StrConcat { Lit(value="module-") ToString { Var(name=index) } }
+                    AppendAttr {
+                      MakeNode {
+                        Lit(value="ModuleObjectTask")
+                        StrConcat { Lit(value="module-") ToString { Var(name=index) } }
+                      }
+                      MakeLitInt { Lit(value="moduleIndex") Var(name=index) }
                     }
-                    MakeLitString { Lit(value="projectDir") Var(name=projectDir) }
+                    MakeLitString {
+                      Lit(value="modulePath")
+                      AttrValueString {
+                        ChildAt { Var(name=paths) Var(name=index) } Lit(value=0)
+                      }
+                    }
                   }
-                  MakeLitString { Lit(value="stageDir") Var(name=stageDir) }
+                  MakeLitString {
+                    Lit(value="moduleSource")
+                    Call(target=bytes.toUtf8String) {
+                      Call(target=sys.fs.file.read) {
+                        StrConcat {
+                          Var(name=projectDir)
+                          StrConcat {
+                            Lit(value="/")
+                            AttrValueString {
+                              ChildAt { Var(name=paths) Var(name=index) } Lit(value=0)
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
-                MakeLitInt { Lit(value="moduleIndex") Var(name=index) }
+                Var(name=records)
               }
             }
             Let(name=record) {
               Call(target=structuralRecord.decode) {
                 Call(target=moduleObjectCompileRecordPayload) {
-                  Call(target=bytes.fromUtf8String) {
-                    Call(target=format.format) { Var(name=payload) }
-                  }
+                  Call(target=structuralRecord.encode) { Var(name=payload) }
                 }
               }
             }
@@ -177,9 +193,36 @@ Program {
               Block {
                 Return {
                   Call(target=verify.collectWorkerRecords) {
-                    Var(name=projectDir) Var(name=stageDir) Var(name=count)
+                    Var(name=paths) Var(name=projectDir) Var(name=lockText)
+                    Var(name=records) Var(name=count)
                     Add { Var(name=index) Lit(value=1) }
                     AppendChild { Var(name=objects) Var(name=record) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=verify.roundTripObjects) {
+    Fn(params=objects,index,decoded) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=objects) } }
+          Block { Return { Var(name=decoded) } }
+          Block {
+            Return {
+              Call(target=verify.roundTripObjects) {
+                Var(name=objects) Add { Var(name=index) Lit(value=1) }
+                AppendChild {
+                  Var(name=decoded)
+                  Call(target=structuralRecord.decode) {
+                    Call(target=structuralRecord.encode) {
+                      ChildAt { Var(name=objects) Var(name=index) }
+                    }
                   }
                 }
               }

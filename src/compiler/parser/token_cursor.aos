@@ -26,8 +26,7 @@ Program {
       Block {
         If { Eq { Var(name=ch) Lit(value="") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
         If { Eq { Var(name=ch) Lit(value=" ") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
-        If { Eq { Var(name=ch) Lit(value="
-") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
+        If { Eq { Var(name=ch) Lit(value="\n") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
         If { Eq { Var(name=ch) Lit(value="\t") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
         If { Eq { Var(name=ch) Lit(value="\r") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }
         If { Eq { Var(name=ch) Lit(value="#") } Block { Return { Lit(value=true) } } Block { Lit(value=0) } }

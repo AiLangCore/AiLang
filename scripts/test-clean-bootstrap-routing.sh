@@ -8,6 +8,7 @@ INSTALL_ROOT="${TMP_DIR}/install"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${FIXTURE_ROOT}/scripts" "${INSTALL_ROOT}/local/bin"
+mkdir -p "${INSTALL_ROOT}/local/libexec/ailang/commands"
 cp "${ROOT_DIR}/scripts/stage-installed-toolchain.sh" \
   "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh"
 
@@ -17,6 +18,8 @@ version = "local"
 EOF
 cat > "${INSTALL_ROOT}/local/bin/ailang" <<'EOF'
 #!/usr/bin/env sh
+SDK_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+test -x "${SDK_ROOT}/bin/aivm-runtime"
 echo staged-ailang
 EOF
 cat > "${INSTALL_ROOT}/local/bin/aivm-runtime" <<'EOF'
@@ -26,6 +29,14 @@ EOF
 chmod +x \
   "${INSTALL_ROOT}/local/bin/ailang" \
   "${INSTALL_ROOT}/local/bin/aivm-runtime"
+printf 'package-bytecode\n' \
+  >"${INSTALL_ROOT}/local/libexec/ailang/commands/package.aibc1"
+mkdir -p "${INSTALL_ROOT}/local/libexec/ailang/cli"
+printf 'cli-bytecode\n' \
+  >"${INSTALL_ROOT}/local/libexec/ailang/cli/app.aibc1"
+mkdir -p "${INSTALL_ROOT}/local/libexec/ailang/build-workers"
+printf 'worker-bytecode\n' \
+  >"${INSTALL_ROOT}/local/libexec/ailang/build-workers/module-object.aibc1"
 
 AILANG_INSTALL_ROOT="${INSTALL_ROOT}" \
   "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh" >/dev/null
@@ -34,8 +45,26 @@ test -x "${FIXTURE_ROOT}/tools/ailang"
 test -x "${FIXTURE_ROOT}/tools/aivm-runtime"
 test "$("${FIXTURE_ROOT}/tools/ailang")" = "staged-ailang"
 test "$("${FIXTURE_ROOT}/tools/aivm-runtime")" = "staged-runtime"
+rg -Fq "${INSTALL_ROOT}/local/bin/ailang" \
+  "${FIXTURE_ROOT}/tools/ailang"
+test -s \
+  "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/commands/package.aibc1"
+test -s \
+  "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/cli/app.aibc1"
+test -s \
+  "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/build-workers/module-object.aibc1"
 
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/build.sh"
+rg -q 'ailang-bootstrap/commands' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-cli=installed-sdk' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-worker=installed-sdk' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-cli=previous-selfhost' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-worker=previous-selfhost' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
 rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"
 rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/scripts/test.sh"

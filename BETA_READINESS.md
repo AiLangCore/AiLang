@@ -91,7 +91,7 @@ Verified on 2026-05-20:
   gate on `ubuntu-latest`, `macos-14`, and `windows-latest`.
 - `scripts/test-canonical-formatting.sh` parses the public AOS corpus under
   `examples`, `samples`, `src/std`, `src/compiler`, `src/cli`, and `templates`
-  with `tools/aos_frontend`.
+  with the compiled AiLang `parse-check.aibc1` built-in command.
 - The same check enforces no CRLF, tabs, or trailing whitespace in public AOS
   files and core docs/spec Markdown.
 - The formatter fixture `examples/golden/fmt_basic.out.aos` is pinned to the

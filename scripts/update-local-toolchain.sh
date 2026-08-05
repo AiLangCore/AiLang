@@ -13,6 +13,7 @@ fi
 AIVM_DIR="${AIVM_REPO_DIR:-${WORKSPACE_DIR}/AiVM}"
 AIVECTRA_DIR="${AIVECTRA_REPO_DIR:-${WORKSPACE_DIR}/AiVectra}"
 BUILD_WASM="${AILANG_LOCAL_BUILD_WASM:-auto}"
+SELFHOST_DIR="${AILANG_DIR}/.artifacts/ailang-selfhost"
 
 usage() {
   cat <<'EOF'
@@ -222,18 +223,23 @@ else
   echo "warning: AiVM checkout not found: ${AIVM_DIR}" >&2
 fi
 
-echo "building AiLang from ${AILANG_DIR}..."
-if [[ -d "${AIVM_DIR}/src" ]]; then
-  (cd "${AILANG_DIR}" && AIVM_C_SOURCE_DIR="${AIVM_DIR}/src" ./build.sh legacy)
-else
-  (cd "${AILANG_DIR}" && ./build.sh legacy)
-fi
+echo "building self-hosted AiLang from ${AILANG_DIR}..."
+(cd "${AILANG_DIR}" && ./build.sh)
 
-copy_if_exists "${AILANG_DIR}/tools/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
-echo "building AiLang bytecode CLI payload..."
-"${AILANG_DIR}/tools/ailang" build "${AILANG_DIR}/src/cli/ailang.aos" --out "${TMP_ROOT}/libexec/ailang/cli" --no-cache >/dev/null
-if [[ ! -f "${TMP_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
-  echo "error: failed to stage AiLang bytecode CLI payload" >&2
+copy_if_exists "${SELFHOST_DIR}/bin/aivm-runtime" "${TMP_ROOT}/bin/aivm-runtime"
+copy_if_exists "${SELFHOST_DIR}/bin/ailang.aibc1" "${TMP_ROOT}/libexec/ailang/cli/app.aibc1"
+copy_if_exists "${SELFHOST_DIR}/bin/commands/." "${TMP_ROOT}/libexec/ailang/commands/"
+copy_if_exists "${SELFHOST_DIR}/libexec/ailang/build-workers/." "${TMP_ROOT}/libexec/ailang/build-workers/"
+if [[ ! -s "${TMP_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
+  echo "error: failed to stage self-hosted AiLang bytecode CLI payload" >&2
+  exit 1
+fi
+if [[ ! -s "${TMP_ROOT}/libexec/ailang/commands/package.aibc1" ]]; then
+  echo "error: failed to stage self-hosted AiLang built-in commands" >&2
+  exit 1
+fi
+if [[ ! -s "${TMP_ROOT}/libexec/ailang/commands/parse-check.aibc1" ]]; then
+  echo "error: failed to stage self-hosted parse-check command" >&2
   exit 1
 fi
 write_sdk_ailang_shim
@@ -251,7 +257,9 @@ copy_if_exists "${AILANG_DIR}/Docs" "${TMP_ROOT}/sdk/AiLangDocs"
 copy_if_exists "${AILANG_DIR}/manifests/commands.toml" "${TMP_ROOT}/manifests/commands.toml"
 
 for command_name in init template agent build run publish package test clean doctor; do
-  write_private_command_shim "${command_name}"
+  if [[ ! -s "${TMP_ROOT}/libexec/ailang/commands/${command_name}.aibc1" ]]; then
+    write_private_command_shim "${command_name}"
+  fi
 done
 
 if [[ "${BUILD_WASM}" == "1" || ( "${BUILD_WASM}" == "auto" && -n "$(command -v emcc || true)" ) ]]; then
@@ -327,7 +335,7 @@ if ! printf '%s\n' "${STAGED_AILANG_VERSION}" | grep -Eq '^ailang [0-9]+\.[0-9]+
   echo "staged: ${STAGED_AILANG_VERSION}" >&2
   exit 1
 fi
-if file "${SDK_ROOT}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
+if file -b "${SDK_ROOT}/bin/ailang" | grep -Eiq 'Mach-O|ELF|PE32'; then
   echo "error: staged ailang must be a non-C shim, not a native binary" >&2
   exit 1
 fi

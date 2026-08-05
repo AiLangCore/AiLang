@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_ROOT="${AILANG_INSTALL_ROOT:-${HOME}/.ailang}"
 TOOLS_DIR="${ROOT_DIR}/tools"
+BOOTSTRAP_ARTIFACTS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap"
+BOOTSTRAP_COMMANDS_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/commands"
+BOOTSTRAP_CLI_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/cli"
+BOOTSTRAP_WORKERS_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/build-workers"
 
 find_project_toolchain() {
   if [[ "${AILANG_IGNORE_PROJECT_TOOLCHAIN:-0}" == "1" ]]; then
@@ -44,6 +48,19 @@ copy_executable() {
   chmod +x "${dst}"
 }
 
+write_sdk_launcher() {
+  local src="$1"
+  local dst="$2"
+  local escaped_src
+  escaped_src="$(printf '%s' "${src}" | sed "s/'/'\\\\''/g")"
+  printf '%s\n' \
+    '#!/usr/bin/env sh' \
+    'set -eu' \
+    "exec '${escaped_src}' \"\$@\"" \
+    >"${dst}"
+  chmod +x "${dst}"
+}
+
 SDK_ROOT="$(resolve_toolchain_root)"
 SDK_BIN="${SDK_ROOT}/bin"
 LEGACY_BOOTSTRAP="${AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK:-0}"
@@ -79,7 +96,7 @@ fi
 
 mkdir -p "${TOOLS_DIR}"
 rm -f "${TOOLS_DIR}/ailang" "${TOOLS_DIR}/ailang.exe"
-copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
+write_sdk_launcher "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
 
 RUNTIME_BIN="$(resolve_sdk_executable aivm-runtime || true)"
 if [[ -n "${RUNTIME_BIN}" ]]; then
@@ -89,6 +106,23 @@ fi
 if [[ -d "${SDK_ROOT}/.artifacts" ]]; then
   mkdir -p "${ROOT_DIR}/.artifacts"
   cp -R "${SDK_ROOT}/.artifacts"/. "${ROOT_DIR}/.artifacts"/
+fi
+
+rm -rf "${BOOTSTRAP_ARTIFACTS_DIR}"
+if [[ -s "${SDK_ROOT}/libexec/ailang/commands/package.aibc1" ]]; then
+  mkdir -p "${BOOTSTRAP_COMMANDS_DIR}"
+  cp "${SDK_ROOT}/libexec/ailang/commands"/*.aibc1 \
+    "${BOOTSTRAP_COMMANDS_DIR}/"
+fi
+if [[ -s "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
+  mkdir -p "${BOOTSTRAP_CLI_DIR}"
+  cp "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" \
+    "${BOOTSTRAP_CLI_DIR}/app.aibc1"
+fi
+if [[ -s "${SDK_ROOT}/libexec/ailang/build-workers/module-object.aibc1" ]]; then
+  mkdir -p "${BOOTSTRAP_WORKERS_DIR}"
+  cp "${SDK_ROOT}/libexec/ailang/build-workers/module-object.aibc1" \
+    "${BOOTSTRAP_WORKERS_DIR}/module-object.aibc1"
 fi
 
 cat <<EOF

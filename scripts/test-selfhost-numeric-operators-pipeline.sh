@@ -7,7 +7,7 @@ AILANG_BIN="${AILANG_BIN:-${ROOT_DIR}/tools/ailang}"
 
 rm -rf "${TMP_ROOT}"
 
-for CASE in 'mul Mul 6 7 42' 'div Div 20 4 5' 'mod Mod 20 6 2'; do
+for CASE in 'mul Mul 6 7 42' 'div Div 20 4 5' 'mod Mod 20 6 2' 'pow Pow 2 8 256'; do
   read -r NAME NODE LEFT RIGHT EXPECTED <<<"${CASE}"
   CASE_DIR="${TMP_ROOT}/${NAME}"
   mkdir -p "${CASE_DIR}/src"

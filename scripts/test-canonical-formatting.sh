@@ -58,10 +58,14 @@ done < <(
     -name '*.aos' -type f -print | sort
 )
 
-if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${PARSE_FILES[@]}" >/dev/null; then
-  echo "canonical formatting check failed: compiled AiLang parser rejected the source corpus" >&2
-  exit 1
-fi
+PARSE_BATCH_SIZE=64
+for ((batch_start = 0; batch_start < ${#PARSE_FILES[@]}; batch_start += PARSE_BATCH_SIZE)); do
+  parse_batch=("${PARSE_FILES[@]:batch_start:PARSE_BATCH_SIZE}")
+  if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${parse_batch[@]}" >/dev/null; then
+    echo "canonical formatting check failed: compiled AiLang parser rejected the source corpus" >&2
+    exit 1
+  fi
+done
 
 PARSE_CHECK_TMP="${ROOT_DIR}/.tmp/canonical-formatting"
 rm -rf "${PARSE_CHECK_TMP}"
@@ -73,7 +77,7 @@ if "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- \
   echo "canonical formatting check failed: parse-check accepted invalid AOS" >&2
   exit 1
 fi
-rg -Fq 'code=AILANG022' "${PARSE_CHECK_TMP}/invalid.out"
+grep -Fq 'code=AILANG022' "${PARSE_CHECK_TMP}/invalid.out"
 
 while IFS= read -r file; do
   check_text_hygiene "$file"

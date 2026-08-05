@@ -27,16 +27,26 @@ $sourceFiles = $sourceRoots |
   Where-Object { $_.Name -notlike '*.out.aos' -and $_.FullName -notmatch '[\\/]\.tmp[\\/]' } |
   Sort-Object FullName
 
-foreach ($sourceFile in $sourceFiles) {
-  $parseOutput = & $runtime run $parseCheck -- parse-check $sourceFile.FullName 2>&1
+function Invoke-ParseCheckPath([string] $sourcePath) {
+  $parseOutput = & $runtime run $parseCheck -- parse-check $sourcePath 2>&1
   if ($LASTEXITCODE -ne 0) {
-    throw "self-hosted parser corpus failed: $($sourceFile.FullName) status=$LASTEXITCODE output=$($parseOutput | Out-String)"
+    $artifactHash = (Get-FileHash -Algorithm SHA256 $parseCheck).Hash.ToLowerInvariant()
+    $sourceHash = (Get-FileHash -Algorithm SHA256 $sourcePath).Hash.ToLowerInvariant()
+    throw "self-hosted parser corpus failed: $sourcePath status=$LASTEXITCODE artifactSha256=$artifactHash sourceSha256=$sourceHash output=$($parseOutput | Out-String)"
   }
 }
 
-$invalidDir = Join-Path $root '.tmp\canonical-formatting-windows'
-$invalidPath = Join-Path $invalidDir 'invalid.aos'
-New-Item -ItemType Directory -Force $invalidDir | Out-Null
+$probeDir = Join-Path $root '.tmp\canonical-formatting-windows'
+$probePath = Join-Path $probeDir 'probe.aos'
+New-Item -ItemType Directory -Force $probeDir | Out-Null
+[IO.File]::WriteAllText($probePath, 'Program { Lit(value=1) }', [Text.UTF8Encoding]::new($false))
+Invoke-ParseCheckPath $probePath
+
+foreach ($sourceFile in $sourceFiles) {
+  Invoke-ParseCheckPath $sourceFile.FullName
+}
+
+$invalidPath = Join-Path $probeDir 'invalid.aos'
 Set-Content -NoNewline -Encoding utf8 $invalidPath 'not-an-aos-document'
 $invalidOutput = & $runtime run $parseCheck -- parse-check $invalidPath 2>&1
 if ($LASTEXITCODE -eq 0) {

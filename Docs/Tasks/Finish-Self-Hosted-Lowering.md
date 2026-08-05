@@ -94,6 +94,12 @@ Current self-build frontier:
   control-flow regressions remain green, while the phase probe remains in
   `phase=graph` after 150 seconds and the compiler-files parser test still does
   not complete within its 30-second diagnostic window.
+- Literal-return plan emission now lives in the focused
+  `lower/plans/literal_returns.aos` module. It owns integer and typed literal
+  return plans while `lower.aos` retains only their public exports and routing.
+  The extraction reduces the facade to 1,648 lines and 103,699 bytes without
+  changing emitted records. Parser, focused lowering, module-bundle, AiBCO
+  round-trip, and canonical formatting gates remain green.
 - Native return, native If, and terminal-sequence record-plan construction now
   lives in the focused `lower/plans/native_records.aos` module. Expression
   eligibility, expression emission, branch traversal, and record-plan policy

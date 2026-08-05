@@ -61,6 +61,10 @@ rg -q 'selfhost-bootstrap-cli=installed-sdk' \
   "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
 rg -q 'selfhost-bootstrap-worker=installed-sdk' \
   "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-cli=previous-selfhost' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-worker=previous-selfhost' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
 rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"
 rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/scripts/test.sh"

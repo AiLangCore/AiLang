@@ -1079,13 +1079,22 @@ seconds. The generation-one and generation-two CLI artifacts are byte-identical
 at 622,083 bytes with SHA-256
 `af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
 
-The self-host compiler's full 113-module workload measured above the former
-16 MiB and 32 MiB tooling byte-arena ceilings. AiVM now retains dynamic arena
-growth with a deterministic 64 MiB tooling-profile ceiling; production and
-debug limits are unchanged. The final repository C dependency is no longer in
-the build path, but `tools/aos_frontend.c` still owns the canonical whole-corpus
-parse gate. It must be replaced by a compiled AiLang parse-check command before
-the source and its release artifact are removed.
+The fixed 16, 32, and 64 MiB tooling byte-arena ceilings have been removed.
+AiVM now compacts dead phase-local bytes before growing pressure-aware hosted
+backing, spills completed unobserved worker results to reloadable temporary
+storage, releases materialized batch framing, and reduces physical worker
+dispatch as available memory falls. Production and debug remain bounded. A
+full default self-host completes generation in 635 seconds and built-ins in 45
+seconds; generation-one and generation-two remain byte-identical at 622,083
+bytes with SHA-256
+`af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
+The build also reuses a prior local self-host CLI and module-object worker when
+an installed bootstrap catalog is absent, preventing stale native-runtime
+refresh from falling back to the obsolete modular-link probe. The final
+repository C dependency is no longer in the build path, but
+`tools/aos_frontend.c` still owns the canonical whole-corpus parse gate. It
+must be replaced by a compiled AiLang parse-check command before the source and
+its release artifact are removed.
 
 ## Acceptance Criteria
 

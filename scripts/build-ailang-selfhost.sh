@@ -13,6 +13,8 @@ WORKER_DIR="${OUT_DIR}/libexec/ailang/build-workers"
 BOOTSTRAP_COMMANDS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap/commands"
 INSTALLED_BOOTSTRAP_CLI="${ROOT_DIR}/.artifacts/ailang-bootstrap/cli/app.aibc1"
 INSTALLED_BOOTSTRAP_WORKER="${ROOT_DIR}/.artifacts/ailang-bootstrap/build-workers/module-object.aibc1"
+LOCAL_SELFHOST_CLI="${OUT_DIR}/bin/ailang.aibc1"
+LOCAL_SELFHOST_WORKER="${OUT_DIR}/libexec/ailang/build-workers/module-object.aibc1"
 
 resolve_tool() {
   local name="$1"
@@ -92,6 +94,10 @@ if [[ -s "${INSTALLED_BOOTSTRAP_CLI}" ]]; then
   mkdir -p "${BOOTSTRAP_DIR}/bin"
   cp "${INSTALLED_BOOTSTRAP_CLI}" "${BOOTSTRAP_DIR}/bin/ailang.aibc1"
   echo "selfhost-bootstrap-cli=installed-sdk"
+elif [[ -s "${LOCAL_SELFHOST_CLI}" ]]; then
+  mkdir -p "${BOOTSTRAP_DIR}/bin"
+  cp "${LOCAL_SELFHOST_CLI}" "${BOOTSTRAP_DIR}/bin/ailang.aibc1"
+  echo "selfhost-bootstrap-cli=previous-selfhost"
 else
   AILANG_SDK_ROOT="${OUT_DIR}" \
   SELFHOST_LINK_WORK_DIR="${BOOTSTRAP_DIR}" \
@@ -107,6 +113,8 @@ if [[ -s "${INSTALLED_BOOTSTRAP_WORKER}" ]]; then
   mkdir -p "${WORKER_DIR}"
   cp "${INSTALLED_BOOTSTRAP_WORKER}" "${WORKER_DIR}/module-object.aibc1"
   echo "selfhost-bootstrap-worker=installed-sdk"
+elif [[ -s "${LOCAL_SELFHOST_WORKER}" ]]; then
+  echo "selfhost-bootstrap-worker=previous-selfhost"
 else
   AILANG_WORKER_SDK_ROOT="${OUT_DIR}" \
   AILANG_BIN="${AILANG_BIN}" \

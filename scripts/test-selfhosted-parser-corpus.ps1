@@ -23,7 +23,7 @@ $sourceRoots = @('examples', 'samples', 'src\std', 'src\compiler', 'src\cli', 't
   ForEach-Object { Join-Path $root $_ } |
   Where-Object { Test-Path $_ -PathType Container }
 $sourceFiles = $sourceRoots |
-  ForEach-Object { Get-ChildItem $_ -Recurse -File -Filter '*.aos' } |
+  ForEach-Object { Get-ChildItem $_ -Recurse -Force -File -Filter '*.aos' } |
   Where-Object { $_.Name -notlike '*.out.aos' -and $_.FullName -notmatch '[\\/]\.tmp[\\/]' } |
   Sort-Object FullName
 
@@ -57,3 +57,4 @@ if (($invalidOutput | Out-String) -notmatch 'code=AILANG022') {
 }
 
 Write-Host "self-hosted parser corpus: PASS ($($sourceFiles.Count) files)"
+exit 0

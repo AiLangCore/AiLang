@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_ROOT="${AILANG_INSTALL_ROOT:-${HOME}/.ailang}"
 TOOLS_DIR="${ROOT_DIR}/tools"
-BOOTSTRAP_COMMANDS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap/commands"
+BOOTSTRAP_ARTIFACTS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap"
+BOOTSTRAP_COMMANDS_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/commands"
+BOOTSTRAP_CLI_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/cli"
 
 find_project_toolchain() {
   if [[ "${AILANG_IGNORE_PROJECT_TOOLCHAIN:-0}" == "1" ]]; then
@@ -105,11 +107,16 @@ if [[ -d "${SDK_ROOT}/.artifacts" ]]; then
   cp -R "${SDK_ROOT}/.artifacts"/. "${ROOT_DIR}/.artifacts"/
 fi
 
-rm -rf "${BOOTSTRAP_COMMANDS_DIR}"
+rm -rf "${BOOTSTRAP_ARTIFACTS_DIR}"
 if [[ -s "${SDK_ROOT}/libexec/ailang/commands/package.aibc1" ]]; then
   mkdir -p "${BOOTSTRAP_COMMANDS_DIR}"
   cp "${SDK_ROOT}/libexec/ailang/commands"/*.aibc1 \
     "${BOOTSTRAP_COMMANDS_DIR}/"
+fi
+if [[ -s "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
+  mkdir -p "${BOOTSTRAP_CLI_DIR}"
+  cp "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" \
+    "${BOOTSTRAP_CLI_DIR}/app.aibc1"
 fi
 
 cat <<EOF

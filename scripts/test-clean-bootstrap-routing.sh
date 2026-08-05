@@ -31,6 +31,9 @@ chmod +x \
   "${INSTALL_ROOT}/local/bin/aivm-runtime"
 printf 'package-bytecode\n' \
   >"${INSTALL_ROOT}/local/libexec/ailang/commands/package.aibc1"
+mkdir -p "${INSTALL_ROOT}/local/libexec/ailang/cli"
+printf 'cli-bytecode\n' \
+  >"${INSTALL_ROOT}/local/libexec/ailang/cli/app.aibc1"
 
 AILANG_INSTALL_ROOT="${INSTALL_ROOT}" \
   "${FIXTURE_ROOT}/scripts/stage-installed-toolchain.sh" >/dev/null
@@ -43,9 +46,13 @@ rg -Fq "${INSTALL_ROOT}/local/bin/ailang" \
   "${FIXTURE_ROOT}/tools/ailang"
 test -s \
   "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/commands/package.aibc1"
+test -s \
+  "${FIXTURE_ROOT}/.artifacts/ailang-bootstrap/cli/app.aibc1"
 
 rg -q 'scripts/stage-installed-toolchain\.sh' "${ROOT_DIR}/build.sh"
 rg -q 'ailang-bootstrap/commands' \
+  "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
+rg -q 'selfhost-bootstrap-cli=installed-sdk' \
   "${ROOT_DIR}/scripts/build-ailang-selfhost.sh"
 rg -q "tools/ailang\.exe" "${ROOT_DIR}/build.ps1"
 rg -q "tools/aivm-runtime\.exe" "${ROOT_DIR}/build.ps1"

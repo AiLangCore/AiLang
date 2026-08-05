@@ -11,7 +11,7 @@ ENTRY_FILE="${ENTRY_FILE:-src/cli/ailang.aos}"
 ENTRY_EXPORT="${ENTRY_EXPORT:-main}"
 OUTPUT_NAME="${OUTPUT_NAME:-ailang.aibc1}"
 BUILD_PROJECT_DIR="${TMP_DIR}/project"
-PROBE_SOURCE="${BUILD_PROJECT_DIR}/selfhost_link_probe.aos"
+PROBE_SOURCE="${BUILD_PROJECT_DIR}/src/cli/selfhost_link_probe.aos"
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}/obj" "${TMP_DIR}/bin" "${BUILD_PROJECT_DIR}"
@@ -25,14 +25,14 @@ fi
 
 cat > "${PROBE_SOURCE}" <<AOS
 Program {
-  Import(path="src/compiler/parser.aos")
-  Import(path="src/compiler/linker.aos")
-  Import(path="src/compiler/structural_project_link.aos")
-  Import(path="src/compiler/structural_project_symbols.aos")
-  Import(path="src/compiler/structural_object_chunks.aos")
-  Import(path="src/compiler/object_linker.aos")
-  Import(path="src/compiler/object_linker_constant_plan.aos")
-  Import(path="src/std/bytes.aos")
+  Import(path="../compiler/parser.aos")
+  Import(path="../compiler/linker.aos")
+  Import(path="../compiler/structural_project_link.aos")
+  Import(path="../compiler/structural_project_symbols.aos")
+  Import(path="../compiler/structural_object_chunks.aos")
+  Import(path="../compiler/object_linker.aos")
+  Import(path="../compiler/object_linker_constant_plan.aos")
+  Import(path="../std/bytes.aos")
   Export(name=start)
 
   Let(name=traceRecordPlans) {
@@ -380,7 +380,7 @@ Program {
 AOS
 
 sed \
-  -e 's|entryFile="[^"]*"|entryFile="selfhost_link_probe.aos"|' \
+  -e 's|entryFile="[^"]*"|entryFile="src/cli/selfhost_link_probe.aos"|' \
   -e 's|entryExport="[^"]*"|entryExport="start"|' \
   "${PROJECT_DIR}/project.aiproj" >"${BUILD_PROJECT_DIR}/project.aiproj"
 

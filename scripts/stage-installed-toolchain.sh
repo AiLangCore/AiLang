@@ -7,6 +7,7 @@ TOOLS_DIR="${ROOT_DIR}/tools"
 BOOTSTRAP_ARTIFACTS_DIR="${ROOT_DIR}/.artifacts/ailang-bootstrap"
 BOOTSTRAP_COMMANDS_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/commands"
 BOOTSTRAP_CLI_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/cli"
+BOOTSTRAP_WORKERS_DIR="${BOOTSTRAP_ARTIFACTS_DIR}/build-workers"
 
 find_project_toolchain() {
   if [[ "${AILANG_IGNORE_PROJECT_TOOLCHAIN:-0}" == "1" ]]; then
@@ -117,6 +118,11 @@ if [[ -s "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" ]]; then
   mkdir -p "${BOOTSTRAP_CLI_DIR}"
   cp "${SDK_ROOT}/libexec/ailang/cli/app.aibc1" \
     "${BOOTSTRAP_CLI_DIR}/app.aibc1"
+fi
+if [[ -s "${SDK_ROOT}/libexec/ailang/build-workers/module-object.aibc1" ]]; then
+  mkdir -p "${BOOTSTRAP_WORKERS_DIR}"
+  cp "${SDK_ROOT}/libexec/ailang/build-workers/module-object.aibc1" \
+    "${BOOTSTRAP_WORKERS_DIR}/module-object.aibc1"
 fi
 
 cat <<EOF

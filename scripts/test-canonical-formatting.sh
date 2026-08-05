@@ -58,15 +58,14 @@ done < <(
     -name '*.aos' -type f -print | sort
 )
 
-PARSE_BATCH_SIZE=16
+PARSE_BATCH_SIZE=1
 PARSE_CHECK_TMP="${ROOT_DIR}/.tmp/canonical-formatting"
 rm -rf "${PARSE_CHECK_TMP}"
 mkdir -p "${PARSE_CHECK_TMP}"
 
 run_parse_batch() {
   if [[ "${AIVM_RUNTIME}" == *.exe ]]; then
-    MSYS2_ARG_CONV_EXCL='examples/;samples/;src/;templates/' \
-      "${AIVM_RUNTIME}" run "${PARSE_CHECK}" --log-level trace -- \
+    "${AIVM_RUNTIME}" run "${PARSE_CHECK}" --log-level trace -- \
       parse-check "$@"
   else
     "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "$@"

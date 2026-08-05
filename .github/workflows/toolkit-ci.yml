@@ -162,7 +162,6 @@ jobs:
           .\scripts\stage-sdk-docs.ps1 .\dist
 
       - name: Self-hosted parser corpus
-        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail

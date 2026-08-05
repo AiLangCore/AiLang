@@ -62,14 +62,27 @@ PARSE_BATCH_SIZE=16
 PARSE_CHECK_TMP="${ROOT_DIR}/.tmp/canonical-formatting"
 rm -rf "${PARSE_CHECK_TMP}"
 mkdir -p "${PARSE_CHECK_TMP}"
+
+run_parse_batch() {
+  if [[ "${AIVM_RUNTIME}" == *.exe ]]; then
+    MSYS2_ARG_CONV_EXCL='examples/;samples/;src/;templates/' \
+      "${AIVM_RUNTIME}" run "${PARSE_CHECK}" --log-level trace -- \
+      parse-check "$@"
+  else
+    "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "$@"
+  fi
+}
+
 for ((batch_start = 0; batch_start < ${#PARSE_FILES[@]}; batch_start += PARSE_BATCH_SIZE)); do
   parse_batch=("${PARSE_FILES[@]:batch_start:PARSE_BATCH_SIZE}")
   runtime_batch=("${parse_batch[@]}")
-  if ! MSYS2_ARG_CONV_EXCL='examples/;samples/;src/;templates/' \
-      "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${runtime_batch[@]}" \
-      >"${PARSE_CHECK_TMP}/batch.out" 2>&1; then
+  set +e
+  run_parse_batch "${runtime_batch[@]}" >"${PARSE_CHECK_TMP}/batch.out" 2>&1
+  parse_status=$?
+  set -e
+  if [[ ${parse_status} -ne 0 ]]; then
     cat "${PARSE_CHECK_TMP}/batch.out" >&2
-    echo "canonical formatting check failed: compiled AiLang parser rejected ${parse_batch[0]} at ordered offset ${batch_start}" >&2
+    echo "canonical formatting check failed: compiled AiLang parser rejected ${parse_batch[0]} at ordered offset ${batch_start} status=${parse_status}" >&2
     exit 1
   fi
 done

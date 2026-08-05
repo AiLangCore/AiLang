@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.58] - 2026-08-05
+
+### Fixed
+
+- Removed per-command wall-clock alarms from release installation builds so a
+  resource-constrained hosted VM may complete slowly instead of being reported
+  as a semantic build failure.
+- Corrected the published Weather example document consumed by installation
+  smoke tests.
+
 ## [0.0.1-beta.57] - 2026-08-05
 
 ### Added

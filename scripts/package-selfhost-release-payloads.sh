@@ -21,6 +21,10 @@ if [[ ! -s "${COMMAND_DIR}/package.aibc1" ]]; then
   echo "missing self-hosted built-in commands: ${COMMAND_DIR}" >&2
   exit 1
 fi
+if [[ ! -s "${COMMAND_DIR}/parse-check.aibc1" ]]; then
+  echo "missing self-hosted parse-check command: ${COMMAND_DIR}" >&2
+  exit 1
+fi
 
 mkdir -p "${OUT_DIR}"
 cp "${CLI_SOURCE}" "${OUT_DIR}/ailang-cli.aibc1"

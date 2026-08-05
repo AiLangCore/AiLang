@@ -4,16 +4,23 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-if [[ -x "${ROOT_DIR}/tools/aos_frontend" ]]; then
-  AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend"
-elif [[ -x "${ROOT_DIR}/tools/aos_frontend.exe" ]]; then
-  AOS_FRONTEND="${ROOT_DIR}/tools/aos_frontend.exe"
-elif [[ -x "${ROOT_DIR}/dist/aos_frontend" ]]; then
-  AOS_FRONTEND="${ROOT_DIR}/dist/aos_frontend"
-elif [[ -x "${ROOT_DIR}/dist/aos_frontend.exe" ]]; then
-  AOS_FRONTEND="${ROOT_DIR}/dist/aos_frontend.exe"
+if [[ -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
+  AIVM_RUNTIME="${ROOT_DIR}/tools/aivm-runtime"
+elif [[ -x "${ROOT_DIR}/tools/aivm-runtime.exe" ]]; then
+  AIVM_RUNTIME="${ROOT_DIR}/tools/aivm-runtime.exe"
 else
-  echo "canonical formatting check failed: missing tools/aos_frontend" >&2
+  echo "canonical formatting check failed: missing tools/aivm-runtime" >&2
+  exit 1
+fi
+
+if [[ -s "${ROOT_DIR}/.artifacts/ailang-selfhost/bin/commands/parse-check.aibc1" ]]; then
+  PARSE_CHECK="${ROOT_DIR}/.artifacts/ailang-selfhost/bin/commands/parse-check.aibc1"
+elif [[ -s "${ROOT_DIR}/.artifacts/ailang-builtins/parse-check.aibc1" ]]; then
+  PARSE_CHECK="${ROOT_DIR}/.artifacts/ailang-builtins/parse-check.aibc1"
+elif [[ -s "${ROOT_DIR}/.artifacts/ailang-bootstrap/commands/parse-check.aibc1" ]]; then
+  PARSE_CHECK="${ROOT_DIR}/.artifacts/ailang-bootstrap/commands/parse-check.aibc1"
+else
+  echo "canonical formatting check failed: missing compiled parse-check command; run ./build.sh" >&2
   exit 1
 fi
 
@@ -33,14 +40,6 @@ check_text_hygiene() {
   fi
 }
 
-check_aos_parse() {
-  local file="$1"
-  if ! "${AOS_FRONTEND}" "$file" >/dev/null; then
-    echo "canonical formatting check failed: parser rejected ${file}" >&2
-    return 1
-  fi
-}
-
 AOS_DIRS=()
 for candidate in examples samples src/std src/compiler src/cli templates; do
   if [[ -d "${candidate}" ]]; then
@@ -48,15 +47,33 @@ for candidate in examples samples src/std src/compiler src/cli templates; do
   fi
 done
 
+PARSE_FILES=()
 while IFS= read -r file; do
   check_text_hygiene "$file"
-  check_aos_parse "$file"
+  PARSE_FILES+=("$file")
 done < <(
   find "${AOS_DIRS[@]}" \
     -path '*/.tmp/*' -prune -o \
     -name '*.out.aos' -prune -o \
     -name '*.aos' -type f -print | sort
 )
+
+if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${PARSE_FILES[@]}" >/dev/null; then
+  echo "canonical formatting check failed: compiled AiLang parser rejected the source corpus" >&2
+  exit 1
+fi
+
+PARSE_CHECK_TMP="${ROOT_DIR}/.tmp/canonical-formatting"
+rm -rf "${PARSE_CHECK_TMP}"
+mkdir -p "${PARSE_CHECK_TMP}"
+printf '%s\n' 'not-an-aos-document' >"${PARSE_CHECK_TMP}/invalid.aos"
+if "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- \
+    parse-check "${PARSE_CHECK_TMP}/invalid.aos" \
+    >"${PARSE_CHECK_TMP}/invalid.out" 2>&1; then
+  echo "canonical formatting check failed: parse-check accepted invalid AOS" >&2
+  exit 1
+fi
+rg -Fq 'code=AILANG022' "${PARSE_CHECK_TMP}/invalid.out"
 
 while IFS= read -r file; do
   check_text_hygiene "$file"

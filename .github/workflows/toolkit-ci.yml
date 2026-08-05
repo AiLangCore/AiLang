@@ -64,15 +64,12 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            frontend: aos_frontend
             airun: ailang
             runtime: aivm-runtime
           - os: macos-14
-            frontend: aos_frontend
             airun: ailang
             runtime: aivm-runtime
           - os: windows-latest
-            frontend: aos_frontend.exe
             airun: ailang.exe
             runtime: aivm-runtime.exe
 
@@ -118,23 +115,6 @@ jobs:
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1 legacy
           if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
-
-      - name: Stage frontend parser (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ./dist
-          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.frontend }}"
-
-      - name: Stage frontend parser (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .\dist | Out-Null
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
       - name: Stage runtime binary (non-Windows)
         if: runner.os != 'Windows'

@@ -79,15 +79,6 @@ function Invoke-StageInstalledToolchain {
   if (Test-Path $runtime) {
     Copy-Item $runtime (Join-Path $toolsDir 'aivm-runtime.exe') -Force
   }
-  $frontend = Join-Path $sdkBin 'aos_frontend.exe'
-  if (-not (Test-Path $frontend)) { $frontend = Join-Path $sdkBin 'aos_frontend' }
-  if ((-not (Test-Path $frontend)) -and $allowLegacyBootstrap) {
-    $frontend = Join-Path $sdkRoot 'aos_frontend.exe'
-    if (-not (Test-Path $frontend)) { $frontend = Join-Path $sdkRoot 'aos_frontend' }
-  }
-  if (Test-Path $frontend) {
-    Copy-Item $frontend (Join-Path $toolsDir 'aos_frontend.exe') -Force
-  }
   $sdkArtifacts = Join-Path $sdkRoot '.artifacts'
   if (Test-Path $sdkArtifacts) {
     $repoArtifacts = Join-Path $PSScriptRoot '.artifacts'

@@ -238,6 +238,10 @@ if [[ ! -s "${TMP_ROOT}/libexec/ailang/commands/package.aibc1" ]]; then
   echo "error: failed to stage self-hosted AiLang built-in commands" >&2
   exit 1
 fi
+if [[ ! -s "${TMP_ROOT}/libexec/ailang/commands/parse-check.aibc1" ]]; then
+  echo "error: failed to stage self-hosted parse-check command" >&2
+  exit 1
+fi
 write_sdk_ailang_shim
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivm-runtime" "${TMP_ROOT}/runtimes/linux-x64/aivm-runtime"
 copy_if_exists "${AILANG_DIR}/.artifacts/ailang-linux-x64/aivectra-x11" "${TMP_ROOT}/runtimes/linux-x64/aivectra-x11"

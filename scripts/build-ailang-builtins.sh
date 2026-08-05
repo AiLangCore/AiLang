@@ -24,12 +24,13 @@ if [[ "${JOB_LIMIT}" -gt 6 ]]; then
   JOB_LIMIT=6
 fi
 
-BUILTIN_NAMES=(agent clean init package project template)
+BUILTIN_NAMES=(agent clean init package parse-check project template)
 BUILTIN_ENTRIES=(
   "Agent/main.aos"
   "Clean/main.aos"
   "Init/main.aos"
   "Package/main.aos"
+  "ParseCheck/main.aos"
   "Project/main.aos"
   "Template/main.aos"
 )

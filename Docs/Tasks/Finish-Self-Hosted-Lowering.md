@@ -1064,11 +1064,9 @@ The default build reaches bootstrap linking from a checkout containing no
 generated `tools/ailang` or `tools/aivm-runtime`, without invoking the legacy C
 build. The latest installed published SDK, beta.53, cannot finish seeding this
 branch: it predates the current nested modular compiler graph and reports
-`AILANG021` while linking the generated bootstrap probe. Therefore repository
-C removal is not yet accepted. AiLang contains one tracked C source,
-`tools/aos_frontend.c`; it remains the structural parser bootstrap until a
-current self-host SDK is published and the clean-checkout proof passes from
-that published SDK.
+`AILANG021` while linking the generated bootstrap probe. A later relocated
+release-candidate SDK supplies the current self-host seed and passes the clean
+checkout proof described below.
 
 The release-candidate SDK proof now passes from a detached clean checkout. The
 relocated SDK supplies its compiled AiLang CLI, built-in commands, module-object
@@ -1084,28 +1082,31 @@ AiVM now compacts dead phase-local bytes before growing pressure-aware hosted
 backing, spills completed unobserved worker results to reloadable temporary
 storage, releases materialized batch framing, and reduces physical worker
 dispatch as available memory falls. Production and debug remain bounded. A
-full default self-host completes generation in 635 seconds and built-ins in 45
+full default self-host completes generation in 630 seconds and seven built-ins in 62
 seconds; generation-one and generation-two remain byte-identical at 622,083
 bytes with SHA-256
 `af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
 The build also reuses a prior local self-host CLI and module-object worker when
 an installed bootstrap catalog is absent, preventing stale native-runtime
-refresh from falling back to the obsolete modular-link probe. The final
-repository C dependency is no longer in the build path, but
-`tools/aos_frontend.c` still owns the canonical whole-corpus parse gate. It
-must be replaced by a compiled AiLang parse-check command before the source and
-its release artifact are removed.
+refresh from falling back to the obsolete modular-link probe.
+
+The compiled `parse-check.aibc1` built-in now parses the ordered authored AOS
+corpus through `parse.parseDocument`. The canonical formatting gate invokes
+that bytecode command through AiVM, and the standalone `tools/aos_frontend.c`
+source, native build helper, SDK staging, and CI/release matrix artifacts have
+been removed. The migration also corrected the generated command registry by
+removing non-AOS comment syntax discovered by the self-host parser.
 
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.
-- [ ] Full compiler-file self-hosted parser gate passes.
+- [x] Full compiler-file self-hosted parser gate passes.
 - [ ] Supported compiler modules lower to deterministic AiBCO1 objects.
 - [ ] Objects link deterministically into executable AiBC1.
 - [x] Self-hosted and bootstrap paths have automated parity coverage.
 - [x] Supported compiler/tool sources build through the self-hosted path.
 - [x] Weather builds and runs through self-hosted compilation without fallback.
-- [ ] No new compiler semantics or CLI commands were added to C.
+- [x] No new compiler semantics or CLI commands were added to C.
 - [x] All affected tests pass from a clean workspace.
 
 ## Deliverables

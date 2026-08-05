@@ -94,7 +94,7 @@ All notable changes to this project are documented in this file.
 - The installed bytecode `ailang` CLI now reports the actual selected SDK
   version from its shim instead of a stale hard-coded prerelease value.
 - Removed the bootstrap `aos_frontend` executable from normal SDK package
-  staging; it remains a bootstrap/CI implementation detail.
+  staging. The compiled AiLang parse-check command now owns corpus validation.
 - Pre-1.0 alpha, beta, and RC artifacts are now cut from `develop`; stable
   releases remain `main`-only.
 

@@ -159,7 +159,6 @@ jobs:
             arch: x64
             archive: tar.gz
             artifact_dir: .artifacts/ailang-linux-x64
-            frontend: aos_frontend
             tool: ailang
             runtime: aivm-runtime
           - os: ubuntu-latest
@@ -168,7 +167,6 @@ jobs:
             arch: arm64
             archive: tar.gz
             artifact_dir: .artifacts/ailang-linux-arm64
-            frontend: aos_frontend
             tool: ailang
             runtime: aivm-runtime
           - os: macos-14
@@ -177,7 +175,6 @@ jobs:
             arch: x64
             archive: tar.gz
             artifact_dir: .artifacts/ailang-osx-x64
-            frontend: aos_frontend
             tool: ailang
             runtime: aivm-runtime
           - os: macos-14
@@ -186,7 +183,6 @@ jobs:
             arch: arm64
             archive: tar.gz
             artifact_dir: .artifacts/ailang-osx-arm64
-            frontend: aos_frontend
             tool: ailang
             runtime: aivm-runtime
           - os: windows-latest
@@ -195,7 +191,6 @@ jobs:
             arch: x64
             archive: zip
             artifact_dir: .artifacts/ailang-windows-x64
-            frontend: aos_frontend.exe
             tool: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64
@@ -205,7 +200,6 @@ jobs:
             arch: arm64
             archive: zip
             artifact_dir: .artifacts/ailang-windows-arm64
-            frontend: aos_frontend.exe
             tool: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64_arm64
@@ -296,23 +290,6 @@ jobs:
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./scripts/build-ailang-native.ps1
 
-      - name: Stage frontend parser (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ./dist
-          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.frontend }}"
-
-      - name: Stage frontend parser (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .\dist | Out-Null
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
-
       - name: Stage compiler assets (Unix)
         if: matrix.platform != 'windows'
         shell: bash
@@ -389,6 +366,7 @@ jobs:
           cp -R ./dist/libexec/ailang/commands "${PACKAGE_DIR}/libexec/ailang/commands"
           test -f "${PACKAGE_DIR}/libexec/ailang/cli/app.aibc1"
           test -f "${PACKAGE_DIR}/libexec/ailang/commands/package.aibc1"
+          test -f "${PACKAGE_DIR}/libexec/ailang/commands/parse-check.aibc1"
           cp -R ./src/std "${PACKAGE_DIR}/std"
           cp -R ./templates "${PACKAGE_DIR}/templates"
           cp ./sdk-runtime.toml "${PACKAGE_DIR}/sdk-runtime.toml"
@@ -436,6 +414,7 @@ jobs:
           Copy-Item .\dist\libexec\ailang\commands "$packageDir\libexec\ailang\commands" -Recurse
           if (-not (Test-Path "$packageDir\libexec\ailang\cli\app.aibc1")) { throw 'missing bytecode CLI payload' }
           if (-not (Test-Path "$packageDir\libexec\ailang\commands\package.aibc1")) { throw 'missing built-in command payloads' }
+          if (-not (Test-Path "$packageDir\libexec\ailang\commands\parse-check.aibc1")) { throw 'missing parse-check command payload' }
           Copy-Item .\src\std "$packageDir\std" -Recurse
           Copy-Item .\templates $packageDir -Recurse
           Copy-Item .\sdk-runtime.toml "$packageDir\sdk-runtime.toml"
@@ -529,6 +508,7 @@ jobs:
           tar -xzf "${RUNNER_TEMP}/ailang-builtins.tar.gz" \
             -C ./dist/libexec/ailang
           test -f ./dist/libexec/ailang/commands/package.aibc1
+          test -f ./dist/libexec/ailang/commands/parse-check.aibc1
 
       - name: Upload bytecode CLI payload
         uses: actions/upload-artifact@v7

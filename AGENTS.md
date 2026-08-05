@@ -86,8 +86,7 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - Do not silently change output formatting.
 - Do not add C VM/runtime/native launcher code to AiLang. VM/runtime/native
   launcher C belongs in AiVM, and foreign C library access must go through an
-  explicit SDK/syscall/adapter boundary. The temporary `tools/aos_frontend.c`
-  parser bootstrap is allowed until the parser frontend is rewritten in AiLang.
+  explicit SDK/syscall/adapter boundary.
 
 ## Development workflow
 
@@ -107,7 +106,7 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - Treat `scripts/test*.sh` and `scripts/test*.ps1` as internal implementation details behind the canonical verification entrypoint unless the task is specifically about test-harness maintenance.
 - Treat `scripts/build-*.sh` and `scripts/build-*.ps1` as internal implementation details behind the canonical bootstrap entrypoint unless the task is specifically about build-script maintenance.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.
-- Frontend parsing currently uses temporary bootstrap tool `tools/aos_frontend`.
+- Canonical corpus parsing uses the compiled AiLang `parse-check.aibc1` command.
 - Native launchers and host adapters are supplied by the selected installed SDK.
 
 ## Definition of done

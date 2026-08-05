@@ -1,0 +1,67 @@
+Program {
+  Import(path="../../compiler/parser.aos")
+  Import(path="../common.aos")
+
+  Export(name=parseCheck.run)
+
+  Let(name=parseCheck.run) {
+    Fn(params=args) {
+      Block {
+        If {
+          Lt { ChildCount { Var(name=args) } Lit(value=2) }
+          Block { Return { Call(target=missingPath) { Lit(value="parse-check") } } }
+          Block {
+            Let(name=result) { Call(target=parseCheck.argsAt) { Var(name=args) Lit(value=1) } }
+            If {
+              Eq { Var(name=result) Lit(value=0) }
+              Block {
+                Call(target=sys.stdout.writeLine) { Lit(value="Ok#ok1(type=string value=\"parse-check-complete\")") }
+                Return { Lit(value=0) }
+              }
+              Block { Return { Var(name=result) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parseCheck.argsAt) {
+    Fn(params=args,index) {
+      Block {
+        If {
+          Eq { Var(name=index) ChildCount { Var(name=args) } }
+          Block { Return { Lit(value=0) } }
+          Block {
+            Let(name=path) { Call(target=readArg) { Var(name=args) Var(name=index) } }
+            Let(name=result) { Call(target=parseCheck.file) { Var(name=path) } }
+            If {
+              Eq { Var(name=result) Lit(value=0) }
+              Block { Return { Call(target=parseCheck.argsAt) { Var(name=args) Add { Var(name=index) Lit(value=1) } } } }
+              Block { Return { Var(name=result) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let(name=parseCheck.file) {
+    Fn(params=path) {
+      Block {
+        If {
+          Call(target=sys.fs.path.exists) { Var(name=path) }
+          Block {
+            Let(name=document) { Call(target=parse.parseDocument) { Call(target=readTextFile) { Var(name=path) } } }
+            If {
+              Eq { NodeKind { Var(name=document) } Lit(value="Program") }
+              Block { Return { Lit(value=0) } }
+              Block { Return { Call(target=buildError) { Lit(value="AILANG022") Lit(value="AiLang source could not be parsed.") Var(name=path) } } }
+            }
+          }
+          Block { Return { Call(target=buildError) { Lit(value="AILANG007") Lit(value="AiLang source file was not found.") Var(name=path) } } }
+        }
+      }
+    }
+  }
+}

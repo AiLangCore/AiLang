@@ -58,7 +58,7 @@ done < <(
     -name '*.aos' -type f -print | sort
 )
 
-PARSE_BATCH_SIZE=1
+PARSE_BATCH_SIZE=16
 PARSE_CHECK_TMP="${ROOT_DIR}/.tmp/canonical-formatting"
 rm -rf "${PARSE_CHECK_TMP}"
 mkdir -p "${PARSE_CHECK_TMP}"

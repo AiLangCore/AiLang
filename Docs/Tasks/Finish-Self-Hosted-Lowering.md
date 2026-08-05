@@ -1097,6 +1097,13 @@ source, native build helper, SDK staging, and CI/release matrix artifacts have
 been removed. The migration also corrected the generated command registry by
 removing non-AOS comment syntax discovered by the self-host parser.
 
+The self-hosted parser corpus gate passes on macOS and Linux release hosts.
+Windows continues to run the deterministic bytecode corpus, but its native
+runtime currently aborts a filesystem-backed `parse-check` invocation before
+the AiLang command can publish a diagnostic. Restoring that Windows execution
+gate is the next focused AiVM host-boundary item; it must not reintroduce a C
+parser or duplicate parsing semantics in the runtime.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

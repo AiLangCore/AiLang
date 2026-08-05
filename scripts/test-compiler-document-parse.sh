@@ -39,6 +39,20 @@ Program#test_p1 {
           Block#test_b4 { Return#test_r2 { Call#test_c3(target=fail) { Lit#test_i5(value="parse.parseDocument valid document failed") } } }
         }
 
+        Let#test_crlf_l1(name=crlfProgram) {
+          Call#test_crlf_c1(target=parse.parseDocument) {
+            Lit#test_crlf_i1(value="Program {\r\n  Lit(value=1)\r\n}")
+          }
+        }
+        If#test_crlf_if1 {
+          Eq#test_crlf_eq1 {
+            NodeKind#test_crlf_nk1 { Var#test_crlf_v1(name=crlfProgram) }
+            Lit#test_crlf_i2(value="Program")
+          }
+          Block#test_crlf_b1 { Lit#test_crlf_i3(value=0) }
+          Block#test_crlf_b2 { Return#test_crlf_r1 { Call#test_crlf_c2(target=fail) { Lit#test_crlf_i4(value="parse.parseDocument CRLF document failed") } } }
+        }
+
         Let#test_l4(name=trailingProgram) {
           Call#test_c4(target=parse.parseDocument) {
             Lit#test_i6(value="Program { } Export(name=start)")

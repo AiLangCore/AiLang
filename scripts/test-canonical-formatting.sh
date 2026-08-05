@@ -66,7 +66,7 @@ for ((batch_start = 0; batch_start < ${#PARSE_FILES[@]}; batch_start += PARSE_BA
   parse_batch=("${PARSE_FILES[@]:batch_start:PARSE_BATCH_SIZE}")
   runtime_batch=("${parse_batch[@]}")
   if [[ "${AIVM_RUNTIME}" == *.exe ]]; then
-    runtime_batch=("$(cygpath -w "${parse_batch[0]}")")
+    runtime_batch=("${parse_batch[0]//\//\\}")
   fi
   if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${runtime_batch[@]}" \
       >"${PARSE_CHECK_TMP}/batch.out" 2>&1; then

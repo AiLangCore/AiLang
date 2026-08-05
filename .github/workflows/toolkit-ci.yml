@@ -121,6 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p ./dist
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           cp ./tools/aivm-runtime "./dist/${{ matrix.runtime }}"
           if [ -x ./.artifacts/ailang-linux-x64/aivectra-framebuffer ]; then
@@ -131,6 +132,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
           Copy-Item .\tools\ailang.exe .\dist\${{ matrix.airun }}
           Copy-Item .\tools\aivm-runtime.exe .\dist\${{ matrix.runtime }}
 

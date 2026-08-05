@@ -1070,17 +1070,34 @@ C removal is not yet accepted. AiLang contains one tracked C source,
 current self-host SDK is published and the clean-checkout proof passes from
 that published SDK.
 
+The release-candidate SDK proof now passes from a detached clean checkout. The
+relocated SDK supplies its compiled AiLang CLI, built-in commands, module-object
+worker, and AiVM runtime; the default build does not invoke `build.sh legacy`,
+recompile the native launcher, or select artifacts by checkout-relative host
+paths. Generation completes in 662 seconds and self-hosted built-ins in 44
+seconds. The generation-one and generation-two CLI artifacts are byte-identical
+at 622,083 bytes with SHA-256
+`af23bda0882568dc704922f71e1d0e3072cf54e4856becc5e341662a7c9cb9da`.
+
+The self-host compiler's full 113-module workload measured above the former
+16 MiB and 32 MiB tooling byte-arena ceilings. AiVM now retains dynamic arena
+growth with a deterministic 64 MiB tooling-profile ceiling; production and
+debug limits are unchanged. The final repository C dependency is no longer in
+the build path, but `tools/aos_frontend.c` still owns the canonical whole-corpus
+parse gate. It must be replaced by a compiled AiLang parse-check command before
+the source and its release artifact are removed.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.
 - [ ] Full compiler-file self-hosted parser gate passes.
 - [ ] Supported compiler modules lower to deterministic AiBCO1 objects.
 - [ ] Objects link deterministically into executable AiBC1.
-- [ ] Self-hosted and bootstrap paths have automated parity coverage.
-- [ ] Supported compiler/tool sources build through the self-hosted path.
+- [x] Self-hosted and bootstrap paths have automated parity coverage.
+- [x] Supported compiler/tool sources build through the self-hosted path.
 - [x] Weather builds and runs through self-hosted compilation without fallback.
 - [ ] No new compiler semantics or CLI commands were added to C.
-- [ ] All affected tests pass from a clean workspace.
+- [x] All affected tests pass from a clean workspace.
 
 ## Deliverables
 

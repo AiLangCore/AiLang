@@ -4,10 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-# Git Bash otherwise rewrites slash-containing AiLang arguments before the
-# native Windows runtime receives them. AiLang owns path interpretation.
-export MSYS2_ARG_CONV_EXCL='*'
-
 if [[ -x "${ROOT_DIR}/tools/aivm-runtime" ]]; then
   AIVM_RUNTIME="${ROOT_DIR}/tools/aivm-runtime"
 elif [[ -x "${ROOT_DIR}/tools/aivm-runtime.exe" ]]; then

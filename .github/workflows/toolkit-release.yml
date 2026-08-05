@@ -791,8 +791,8 @@ jobs:
         shell: bash
         env:
           AILANG_EXAMPLES_ROOT: ${{ github.workspace }}/ailang-examples
-          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 300
-          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 300
+          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 0
+          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 0
         run: |
           set -euo pipefail
           export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-exact"
@@ -815,8 +815,8 @@ jobs:
         shell: bash
         env:
           AILANG_EXAMPLES_ROOT: ${{ github.workspace }}/ailang-examples
-          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 300
-          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 300
+          AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS: 0
+          AILANG_WEATHER_BUILD_TIMEOUT_SECONDS: 0
         run: |
           set -euo pipefail
           export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-channel"

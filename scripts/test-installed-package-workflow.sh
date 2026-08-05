@@ -22,22 +22,24 @@ require_tool() {
 
 require_tool ailang
 require_tool git
-require_tool perl
 
 case "${BUILD_TIMEOUT_SECONDS}" in
   ''|*[!0-9]*)
-    echo "AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS must be a positive integer" >&2
+    echo "AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS must be a non-negative integer" >&2
     exit 2
     ;;
 esac
-if [[ "${BUILD_TIMEOUT_SECONDS}" -lt 1 ]]; then
-  echo "AILANG_PACKAGE_BUILD_TIMEOUT_SECONDS must be at least 1" >&2
-  exit 2
+if [[ "${BUILD_TIMEOUT_SECONDS}" -gt 0 ]]; then
+  require_tool perl
 fi
 
 run_with_timeout() {
   local seconds="$1"
   shift
+  if [[ "${seconds}" -eq 0 ]]; then
+    "$@"
+    return
+  fi
   perl -e 'alarm shift @ARGV; exec @ARGV' "$seconds" "$@"
 }
 

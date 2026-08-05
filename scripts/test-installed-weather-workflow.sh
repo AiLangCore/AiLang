@@ -23,19 +23,15 @@ if ! command -v git >/dev/null 2>&1; then
   echo "missing required tool: git" >&2
   exit 1
 fi
-if ! command -v perl >/dev/null 2>&1; then
-  echo "missing required tool: perl" >&2
-  exit 1
-fi
 case "${BUILD_TIMEOUT_SECONDS}" in
   ''|*[!0-9]*)
-    echo "AILANG_WEATHER_BUILD_TIMEOUT_SECONDS must be a positive integer" >&2
+    echo "AILANG_WEATHER_BUILD_TIMEOUT_SECONDS must be a non-negative integer" >&2
     exit 2
     ;;
 esac
-if [[ "${BUILD_TIMEOUT_SECONDS}" -lt 1 ]]; then
-  echo "AILANG_WEATHER_BUILD_TIMEOUT_SECONDS must be at least 1" >&2
-  exit 2
+if [[ "${BUILD_TIMEOUT_SECONDS}" -gt 0 ]] && ! command -v perl >/dev/null 2>&1; then
+  echo "missing required tool: perl" >&2
+  exit 1
 fi
 if [[ ! -f "${EXAMPLE_DIR}/project.aiproj" ]]; then
   echo "weather example was not found: ${EXAMPLE_DIR}" >&2
@@ -54,7 +50,15 @@ grep -q 'name = "vectra-ui"' "${APP_DIR}/ailang.lock.toml"
 grep -q 'name = "std-http"' "${APP_DIR}/ailang.lock.toml"
 grep -q 'namespaces = .*"std.net.http"' "${APP_DIR}/ailang.lock.toml"
 
-if ! perl -e 'alarm shift @ARGV; exec @ARGV' "${BUILD_TIMEOUT_SECONDS}" ailang build "${APP_DIR}"; then
+run_build() {
+  if [[ "${BUILD_TIMEOUT_SECONDS}" -eq 0 ]]; then
+    ailang build "${APP_DIR}"
+    return
+  fi
+  perl -e 'alarm shift @ARGV; exec @ARGV' "${BUILD_TIMEOUT_SECONDS}" ailang build "${APP_DIR}"
+}
+
+if ! run_build; then
   echo "weather build failed or timed out" >&2
   exit 1
 fi

@@ -28,9 +28,9 @@ $sourceFiles = $sourceRoots |
   Sort-Object FullName
 
 foreach ($sourceFile in $sourceFiles) {
-  & $runtime run $parseCheck -- parse-check $sourceFile.FullName | Out-Null
+  $parseOutput = & $runtime run $parseCheck -- parse-check $sourceFile.FullName 2>&1
   if ($LASTEXITCODE -ne 0) {
-    throw "self-hosted parser corpus failed: $($sourceFile.FullName) status=$LASTEXITCODE"
+    throw "self-hosted parser corpus failed: $($sourceFile.FullName) status=$LASTEXITCODE output=$($parseOutput | Out-String)"
   }
 }
 

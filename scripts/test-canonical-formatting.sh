@@ -64,7 +64,11 @@ rm -rf "${PARSE_CHECK_TMP}"
 mkdir -p "${PARSE_CHECK_TMP}"
 for ((batch_start = 0; batch_start < ${#PARSE_FILES[@]}; batch_start += PARSE_BATCH_SIZE)); do
   parse_batch=("${PARSE_FILES[@]:batch_start:PARSE_BATCH_SIZE}")
-  if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${parse_batch[@]}" \
+  runtime_batch=("${parse_batch[@]}")
+  if [[ "${AIVM_RUNTIME}" == *.exe ]]; then
+    runtime_batch=("$(cygpath -w "${parse_batch[0]}")")
+  fi
+  if ! "${AIVM_RUNTIME}" run "${PARSE_CHECK}" -- parse-check "${runtime_batch[@]}" \
       >"${PARSE_CHECK_TMP}/batch.out" 2>&1; then
     cat "${PARSE_CHECK_TMP}/batch.out" >&2
     echo "canonical formatting check failed: compiled AiLang parser rejected ${parse_batch[0]} at ordered offset ${batch_start}" >&2

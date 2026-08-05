@@ -1054,6 +1054,22 @@ semantic loop. Any active HTTP operation is cancelled through the canonical
 from authored sources and runtime compatibility binding. The live Weather
 launch observes `op=1 cancel`, returns success, and terminates in 0.41 seconds.
 
+The clean-checkout bootstrap audit now stages an installed SDK without copying
+its relative `bin/ailang` launcher out of context. Modern SDK launchers remain
+bound to their installed SDK root, and published built-in command bytecode is
+reused for package restore instead of recompiling those commands through an
+older CLI contract. The clean-bootstrap regression covers both behaviors.
+
+The default build reaches bootstrap linking from a checkout containing no
+generated `tools/ailang` or `tools/aivm-runtime`, without invoking the legacy C
+build. The latest installed published SDK, beta.53, cannot finish seeding this
+branch: it predates the current nested modular compiler graph and reports
+`AILANG021` while linking the generated bootstrap probe. Therefore repository
+C removal is not yet accepted. AiLang contains one tracked C source,
+`tools/aos_frontend.c`; it remains the structural parser bootstrap until a
+current self-host SDK is published and the clean-checkout proof passes from
+that published SDK.
+
 ## Acceptance Criteria
 
 - [ ] `lower.aos` is a thin facade; lowering families live in focused modules.

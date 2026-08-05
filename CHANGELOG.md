@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.57] - 2026-08-05
+
+### Added
+
+- Added build-validated worker references, Task composition, and bounded
+  isolated worker execution for compiler parallelism.
+- Added the self-hosted `parse-check` built-in command and Windows-native
+  parser corpus validation.
+
+### Changed
+
+- Made the self-hosted compiler and built-in commands the default build path.
+- Streamed compact linker-ready worker records through canonical ordered
+  commit while preserving deterministic output and diagnostics.
+- Continued decomposing compiler lowering into focused plan, control,
+  expression, and worker modules.
+
+### Removed
+
+- Removed the standalone native C AOS parser and its release artifacts.
+
+### Fixed
+
+- Made parser newline literals independent of checkout line-ending conversion.
+- Aligned direct Windows native stack reservation with the AiVM CMake build.
+- Fixed installed-SDK bootstrap staging and cross-platform build routing.
+
 ## [0.0.1-beta.33] - 2026-07-11
 
 ### Fixed
